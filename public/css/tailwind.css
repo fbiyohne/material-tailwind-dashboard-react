@@ -1,3 +1,124 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ════════════════════════════════════════════════════════════
+   Barreau de Pointe-Noire — styles de base institutionnels
+   Repris fidèlement de la maquette UI/UX (palette marine & or)
+   ════════════════════════════════════════════════════════════ */
+@layer base {
+  :root {
+    /* Tokens exposés en CSS pour les accents dynamiques (StatCard, barres…) */
+    --bpn-navy: #1a3a6b;
+    --bpn-or: #c4990a;
+    --bpn-vert: #1a5c3a;
+    --bpn-rouge: #8b1a1a;
+    --bpn-gris: #7a756a;
+  }
+
+  body {
+    @apply bg-creme text-encre font-sans antialiased;
+  }
+
+  /* Scrollbar discrète, ton institutionnel */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-grisM;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gris;
+  }
+}
+
+@layer components {
+  /* ─── Eyebrow / titres de section ─────────────────────────── */
+  .bpn-eyebrow {
+    @apply flex items-center gap-2.5 text-[10px] font-semibold uppercase tracking-[0.25em] text-or;
+  }
+  .bpn-eyebrow::before {
+    content: "";
+    @apply h-px w-6 bg-or;
+  }
+  .bpn-title {
+    @apply font-display text-3xl font-semibold leading-tight text-navy;
+  }
+
+  /* ─── Carte indicateur (stat card) ────────────────────────── */
+  .bpn-stat {
+    @apply rounded-lg border border-grisM border-l-[3px] bg-creme p-4;
+  }
+  .bpn-stat-label {
+    @apply mb-2 text-[10px] font-medium uppercase tracking-wide text-gris;
+  }
+  .bpn-stat-value {
+    @apply font-display text-3xl font-bold leading-none;
+  }
+  .bpn-stat-sub {
+    @apply mt-1 text-[11px] text-gris;
+  }
+
+  /* ─── Badges pastilles statut ─────────────────────────────── */
+  .bpn-badge {
+    @apply inline-flex items-center gap-1.5 rounded-xl px-2.5 py-[3px] text-[11px] font-medium;
+  }
+  .bpn-badge-dot {
+    @apply h-[5px] w-[5px] rounded-full bg-current;
+  }
+  .bpn-badge-vert {
+    @apply bg-[#e6f4ee] text-vert;
+  }
+  .bpn-badge-rouge {
+    @apply bg-[#f4e6e6] text-rouge;
+  }
+  .bpn-badge-or {
+    @apply bg-or-L text-or;
+  }
+  .bpn-badge-gris {
+    @apply bg-grisL text-gris;
+  }
+  .bpn-badge-bleu {
+    @apply bg-[#e6edf4] text-navy;
+  }
+
+  /* ─── Boutons ─────────────────────────────────────────────── */
+  .bpn-btn {
+    @apply inline-flex items-center gap-1.5 rounded border border-transparent px-4 py-2 text-xs font-medium transition-all duration-150;
+  }
+  .bpn-btn-primary {
+    @apply bg-navy text-white hover:bg-navy-2;
+  }
+  .bpn-btn-or {
+    @apply border-or bg-or text-navy-3 hover:bg-or-2;
+  }
+  .bpn-btn-ghost {
+    @apply border-grisM bg-transparent text-gris hover:bg-grisL hover:text-encre;
+  }
+  .bpn-btn-danger {
+    @apply bg-rouge text-white;
+  }
+  .bpn-btn:disabled {
+    @apply cursor-not-allowed opacity-40;
+  }
+
+  /* ─── Carte panneau ───────────────────────────────────────── */
+  .bpn-card {
+    @apply overflow-hidden rounded-lg border border-grisM bg-white;
+  }
+  .bpn-card-header {
+    @apply flex items-center justify-between border-b border-grisM px-4 py-2.5;
+  }
+  .bpn-card-heading {
+    @apply font-display text-sm text-navy;
+  }
+
+  /* ─── Champs de formulaire ────────────────────────────────── */
+  .bpn-input {
+    @apply w-full rounded border border-grisM bg-white px-3 py-2 text-sm text-encre outline-none transition focus:border-or focus:shadow-[0_0_0_3px_rgba(196,153,10,0.12)];
+  }
+  .bpn-label {
+    @apply text-[10px] font-medium uppercase tracking-wide text-gris;
+  }
+}

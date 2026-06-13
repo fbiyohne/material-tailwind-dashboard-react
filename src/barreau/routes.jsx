@@ -1,0 +1,75 @@
+import {
+  Squares2X2Icon,
+  UsersIcon,
+  AcademicCapIcon,
+  CheckBadgeIcon,
+  BanknotesIcon,
+  DocumentCheckIcon,
+  ReceiptPercentIcon,
+  CurrencyDollarIcon,
+  CalendarDaysIcon,
+  BuildingLibraryIcon,
+  ScaleIcon,
+  ArchiveBoxIcon,
+  BookOpenIcon,
+  MegaphoneIcon,
+  NewspaperIcon,
+} from "@heroicons/react/24/outline";
+
+import Dashboard from "./pages/Dashboard";
+
+/**
+ * Arborescence des 15 modules fonctionnels du Secrétariat Général,
+ * groupés exactement comme la sidebar de la maquette UI/UX.
+ *
+ * Étape 1 : seul le Tableau de bord possède une page complète ; les autres
+ * modules pointent vers un écran « en construction » (élément par défaut).
+ * Les compteurs `badge` reprennent la maquette et deviendront dynamiques en V2.
+ */
+export const navSections = [
+  {
+    label: "Tableau de bord",
+    items: [
+      { name: "Tableau de bord", path: "/", icon: Squares2X2Icon, element: <Dashboard /> },
+    ],
+  },
+  {
+    label: "Membres",
+    items: [
+      { name: "Avocats inscrits", path: "/avocats", icon: UsersIcon },
+      { name: "Avocats stagiaires", path: "/stagiaires", icon: AcademicCapIcon },
+      { name: "Corps électoral", path: "/corps-electoral", icon: CheckBadgeIcon },
+    ],
+  },
+  {
+    label: "Finances",
+    items: [
+      { name: "Cotisations", path: "/cotisations", icon: BanknotesIcon, badge: 3 },
+      { name: "Quitus", path: "/quitus", icon: DocumentCheckIcon },
+      { name: "Reçus de paiement", path: "/recus", icon: ReceiptPercentIcon },
+      { name: "Droits de plaidoirie", path: "/droits-plaidoirie", icon: CurrencyDollarIcon },
+    ],
+  },
+  {
+    label: "Institutionnel",
+    items: [
+      { name: "Réunions", path: "/reunions", icon: CalendarDaysIcon },
+      { name: "Assemblées générales", path: "/assemblees", icon: BuildingLibraryIcon },
+      { name: "Discipline", path: "/discipline", icon: ScaleIcon, badge: 2 },
+    ],
+  },
+  {
+    label: "Documents",
+    items: [
+      { name: "Archives", path: "/archives", icon: ArchiveBoxIcon },
+      { name: "Annuaire", path: "/annuaire", icon: BookOpenIcon },
+      { name: "Publications", path: "/publications", icon: MegaphoneIcon },
+      { name: "Lettre du Bâtonnier", path: "/lettre-batonnier", icon: NewspaperIcon },
+    ],
+  },
+];
+
+/** Liste à plat de tous les modules (pour le routage). */
+export const allModules = navSections.flatMap((s) => s.items);
+
+export default navSections;
