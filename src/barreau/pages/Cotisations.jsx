@@ -6,7 +6,8 @@ import { useDataTable } from "../hooks/useDataTable";
 import { EXERCICES } from "../data/dashboard-data";
 import { STATUT_META, QUALITE_LABEL } from "../data/derivations";
 import { formatFCFA } from "../utils/format";
-import { getCotisations, getMembre, validerCotisation } from "../api/resources";
+import { getCotisations, getMembre, validerCotisation, lancerRelances } from "../api/resources";
+import { EnvelopeIcon } from "@heroicons/react/24/outline";
 
 const FILTRES = [
   { value: "tous", label: "Tous les statuts" },
@@ -118,10 +119,23 @@ export function Cotisations() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <div className="bpn-eyebrow">Finances</div>
-        <h2 className="bpn-title mt-2">Cotisations ordinales</h2>
-        <p className="mt-1 text-sm text-gris">Suivi des cotisations 2020–2026, recherche en temps réel et historique par avocat.</p>
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+        <div>
+          <div className="bpn-eyebrow">Finances</div>
+          <h2 className="bpn-title mt-2">Cotisations ordinales</h2>
+          <p className="mt-1 text-sm text-gris">Suivi des cotisations 2020–2026, recherche en temps réel et historique par avocat.</p>
+        </div>
+        <button
+          className="bpn-btn bpn-btn-ghost"
+          onClick={async () => {
+            try {
+              const r = await lancerRelances(exercice);
+              toast.success(`${r.envoyes} relance${r.envoyes > 1 ? "s" : ""} envoyée${r.envoyes > 1 ? "s" : ""}${r.simulation ? " (simulation)" : ""}.`);
+            } catch (e) { toast.error(e.message); }
+          }}
+        >
+          <EnvelopeIcon className="h-4 w-4" /> Relancer les retardataires
+        </button>
       </div>
 
       <div className="flex flex-wrap gap-1 border-b border-grisM">

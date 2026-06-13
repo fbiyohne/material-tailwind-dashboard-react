@@ -64,6 +64,7 @@ export async function getCotisations(annee) {
 }
 
 export const enregistrerPaiement = (payload) => api("/cotisations/paiement", { method: "POST", body: payload });
+export const lancerRelances = (annee) => api(`/cotisations/relances?annee=${annee}`, { method: "POST" });
 export const validerCotisation = (membreId, annee, valide = true) =>
   api(`/cotisations/${membreId}/valider`, { method: "POST", body: { annee, valide } });
 

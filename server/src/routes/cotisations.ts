@@ -4,9 +4,40 @@ import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { archiver, montantDu, prochainNumeroRecu, statutCotisation } from "../lib/business.js";
+import { envoyerMail, modeSimulation } from "../lib/mail.js";
 
 export const cotisationsRouter = Router();
 cotisationsRouter.use(requireAuth);
+
+/** POST /cotisations/relances?annee= — relance email des retardataires (FR). */
+cotisationsRouter.post(
+  "/relances",
+  requireRole("SECRETAIRE_GENERAL", "TRESORIERE"),
+  asyncH(async (req, res) => {
+    const annee = Number(req.query.annee ?? new Date().getFullYear());
+    const membres = await prisma.membre.findMany({ include: { cotisations: { where: { annee } } } });
+    const cibles = membres.filter((m) => {
+      const c = m.cotisations[0];
+      const du = c?.montantDu ?? montantDu(m.qualite);
+      const st = statutCotisation(du, c?.montantPaye ?? 0);
+      return (st === "retard" || st === "partiel") && m.email;
+    });
+
+    let envoyes = 0;
+    for (const m of cibles) {
+      const c = m.cotisations[0];
+      const du = c?.montantDu ?? montantDu(m.qualite);
+      const solde = du - (c?.montantPaye ?? 0);
+      await envoyerMail({
+        to: m.email!,
+        subject: `Relance — cotisation ordinale ${annee} · Barreau de Pointe-Noire`,
+        text: `Maître ${m.nom},\n\nVotre cotisation ordinale au titre de l'exercice ${annee} présente un solde restant dû de ${solde.toLocaleString("fr-FR")} FCFA.\nNous vous invitons à régulariser votre situation auprès de la Trésorerie.\n\nLe Secrétariat Général du Barreau de Pointe-Noire.`,
+      });
+      envoyes += 1;
+    }
+    res.json({ annee, envoyes, simulation: modeSimulation, destinataires: cibles.map((m) => ({ nom: m.nom, email: m.email })) });
+  })
+);
 
 /** GET /cotisations?annee= — situation de tous les membres pour l'exercice. */
 cotisationsRouter.get(

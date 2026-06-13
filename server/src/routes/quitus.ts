@@ -6,17 +6,19 @@ import { requireAuth, requireRole } from "../middleware/auth.js";
 import { eligibleQuitus, prochainNumeroQuitus } from "../lib/business.js";
 import { htmlVersPdf } from "../lib/pdf.js";
 import { quitusHtml } from "../lib/templates.js";
+import { signerDocument, quitusPayload } from "../lib/signature.js";
 
 export const quitusRouter = Router();
 quitusRouter.use(requireAuth);
 
-/** GET /quitus/:id/pdf — quitus officiel en PDF vectoriel (Puppeteer). */
+/** GET /quitus/:id/pdf — quitus officiel signé en PDF vectoriel (Puppeteer). */
 quitusRouter.get(
   "/:id/pdf",
   asyncH(async (req, res) => {
     const quitus = await prisma.quitus.findUnique({ where: { id: Number(req.params.id) }, include: { membre: true } });
     if (!quitus) throw new HttpError(404, "Quitus introuvable");
-    const pdf = await htmlVersPdf(quitusHtml(quitus, quitus.membre));
+    const signature = signerDocument(quitusPayload(quitus));
+    const pdf = await htmlVersPdf(quitusHtml(quitus, quitus.membre, signature));
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="Quitus-${quitus.numero}.pdf"`);
     res.end(pdf);
@@ -33,6 +35,17 @@ quitusRouter.get(
       .filter((c) => eligibleQuitus(c))
       .map((c) => ({ id: c.membre.id, num: c.membre.num, nom: c.membre.nom }));
     res.json({ annee, eligibles });
+  })
+);
+
+/** GET /quitus/:id/signature — sceau électronique du quitus (pour vérification). */
+quitusRouter.get(
+  "/:id/signature",
+  asyncH(async (req, res) => {
+    const quitus = await prisma.quitus.findUnique({ where: { id: Number(req.params.id) } });
+    if (!quitus) throw new HttpError(404, "Quitus introuvable");
+    const payload = quitusPayload(quitus);
+    res.json({ numero: quitus.numero, payload, signature: signerDocument(payload) });
   })
 );
 

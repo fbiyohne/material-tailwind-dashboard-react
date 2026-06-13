@@ -91,14 +91,21 @@ export function recuHtml(recu: any, membre: { nom: string }): string {
   });
 }
 
-export function quitusHtml(quitus: any, membre: { nom: string }): string {
+export function quitusHtml(quitus: any, membre: { nom: string }, signature?: string): string {
+  const blocSignature = signature
+    ? `<div style="margin-top:16px;border-top:1px dashed #E0DBD0;padding-top:8px;font-size:9px;color:#7A756A">
+         Signature électronique (HMAC-SHA256) :
+         <span style="font-family:'DM Mono',monospace;color:#1A3A6B;word-break:break-all">${signature}</span>
+       </div>`
+    : "";
   return documentHtml({
     org: "Conseil de l'Ordre",
     title: "Quitus de cotisation",
     reference: `N° ${quitus.numero}`,
     bodyHtml: `
       <p>Le Conseil de l'Ordre des Avocats du Barreau de Pointe-Noire certifie que <b>Me ${membre.nom}</b>, avocat inscrit au tableau, est <b>entièrement à jour</b> de ses cotisations ordinales au titre de l'exercice <b>${quitus.annee}</b>.</p>
-      <p style="margin-top:12px">En foi de quoi le présent quitus lui est délivré pour servir et valoir ce que de droit.</p>`,
+      <p style="margin-top:12px">En foi de quoi le présent quitus lui est délivré pour servir et valoir ce que de droit.</p>
+      ${blocSignature}`,
     signataire: { role: "La Trésorière", nom: "Me ONDZE BOYA" },
     date: quitus.dateEmission,
   });
