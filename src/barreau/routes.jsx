@@ -20,6 +20,9 @@ import Dashboard from "./pages/Dashboard";
 import Cotisations from "./pages/Cotisations";
 import Recus from "./pages/Recus";
 import Quitus from "./pages/Quitus";
+import Avocats from "./pages/Avocats";
+import Stagiaires from "./pages/Stagiaires";
+import CorpsElectoral from "./pages/CorpsElectoral";
 
 /**
  * Arborescence des 15 modules fonctionnels du Secrétariat Général,
@@ -39,9 +42,9 @@ export const navSections = [
   {
     label: "Membres",
     items: [
-      { name: "Avocats inscrits", path: "/avocats", icon: UsersIcon },
-      { name: "Avocats stagiaires", path: "/stagiaires", icon: AcademicCapIcon },
-      { name: "Corps électoral", path: "/corps-electoral", icon: CheckBadgeIcon },
+      { name: "Avocats inscrits", path: "/avocats", icon: UsersIcon, element: <Avocats /> },
+      { name: "Avocats stagiaires", path: "/stagiaires", icon: AcademicCapIcon, element: <Stagiaires /> },
+      { name: "Corps électoral", path: "/corps-electoral", icon: CheckBadgeIcon, element: <CorpsElectoral /> },
     ],
   },
   {

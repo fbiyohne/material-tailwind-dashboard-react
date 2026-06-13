@@ -1,0 +1,145 @@
+import { useMemo, useState } from "react";
+import { PrinterIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
+import { StatCard, Badge } from "../components";
+import { useBarreau } from "../store/BarreauStore";
+import { eligibiliteElectorale } from "../data/derivations";
+import { EXERCICES } from "../data/dashboard-data";
+
+const MOTIF_LABEL = {
+  cotisation: { label: "Cotisations non à jour", ton: "rouge" },
+  statut: { label: "Suspension / radiation / omission", ton: "gris" },
+};
+
+export function CorpsElectoral() {
+  const { membres } = useBarreau();
+  const [exercice, setExercice] = useState(2026);
+
+  const { electeurs, exclusCotisation, exclusStatut } = useMemo(() => {
+    const base = membres.filter((m) => m.qualite !== "stagiaire");
+    const electeurs = [];
+    const exclusCotisation = [];
+    const exclusStatut = [];
+    base.forEach((m) => {
+      const { eligible, raison } = eligibiliteElectorale(m, exercice);
+      if (eligible) electeurs.push(m);
+      else if (raison === "cotisation") exclusCotisation.push(m);
+      else if (raison === "statut") exclusStatut.push(m);
+      // honoraires : exclus de plein droit, non décomptés dans les arriérés (BR-08)
+    });
+    return { electeurs, exclusCotisation, exclusStatut };
+  }, [membres, exercice]);
+
+  const exporterCSV = () => {
+    const lignes = [
+      ["N°", "Avocat", "Cabinet", "Date inscription"],
+      ...electeurs.map((m) => [m.num, `Me ${m.nom}`, m.cabinet, m.dateInscription ?? ""]),
+    ];
+    const csv = lignes.map((l) => l.map((c) => `"${c}"`).join(";")).join("\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `corps-electoral-${exercice}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="space-y-5">
+      <div className="bpn-no-print flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+        <div>
+          <div className="bpn-eyebrow">Membres</div>
+          <h2 className="bpn-title mt-2">Corps électoral</h2>
+          <p className="mt-1 text-sm text-gris">
+            Liste générée automatiquement : avocats inscrits, à jour de cotisations et non
+            suspendus (RG-04 à RG-06).
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="bpn-label mr-1">Exercice</span>
+          {EXERCICES.map((a) => (
+            <button
+              key={a}
+              type="button"
+              onClick={() => setExercice(a)}
+              className={`rounded px-3 py-1 font-mono text-xs transition ${
+                a === exercice ? "bg-navy text-white" : "bg-grisL text-gris hover:bg-grisM"
+              }`}
+            >
+              {a}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Statistiques (FR-CE) */}
+      <div className="bpn-no-print grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatCard label="Électeurs qualifiés" value={electeurs.length} sub="aptes à voter" accent="vert" />
+        <StatCard label="Exclus — cotisations" value={exclusCotisation.length} sub="non à jour" accent="rouge" />
+        <StatCard label="Exclus — statut" value={exclusStatut.length} sub="suspendu / radié / omis" accent="gris" />
+      </div>
+
+      <div className="bpn-no-print flex justify-end gap-2">
+        <button type="button" onClick={() => window.print()} className="bpn-btn bpn-btn-ghost">
+          <PrinterIcon className="h-4 w-4" /> Imprimer
+        </button>
+        <button type="button" onClick={exporterCSV} className="bpn-btn bpn-btn-or">
+          <ArrowDownTrayIcon className="h-4 w-4" /> Export Excel
+        </button>
+      </div>
+
+      {/* Liste électorale (imprimable) */}
+      <div className="bpn-print-zone bpn-card">
+        <div className="bpn-card-header">
+          <span className="bpn-card-heading">
+            Liste du corps électoral {exercice} — Barreau de Pointe-Noire
+          </span>
+          <span className="font-mono text-xs text-gris">{electeurs.length} électeurs</span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-navy text-left text-[9px] uppercase tracking-[0.1em] text-white/90">
+                <th className="px-3 py-2.5 font-medium">N°</th>
+                <th className="px-3 py-2.5 font-medium">Avocat électeur</th>
+                <th className="px-3 py-2.5 font-medium">Cabinet</th>
+                <th className="px-3 py-2.5 font-medium">Inscrit depuis</th>
+              </tr>
+            </thead>
+            <tbody>
+              {electeurs.map((m, i) => (
+                <tr key={m.id} className="border-b border-grisL hover:bg-grisL/60">
+                  <td className="px-3 py-2.5 font-mono text-xs text-gris">{i + 1}</td>
+                  <td className="px-3 py-2.5 font-medium">Me {m.nom}</td>
+                  <td className="px-3 py-2.5 text-gris">{m.cabinet}</td>
+                  <td className="px-3 py-2.5 text-xs text-gris">{m.dateInscription ?? "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Détail des exclusions */}
+      <div className="bpn-no-print bpn-card">
+        <div className="bpn-card-header">
+          <span className="bpn-card-heading">Exclusions justifiées</span>
+        </div>
+        <ul className="divide-y divide-grisL">
+          {[...exclusCotisation.map((m) => ({ m, motif: "cotisation" })),
+            ...exclusStatut.map((m) => ({ m, motif: "statut" }))].map(({ m, motif }) => (
+            <li key={m.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
+              <span className="font-medium text-encre">Me {m.nom}</span>
+              <Badge ton={MOTIF_LABEL[motif].ton}>{MOTIF_LABEL[motif].label}</Badge>
+            </li>
+          ))}
+          {exclusCotisation.length + exclusStatut.length === 0 && (
+            <li className="px-4 py-6 text-center text-sm text-gris">Aucune exclusion.</li>
+          )}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+export default CorpsElectoral;

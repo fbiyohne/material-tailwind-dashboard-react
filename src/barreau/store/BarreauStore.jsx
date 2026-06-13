@@ -37,8 +37,15 @@ export function BarreauProvider({ children }) {
   const [recus, setRecus] = useState([]);
   const [validations, setValidations] = useState(VALIDATIONS_INITIALES);
   const [quitus, setQuitus] = useState(QUITUS_INITIAUX);
+  const [attestations, setAttestations] = useState([]);
+  const [archives, setArchives] = useState([]);
 
   const prochainNumeroRecu = formatNumeroRecu(DERNIER_RECU + recus.length + 1);
+
+  /** Archive automatiquement un document généré (BR-05 / RG-14). */
+  const archiver = useCallback((entree) => {
+    setArchives((prev) => [{ ...entree, archiveLe: new Date().toISOString() }, ...prev]);
+  }, []);
 
   /** Liste consolidée des cotisations d'un exercice (FR-COT-*). */
   const cotisationsExercice = useCallback(
@@ -85,9 +92,16 @@ export function BarreauProvider({ children }) {
         emisLe: new Date().toISOString(),
       };
       setRecus((prev) => [recu, ...prev]);
+      archiver({
+        categorie: "Reçu de paiement",
+        titre: `Reçu N° ${numero} — Me ${membre.nom}`,
+        reference: numero,
+        date,
+        membreNom: membre.nom,
+      });
       return recu;
     },
-    [membres, recus.length]
+    [membres, recus.length, archiver]
   );
 
   // ─── Validation par la Trésorière (US-07 / FR-QUI-02) ────────────────────
@@ -145,9 +159,48 @@ export function BarreauProvider({ children }) {
         emisLe: new Date().toISOString(),
       };
       setQuitus((prev) => [quit, ...prev]);
+      archiver({
+        categorie: "Quitus",
+        titre: `Quitus ${quit.numero} — Me ${membre.nom}`,
+        reference: quit.numero,
+        date: quit.date,
+        membreNom: membre.nom,
+      });
       return quit;
     },
-    [membres, estEligibleQuitus, prochainNumeroQuitus]
+    [membres, estEligibleQuitus, prochainNumeroQuitus, archiver]
+  );
+
+  // ─── Attestation d'inscription (FR-AV-05) ────────────────────────────────
+  const prochainNumeroAttestation = useCallback(() => {
+    const annee = new Date().getFullYear();
+    const n = attestations.filter((a) => a.numero.includes(`-${annee}-`)).length + 1;
+    return `ATT-${annee}-${String(n).padStart(3, "0")}`;
+  }, [attestations]);
+
+  /** Génère une attestation d'inscription et l'archive automatiquement. */
+  const genererAttestation = useCallback(
+    ({ membreId, date }) => {
+      const membre = membres.find((m) => m.id === membreId);
+      if (!membre) return null;
+      const att = {
+        numero: prochainNumeroAttestation(),
+        membreId,
+        membreNom: membre.nom,
+        date: date ?? new Date().toISOString().slice(0, 10),
+        emisLe: new Date().toISOString(),
+      };
+      setAttestations((prev) => [att, ...prev]);
+      archiver({
+        categorie: "Attestation d'inscription",
+        titre: `Attestation ${att.numero} — Me ${membre.nom}`,
+        reference: att.numero,
+        date: att.date,
+        membreNom: membre.nom,
+      });
+      return att;
+    },
+    [membres, prochainNumeroAttestation, archiver]
   );
 
   const value = useMemo(
@@ -155,6 +208,8 @@ export function BarreauProvider({ children }) {
       membres,
       recus,
       quitus,
+      attestations,
+      archives,
       prochainNumeroRecu,
       cotisationsExercice,
       enregistrerPaiement,
@@ -164,11 +219,15 @@ export function BarreauProvider({ children }) {
       eligiblesQuitus,
       prochainNumeroQuitus,
       genererQuitus,
+      prochainNumeroAttestation,
+      genererAttestation,
     }),
     [
       membres,
       recus,
       quitus,
+      attestations,
+      archives,
       prochainNumeroRecu,
       cotisationsExercice,
       enregistrerPaiement,
@@ -178,6 +237,8 @@ export function BarreauProvider({ children }) {
       eligiblesQuitus,
       prochainNumeroQuitus,
       genererQuitus,
+      prochainNumeroAttestation,
+      genererAttestation,
     ]
   );
 
