@@ -7,6 +7,17 @@ import {
   assembleesInitiales,
   dossiersInitiaux,
 } from "../data/institutionnel";
+import {
+  publicationsInitiales,
+  genererBrouillonArticle,
+} from "../data/publications";
+
+// Quelques documents déjà archivés au démarrage (RG-14).
+const ARCHIVES_INITIALES = [
+  { categorie: "Quitus", titre: "Quitus Q-2026-089 — Me BIKINDOU Audrey Séverin", reference: "Q-2026-089", date: "2026-05-20", archiveLe: "2026-05-20T10:00:00Z" },
+  { categorie: "Procès-verbal (Conseil)", titre: "PV réunion du 2026-05-14", reference: "2026-05-14", date: "2026-05-14", archiveLe: "2026-05-14T17:00:00Z" },
+  { categorie: "Attestation d'inscription", titre: "Attestation ATT-2025-014 — Me NGOMA Patricia", reference: "ATT-2025-014", date: "2025-11-08", archiveLe: "2025-11-08T09:30:00Z" },
+];
 
 /**
  * Store applicatif en mémoire (sera remplacé par l'API REST en V2).
@@ -43,11 +54,13 @@ export function BarreauProvider({ children }) {
   const [validations, setValidations] = useState(VALIDATIONS_INITIALES);
   const [quitus, setQuitus] = useState(QUITUS_INITIAUX);
   const [attestations, setAttestations] = useState([]);
-  const [archives, setArchives] = useState([]);
+  const [archives, setArchives] = useState(ARCHIVES_INITIALES);
   const [reunions, setReunions] = useState(reunionsInitiales);
   const [assemblees, setAssemblees] = useState(assembleesInitiales);
   const [dossiers, setDossiers] = useState(dossiersInitiaux);
   const [journalDiscipline, setJournalDiscipline] = useState([]);
+  const [publications, setPublications] = useState(publicationsInitiales);
+  const [articlesLettre, setArticlesLettre] = useState({});
 
   const prochainNumeroRecu = formatNumeroRecu(DERNIER_RECU + recus.length + 1);
 
@@ -273,6 +286,36 @@ export function BarreauProvider({ children }) {
     ]);
   }, []);
 
+  // ─── Publications institutionnelles (FR-PUB) ─────────────────────────────
+  const creerPublication = useCallback((data) => {
+    setPublications((prev) => [
+      { id: Date.now(), statut: "a_valider", date: new Date().toISOString().slice(0, 10), ...data },
+      ...prev,
+    ]);
+  }, []);
+
+  /** Validation par le Bâtonnier avant diffusion (FR-PUB / RG). */
+  const changerStatutPublication = useCallback((id, statut) => {
+    setPublications((prev) => prev.map((p) => (p.id === id ? { ...p, statut } : p)));
+  }, []);
+
+  // ─── Lettre du Bâtonnier (FR-BAT) ────────────────────────────────────────
+  /** Génère un projet d'article (gabarit ; IA en V2) et l'archive. */
+  const genererArticleLettre = useCallback(
+    (mois, theme) => {
+      const texte = genererBrouillonArticle(mois, theme);
+      setArticlesLettre((prev) => ({ ...prev, [mois]: texte }));
+      archiver({
+        categorie: "Lettre du Bâtonnier",
+        titre: `Projet d'article — ${mois}`,
+        reference: mois,
+        date: new Date().toISOString().slice(0, 10),
+      });
+      return texte;
+    },
+    [archiver]
+  );
+
   const value = useMemo(
     () => ({
       membres,
@@ -284,6 +327,8 @@ export function BarreauProvider({ children }) {
       assemblees,
       dossiers,
       journalDiscipline,
+      publications,
+      articlesLettre,
       archiver,
       creerReunion,
       enregistrerPv,
@@ -291,6 +336,9 @@ export function BarreauProvider({ children }) {
       prochaineReferenceDossier,
       ouvrirDossier,
       journaliserDiscipline,
+      creerPublication,
+      changerStatutPublication,
+      genererArticleLettre,
       prochainNumeroRecu,
       cotisationsExercice,
       enregistrerPaiement,
@@ -313,6 +361,8 @@ export function BarreauProvider({ children }) {
       assemblees,
       dossiers,
       journalDiscipline,
+      publications,
+      articlesLettre,
       archiver,
       creerReunion,
       enregistrerPv,
@@ -320,6 +370,9 @@ export function BarreauProvider({ children }) {
       prochaineReferenceDossier,
       ouvrirDossier,
       journaliserDiscipline,
+      creerPublication,
+      changerStatutPublication,
+      genererArticleLettre,
       prochainNumeroRecu,
       cotisationsExercice,
       enregistrerPaiement,

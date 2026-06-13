@@ -26,6 +26,11 @@ import CorpsElectoral from "./pages/CorpsElectoral";
 import Reunions from "./pages/Reunions";
 import Assemblees from "./pages/Assemblees";
 import Discipline from "./pages/Discipline";
+import DroitsPlaidoirie from "./pages/DroitsPlaidoirie";
+import Archives from "./pages/Archives";
+import Annuaire from "./pages/Annuaire";
+import Publications from "./pages/Publications";
+import LettreBatonnier from "./pages/LettreBatonnier";
 
 /**
  * Arborescence des 15 modules fonctionnels du Secrétariat Général,
@@ -56,7 +61,7 @@ export const navSections = [
       { name: "Cotisations", path: "/cotisations", icon: BanknotesIcon, badge: 3, element: <Cotisations /> },
       { name: "Quitus", path: "/quitus", icon: DocumentCheckIcon, element: <Quitus /> },
       { name: "Reçus de paiement", path: "/recus", icon: ReceiptPercentIcon, element: <Recus /> },
-      { name: "Droits de plaidoirie", path: "/droits-plaidoirie", icon: CurrencyDollarIcon },
+      { name: "Droits de plaidoirie", path: "/droits-plaidoirie", icon: CurrencyDollarIcon, element: <DroitsPlaidoirie /> },
     ],
   },
   {
@@ -70,10 +75,10 @@ export const navSections = [
   {
     label: "Documents",
     items: [
-      { name: "Archives", path: "/archives", icon: ArchiveBoxIcon },
-      { name: "Annuaire", path: "/annuaire", icon: BookOpenIcon },
-      { name: "Publications", path: "/publications", icon: MegaphoneIcon },
-      { name: "Lettre du Bâtonnier", path: "/lettre-batonnier", icon: NewspaperIcon },
+      { name: "Archives", path: "/archives", icon: ArchiveBoxIcon, element: <Archives /> },
+      { name: "Annuaire", path: "/annuaire", icon: BookOpenIcon, element: <Annuaire /> },
+      { name: "Publications", path: "/publications", icon: MegaphoneIcon, element: <Publications /> },
+      { name: "Lettre du Bâtonnier", path: "/lettre-batonnier", icon: NewspaperIcon, element: <LettreBatonnier /> },
     ],
   },
 ];
