@@ -1,0 +1,43 @@
+import crypto from "node:crypto";
+import jwt from "jsonwebtoken";
+import type { Role, User } from "@prisma/client";
+import { prisma } from "../prisma.js";
+import { env } from "../env.js";
+
+const hash = (t: string) => crypto.createHash("sha256").update(t).digest("hex");
+
+/** Jeton d'accès court (JWT). */
+export function signerAccessToken(user: { id: number; role: Role }) {
+  return jwt.sign({ sub: user.id, role: user.role }, env.jwtSecret, { expiresIn: env.accessTtl });
+}
+
+/** Crée et stocke (haché) un refresh token opaque ; renvoie le jeton en clair. */
+export async function creerRefreshToken(userId: number) {
+  const token = crypto.randomBytes(48).toString("hex");
+  const expiresAt = new Date(Date.now() + env.refreshTtlDays * 86_400_000);
+  await prisma.refreshToken.create({ data: { tokenHash: hash(token), userId, expiresAt } });
+  return token;
+}
+
+/** Émet la paire access + refresh pour un utilisateur. */
+export async function emettrePaire(user: User) {
+  return {
+    token: signerAccessToken(user),
+    refreshToken: await creerRefreshToken(user.id),
+    user: { id: user.id, nom: user.nom, email: user.email, role: user.role },
+  };
+}
+
+/** Échange un refresh valide contre une nouvelle paire (rotation). */
+export async function rafraichir(rawRefresh: string) {
+  const stocke = await prisma.refreshToken.findUnique({ where: { tokenHash: hash(rawRefresh) }, include: { user: true } });
+  if (!stocke || stocke.revoked || stocke.expiresAt < new Date() || !stocke.user.actif) return null;
+  // Rotation : on révoque l'ancien et on en émet un nouveau.
+  await prisma.refreshToken.update({ where: { id: stocke.id }, data: { revoked: true } });
+  return emettrePaire(stocke.user);
+}
+
+/** Révoque un refresh token (déconnexion). */
+export async function revoquer(rawRefresh: string) {
+  await prisma.refreshToken.updateMany({ where: { tokenHash: hash(rawRefresh) }, data: { revoked: true } });
+}

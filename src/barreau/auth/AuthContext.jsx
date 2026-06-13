@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import PropTypes from "prop-types";
-import { api, getToken, setToken, setUnauthorizedHandler } from "../api/client";
+import { api, getToken, getRefreshToken, setSession, clearSession, setUnauthorizedHandler } from "../api/client";
 
 const AuthContext = createContext(null);
 
@@ -9,16 +9,13 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setUnauthorizedHandler(() => {
-      setToken(null);
-      setUser(null);
-    });
+    setUnauthorizedHandler(() => setUser(null));
     (async () => {
       if (getToken()) {
         try {
           setUser(await api("/auth/me"));
         } catch {
-          setToken(null);
+          clearSession();
         }
       }
       setLoading(false);
@@ -26,15 +23,17 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = async (email, password) => {
-    const { token, user: u } = await api("/auth/login", { method: "POST", auth: false, body: { email, password } });
-    setToken(token);
-    setUser(u);
-    return u;
+    const data = await api("/auth/login", { method: "POST", auth: false, body: { email, password } });
+    setSession(data);
+    setUser(data.user);
+    return data.user;
   };
 
-  const logout = () => {
-    setToken(null);
+  const logout = async () => {
+    const refreshToken = getRefreshToken();
+    clearSession();
     setUser(null);
+    if (refreshToken) api("/auth/logout", { method: "POST", auth: false, body: { refreshToken } }).catch(() => {});
   };
 
   return <AuthContext.Provider value={{ user, loading, login, logout }}>{children}</AuthContext.Provider>;

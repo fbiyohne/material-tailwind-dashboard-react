@@ -53,13 +53,24 @@ enum StatutPublication {
 }
 
 model User {
-  id           Int      @id @default(autoincrement())
-  nom          String
-  email        String   @unique
-  role         Role
-  passwordHash String
-  actif        Boolean  @default(true)
-  createdAt    DateTime @default(now())
+  id            Int            @id @default(autoincrement())
+  nom           String
+  email         String         @unique
+  role          Role
+  passwordHash  String
+  actif         Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  refreshTokens RefreshToken[]
+}
+
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  tokenHash String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
 }
 
 model Membre {

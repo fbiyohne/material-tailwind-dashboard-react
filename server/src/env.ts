@@ -11,4 +11,6 @@ export const env = {
   jwtSecret: requis("JWT_SECRET", "dev-secret"),
   port: Number(requis("PORT", "4000")),
   clientOrigin: requis("CLIENT_ORIGIN", "http://localhost:5173"),
+  accessTtl: requis("ACCESS_TTL", "15m"),
+  refreshTtlDays: Number(requis("REFRESH_TTL_DAYS", "7")),
 };
