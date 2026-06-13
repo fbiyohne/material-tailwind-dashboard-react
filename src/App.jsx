@@ -1,22 +1,43 @@
 import BarreauLayout from "@/barreau/layout/BarreauLayout";
 import { BarreauProvider } from "@/barreau/store/BarreauStore";
 import { ErrorBoundary, ToastProvider, ConfirmProvider } from "@/barreau/components";
+import { AuthProvider, useAuth } from "@/barreau/auth/AuthContext";
+import { Login } from "@/barreau/auth/Login";
+
+function Splash() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-navy-3 text-sm text-white/50">
+      Chargement…
+    </div>
+  );
+}
+
+/** Affiche la connexion tant que l'utilisateur n'est pas authentifié. */
+function AuthGate() {
+  const { user, loading } = useAuth();
+  if (loading) return <Splash />;
+  if (!user) return <Login />;
+  return (
+    <ConfirmProvider>
+      <BarreauProvider>
+        <BarreauLayout />
+      </BarreauProvider>
+    </ConfirmProvider>
+  );
+}
 
 /**
  * Application de gestion du Secrétariat Général du Barreau de Pointe-Noire.
- * Providers transverses : capture d'erreurs, notifications (toasts) et
- * dialogues de confirmation, autour du store et du layout institutionnel.
+ * Authentification (JWT) puis layout institutionnel et store applicatif.
  */
 function App() {
   return (
     <ErrorBoundary>
-      <BarreauProvider>
-        <ToastProvider>
-          <ConfirmProvider>
-            <BarreauLayout />
-          </ConfirmProvider>
-        </ToastProvider>
-      </BarreauProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <AuthGate />
+        </AuthProvider>
+      </ToastProvider>
     </ErrorBoundary>
   );
 }

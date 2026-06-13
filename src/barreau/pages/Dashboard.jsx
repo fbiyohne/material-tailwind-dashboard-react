@@ -1,30 +1,18 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { StatCard } from "../components";
 import { formatFCFA, ratioPct } from "../utils/format";
-import {
-  EXERCICES,
-  dashboardParExercice,
-  prochainesEcheances,
-  journalActivite,
-} from "../data/dashboard-data";
+import { EXERCICES, prochainesEcheances, journalActivite } from "../data/dashboard-data";
+import { api } from "../api/client";
 
-/** Sélecteur d'exercice (FR-DB-08) — pastilles d'années 2020 → 2026. */
+/** Sélecteur d'exercice (FR-DB-08). */
 function SelecteurExercice({ valeur, onChange }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <span className="bpn-label mr-1">Exercice</span>
       {EXERCICES.map((annee) => (
-        <button
-          key={annee}
-          type="button"
-          onClick={() => onChange(annee)}
-          className={`rounded px-3 py-1 font-mono text-xs transition ${
-            annee === valeur
-              ? "bg-navy text-white"
-              : "bg-grisL text-gris hover:bg-grisM hover:text-encre"
-          }`}
-        >
+        <button key={annee} type="button" onClick={() => onChange(annee)}
+          className={`rounded px-3 py-1 font-mono text-xs transition ${annee === valeur ? "bg-navy text-white" : "bg-grisL text-gris hover:bg-grisM hover:text-encre"}`}>
           {annee}
         </button>
       ))}
@@ -32,28 +20,13 @@ function SelecteurExercice({ valeur, onChange }) {
   );
 }
 
-/** Une colonne de la situation financière (payées / impayées / solde). */
-function ColonneFinance({ label, montant, total, accent, className = "" }) {
+function ColonneFinance({ label, montant, total, accent }) {
   return (
-    <div
-      className={`border-l-[3px] p-4 ${className}`}
-      style={{ borderLeftColor: `var(--bpn-${accent})` }}
-    >
+    <div className="border-l-[3px] p-4" style={{ borderLeftColor: `var(--bpn-${accent})` }}>
       <div className="mb-1 text-[10px] uppercase tracking-wide text-gris">{label}</div>
-      <div
-        className="font-display text-base font-bold"
-        style={{ color: `var(--bpn-${accent})` }}
-      >
-        {formatFCFA(montant)}
-      </div>
+      <div className="font-display text-base font-bold" style={{ color: `var(--bpn-${accent})` }}>{formatFCFA(montant)}</div>
       <div className="mt-2 h-1.5 overflow-hidden rounded bg-grisM">
-        <div
-          className="h-full rounded transition-all duration-500"
-          style={{
-            width: `${ratioPct(montant, total)}%`,
-            backgroundColor: `var(--bpn-${accent})`,
-          }}
-        />
+        <div className="h-full rounded transition-all duration-500" style={{ width: `${ratioPct(montant, total)}%`, backgroundColor: `var(--bpn-${accent})` }} />
       </div>
     </div>
   );
@@ -61,49 +34,42 @@ function ColonneFinance({ label, montant, total, accent, className = "" }) {
 
 export function Dashboard() {
   const navigate = useNavigate();
-  const [exercice, setExercice] = useState(2025);
-  const { membres, finances } = dashboardParExercice[exercice];
-  const totalDu = finances.payees + finances.impayees;
-  const solde = finances.impayees; // solde à recouvrer = cotisations impayées
+  const [exercice, setExercice] = useState(2026);
+  const [data, setData] = useState(null);
+  const [erreur, setErreur] = useState(null);
+
+  useEffect(() => {
+    let actif = true;
+    setData(null);
+    setErreur(null);
+    api(`/dashboard?annee=${exercice}`)
+      .then((d) => actif && setData(d))
+      .catch((e) => actif && setErreur(e.message));
+    return () => {
+      actif = false;
+    };
+  }, [exercice]);
+
+  const membres = data?.membres;
+  const finances = data?.finances;
+  const totalDu = finances ? finances.payees + finances.impayees : 0;
 
   return (
     <div className="space-y-6">
-      {/* Sélecteur d'exercice (FR-DB-08) */}
       <div className="flex justify-end">
         <SelecteurExercice valeur={exercice} onChange={setExercice} />
       </div>
 
-      {/* 4 indicateurs membres */}
+      {erreur && (
+        <div className="rounded border-l-[3px] border-rouge bg-[#f4e6e6] px-4 py-2.5 text-sm text-rouge">{erreur}</div>
+      )}
+
+      {/* 4 indicateurs (données réelles de la base) */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          label="Avocats inscrits"
-          value={membres.inscrits}
-          sub="au tableau"
-          accent="or"
-          valueAccent="navy"
-          onClick={() => navigate("/avocats")}
-        />
-        <StatCard
-          label="À jour"
-          value={membres.aJour}
-          sub="avocats + stagiaires"
-          accent="vert"
-          onClick={() => navigate("/cotisations?statut=ajour")}
-        />
-        <StatCard
-          label="En retard"
-          value={membres.enRetard}
-          sub="relances nécessaires"
-          accent="rouge"
-          onClick={() => navigate("/cotisations?statut=retard")}
-        />
-        <StatCard
-          label="Stagiaires"
-          value={membres.stagiaires}
-          sub="en cours"
-          accent="navy"
-          onClick={() => navigate("/stagiaires")}
-        />
+        <StatCard label="Avocats inscrits" value={membres?.inscrits ?? "…"} sub="au tableau" accent="or" valueAccent="navy" onClick={() => navigate("/avocats")} />
+        <StatCard label="À jour" value={membres?.aJour ?? "…"} sub="avocats + stagiaires" accent="vert" onClick={() => navigate("/cotisations?statut=ajour")} />
+        <StatCard label="En retard" value={membres?.enRetard ?? "…"} sub="relances nécessaires" accent="rouge" onClick={() => navigate("/cotisations?statut=retard")} />
+        <StatCard label="Stagiaires" value={membres?.stagiaires ?? "…"} sub="en cours" accent="navy" onClick={() => navigate("/stagiaires")} />
       </div>
 
       {/* Situation financière */}
@@ -113,57 +79,33 @@ export function Dashboard() {
           <span className="font-mono text-xs text-gris">en FCFA</span>
         </div>
         <div className="grid grid-cols-1 divide-y divide-grisM md:grid-cols-3 md:divide-x md:divide-y-0">
-          <ColonneFinance
-            label="Cotisations payées"
-            montant={finances.payees}
-            total={totalDu}
-            accent="vert"
-          />
-          <ColonneFinance
-            label="Impayées"
-            montant={finances.impayees}
-            total={totalDu}
-            accent="rouge"
-          />
-          <ColonneFinance
-            label="Solde à recouvrer"
-            montant={solde}
-            total={totalDu}
-            accent="or"
-          />
+          <ColonneFinance label="Cotisations payées" montant={finances?.payees ?? 0} total={totalDu} accent="vert" />
+          <ColonneFinance label="Impayées" montant={finances?.impayees ?? 0} total={totalDu} accent="rouge" />
+          <ColonneFinance label="Solde à recouvrer" montant={finances?.solde ?? 0} total={totalDu} accent="or" />
         </div>
       </div>
 
-      {/* Agenda + journal d'activité */}
+      {/* Agenda + journal (statiques pour le moment) */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="bpn-card">
-          <div className="bpn-card-header">
-            <span className="bpn-card-heading">Prochaines échéances</span>
-          </div>
+          <div className="bpn-card-header"><span className="bpn-card-heading">Prochaines échéances</span></div>
           <ul className="divide-y divide-grisL">
             {prochainesEcheances.map((e) => (
               <li key={e.libelle} className="flex items-center gap-3 px-4 py-3">
-                <span className="w-24 shrink-0 font-mono text-[11px] text-or">
-                  {e.date}
-                </span>
+                <span className="w-24 shrink-0 font-mono text-[11px] text-or">{e.date}</span>
                 <span className="text-sm text-encre">{e.libelle}</span>
               </li>
             ))}
           </ul>
         </div>
-
         <div className="bpn-card">
-          <div className="bpn-card-header">
-            <span className="bpn-card-heading">Journal d'activité</span>
-          </div>
+          <div className="bpn-card-header"><span className="bpn-card-heading">Journal d'activité</span></div>
           <ul className="divide-y divide-grisL">
             {journalActivite.map((j) => (
               <li key={j.action} className="px-4 py-3">
                 <div className="text-sm text-encre">{j.action}</div>
                 <div className="mt-0.5 flex items-center gap-2 text-[11px] text-gris">
-                  <span className="font-mono">{j.quand}</span>
-                  <span>·</span>
-                  <span>{j.acteur}</span>
+                  <span className="font-mono">{j.quand}</span><span>·</span><span>{j.acteur}</span>
                 </div>
               </li>
             ))}

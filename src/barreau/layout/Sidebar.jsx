@@ -1,12 +1,19 @@
 import PropTypes from "prop-types";
 import { NavLink } from "react-router-dom";
-import { XMarkIcon, ScaleIcon } from "@heroicons/react/24/outline";
+import { XMarkIcon, ScaleIcon, ArrowRightOnRectangleIcon } from "@heroicons/react/24/outline";
 import { navSections } from "../routes";
-import { useBarreau } from "../store/BarreauStore";
+import { useAuth } from "../auth/AuthContext";
 
 const initiales = (nom) => {
-  const parts = nom.replace(/^Me\s+/i, "").trim().split(/\s+/);
-  return ((parts[0]?.[0] ?? "") + (parts[parts.length - 1]?.[0] ?? "")).toUpperCase();
+  const parts = (nom ?? "").replace(/^Me\s+/i, "").trim().split(/\s+/);
+  return ((parts[0]?.[0] ?? "") + (parts[parts.length - 1]?.[0] ?? "")).toUpperCase() || "?";
+};
+
+const ROLE_LABEL = {
+  SECRETAIRE_GENERAL: "Secrétaire Général",
+  BATONNIER: "Bâtonnier",
+  TRESORIERE: "Trésorière",
+  ADMIN: "Administrateur",
 };
 
 /**
@@ -16,8 +23,7 @@ const initiales = (nom) => {
  * Pied : carte d'identité de l'utilisateur (rôle). Off-canvas sur mobile.
  */
 export function Sidebar({ open, onClose }) {
-  const { parametres } = useBarreau();
-  const sg = parametres.identite.secretaireGeneral;
+  const { user, logout } = useAuth();
   return (
     <>
       {open && (
@@ -116,18 +122,27 @@ export function Sidebar({ open, onClose }) {
           ))}
         </nav>
 
-        {/* Carte d'identité utilisateur */}
+        {/* Carte d'identité utilisateur + déconnexion */}
         <div className="shrink-0 border-t border-white/[0.08] p-3">
           <div className="flex items-center gap-2.5 rounded-lg border border-white/[0.06] bg-white/[0.04] px-3 py-2.5">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-or/30 bg-or/15 text-[11px] font-semibold text-or-2">
-              {initiales(sg)}
+              {initiales(user?.nom)}
             </div>
-            <div className="min-w-0">
-              <div className="truncate text-[11px] font-medium text-white/90">{sg}</div>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-[11px] font-medium text-white/90">{user?.nom}</div>
               <div className="text-[8px] uppercase tracking-[0.15em] text-or/70">
-                Secrétaire Général
+                {ROLE_LABEL[user?.role] ?? user?.role}
               </div>
             </div>
+            <button
+              type="button"
+              onClick={logout}
+              className="shrink-0 text-white/40 transition hover:text-rouge"
+              aria-label="Se déconnecter"
+              title="Se déconnecter"
+            >
+              <ArrowRightOnRectangleIcon className="h-4 w-4" />
+            </button>
           </div>
         </div>
       </aside>
