@@ -7,6 +7,7 @@ function requis(nom: string, defaut?: string): string {
 }
 
 export const env = {
+  nodeEnv: process.env.NODE_ENV ?? "development",
   databaseUrl: requis("DATABASE_URL"),
   jwtSecret: requis("JWT_SECRET", "dev-secret"),
   port: Number(requis("PORT", "4000")),

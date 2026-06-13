@@ -2,7 +2,10 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import { pinoHttp } from "pino-http";
+import { randomUUID } from "node:crypto";
 import { env } from "./env.js";
+import { logger } from "./lib/logger.js";
 import { errorHandler } from "./middleware/error.js";
 import { authRouter } from "./routes/auth.js";
 import { membresRouter } from "./routes/membres.js";
@@ -25,6 +28,20 @@ export function creerApp() {
   app.set("trust proxy", 1);
   app.use(helmet());
   app.use(cors({ origin: env.clientOrigin }));
+  // Journalisation structurée des requêtes (id de corrélation + durée + statut).
+  app.use(
+    pinoHttp({
+      logger,
+      genReqId: (req, res) => {
+        const id = (req.headers["x-request-id"] as string) || randomUUID();
+        res.setHeader("x-request-id", id);
+        return id;
+      },
+      customLogLevel: (_req, res, err) => (err || res.statusCode >= 500 ? "error" : res.statusCode >= 400 ? "warn" : "info"),
+      // Les PDF passent par le logger ; on évite de journaliser le corps binaire.
+      autoLogging: { ignore: (req) => req.url === "/api/health" },
+    })
+  );
   app.use(express.json());
   // Limiteur global (protection DoS basique).
   app.use("/api", rateLimit({ windowMs: 15 * 60 * 1000, limit: 600, standardHeaders: true, legacyHeaders: false }));
