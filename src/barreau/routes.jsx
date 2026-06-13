@@ -19,6 +19,7 @@ import {
 import Dashboard from "./pages/Dashboard";
 import Cotisations from "./pages/Cotisations";
 import Recus from "./pages/Recus";
+import Quitus from "./pages/Quitus";
 
 /**
  * Arborescence des 15 modules fonctionnels du Secrétariat Général,
@@ -47,7 +48,7 @@ export const navSections = [
     label: "Finances",
     items: [
       { name: "Cotisations", path: "/cotisations", icon: BanknotesIcon, badge: 3, element: <Cotisations /> },
-      { name: "Quitus", path: "/quitus", icon: DocumentCheckIcon },
+      { name: "Quitus", path: "/quitus", icon: DocumentCheckIcon, element: <Quitus /> },
       { name: "Reçus de paiement", path: "/recus", icon: ReceiptPercentIcon, element: <Recus /> },
       { name: "Droits de plaidoirie", path: "/droits-plaidoirie", icon: CurrencyDollarIcon },
     ],

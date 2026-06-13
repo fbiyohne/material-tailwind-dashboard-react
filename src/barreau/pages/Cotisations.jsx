@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
+import { MagnifyingGlassIcon, CheckCircleIcon } from "@heroicons/react/24/outline";
 import { Badge, Modal } from "../components";
 import { useBarreau } from "../store/BarreauStore";
 import { EXERCICES } from "../data/dashboard-data";
@@ -57,7 +57,7 @@ function HistoriqueModal({ membre, onClose }) {
 }
 
 export function Cotisations() {
-  const { cotisationsExercice } = useBarreau();
+  const { cotisationsExercice, estValide, basculerValidation } = useBarreau();
   const [exercice, setExercice] = useState(2026);
   const [recherche, setRecherche] = useState("");
   const [filtre, setFiltre] = useState("tous");
@@ -183,14 +183,37 @@ export function Cotisations() {
                     <td className="px-3 py-2.5">
                       <Badge ton={meta.ton}>{meta.label}</Badge>
                     </td>
-                    <td className="px-3 py-2.5 text-right">
-                      <button
-                        type="button"
-                        onClick={() => setHistorique(l.membre)}
-                        className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-[10px]"
-                      >
-                        Historique
-                      </button>
+                    <td className="px-3 py-2.5">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {l.statut === "ajour" &&
+                          (estValide(l.membre.id, exercice) ? (
+                            <button
+                              type="button"
+                              title="Situation validée par la Trésorière — cliquer pour annuler"
+                              onClick={() => basculerValidation(l.membre.id, exercice)}
+                              className="bpn-badge bpn-badge-vert"
+                            >
+                              <CheckCircleIcon className="h-3.5 w-3.5" />
+                              Validé
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              title="Valider la situation financière (Trésorière)"
+                              onClick={() => basculerValidation(l.membre.id, exercice)}
+                              className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-[10px]"
+                            >
+                              Valider
+                            </button>
+                          ))}
+                        <button
+                          type="button"
+                          onClick={() => setHistorique(l.membre)}
+                          className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-[10px]"
+                        >
+                          Historique
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
