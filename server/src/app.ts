@@ -7,6 +7,7 @@ import { randomUUID } from "node:crypto";
 import { env } from "./env.js";
 import { logger } from "./lib/logger.js";
 import { errorHandler } from "./middleware/error.js";
+import { audit } from "./middleware/audit.js";
 import { authRouter } from "./routes/auth.js";
 import { membresRouter } from "./routes/membres.js";
 import { cotisationsRouter } from "./routes/cotisations.js";
@@ -43,6 +44,8 @@ export function creerApp() {
     })
   );
   app.use(express.json());
+  // Journal d'audit transverse des mutations (RG-16 / NFR-09).
+  app.use("/api", audit);
   // Limiteur global (protection DoS basique).
   app.use("/api", rateLimit({ windowMs: 15 * 60 * 1000, limit: 600, standardHeaders: true, legacyHeaders: false }));
 

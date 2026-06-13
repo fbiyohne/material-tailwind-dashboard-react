@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeftIcon, CalendarDaysIcon, MapPinIcon, CheckIcon } from "@heroicons/react/24/outline";
+import { ArrowLeftIcon, CalendarDaysIcon, MapPinIcon, CheckIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
 import { Badge, DocumentModal, useToast } from "../components";
-import { getReunion, majReunion, archiverDoc } from "../api/resources";
+import { getReunion, majReunion, archiverDoc, telechargerPvReunionPdf } from "../api/resources";
 
 const fmt = (d) => new Date(d).toLocaleDateString("fr-FR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
 const CONSEIL = [
@@ -66,6 +66,12 @@ export function ReunionDetail() {
     await majReunion(reunion.id, { presences });
     toast.success(`Présences enregistrées (${nbPresents}/${CONSEIL.length}).`);
   };
+  const telechargerPv = async () => {
+    await majReunion(reunion.id, { pv, statut: "tenue" });
+    await telechargerPvReunionPdf(reunion.id);
+    setReunion({ ...reunion, statut: "tenue" });
+    toast.success("Procès-verbal enregistré, archivé et téléchargé (PDF).");
+  };
   const sauverPv = async () => {
     await majReunion(reunion.id, { pv, statut: "tenue" });
     await archiverDoc({ categorie: "Procès-verbal (Conseil)", titre: `PV réunion du ${dateCourte}`, reference: dateCourte, date: dateCourte });
@@ -115,7 +121,12 @@ export function ReunionDetail() {
         </Carte>
       </div>
 
-      <Carte titre="Procès-verbal" action={<button className="bpn-btn bpn-btn-or !px-3 !py-1 text-[11px]" onClick={sauverPv}><CheckIcon className="h-3.5 w-3.5" /> Enregistrer &amp; archiver</button>}>
+      <Carte titre="Procès-verbal" action={
+        <div className="flex gap-2">
+          <button className="bpn-btn bpn-btn-ghost !px-3 !py-1 text-[11px]" onClick={telechargerPv}><ArrowDownTrayIcon className="h-3.5 w-3.5" /> PDF</button>
+          <button className="bpn-btn bpn-btn-or !px-3 !py-1 text-[11px]" onClick={sauverPv}><CheckIcon className="h-3.5 w-3.5" /> Enregistrer &amp; archiver</button>
+        </div>
+      }>
         <textarea rows={8} value={pv} onChange={(e) => setPv(e.target.value)} className="bpn-input" placeholder="Rédiger le procès-verbal de la réunion…" />
       </Carte>
 

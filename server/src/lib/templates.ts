@@ -1,5 +1,7 @@
 /** Gabarits HTML des documents officiels (rendus en PDF par Puppeteer). */
 
+import { montantEnLettresFCFA } from "./montantEnLettres.js";
+
 const fmtDate = (d: Date | string) =>
   new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
 
@@ -157,13 +159,88 @@ export function convocationDisciplineHtml(d: any): string {
   });
 }
 
+/** Rend un texte libre (PV, décision) en paragraphes HTML échappés. */
+const paragraphes = (texte?: string | null) =>
+  (texte ?? "")
+    .split(/\n{2,}/)
+    .map((bloc) => bloc.trim())
+    .filter(Boolean)
+    .map((bloc) => `<p style="margin:0 0 10px">${escapeHtml(bloc).replace(/\n/g, "<br>")}</p>`)
+    .join("") || '<p style="color:#7A756A">— Procès-verbal non encore rédigé —</p>';
+
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]!));
+}
+
+/** Procès-verbal de réunion du Conseil de l'Ordre (CDC §2.9 / §6). */
+export function pvReunionHtml(reunion: any): string {
+  const odj = (reunion.ordreDuJour ?? []).length
+    ? `<p style="margin:10px 0 4px"><b>Ordre du jour :</b></p>${liste(reunion.ordreDuJour)}`
+    : "";
+  return documentHtml({
+    org: "Conseil de l'Ordre",
+    title: "Procès-verbal de réunion",
+    reference: `Réunion du ${fmtDate(reunion.date)}`,
+    bodyHtml: `
+      <p>L'an ${new Date(reunion.date).getFullYear()}, le <b>${fmtDate(reunion.date)}</b>${reunion.heure ? ` à <b>${reunion.heure}</b>` : ""}, le Conseil de l'Ordre des Avocats du Barreau de Pointe-Noire s'est réuni${reunion.lieu ? ` au <b>${reunion.lieu}</b>` : ""}.</p>
+      ${odj}
+      <p style="margin:14px 0 4px"><b>Délibérations :</b></p>
+      ${paragraphes(reunion.pv)}`,
+    signataire: { role: "Le Secrétaire Général", nom: "Me KALINA-MENGA Lionel" },
+    date: reunion.date,
+  });
+}
+
+/** Procès-verbal d'assemblée générale (CDC §2.10 / §6). */
+export function pvAssembleeHtml(a: any): string {
+  const type = a.type === "AGE" ? "Assemblée Générale Extraordinaire" : "Assemblée Générale Ordinaire";
+  const decisions = (a.decisions ?? []).length
+    ? `<p style="margin:14px 0 4px"><b>Décisions adoptées :</b></p>${liste(a.decisions)}`
+    : "";
+  const quorum = a.quorumPresent != null ? `<div class="row"><span class="l">Quorum présent</span><span>${a.quorumPresent}</span></div>` : "";
+  return documentHtml({
+    org: "Conseil de l'Ordre",
+    title: "Procès-verbal d'Assemblée Générale",
+    reference: `${a.type} du ${fmtDate(a.date)}`,
+    bodyHtml: `
+      <p>L'an ${new Date(a.date).getFullYear()}, le <b>${fmtDate(a.date)}</b>, les membres du Barreau de Pointe-Noire se sont réunis en <b>${type}</b>${a.lieu ? ` au <b>${a.lieu}</b>` : ""}.</p>
+      ${quorum}
+      <p style="margin:14px 0 4px"><b>Délibérations :</b></p>
+      ${paragraphes(a.pv)}
+      ${decisions}`,
+    signataire: { role: "Le Bâtonnier", nom: "Me BIKINDOU Audrey Séverin" },
+    date: a.date,
+  });
+}
+
+/** Décision disciplinaire (CDC §2.11 / §6 — PDF sécurisé). */
+export function decisionDisciplineHtml(d: any): string {
+  const qui = d.avocatNom === "Confidentiel" ? "l'avocat concerné" : `Me ${d.avocatNom}`;
+  const sanction = d.sanction
+    ? `<div class="montant"><b>${escapeHtml(d.sanction)}</b><i>Sanction prononcée</i></div>`
+    : "";
+  return documentHtml({
+    org: "Conseil de discipline",
+    title: "Décision disciplinaire",
+    reference: `Dossier N° ${d.reference}`,
+    bodyHtml: `
+      <p>Le Conseil de discipline de l'Ordre des Avocats du Barreau de Pointe-Noire, statuant sur le dossier <b>N° ${d.reference}</b> concernant <b>${qui}</b>${d.dateAudience ? `, à la suite de l'audience du <b>${fmtDate(d.dateAudience)}</b>` : ""},</p>
+      <p style="margin:10px 0 4px"><b>Objet :</b> ${escapeHtml(d.objet ?? "—")}.</p>
+      <p style="margin:14px 0 4px"><b>Décision :</b></p>
+      ${paragraphes(d.decision)}
+      ${sanction}`,
+    signataire: { role: "Le Bâtonnier, Président du Conseil de discipline", nom: "Me BIKINDOU Audrey Séverin" },
+    date: new Date(),
+  });
+}
+
 export function recuHtml(recu: any, membre: { nom: string }): string {
   return documentHtml({
     org: "Trésorerie Générale",
     title: `Reçu N° ${recu.numero}`,
     bodyHtml: `
       <div class="row"><span class="l">Reçu de Me</span><span><b>${membre.nom}</b></span></div>
-      <div class="montant"><b>${fmtFCFA(recu.montant)}</b></div>
+      <div class="montant"><b>${fmtFCFA(recu.montant)}</b><i>Arrêté à la somme de ${montantEnLettresFCFA(recu.montant)}.</i></div>
       <div class="row"><span class="l">Pour</span><span>Cotisation ordinale ${recu.annee}</span></div>
       <div class="row"><span class="l">Mode de paiement</span><span>${recu.mode ?? "—"}</span></div>`,
     signataire: { role: "La Trésorière", nom: "Me ONDZE BOYA" },

@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeftIcon, ShieldExclamationIcon, CheckIcon } from "@heroicons/react/24/outline";
+import { ArrowLeftIcon, ShieldExclamationIcon, CheckIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
 import { Badge, DocumentModal, useToast } from "../components";
 import { STATUT_DOSSIER_META } from "../data/institutionnel";
-import { getDossier, majDossier, archiverDoc } from "../api/resources";
+import { getDossier, majDossier, archiverDoc, telechargerDecisionDisciplinePdf } from "../api/resources";
 
 const STATUTS = ["ouvert", "instruction", "audience", "decision", "classe"];
 
@@ -42,6 +42,16 @@ export function DossierDetail() {
       });
       setEnregistre(true);
       toast.success("Dossier mis à jour.");
+    } catch (e) {
+      toast.error(e.message);
+    }
+  };
+
+  const telechargerDecision = async () => {
+    try {
+      await enregistrer();
+      await telechargerDecisionDisciplinePdf(dossier.id);
+      toast.success("Décision générée, archivée et téléchargée (PDF).");
     } catch (e) {
       toast.error(e.message);
     }
@@ -98,6 +108,9 @@ export function DossierDetail() {
         </div>
         <div className="flex items-center justify-end gap-3 border-t border-grisM px-4 py-3">
           {enregistre && <span className="flex items-center gap-1 text-sm text-vert"><CheckIcon className="h-4 w-4" /> Enregistré</span>}
+          <button className="bpn-btn bpn-btn-ghost" onClick={telechargerDecision} disabled={!form.decision} title={form.decision ? "" : "Renseigner la décision d'abord"}>
+            <ArrowDownTrayIcon className="h-4 w-4" /> Décision (PDF)
+          </button>
           <button className="bpn-btn bpn-btn-primary" onClick={enregistrer}>Enregistrer le dossier</button>
         </div>
       </div>

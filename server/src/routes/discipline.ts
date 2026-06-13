@@ -3,9 +3,9 @@ import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole, type AuthRequest } from "../middleware/auth.js";
-import { prochaineReferenceDossier } from "../lib/business.js";
+import { prochaineReferenceDossier, archiver } from "../lib/business.js";
 import { htmlVersPdf } from "../lib/pdf.js";
-import { convocationDisciplineHtml } from "../lib/templates.js";
+import { convocationDisciplineHtml, decisionDisciplineHtml } from "../lib/templates.js";
 
 export const disciplineRouter = Router();
 // Accès restreint SG / Bâtonnier / Admin, journalisé (RG-13).
@@ -103,6 +103,21 @@ disciplineRouter.get(
     const pdf = await htmlVersPdf(convocationDisciplineHtml(d));
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="Convocation-disciplinaire-${d.reference}.pdf"`);
+    res.end(pdf);
+  })
+);
+
+/** GET /discipline/:id/decision/pdf — décision disciplinaire (PDF sécurisé), journalisée + archivée. */
+disciplineRouter.get(
+  "/:id/decision/pdf",
+  asyncH(async (req: AuthRequest, res) => {
+    const d = await prisma.dossierDisciplinaire.findUnique({ where: { id: Number(req.params.id) } });
+    if (!d) throw new HttpError(404, "Dossier introuvable");
+    await journaliser(`Génération décision — dossier ${d.reference}`, req.user!.id);
+    await archiver({ categorie: "Décision disciplinaire", titre: `Décision — dossier ${d.reference}`, reference: d.reference, date: new Date() });
+    const pdf = await htmlVersPdf(decisionDisciplineHtml(d));
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="Decision-disciplinaire-${d.reference}.pdf"`);
     res.end(pdf);
   })
 );

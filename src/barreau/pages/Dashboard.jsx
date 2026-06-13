@@ -4,6 +4,15 @@ import { StatCard } from "../components";
 import { formatFCFA, ratioPct } from "../utils/format";
 import { EXERCICES, prochainesEcheances, journalActivite } from "../data/dashboard-data";
 import { api } from "../api/client";
+import { getJournalAudit } from "../api/resources";
+
+/** Affichage court d'un horodatage ISO ; laisse passer les libellés statiques. */
+function formatQuand(v) {
+  if (!v) return "";
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return v;
+  return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+}
 
 /** Sélecteur d'exercice (FR-DB-08). */
 function SelecteurExercice({ valeur, onChange }) {
@@ -37,6 +46,7 @@ export function Dashboard() {
   const [exercice, setExercice] = useState(2026);
   const [data, setData] = useState(null);
   const [erreur, setErreur] = useState(null);
+  const [journal, setJournal] = useState(null);
 
   useEffect(() => {
     let actif = true;
@@ -49,6 +59,17 @@ export function Dashboard() {
       actif = false;
     };
   }, [exercice]);
+
+  // Journal d'audit réel (FR-DB-10 / RG-16) — repli sur l'exemple si vide.
+  useEffect(() => {
+    let actif = true;
+    getJournalAudit(12)
+      .then((j) => actif && setJournal(j))
+      .catch(() => actif && setJournal([]));
+    return () => {
+      actif = false;
+    };
+  }, []);
 
   const membres = data?.membres;
   const finances = data?.finances;
@@ -101,11 +122,11 @@ export function Dashboard() {
         <div className="bpn-card">
           <div className="bpn-card-header"><span className="bpn-card-heading">Journal d'activité</span></div>
           <ul className="divide-y divide-grisL">
-            {journalActivite.map((j) => (
-              <li key={j.action} className="px-4 py-3">
-                <div className="text-sm text-encre">{j.action}</div>
+            {(journal && journal.length ? journal : journalActivite).map((j, i) => (
+              <li key={j.id ?? `${j.action}-${i}`} className="px-4 py-3">
+                <div className="text-sm text-encre">{j.action}{j.cible ? ` ${j.cible}` : ""}</div>
                 <div className="mt-0.5 flex items-center gap-2 text-[11px] text-gris">
-                  <span className="font-mono">{j.quand}</span><span>·</span><span>{j.acteur}</span>
+                  <span className="font-mono">{formatQuand(j.quand)}</span><span>·</span><span>{j.acteur}</span>
                 </div>
               </li>
             ))}

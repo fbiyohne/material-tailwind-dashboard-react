@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeftIcon, PlusIcon, CheckIcon } from "@heroicons/react/24/outline";
+import { ArrowLeftIcon, PlusIcon, CheckIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
 import { Badge, DocumentModal, useToast } from "../components";
-import { getAssemblee, majAssemblee, getCorpsElectoral, archiverDoc } from "../api/resources";
+import { getAssemblee, majAssemblee, getCorpsElectoral, archiverDoc, telechargerPvAgPdf } from "../api/resources";
 
 const TYPE_LABEL = { AGO: "Assemblée Générale Ordinaire", AGE: "Assemblée Générale Extraordinaire" };
 const fmt = (d) => new Date(d).toLocaleDateString("fr-FR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
@@ -67,6 +67,11 @@ export function AssembleeDetail() {
     await archiverDoc({ categorie: "Procès-verbal (AG)", titre: `PV ${assemblee.type} du ${dateCourte}`, reference: dateCourte, date: dateCourte });
     toast.success("Procès-verbal enregistré et archivé.");
   };
+  const telechargerPv = async () => {
+    await majAssemblee(assemblee.id, { pv, statut: "tenue" });
+    await telechargerPvAgPdf(assemblee.id);
+    toast.success("Procès-verbal enregistré, archivé et téléchargé (PDF).");
+  };
 
   return (
     <div className="space-y-5">
@@ -121,7 +126,12 @@ export function AssembleeDetail() {
         )}
       </Carte>
 
-      <Carte titre="Procès-verbal" action={<button className="bpn-btn bpn-btn-or !px-3 !py-1 text-[11px]" onClick={sauverPv}><CheckIcon className="h-3.5 w-3.5" /> Enregistrer &amp; archiver</button>}>
+      <Carte titre="Procès-verbal" action={
+        <div className="flex gap-2">
+          <button className="bpn-btn bpn-btn-ghost !px-3 !py-1 text-[11px]" onClick={telechargerPv}><ArrowDownTrayIcon className="h-3.5 w-3.5" /> PDF</button>
+          <button className="bpn-btn bpn-btn-or !px-3 !py-1 text-[11px]" onClick={sauverPv}><CheckIcon className="h-3.5 w-3.5" /> Enregistrer &amp; archiver</button>
+        </div>
+      }>
         <textarea rows={7} value={pv} onChange={(e) => setPv(e.target.value)} className="bpn-input" placeholder="Rédiger le procès-verbal de l'assemblée…" />
       </Carte>
 

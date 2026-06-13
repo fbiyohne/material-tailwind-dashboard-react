@@ -40,3 +40,24 @@ dashboardRouter.get(
     });
   })
 );
+
+/** GET /dashboard/journal — dernières actions effectuées (journal d'audit, FR-DB-10). */
+dashboardRouter.get(
+  "/journal",
+  asyncH(async (req, res) => {
+    const take = Math.min(50, Math.max(1, Number(req.query.limit ?? 12)));
+    const entries = await prisma.journalAudit.findMany({ orderBy: { id: "desc" }, take });
+    const userIds = [...new Set(entries.map((e) => e.userId).filter((v): v is number => v != null))];
+    const users = userIds.length ? await prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, nom: true } }) : [];
+    const nomParId = new Map(users.map((u) => [u.id, u.nom]));
+    res.json(
+      entries.map((e) => ({
+        id: e.id,
+        action: e.action,
+        cible: e.cible,
+        acteur: e.userNom ?? (e.userId != null ? nomParId.get(e.userId) ?? "Utilisateur" : "Système"),
+        quand: e.quand,
+      }))
+    );
+  })
+);

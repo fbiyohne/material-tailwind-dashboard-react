@@ -2,7 +2,7 @@ import { useState } from "react";
 import { SparklesIcon, DocumentTextIcon } from "@heroicons/react/24/outline";
 import { Badge, Modal } from "../components";
 import { calendrierLettre, genererBrouillonArticle } from "../data/publications";
-import { archiverDoc } from "../api/resources";
+import { archiverDoc, genererArticleLettre } from "../api/resources";
 
 const STATUT_META = {
   publie: { label: "Publié", ton: "vert" },
@@ -12,16 +12,29 @@ const STATUT_META = {
 
 export function LettreBatonnier() {
   const [articlesLettre, setArticlesLettre] = useState({});
-  const [apercu, setApercu] = useState(null); // { mois, texte }
+  const [apercu, setApercu] = useState(null); // { mois, texte, simule }
+  const [chargement, setChargement] = useState(null); // mois en cours de génération
 
-  const ouvrirGeneration = (mois, theme) => {
-    let texte = articlesLettre[mois];
-    if (!texte) {
-      texte = genererBrouillonArticle(mois, theme);
-      setArticlesLettre((prev) => ({ ...prev, [mois]: texte }));
-      archiverDoc({ categorie: "Lettre du Bâtonnier", titre: `Projet d'article — ${mois}`, reference: mois, date: new Date().toISOString().slice(0, 10) }).catch(() => {});
+  const ouvrirGeneration = async (mois, theme) => {
+    const existant = articlesLettre[mois];
+    if (existant) {
+      setApercu({ mois, ...existant });
+      return;
     }
-    setApercu({ mois, texte });
+    setChargement(mois);
+    let resultat;
+    try {
+      // Génération serveur (IA Claude si configurée, sinon gabarit côté serveur).
+      const r = await genererArticleLettre(mois, theme);
+      resultat = { texte: r.texte, simule: r.simule };
+    } catch {
+      // Repli ultime côté client si l'API est injoignable.
+      resultat = { texte: genererBrouillonArticle(mois, theme), simule: true };
+    }
+    setArticlesLettre((prev) => ({ ...prev, [mois]: resultat }));
+    archiverDoc({ categorie: "Lettre du Bâtonnier", titre: `Projet d'article — ${mois}`, reference: mois, date: new Date().toISOString().slice(0, 10) }).catch(() => {});
+    setChargement(null);
+    setApercu({ mois, ...resultat });
   };
 
   return (
@@ -52,8 +65,11 @@ export function LettreBatonnier() {
               <button
                 className="bpn-btn bpn-btn-ghost mt-3 w-full justify-center !py-1.5 text-[11px]"
                 onClick={() => ouvrirGeneration(c.mois, c.theme)}
+                disabled={chargement === c.mois}
               >
-                {genere ? (
+                {chargement === c.mois ? (
+                  <><SparklesIcon className="h-4 w-4 animate-pulse" /> Génération…</>
+                ) : genere ? (
                   <><DocumentTextIcon className="h-4 w-4" /> Voir le projet</>
                 ) : (
                   <><SparklesIcon className="h-4 w-4" /> Générer un projet</>
@@ -71,8 +87,9 @@ export function LettreBatonnier() {
       >
         <div className="mb-3 flex items-center gap-2 rounded border-l-[3px] border-or bg-or-L px-3 py-2 text-xs text-gris">
           <SparklesIcon className="h-4 w-4 shrink-0 text-or" />
-          Brouillon généré automatiquement (gabarit). En V2, rédigé par l'assistance IA puis
-          relu par le Bâtonnier.
+          {apercu?.simule
+            ? "Brouillon généré à partir d'un gabarit (IA non configurée). À relire par le Bâtonnier."
+            : "Projet rédigé par l'assistance IA (Claude). À relire et valider par le Bâtonnier."}
         </div>
         <pre className="whitespace-pre-wrap font-sans text-sm leading-7 text-encre">
           {apercu?.texte}

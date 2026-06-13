@@ -206,6 +206,21 @@ model JournalDiscipline {
   userId Int?
 }
 
+/// Journal d'audit transverse — historise les actions importantes (RG-16 / NFR-09).
+model JournalAudit {
+  id      Int      @id @default(autoincrement())
+  action  String
+  cible   String?
+  methode String
+  chemin  String
+  statut  Int
+  userId  Int?
+  userNom String?
+  quand   DateTime @default(now())
+
+  @@index([quand])
+}
+
 model Parametres {
   id   Int  @id @default(1)
   data Json

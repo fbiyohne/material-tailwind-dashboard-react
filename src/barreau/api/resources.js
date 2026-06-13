@@ -7,6 +7,9 @@ export const telechargerConvocationReunionPdf = (id) => telechargerPdf(`/reunion
 export const telechargerFeuillePdf = (id) => telechargerPdf(`/reunions/${id}/feuille-presence/pdf`, `Feuille-presence.pdf`);
 export const telechargerConvocationAgPdf = (id) => telechargerPdf(`/assemblees/${id}/convocation/pdf`, `Convocation-AG.pdf`);
 export const telechargerConvocationDisciplinePdf = (id) => telechargerPdf(`/discipline/${id}/convocation/pdf`, `Convocation-disciplinaire.pdf`);
+export const telechargerPvReunionPdf = (id) => telechargerPdf(`/reunions/${id}/pv/pdf`, `PV-reunion.pdf`);
+export const telechargerPvAgPdf = (id) => telechargerPdf(`/assemblees/${id}/pv/pdf`, `PV-assemblee.pdf`);
+export const telechargerDecisionDisciplinePdf = (id) => telechargerPdf(`/discipline/${id}/decision/pdf`, `Decision-disciplinaire.pdf`);
 
 /**
  * Couche d'accès aux ressources de l'API. Normalise les formats du backend
@@ -82,6 +85,7 @@ export const genererQuitus = (membreId, annee) => api("/quitus", { method: "POST
 // ─── Droits / Corps électoral / Dashboard ────────────────────────────────
 export const getDroits = (annee) => api(`/droits?annee=${annee}`);
 export const getCorpsElectoral = (annee) => api(`/corps-electoral?annee=${annee}`);
+export const getJournalAudit = (limit = 12) => api(`/dashboard/journal?limit=${limit}`);
 
 // ─── Réunions ─────────────────────────────────────────────────────────────
 export const listerReunions = () => api("/reunions");
@@ -118,6 +122,8 @@ export const creerPublication = (data) => api("/publications", { method: "POST",
 export const majPublication = (id, patch) => api(`/publications/${id}`, { method: "PATCH", body: patch }).then(normPub);
 export const changerStatutPublication = (id, statut) =>
   api(`/publications/${id}/statut`, { method: "POST", body: { statut: statut.toUpperCase() } }).then(normPub);
+export const genererArticleLettre = (mois, theme) =>
+  api("/publications/lettre/generer", { method: "POST", body: { mois, theme } });
 
 // ─── Archives / Paramètres ───────────────────────────────────────────────
 export const listerArchives = (params = {}) => api(`/archives?${new URLSearchParams(params).toString()}`);

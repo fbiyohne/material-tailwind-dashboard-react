@@ -4,7 +4,8 @@ import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { htmlVersPdf } from "../lib/pdf.js";
-import { convocationReunionHtml, feuillePresenceHtml } from "../lib/templates.js";
+import { archiver } from "../lib/business.js";
+import { convocationReunionHtml, feuillePresenceHtml, pvReunionHtml } from "../lib/templates.js";
 
 export const reunionsRouter = Router();
 reunionsRouter.use(requireAuth);
@@ -25,6 +26,15 @@ reunionsRouter.get("/:id/feuille-presence/pdf", asyncH(async (req, res) => {
   const r = await prisma.reunion.findUnique({ where: { id: Number(req.params.id) } });
   if (!r) throw new HttpError(404, "Réunion introuvable");
   envoyerPdf(res, await htmlVersPdf(feuillePresenceHtml(r)), `Feuille-presence-${String(r.date).slice(0, 10)}.pdf`);
+}));
+
+/** GET /reunions/:id/pv/pdf — procès-verbal (PDF) + archivage auto (RG-14). */
+reunionsRouter.get("/:id/pv/pdf", asyncH(async (req, res) => {
+  const r = await prisma.reunion.findUnique({ where: { id: Number(req.params.id) } });
+  if (!r) throw new HttpError(404, "Réunion introuvable");
+  const jour = String(r.date).slice(0, 10);
+  await archiver({ categorie: "Procès-verbal", titre: `PV réunion du ${jour}`, reference: `REU-${jour}`, date: new Date() });
+  envoyerPdf(res, await htmlVersPdf(pvReunionHtml(r)), `PV-reunion-${jour}.pdf`);
 }));
 
 reunionsRouter.get("/", asyncH(async (_req, res) => {

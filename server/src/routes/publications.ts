@@ -3,9 +3,22 @@ import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { genererArticleLettre, iaDisponible } from "../lib/ia.js";
 
 export const publicationsRouter = Router();
 publicationsRouter.use(requireAuth);
+
+/** POST /publications/lettre/generer — projet d'article IA (FR-BAT-01 / CDC §2.15). */
+const lettreSchema = z.object({ mois: z.string().min(1), theme: z.string().min(1) });
+publicationsRouter.post(
+  "/lettre/generer",
+  requireRole("SECRETAIRE_GENERAL", "BATONNIER"),
+  asyncH(async (req, res) => {
+    const { mois, theme } = lettreSchema.parse(req.body);
+    const resultat = await genererArticleLettre(mois, theme);
+    res.json({ ...resultat, iaDisponible });
+  })
+);
 
 publicationsRouter.get("/", asyncH(async (_req, res) => {
   res.json(await prisma.publication.findMany({ orderBy: { id: "desc" } }));
