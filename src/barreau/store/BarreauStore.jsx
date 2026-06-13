@@ -2,6 +2,11 @@ import { createContext, useContext, useMemo, useState, useCallback } from "react
 import PropTypes from "prop-types";
 import { membres as membresInitiaux } from "../data/membres";
 import { ligneCotisation, statutCotisation } from "../data/derivations";
+import {
+  reunionsInitiales,
+  assembleesInitiales,
+  dossiersInitiaux,
+} from "../data/institutionnel";
 
 /**
  * Store applicatif en mémoire (sera remplacé par l'API REST en V2).
@@ -39,6 +44,10 @@ export function BarreauProvider({ children }) {
   const [quitus, setQuitus] = useState(QUITUS_INITIAUX);
   const [attestations, setAttestations] = useState([]);
   const [archives, setArchives] = useState([]);
+  const [reunions, setReunions] = useState(reunionsInitiales);
+  const [assemblees, setAssemblees] = useState(assembleesInitiales);
+  const [dossiers, setDossiers] = useState(dossiersInitiaux);
+  const [journalDiscipline, setJournalDiscipline] = useState([]);
 
   const prochainNumeroRecu = formatNumeroRecu(DERNIER_RECU + recus.length + 1);
 
@@ -203,6 +212,67 @@ export function BarreauProvider({ children }) {
     [membres, prochainNumeroAttestation, archiver]
   );
 
+  // ─── Réunions du Conseil (FR-REU-*) ──────────────────────────────────────
+  const creerReunion = useCallback((data) => {
+    setReunions((prev) => [
+      { id: Date.now(), statut: "planifiee", pv: null, ...data },
+      ...prev,
+    ]);
+  }, []);
+
+  const enregistrerPv = useCallback((reunionId, pv) => {
+    setReunions((prev) =>
+      prev.map((r) => (r.id === reunionId ? { ...r, pv, statut: "tenue" } : r))
+    );
+  }, []);
+
+  // ─── Assemblées générales (FR-AG-*) ──────────────────────────────────────
+  const creerAssemblee = useCallback((data) => {
+    setAssemblees((prev) => [
+      { id: Date.now(), quorumPresent: 0, statut: "convoquee", decisions: [], ...data },
+      ...prev,
+    ]);
+  }, []);
+
+  // ─── Conseil de discipline (FR-DIS-* / BR-06 / RG-12-13) ─────────────────
+  /** Référence unique non réutilisable, format AAAA-NN (BR-06 / RG-12). */
+  const prochaineReferenceDossier = useCallback(() => {
+    const annee = new Date().getFullYear();
+    const nums = dossiers
+      .filter((d) => d.reference.startsWith(`${annee}-`))
+      .map((d) => parseInt(d.reference.split("-")[1], 10));
+    const suivant = (nums.length ? Math.max(...nums) : 0) + 1;
+    return `${annee}-${String(suivant).padStart(2, "0")}`;
+  }, [dossiers]);
+
+  const ouvrirDossier = useCallback(
+    ({ avocatNom, objet, dateSaisine }) => {
+      const dossier = {
+        id: Date.now(),
+        reference: prochaineReferenceDossier(),
+        avocatNom,
+        objet,
+        dateSaisine,
+        dateConvocation: null,
+        dateAudience: null,
+        decision: "",
+        sanction: "",
+        statut: "ouvert",
+      };
+      setDossiers((prev) => [dossier, ...prev]);
+      return dossier;
+    },
+    [prochaineReferenceDossier]
+  );
+
+  /** Journalise toute consultation de données disciplinaires (RG-13). */
+  const journaliserDiscipline = useCallback((action) => {
+    setJournalDiscipline((prev) => [
+      { action, quand: new Date().toISOString() },
+      ...prev,
+    ]);
+  }, []);
+
   const value = useMemo(
     () => ({
       membres,
@@ -210,6 +280,17 @@ export function BarreauProvider({ children }) {
       quitus,
       attestations,
       archives,
+      reunions,
+      assemblees,
+      dossiers,
+      journalDiscipline,
+      archiver,
+      creerReunion,
+      enregistrerPv,
+      creerAssemblee,
+      prochaineReferenceDossier,
+      ouvrirDossier,
+      journaliserDiscipline,
       prochainNumeroRecu,
       cotisationsExercice,
       enregistrerPaiement,
@@ -228,6 +309,17 @@ export function BarreauProvider({ children }) {
       quitus,
       attestations,
       archives,
+      reunions,
+      assemblees,
+      dossiers,
+      journalDiscipline,
+      archiver,
+      creerReunion,
+      enregistrerPv,
+      creerAssemblee,
+      prochaineReferenceDossier,
+      ouvrirDossier,
+      journaliserDiscipline,
       prochainNumeroRecu,
       cotisationsExercice,
       enregistrerPaiement,

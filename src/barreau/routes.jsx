@@ -23,6 +23,9 @@ import Quitus from "./pages/Quitus";
 import Avocats from "./pages/Avocats";
 import Stagiaires from "./pages/Stagiaires";
 import CorpsElectoral from "./pages/CorpsElectoral";
+import Reunions from "./pages/Reunions";
+import Assemblees from "./pages/Assemblees";
+import Discipline from "./pages/Discipline";
 
 /**
  * Arborescence des 15 modules fonctionnels du Secrétariat Général,
@@ -59,9 +62,9 @@ export const navSections = [
   {
     label: "Institutionnel",
     items: [
-      { name: "Réunions", path: "/reunions", icon: CalendarDaysIcon },
-      { name: "Assemblées générales", path: "/assemblees", icon: BuildingLibraryIcon },
-      { name: "Discipline", path: "/discipline", icon: ScaleIcon, badge: 2 },
+      { name: "Réunions", path: "/reunions", icon: CalendarDaysIcon, element: <Reunions /> },
+      { name: "Assemblées générales", path: "/assemblees", icon: BuildingLibraryIcon, element: <Assemblees /> },
+      { name: "Discipline", path: "/discipline", icon: ScaleIcon, badge: 2, element: <Discipline /> },
     ],
   },
   {
