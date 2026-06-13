@@ -20,7 +20,7 @@ export function BarreauLayout() {
     <div className="min-h-screen bg-creme">
       <Sidebar open={menuOpen} onClose={() => setMenuOpen(false)} />
 
-      <div className="xl:ml-[260px]">
+      <div className="min-h-screen bg-white xl:ml-[260px]">
         <Topbar title={titre} onOpenMenu={() => setMenuOpen(true)} />
 
         <main className="mx-auto max-w-container px-4 py-6 md:px-8 md:py-8">

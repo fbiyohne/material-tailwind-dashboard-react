@@ -66,15 +66,8 @@ export function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {/* En-tête + sélecteur d'exercice */}
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-        <div>
-          <div className="bpn-eyebrow">Pilotage institutionnel</div>
-          <h2 className="bpn-title mt-2">Vue d'ensemble</h2>
-          <p className="mt-1 text-sm text-gris">
-            Indicateurs clés du Barreau en temps réel, filtrables par exercice.
-          </p>
-        </div>
+      {/* Sélecteur d'exercice (FR-DB-08) */}
+      <div className="flex justify-end">
         <SelecteurExercice valeur={exercice} onChange={setExercice} />
       </div>
 

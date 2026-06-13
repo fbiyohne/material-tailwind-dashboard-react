@@ -30,7 +30,7 @@ export function Sidebar({ open, onClose }) {
           <div className="mb-1 text-[8px] uppercase tracking-[0.3em] text-or">
             République du Congo
           </div>
-          <div className="font-display text-[15px] leading-tight text-white">
+          <div className="font-display text-[14px] leading-tight text-white">
             Barreau de
             <br />
             Pointe-Noire
@@ -63,7 +63,7 @@ export function Sidebar({ open, onClose }) {
                     end={item.path === "/"}
                     onClick={onClose}
                     className={({ isActive }) =>
-                      `flex items-center gap-2.5 border-l-2 px-4 py-2 text-[12px] transition-all duration-150 ${
+                      `flex items-center gap-2.5 border-l-2 px-4 py-[7px] text-[11px] transition-all duration-150 ${
                         isActive
                           ? "border-or bg-or/[0.08] text-or-2"
                           : "border-transparent text-white/45 hover:bg-white/5 hover:text-white/80"
