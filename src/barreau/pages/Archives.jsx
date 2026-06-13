@@ -1,7 +1,14 @@
 import { useMemo, useState } from "react";
 import { MagnifyingGlassIcon, DocumentArrowDownIcon } from "@heroicons/react/24/outline";
-import { Badge } from "../components";
+import { Badge, SortTh, Pagination } from "../components";
 import { useBarreau } from "../store/BarreauStore";
+import { useDataTable } from "../hooks/useDataTable";
+
+const ACCESSORS = {
+  date: (a) => a.date,
+  categorie: (a) => a.categorie.toLowerCase(),
+  titre: (a) => a.titre.toLowerCase(),
+};
 
 export function Archives() {
   const { archives } = useBarreau();
@@ -24,6 +31,10 @@ export function Archives() {
       );
     });
   }, [archives, recherche, categorie]);
+
+  const { rows, total, page, setPage, totalPages, sortKey, sortDir, toggleSort } = useDataTable(lignes, {
+    accessors: ACCESSORS, pageSize: 12, initialSort: { key: "date", dir: "desc" },
+  });
 
   return (
     <div className="space-y-5">
@@ -54,15 +65,15 @@ export function Archives() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-navy text-left text-[9px] uppercase tracking-[0.1em] text-white/90">
-                <th className="px-3 py-2.5 font-medium">Date</th>
-                <th className="px-3 py-2.5 font-medium">Catégorie</th>
-                <th className="px-3 py-2.5 font-medium">Document</th>
+                <SortTh label="Date" sortKey="date" current={sortKey} dir={sortDir} onSort={toggleSort} />
+                <SortTh label="Catégorie" sortKey="categorie" current={sortKey} dir={sortDir} onSort={toggleSort} />
+                <SortTh label="Document" sortKey="titre" current={sortKey} dir={sortDir} onSort={toggleSort} />
                 <th className="px-3 py-2.5 font-medium">Référence</th>
                 <th className="px-3 py-2.5 text-right font-medium">Action</th>
               </tr>
             </thead>
             <tbody>
-              {lignes.map((a, i) => (
+              {rows.map((a, i) => (
                 <tr key={`${a.reference}-${i}`} className="border-b border-grisL hover:bg-grisL/60">
                   <td className="px-3 py-2.5 text-xs text-gris">{a.date}</td>
                   <td className="px-3 py-2.5"><Badge ton="bleu" dot={false}>{a.categorie}</Badge></td>
@@ -75,15 +86,13 @@ export function Archives() {
                   </td>
                 </tr>
               ))}
-              {lignes.length === 0 && (
+              {rows.length === 0 && (
                 <tr><td colSpan={5} className="px-3 py-10 text-center text-sm text-gris">Aucun document archivé pour ce filtre.</td></tr>
               )}
             </tbody>
           </table>
         </div>
-        <div className="border-t border-grisM px-4 py-2.5 text-xs text-gris">
-          {lignes.length} document{lignes.length > 1 ? "s" : ""} archivé{lignes.length > 1 ? "s" : ""}
-        </div>
+        <Pagination page={page} totalPages={totalPages} total={total} onPage={setPage} libelle="documents" />
       </div>
     </div>
   );

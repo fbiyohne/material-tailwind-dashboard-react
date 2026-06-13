@@ -13,3 +13,5 @@ export { ToastProvider, useToast } from "./Toast";
 export { ConfirmProvider, useConfirm } from "./ConfirmDialog";
 export { EditMembreModal } from "./EditMembreModal";
 export { PaiementModal } from "./PaiementModal";
+export { SortTh } from "./SortTh";
+export { Pagination } from "./Pagination";

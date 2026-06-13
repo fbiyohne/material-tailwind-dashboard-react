@@ -1,10 +1,19 @@
 import { useMemo, useState } from "react";
-import { Badge, StatCard } from "../components";
+import { Badge, StatCard, SortTh, Pagination } from "../components";
 import { useBarreau } from "../store/BarreauStore";
+import { useDataTable } from "../hooks/useDataTable";
 import { ligneDroit } from "../data/droits";
 import { STATUT_META } from "../data/derivations";
 import { EXERCICES } from "../data/dashboard-data";
 import { formatFCFA } from "../utils/format";
+
+const ACCESSORS = {
+  num: (l) => l.membre.num,
+  nom: (l) => l.membre.nom.toLowerCase(),
+  paye: (l) => l.paye,
+  solde: (l) => l.solde,
+  statut: (l) => l.statut,
+};
 
 export function DroitsPlaidoirie() {
   const { membres } = useBarreau();
@@ -20,6 +29,10 @@ export function DroitsPlaidoirie() {
     );
     return { lignes, totaux };
   }, [membres, exercice]);
+
+  const { rows, total, page, setPage, totalPages, sortKey, sortDir, toggleSort } = useDataTable(lignes, {
+    accessors: ACCESSORS, pageSize: 10, initialSort: { key: "num", dir: "asc" },
+  });
 
   return (
     <div className="space-y-5">
@@ -53,16 +66,16 @@ export function DroitsPlaidoirie() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-navy text-left text-[9px] uppercase tracking-[0.1em] text-white/90">
-                <th className="px-3 py-2.5 font-medium">N°</th>
-                <th className="px-3 py-2.5 font-medium">Avocat</th>
+                <SortTh label="N°" sortKey="num" current={sortKey} dir={sortDir} onSort={toggleSort} />
+                <SortTh label="Avocat" sortKey="nom" current={sortKey} dir={sortDir} onSort={toggleSort} />
                 <th className="px-3 py-2.5 font-medium">Droit dû</th>
-                <th className="px-3 py-2.5 font-medium">Perçu</th>
-                <th className="px-3 py-2.5 font-medium">Solde</th>
-                <th className="px-3 py-2.5 font-medium">Statut</th>
+                <SortTh label="Perçu" sortKey="paye" current={sortKey} dir={sortDir} onSort={toggleSort} />
+                <SortTh label="Solde" sortKey="solde" current={sortKey} dir={sortDir} onSort={toggleSort} />
+                <SortTh label="Statut" sortKey="statut" current={sortKey} dir={sortDir} onSort={toggleSort} />
               </tr>
             </thead>
             <tbody>
-              {lignes.map((l) => {
+              {rows.map((l) => {
                 const meta = STATUT_META[l.statut];
                 return (
                   <tr key={l.membre.id} className="border-b border-grisL hover:bg-grisL/60">
@@ -82,9 +95,7 @@ export function DroitsPlaidoirie() {
             </tbody>
           </table>
         </div>
-        <div className="border-t border-grisM px-4 py-2.5 text-xs text-gris">
-          {lignes.length} avocats · exercice {exercice}
-        </div>
+        <Pagination page={page} totalPages={totalPages} total={total} onPage={setPage} libelle="avocats" />
       </div>
     </div>
   );

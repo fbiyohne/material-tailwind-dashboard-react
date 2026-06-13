@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { StatCard } from "../components";
 import { formatFCFA, ratioPct } from "../utils/format";
 import {
@@ -59,6 +60,7 @@ function ColonneFinance({ label, montant, total, accent, className = "" }) {
 }
 
 export function Dashboard() {
+  const navigate = useNavigate();
   const [exercice, setExercice] = useState(2025);
   const { membres, finances } = dashboardParExercice[exercice];
   const totalDu = finances.payees + finances.impayees;
@@ -79,24 +81,28 @@ export function Dashboard() {
           sub="au tableau"
           accent="or"
           valueAccent="navy"
+          onClick={() => navigate("/avocats")}
         />
         <StatCard
           label="À jour"
           value={membres.aJour}
           sub="avocats + stagiaires"
           accent="vert"
+          onClick={() => navigate("/cotisations?statut=ajour")}
         />
         <StatCard
           label="En retard"
           value={membres.enRetard}
           sub="relances nécessaires"
           accent="rouge"
+          onClick={() => navigate("/cotisations?statut=retard")}
         />
         <StatCard
           label="Stagiaires"
           value={membres.stagiaires}
           sub="en cours"
           accent="navy"
+          onClick={() => navigate("/stagiaires")}
         />
       </div>
 
