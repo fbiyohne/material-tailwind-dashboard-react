@@ -239,12 +239,24 @@ export function BarreauProvider({ children }) {
     );
   }, []);
 
+  const mettreAJourReunion = useCallback((id, patch) => {
+    setReunions((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+  }, []);
+
   // ─── Assemblées générales (FR-AG-*) ──────────────────────────────────────
   const creerAssemblee = useCallback((data) => {
     setAssemblees((prev) => [
       { id: Date.now(), quorumPresent: 0, statut: "convoquee", decisions: [], ...data },
       ...prev,
     ]);
+  }, []);
+
+  const mettreAJourAssemblee = useCallback((id, patch) => {
+    setAssemblees((prev) => prev.map((a) => (a.id === id ? { ...a, ...patch } : a)));
+  }, []);
+
+  const mettreAJourPublication = useCallback((id, patch) => {
+    setPublications((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
   }, []);
 
   // ─── Conseil de discipline (FR-DIS-* / BR-06 / RG-12-13) ─────────────────
@@ -372,7 +384,10 @@ export function BarreauProvider({ children }) {
       archiver,
       creerReunion,
       enregistrerPv,
+      mettreAJourReunion,
       creerAssemblee,
+      mettreAJourAssemblee,
+      mettreAJourPublication,
       prochaineReferenceDossier,
       ouvrirDossier,
       mettreAJourDossier,
@@ -410,7 +425,10 @@ export function BarreauProvider({ children }) {
       archiver,
       creerReunion,
       enregistrerPv,
+      mettreAJourReunion,
       creerAssemblee,
+      mettreAJourAssemblee,
+      mettreAJourPublication,
       prochaineReferenceDossier,
       ouvrirDossier,
       mettreAJourDossier,

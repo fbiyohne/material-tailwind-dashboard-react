@@ -33,6 +33,9 @@ import Publications from "./pages/Publications";
 import LettreBatonnier from "./pages/LettreBatonnier";
 import AvocatDetail from "./pages/AvocatDetail";
 import DossierDetail from "./pages/DossierDetail";
+import ReunionDetail from "./pages/ReunionDetail";
+import AssembleeDetail from "./pages/AssembleeDetail";
+import PublicationDetail from "./pages/PublicationDetail";
 
 /**
  * Arborescence des 15 modules fonctionnels du Secrétariat Général,
@@ -95,6 +98,9 @@ export const allModules = navSections.flatMap((s) => s.items);
 export const detailRoutes = [
   { path: "/avocats/:id", element: <AvocatDetail />, parent: "/avocats" },
   { path: "/discipline/:id", element: <DossierDetail />, parent: "/discipline" },
+  { path: "/reunions/:id", element: <ReunionDetail />, parent: "/reunions" },
+  { path: "/assemblees/:id", element: <AssembleeDetail />, parent: "/assemblees" },
+  { path: "/publications/:id", element: <PublicationDetail />, parent: "/publications" },
 ];
 
 export default navSections;

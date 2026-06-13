@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { PlusIcon } from "@heroicons/react/24/outline";
 import { Badge, Modal } from "../components";
 import { useBarreau } from "../store/BarreauStore";
@@ -35,6 +36,7 @@ function NouvellePublicationModal({ open, onClose }) {
 
 export function Publications() {
   const { publications, changerStatutPublication } = useBarreau();
+  const navigate = useNavigate();
   const [creer, setCreer] = useState(false);
 
   return (
@@ -80,6 +82,9 @@ export function Publications() {
                       Publier
                     </button>
                   )}
+                  <button className="bpn-btn bpn-btn-ghost !py-1.5 text-[11px]" onClick={() => navigate(`/publications/${p.id}`)}>
+                    Ouvrir
+                  </button>
                 </div>
               </div>
             </div>
