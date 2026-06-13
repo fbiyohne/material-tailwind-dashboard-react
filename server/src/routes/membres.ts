@@ -9,29 +9,37 @@ import { prochainNumInscription, prochainNumeroAttestation, archiver } from "../
 export const membresRouter = Router();
 membresRouter.use(requireAuth);
 
-/** GET /membres — liste filtrée et paginée (FR-AV-02/03). */
+const TRI_AUTORISE = new Set(["num", "nom", "cabinet", "statut"]);
+
+/** GET /membres — liste filtrée, triée et paginée côté serveur (FR-AV-02/03). */
 membresRouter.get(
   "/",
   asyncH(async (req, res) => {
     const q = String(req.query.q ?? "").trim();
     const qualite = req.query.qualite as string | undefined;
+    const qualiteNot = req.query.qualiteNot as string | undefined;
     const statut = req.query.statut as string | undefined;
     const page = Math.max(1, Number(req.query.page ?? 1));
-    const pageSize = Math.min(100, Number(req.query.pageSize ?? 20));
+    const pageSize = Math.min(200, Math.max(1, Number(req.query.pageSize ?? 20)));
+    const sort = String(req.query.sort ?? "num");
+    const order = req.query.order === "desc" ? "desc" : "asc";
 
     const where: Prisma.MembreWhereInput = {
       ...(qualite ? { qualite: qualite as any } : {}),
+      ...(qualiteNot ? { qualite: { not: qualiteNot as any } } : {}),
       ...(statut ? { statut: statut as any } : {}),
       ...(q
         ? { OR: [{ nom: { contains: q, mode: "insensitive" } }, { cabinet: { contains: q, mode: "insensitive" } }] }
         : {}),
     };
 
+    const orderBy = { [TRI_AUTORISE.has(sort) ? sort : "num"]: order } as Prisma.MembreOrderByWithRelationInput;
+
     const [items, total] = await Promise.all([
-      prisma.membre.findMany({ where, orderBy: { num: "asc" }, skip: (page - 1) * pageSize, take: pageSize }),
+      prisma.membre.findMany({ where, orderBy, skip: (page - 1) * pageSize, take: pageSize }),
       prisma.membre.count({ where }),
     ]);
-    res.json({ items, total, page, pageSize });
+    res.json({ items, total, page, pageSize, totalPages: Math.max(1, Math.ceil(total / pageSize)) });
   })
 );
 

@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { Badge, StatutBadge, AttestationModal, SortTh, Pagination, useToast } from "../components";
-import { useDataTable } from "../hooks/useDataTable";
-import { statutCotisation, STATUT_META, QUALITE_LABEL } from "../data/derivations";
-import { listerMembres } from "../api/resources";
+import { STATUT_META, QUALITE_LABEL } from "../data/derivations";
+import { listerMembres, getCotisations } from "../api/resources";
 
 const EXERCICE_COURANT = 2026;
+const PAGE_SIZE = 10;
 const FILTRES = [
   { value: "tous", label: "Tous les statuts" },
   { value: "inscrit", label: "Inscrit" },
@@ -16,58 +16,50 @@ const FILTRES = [
   { value: "honoraire", label: "Honoraire" },
 ];
 
-const ACCESSORS = {
-  num: (m) => m.num,
-  nom: (m) => m.nom.toLowerCase(),
-  cabinet: (m) => m.cabinet.toLowerCase(),
-  statut: (m) => m.statut,
-};
-
 export function Avocats() {
   const navigate = useNavigate();
   const toast = useToast();
   const [params, setParams] = useSearchParams();
   const [attestation, setAttestation] = useState(null);
-  const [membres, setMembres] = useState([]);
+  const [data, setData] = useState({ items: [], total: 0, totalPages: 1, page: 1 });
   const [statutCot, setStatutCot] = useState({});
-
-  useEffect(() => {
-    let actif = true;
-    listerMembres()
-      .then((d) => actif && setMembres(d.items))
-      .catch((e) => actif && toast.error(e.message));
-    // Statut de cotisation de l'exercice courant (jointure côté client)
-    import("../api/resources").then(({ getCotisations }) =>
-      getCotisations(EXERCICE_COURANT)
-        .then((lignes) => actif && setStatutCot(Object.fromEntries(lignes.map((l) => [l.membre.id, l.statut]))))
-        .catch(() => {})
-    );
-    return () => {
-      actif = false;
-    };
-  }, [toast]);
+  const [page, setPage] = useState(1);
+  const [sort, setSort] = useState({ key: "num", dir: "asc" });
 
   const filtre = params.get("statut") || "tous";
   const recherche = params.get("q") || "";
-  const setParam = (k, v, vide) =>
+  const setParam = (k, v, vide) => {
     setParams((prev) => {
       const p = new URLSearchParams(prev);
       if (v && v !== vide) p.set(k, v);
       else p.delete(k);
       return p;
     }, { replace: true });
+    setPage(1);
+  };
+  const toggleSort = (key) => {
+    setSort((s) => (s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }));
+    setPage(1);
+  };
 
-  const avocats = useMemo(() => {
-    const q = recherche.trim().toLowerCase();
-    return membres
-      .filter((m) => m.qualite !== "stagiaire")
-      .filter((m) => (filtre === "tous" ? true : m.statut === filtre))
-      .filter((m) => (!q ? true : m.nom.toLowerCase().includes(q) || m.cabinet.toLowerCase().includes(q) || String(m.num).includes(q)));
-  }, [membres, recherche, filtre]);
+  // Liste paginée/triée côté serveur
+  useEffect(() => {
+    listerMembres({
+      qualiteNot: "STAGIAIRE",
+      ...(recherche ? { q: recherche } : {}),
+      ...(filtre !== "tous" ? { statut: filtre.toUpperCase() } : {}),
+      page, pageSize: PAGE_SIZE, sort: sort.key, order: sort.dir,
+    })
+      .then(setData)
+      .catch((e) => toast.error(e.message));
+  }, [recherche, filtre, page, sort, toast]);
 
-  const { rows, total, page, setPage, totalPages, sortKey, sortDir, toggleSort } = useDataTable(avocats, {
-    accessors: ACCESSORS, pageSize: 10, initialSort: { key: "num", dir: "asc" },
-  });
+  // Statut de cotisation de l'exercice courant (jointure côté client)
+  useEffect(() => {
+    getCotisations(EXERCICE_COURANT)
+      .then((lignes) => setStatutCot(Object.fromEntries(lignes.map((l) => [l.membre.id, l.statut]))))
+      .catch(() => {});
+  }, [data]);
 
   return (
     <div className="space-y-5">
@@ -92,17 +84,17 @@ export function Avocats() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-navy text-left text-[9px] uppercase tracking-[0.1em] text-white/90">
-                <SortTh label="N°" sortKey="num" current={sortKey} dir={sortDir} onSort={toggleSort} />
-                <SortTh label="Avocat" sortKey="nom" current={sortKey} dir={sortDir} onSort={toggleSort} />
-                <SortTh label="Cabinet" sortKey="cabinet" current={sortKey} dir={sortDir} onSort={toggleSort} />
+                <SortTh label="N°" sortKey="num" current={sort.key} dir={sort.dir} onSort={toggleSort} />
+                <SortTh label="Avocat" sortKey="nom" current={sort.key} dir={sort.dir} onSort={toggleSort} />
+                <SortTh label="Cabinet" sortKey="cabinet" current={sort.key} dir={sort.dir} onSort={toggleSort} />
                 <th className="px-3 py-2.5 font-medium">Qualité</th>
-                <SortTh label="Statut" sortKey="statut" current={sortKey} dir={sortDir} onSort={toggleSort} />
+                <SortTh label="Statut" sortKey="statut" current={sort.key} dir={sort.dir} onSort={toggleSort} />
                 <th className="px-3 py-2.5 font-medium">Cotisation {EXERCICE_COURANT}</th>
                 <th className="px-3 py-2.5 text-right font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((m) => {
+              {data.items.map((m) => {
                 const meta = STATUT_META[statutCot[m.id] ?? "retard"];
                 return (
                   <tr key={m.id} className="border-b border-grisL hover:bg-grisL/60">
@@ -121,13 +113,13 @@ export function Avocats() {
                   </tr>
                 );
               })}
-              {rows.length === 0 && (
+              {data.items.length === 0 && (
                 <tr><td colSpan={7} className="px-3 py-10 text-center text-sm text-gris">Aucun avocat ne correspond à la recherche.</td></tr>
               )}
             </tbody>
           </table>
         </div>
-        <Pagination page={page} totalPages={totalPages} total={total} onPage={setPage} libelle="avocats" />
+        <Pagination page={data.page} totalPages={data.totalPages} total={data.total} onPage={setPage} libelle="avocats" />
       </div>
 
       <AttestationModal membre={attestation} onClose={() => setAttestation(null)} />
