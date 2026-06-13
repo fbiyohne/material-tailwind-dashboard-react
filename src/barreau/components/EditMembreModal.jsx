@@ -2,27 +2,35 @@ import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import { Modal } from "./Modal";
 import { useToast } from "./Toast";
-import { useBarreau } from "../store/BarreauStore";
+import { modifierMembre } from "../api/resources";
 
 /** Édition de la fiche d'un membre (FR-AV-01 : modifier). */
-export function EditMembreModal({ membre, open, onClose }) {
-  const { modifierMembre } = useBarreau();
+export function EditMembreModal({ membre, open, onClose, onSaved }) {
   const toast = useToast();
   const [form, setForm] = useState(membre ?? {});
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => { if (membre) setForm(membre); }, [membre]);
 
   if (!membre) return null;
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
-  const valider = () => {
+  const valider = async () => {
     if (!form.nom?.trim()) return;
-    modifierMembre(membre.id, {
-      nom: form.nom, cabinet: form.cabinet, statut: form.statut,
-      tel: form.tel, email: form.email, rccm: form.rccm, dateInscription: form.dateInscription,
-    });
-    toast.success(`Fiche mise à jour — Me ${form.nom}`);
-    onClose();
+    setLoading(true);
+    try {
+      const maj = await modifierMembre(membre.id, {
+        nom: form.nom, cabinet: form.cabinet, statut: form.statut,
+        tel: form.tel, email: form.email, rccm: form.rccm, dateInscription: form.dateInscription,
+      });
+      toast.success(`Fiche mise à jour — Me ${maj.nom}`);
+      onSaved?.(maj);
+      onClose();
+    } catch (e) {
+      toast.error(e.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -30,7 +38,7 @@ export function EditMembreModal({ membre, open, onClose }) {
       open={open}
       onClose={onClose}
       title={`Modifier — Me ${membre.nom}`}
-      footer={<button className="bpn-btn bpn-btn-primary" onClick={valider} disabled={!form.nom?.trim()}>Enregistrer</button>}
+      footer={<button className="bpn-btn bpn-btn-primary" onClick={valider} disabled={!form.nom?.trim() || loading}>Enregistrer</button>}
     >
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className="block sm:col-span-2"><span className="bpn-label">Nom et prénom</span>
@@ -62,6 +70,7 @@ EditMembreModal.propTypes = {
   membre: PropTypes.object,
   open: PropTypes.bool,
   onClose: PropTypes.func,
+  onSaved: PropTypes.func,
 };
 
 export default EditMembreModal;

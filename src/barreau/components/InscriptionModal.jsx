@@ -3,26 +3,36 @@ import PropTypes from "prop-types";
 import { useNavigate } from "react-router-dom";
 import { UserPlusIcon } from "@heroicons/react/24/outline";
 import { Modal } from "./Modal";
-import { useBarreau } from "../store/BarreauStore";
+import { useToast } from "./Toast";
+import { inscrireMembre } from "../api/resources";
 
 const vide = () => ({
   nom: "", qualite: "avocat", statut: "inscrit", cabinet: "",
   dateInscription: new Date().toISOString().slice(0, 10), tel: "", email: "", rccm: "",
 });
 
-/** Formulaire d'inscription d'un avocat (flux « Inscription avocat » du template). */
+/** Formulaire d'inscription d'un avocat (flux « Inscription avocat »). */
 export function InscriptionModal({ open, onClose }) {
-  const { inscrireAvocat, prochainNumInscription } = useBarreau();
   const navigate = useNavigate();
+  const toast = useToast();
   const [form, setForm] = useState(vide());
+  const [loading, setLoading] = useState(false);
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
-  const valider = () => {
+  const valider = async () => {
     if (!form.nom.trim()) return;
-    const m = inscrireAvocat(form);
-    setForm(vide());
-    onClose();
-    navigate(`/avocats/${m.id}`); // étape « attestation » + mise à jour du tableau
+    setLoading(true);
+    try {
+      const m = await inscrireMembre(form);
+      toast.success(`Inscription enregistrée — ${m.numInscription}`);
+      setForm(vide());
+      onClose();
+      navigate(`/avocats/${m.id}`);
+    } catch (e) {
+      toast.error(e.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -31,14 +41,13 @@ export function InscriptionModal({ open, onClose }) {
       onClose={onClose}
       title="Inscription d'un avocat"
       footer={
-        <button className="bpn-btn bpn-btn-or" onClick={valider} disabled={!form.nom.trim()}>
+        <button className="bpn-btn bpn-btn-or" onClick={valider} disabled={!form.nom.trim() || loading}>
           <UserPlusIcon className="h-4 w-4" /> Inscrire au tableau
         </button>
       }
     >
       <div className="mb-3 rounded border-l-[3px] border-or bg-or-L px-3 py-2 text-xs text-gris">
-        Numéro d'inscription attribué automatiquement :{" "}
-        <span className="font-mono font-medium text-navy">{prochainNumInscription()}</span>
+        Le numéro d'inscription <span className="font-mono font-medium text-navy">PN-AAAA-NNN</span> est attribué automatiquement.
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

@@ -3,24 +3,28 @@ import PropTypes from "prop-types";
 import { PrinterIcon, CheckCircleIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
 import { Modal } from "./Modal";
 import { DocumentChrome } from "./DocumentChrome";
-import { useBarreau } from "../store/BarreauStore";
+import { genererAttestation } from "../api/resources";
 import { exporterPdf } from "../utils/exports";
 
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
 
 /** Génération + aperçu imprimable d'une attestation d'inscription (FR-AV-05). */
 export function AttestationModal({ membre, onClose }) {
-  const { prochainNumeroAttestation, genererAttestation } = useBarreau();
   const [emise, setEmise] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   if (!membre) return null;
-  const numero = emise?.numero ?? prochainNumeroAttestation();
-  const date = emise?.date ?? aujourdhui();
+  const date = emise?.date ? String(emise.date).slice(0, 10) : aujourdhui();
 
-  const emettre = () => {
-    const att = genererAttestation({ membreId: membre.id, date: aujourdhui() });
-    setEmise(att);
-    setTimeout(() => window.print(), 50);
+  const emettre = async () => {
+    setLoading(true);
+    try {
+      const att = await genererAttestation(membre.id);
+      setEmise(att);
+      setTimeout(() => window.print(), 50);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -30,10 +34,12 @@ export function AttestationModal({ membre, onClose }) {
       title="Attestation d'inscription"
       footer={
         <>
-          <button type="button" className="bpn-btn bpn-btn-ghost" onClick={() => exporterPdf(`Attestation-${numero}`)}>
-            <ArrowDownTrayIcon className="h-4 w-4" /> PDF
-          </button>
-          <button type="button" className="bpn-btn bpn-btn-or" onClick={emettre}>
+          {emise && (
+            <button type="button" className="bpn-btn bpn-btn-ghost" onClick={() => exporterPdf(`Attestation-${emise.numero}`)}>
+              <ArrowDownTrayIcon className="h-4 w-4" /> PDF
+            </button>
+          )}
+          <button type="button" className="bpn-btn bpn-btn-or" onClick={emettre} disabled={loading}>
             <PrinterIcon className="h-4 w-4" /> Générer &amp; archiver
           </button>
         </>
@@ -48,7 +54,7 @@ export function AttestationModal({ membre, onClose }) {
       <DocumentChrome
         org="Le Bâtonnier"
         title="Attestation d'inscription"
-        reference={`N° ${numero}`}
+        reference={emise ? `N° ${emise.numero}` : "N° attribué à la génération"}
         date={date}
         signataires={[{ role: "Le Bâtonnier", nom: "Me BIKINDOU Audrey Séverin" }]}
       >

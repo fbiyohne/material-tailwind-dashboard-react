@@ -1,12 +1,12 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { MagnifyingGlassIcon, CheckCircleIcon } from "@heroicons/react/24/outline";
 import { Badge, Modal, useToast, PaiementModal, SortTh, Pagination } from "../components";
-import { useBarreau } from "../store/BarreauStore";
 import { useDataTable } from "../hooks/useDataTable";
 import { EXERCICES } from "../data/dashboard-data";
-import { STATUT_META, QUALITE_LABEL, ligneCotisation } from "../data/derivations";
+import { STATUT_META, QUALITE_LABEL } from "../data/derivations";
 import { formatFCFA } from "../utils/format";
+import { getCotisations, getMembre, validerCotisation } from "../api/resources";
 
 const FILTRES = [
   { value: "tous", label: "Tous les statuts" },
@@ -24,10 +24,20 @@ const ACCESSORS = {
   statut: (l) => l.statut,
 };
 
-/** Modale d'historique des 7 exercices d'un membre (FR-COT-04 / FR-AV-06). */
-function HistoriqueModal({ membre, onClose }) {
+const statutLigne = (du, paye) => (du === 0 ? "exonere" : paye <= 0 ? "retard" : paye >= du ? "ajour" : "partiel");
+
+/** Modale d'historique des 7 exercices d'un membre (FR-COT-04). */
+function HistoriqueModal({ membreId, onClose }) {
+  const [membre, setMembre] = useState(null);
+  useEffect(() => {
+    if (membreId) getMembre(membreId).then(setMembre).catch(() => {});
+    else setMembre(null);
+  }, [membreId]);
+
+  const parAnnee = useMemo(() => Object.fromEntries((membre?.cotisations ?? []).map((c) => [c.annee, c])), [membre]);
+
   return (
-    <Modal open={!!membre} onClose={onClose} title={membre ? `Historique — Me ${membre.nom}` : ""}>
+    <Modal open={!!membreId} onClose={onClose} title={membre ? `Historique — Me ${membre.nom}` : "Historique"}>
       {membre && (
         <table className="w-full text-sm">
           <thead>
@@ -37,14 +47,16 @@ function HistoriqueModal({ membre, onClose }) {
           </thead>
           <tbody>
             {EXERCICES.map((annee) => {
-              const l = ligneCotisation(membre, annee);
-              const meta = STATUT_META[l.statut];
+              const c = parAnnee[annee];
+              const du = c?.montantDu ?? (membre.qualite === "honoraire" ? 0 : membre.qualite === "stagiaire" ? 75000 : 150000);
+              const paye = c?.montantPaye ?? 0;
+              const meta = STATUT_META[statutLigne(du, paye)];
               return (
                 <tr key={annee} className="border-t border-grisL">
                   <td className="py-2 font-mono text-xs text-gris">{annee}</td>
-                  <td className="py-2">{formatFCFA(l.montantDu)}</td>
-                  <td className="py-2">{l.montantPaye ? formatFCFA(l.montantPaye) : "—"}</td>
-                  <td className="py-2 text-xs text-gris">{l.datePaiement ?? "—"}</td>
+                  <td className="py-2">{formatFCFA(du)}</td>
+                  <td className="py-2">{paye ? formatFCFA(paye) : "—"}</td>
+                  <td className="py-2 text-xs text-gris">{c?.datePaiement ? String(c.datePaiement).slice(0, 10) : "—"}</td>
                   <td className="py-2"><Badge ton={meta.ton}>{meta.label}</Badge></td>
                 </tr>
               );
@@ -57,44 +69,50 @@ function HistoriqueModal({ membre, onClose }) {
 }
 
 export function Cotisations() {
-  const { cotisationsExercice, estValide, basculerValidation } = useBarreau();
   const toast = useToast();
   const [params, setParams] = useSearchParams();
-
-  // Filtres persistés dans l'URL (partageables, conservés à la navigation).
   const exercice = Number(params.get("exercice")) || 2026;
   const filtre = params.get("statut") || "tous";
   const recherche = params.get("q") || "";
+
+  const [lignes, setLignes] = useState([]);
   const [historique, setHistorique] = useState(null);
   const [paiement, setPaiement] = useState(null);
 
-  const setParam = (k, v, vide) =>
-    setParams(
-      (prev) => {
-        const p = new URLSearchParams(prev);
-        if (v && v !== vide) p.set(k, v);
-        else p.delete(k);
-        return p;
-      },
-      { replace: true }
-    );
+  const charger = useCallback(() => {
+    getCotisations(exercice).then(setLignes).catch((e) => toast.error(e.message));
+  }, [exercice, toast]);
 
-  const validerSituation = (membre) => {
-    const dejaValide = estValide(membre.id, exercice);
-    basculerValidation(membre.id, exercice);
-    toast.success(dejaValide ? `Validation retirée — Me ${membre.nom}` : `Situation validée — Me ${membre.nom} (exercice ${exercice})`);
+  useEffect(() => { charger(); }, [charger]);
+
+  const setParam = (k, v, vide) =>
+    setParams((prev) => {
+      const p = new URLSearchParams(prev);
+      if (v && v !== vide) p.set(k, v);
+      else p.delete(k);
+      return p;
+    }, { replace: true });
+
+  const validerSituation = async (l) => {
+    try {
+      await validerCotisation(l.membre.id, exercice, !l.valideTresoriere);
+      toast.success(l.valideTresoriere ? `Validation retirée — Me ${l.membre.nom}` : `Situation validée — Me ${l.membre.nom}`);
+      charger();
+    } catch (e) {
+      toast.error(e.message);
+    }
   };
 
-  const lignes = useMemo(() => {
+  const filtrees = useMemo(() => {
     const q = recherche.trim().toLowerCase();
-    return cotisationsExercice(exercice).filter((l) => {
+    return lignes.filter((l) => {
       if (filtre !== "tous" && l.statut !== filtre) return false;
       if (!q) return true;
-      return l.membre.nom.toLowerCase().includes(q) || l.membre.cabinet.toLowerCase().includes(q) || String(l.membre.num).includes(q);
+      return l.membre.nom.toLowerCase().includes(q) || (l.membre.cabinet ?? "").toLowerCase().includes(q) || String(l.membre.num).includes(q);
     });
-  }, [cotisationsExercice, exercice, recherche, filtre]);
+  }, [lignes, recherche, filtre]);
 
-  const { rows, total, page, setPage, totalPages, sortKey, sortDir, toggleSort } = useDataTable(lignes, {
+  const { rows, total, page, setPage, totalPages, sortKey, sortDir, toggleSort } = useDataTable(filtrees, {
     accessors: ACCESSORS, pageSize: 10, initialSort: { key: "num", dir: "asc" },
   });
 
@@ -106,7 +124,6 @@ export function Cotisations() {
         <p className="mt-1 text-sm text-gris">Suivi des cotisations 2020–2026, recherche en temps réel et historique par avocat.</p>
       </div>
 
-      {/* Onglets d'exercice */}
       <div className="flex flex-wrap gap-1 border-b border-grisM">
         {EXERCICES.map((annee) => (
           <button key={annee} type="button" onClick={() => setParam("exercice", String(annee), "2026")}
@@ -116,7 +133,6 @@ export function Cotisations() {
         ))}
       </div>
 
-      {/* Recherche + filtre */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
           <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gris" />
@@ -127,7 +143,6 @@ export function Cotisations() {
         </select>
       </div>
 
-      {/* Tableau */}
       <div className="bpn-card">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -164,16 +179,16 @@ export function Cotisations() {
                     <td className="px-3 py-2.5">
                       <div className="flex items-center justify-end gap-1.5">
                         {(l.statut === "retard" || l.statut === "partiel") && (
-                          <button type="button" onClick={() => setPaiement(l.membre)} className="bpn-btn bpn-btn-or !px-2.5 !py-1 text-[10px]">Paiement</button>
+                          <button type="button" onClick={() => setPaiement(l)} className="bpn-btn bpn-btn-or !px-2.5 !py-1 text-[10px]">Paiement</button>
                         )}
-                        {l.statut === "ajour" && (estValide(l.membre.id, exercice) ? (
-                          <button type="button" title="Situation validée — cliquer pour annuler" onClick={() => validerSituation(l.membre)} className="bpn-badge bpn-badge-vert">
+                        {l.statut === "ajour" && (l.valideTresoriere ? (
+                          <button type="button" title="Validé — cliquer pour annuler" onClick={() => validerSituation(l)} className="bpn-badge bpn-badge-vert">
                             <CheckCircleIcon className="h-3.5 w-3.5" /> Validé
                           </button>
                         ) : (
-                          <button type="button" title="Valider la situation financière (Trésorière)" onClick={() => validerSituation(l.membre)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-[10px]">Valider</button>
+                          <button type="button" title="Valider la situation (Trésorière)" onClick={() => validerSituation(l)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-[10px]">Valider</button>
                         ))}
-                        <button type="button" onClick={() => setHistorique(l.membre)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-[10px]">Historique</button>
+                        <button type="button" onClick={() => setHistorique(l.membre.id)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-[10px]">Historique</button>
                       </div>
                     </td>
                   </tr>
@@ -188,8 +203,8 @@ export function Cotisations() {
         <Pagination page={page} totalPages={totalPages} total={total} onPage={setPage} libelle="membres" />
       </div>
 
-      <HistoriqueModal membre={historique} onClose={() => setHistorique(null)} />
-      <PaiementModal membre={paiement} exercice={exercice} open={!!paiement} onClose={() => setPaiement(null)} />
+      <HistoriqueModal membreId={historique} onClose={() => setHistorique(null)} />
+      <PaiementModal ligne={paiement} exercice={exercice} open={!!paiement} onClose={() => setPaiement(null)} onDone={charger} />
     </div>
   );
 }

@@ -1,10 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
-import { Badge, StatutBadge, AttestationModal, SortTh, Pagination } from "../components";
-import { useBarreau } from "../store/BarreauStore";
+import { Badge, StatutBadge, AttestationModal, SortTh, Pagination, useToast } from "../components";
 import { useDataTable } from "../hooks/useDataTable";
 import { statutCotisation, STATUT_META, QUALITE_LABEL } from "../data/derivations";
+import { listerMembres } from "../api/resources";
 
 const EXERCICE_COURANT = 2026;
 const FILTRES = [
@@ -24,10 +24,28 @@ const ACCESSORS = {
 };
 
 export function Avocats() {
-  const { membres } = useBarreau();
   const navigate = useNavigate();
+  const toast = useToast();
   const [params, setParams] = useSearchParams();
   const [attestation, setAttestation] = useState(null);
+  const [membres, setMembres] = useState([]);
+  const [statutCot, setStatutCot] = useState({});
+
+  useEffect(() => {
+    let actif = true;
+    listerMembres()
+      .then((d) => actif && setMembres(d.items))
+      .catch((e) => actif && toast.error(e.message));
+    // Statut de cotisation de l'exercice courant (jointure côté client)
+    import("../api/resources").then(({ getCotisations }) =>
+      getCotisations(EXERCICE_COURANT)
+        .then((lignes) => actif && setStatutCot(Object.fromEntries(lignes.map((l) => [l.membre.id, l.statut]))))
+        .catch(() => {})
+    );
+    return () => {
+      actif = false;
+    };
+  }, [toast]);
 
   const filtre = params.get("statut") || "tous";
   const recherche = params.get("q") || "";
@@ -85,7 +103,7 @@ export function Avocats() {
             </thead>
             <tbody>
               {rows.map((m) => {
-                const meta = STATUT_META[statutCotisation(m, EXERCICE_COURANT)];
+                const meta = STATUT_META[statutCot[m.id] ?? "retard"];
                 return (
                   <tr key={m.id} className="border-b border-grisL hover:bg-grisL/60">
                     <td className="px-3 py-2.5 font-mono text-xs text-gris">{m.num}</td>

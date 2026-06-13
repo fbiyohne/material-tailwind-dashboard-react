@@ -2,36 +2,45 @@ import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import { Modal } from "./Modal";
 import { useToast } from "./Toast";
-import { useBarreau } from "../store/BarreauStore";
-import { montantDu, montantPaye } from "../data/derivations";
+import { enregistrerPaiement } from "../api/resources";
 import { formatFCFA } from "../utils/format";
 
 const MODES = ["Espèces", "Virement", "Chèque", "Mobile Money"];
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
 
 /**
- * Enregistrement direct d'un paiement de cotisation depuis le tableau.
- * Réutilise BR-03 : met à jour la cotisation et émet le reçu correspondant.
+ * Enregistrement direct d'un paiement de cotisation. Réutilise BR-03 côté
+ * serveur (met à jour la cotisation et émet le reçu).
+ * `ligne` : la ligne de cotisation courante (montantDu, montantPaye, membre).
  */
-export function PaiementModal({ membre, exercice, open, onClose }) {
-  const { enregistrerPaiement } = useBarreau();
+export function PaiementModal({ ligne, exercice, open, onClose, onDone }) {
   const toast = useToast();
-  const solde = membre ? Math.max(0, montantDu(membre) - montantPaye(membre, exercice)) : 0;
+  const solde = ligne ? Math.max(0, ligne.montantDu - ligne.montantPaye) : 0;
   const [form, setForm] = useState({ montant: solde, mode: MODES[0], ref: "", date: aujourdhui() });
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (membre) setForm({ montant: solde, mode: MODES[0], ref: "", date: aujourdhui() });
-  }, [membre, solde]);
+    if (ligne) setForm({ montant: solde, mode: MODES[0], ref: "", date: aujourdhui() });
+  }, [ligne, solde]);
 
-  if (!membre) return null;
+  if (!ligne) return null;
+  const membre = ligne.membre;
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
-  const valider = () => {
+  const valider = async () => {
     const montant = Number(form.montant);
     if (!montant || montant <= 0) return;
-    const recu = enregistrerPaiement({ membreId: membre.id, exercice, montant, mode: form.mode, ref: form.ref, date: form.date });
-    toast.success(`Paiement enregistré — reçu N° ${recu.numero} (Me ${membre.nom})`);
-    onClose();
+    setLoading(true);
+    try {
+      const { recu } = await enregistrerPaiement({ membreId: membre.id, annee: exercice, montant, mode: form.mode, ref: form.ref, date: form.date });
+      toast.success(`Paiement enregistré — reçu N° ${recu.numero} (Me ${membre.nom})`);
+      onDone?.();
+      onClose();
+    } catch (e) {
+      toast.error(e.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -39,10 +48,10 @@ export function PaiementModal({ membre, exercice, open, onClose }) {
       open={open}
       onClose={onClose}
       title={`Enregistrer un paiement — Me ${membre.nom}`}
-      footer={<button className="bpn-btn bpn-btn-or" onClick={valider} disabled={Number(form.montant) <= 0}>Enregistrer &amp; émettre le reçu</button>}
+      footer={<button className="bpn-btn bpn-btn-or" onClick={valider} disabled={Number(form.montant) <= 0 || loading}>Enregistrer &amp; émettre le reçu</button>}
     >
       <div className="mb-3 rounded border border-grisM bg-grisL/40 px-3 py-2 text-xs text-gris">
-        Exercice {exercice} · dû {formatFCFA(montantDu(membre))} · déjà payé {formatFCFA(montantPaye(membre, exercice))} · solde{" "}
+        Exercice {exercice} · dû {formatFCFA(ligne.montantDu)} · déjà payé {formatFCFA(ligne.montantPaye)} · solde{" "}
         <span className="font-medium text-rouge">{formatFCFA(solde)}</span>
       </div>
       <div className="grid grid-cols-2 gap-3">
@@ -62,10 +71,11 @@ export function PaiementModal({ membre, exercice, open, onClose }) {
 }
 
 PaiementModal.propTypes = {
-  membre: PropTypes.object,
+  ligne: PropTypes.object,
   exercice: PropTypes.number,
   open: PropTypes.bool,
   onClose: PropTypes.func,
+  onDone: PropTypes.func,
 };
 
 export default PaiementModal;

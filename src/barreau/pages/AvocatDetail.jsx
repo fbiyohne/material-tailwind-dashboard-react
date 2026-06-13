@@ -1,20 +1,15 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeftIcon, DocumentPlusIcon, PencilSquareIcon, NoSymbolIcon } from "@heroicons/react/24/outline";
 import { Badge, StatutBadge, AttestationModal, EditMembreModal, useConfirm, useToast } from "../components";
-import { useBarreau } from "../store/BarreauStore";
-import {
-  ligneCotisation,
-  statutCotisation,
-  STATUT_META,
-  QUALITE_LABEL,
-  infoStage,
-} from "../data/derivations";
-import { ligneDroit } from "../data/droits";
+import { QUALITE_LABEL, STATUT_META, infoStage } from "../data/derivations";
 import { EXERCICES } from "../data/dashboard-data";
 import { formatFCFA } from "../utils/format";
+import { getMembre, radierMembre } from "../api/resources";
 
 const EXERCICE_COURANT = 2026;
+const DROIT = 60000;
+const statutLigne = (du, paye) => (du === 0 ? "exonere" : paye <= 0 ? "retard" : paye >= du ? "ajour" : "partiel");
 
 function Carte({ titre, children }) {
   return (
@@ -24,7 +19,6 @@ function Carte({ titre, children }) {
     </div>
   );
 }
-
 function Ligne({ label, value }) {
   return (
     <div className="flex justify-between gap-4 border-b border-grisL py-2 text-sm last:border-0">
@@ -37,24 +31,20 @@ function Ligne({ label, value }) {
 export function AvocatDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { membres, attestations, quitus, recus, estValide, modifierMembre } = useBarreau();
   const confirm = useConfirm();
   const toast = useToast();
+  const [membre, setMembre] = useState(null);
   const [attestation, setAttestation] = useState(null);
   const [edition, setEdition] = useState(false);
 
-  const membre = membres.find((m) => m.id === Number(id));
+  const charger = useCallback(() => {
+    getMembre(Number(id)).then(setMembre).catch(() => setMembre(false));
+  }, [id]);
+  useEffect(() => { charger(); }, [charger]);
 
-  const documents = useMemo(() => {
-    if (!membre) return [];
-    return [
-      ...attestations.filter((a) => a.membreId === membre.id).map((a) => ({ type: "Attestation", ref: a.numero, date: a.date })),
-      ...quitus.filter((q) => q.membreId === membre.id).map((q) => ({ type: "Quitus", ref: q.numero, date: q.date })),
-      ...recus.filter((r) => r.membreId === membre.id).map((r) => ({ type: "Reçu", ref: r.numero, date: r.date })),
-    ].sort((a, b) => (a.date < b.date ? 1 : -1));
-  }, [membre, attestations, quitus, recus]);
+  const cotParAnnee = useMemo(() => Object.fromEntries((membre?.cotisations ?? []).map((c) => [c.annee, c])), [membre]);
 
-  if (!membre) {
+  if (membre === false) {
     return (
       <div className="py-20 text-center">
         <p className="text-gris">Avocat introuvable.</p>
@@ -62,11 +52,21 @@ export function AvocatDetail() {
       </div>
     );
   }
+  if (!membre) return <div className="py-20 text-center text-sm text-gris">Chargement…</div>;
 
   const stage = infoStage(membre);
-  const cot = ligneCotisation(membre, EXERCICE_COURANT);
-  const cotMeta = STATUT_META[cot.statut];
-  const droit = ligneDroit(membre, EXERCICE_COURANT);
+  const cot = cotParAnnee[EXERCICE_COURANT];
+  const du = cot?.montantDu ?? (membre.qualite === "honoraire" ? 0 : membre.qualite === "stagiaire" ? 75000 : 150000);
+  const paye = cot?.montantPaye ?? 0;
+  const cotMeta = STATUT_META[statutLigne(du, paye)];
+
+  const droitDu = membre.qualite === "avocat" ? DROIT : 0;
+  const droitPaye = droitDu ? Math.min(droitDu, [0, DROIT / 2, DROIT][(membre.id + EXERCICE_COURANT) % 3]) : 0;
+
+  const documents = [
+    ...(membre.quitus ?? []).map((q) => ({ type: "Quitus", ref: q.numero, date: q.date })),
+    ...(membre.recus ?? []).map((r) => ({ type: "Reçu", ref: r.numero, date: r.date })),
+  ].sort((a, b) => (a.date < b.date ? 1 : -1));
 
   return (
     <div className="space-y-5">
@@ -74,45 +74,27 @@ export function AvocatDetail() {
         <ArrowLeftIcon className="h-4 w-4" /> Retour au tableau du Barreau
       </Link>
 
-      {/* En-tête */}
       <div className="bpn-card flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center">
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="font-display text-2xl text-navy">Me {membre.nom}</h2>
             <StatutBadge statut={membre.statut} />
-            <Badge ton={membre.qualite === "honoraire" ? "or" : "bleu"} dot={false}>
-              {QUALITE_LABEL[membre.qualite]}
-            </Badge>
+            <Badge ton={membre.qualite === "honoraire" ? "or" : "bleu"} dot={false}>{QUALITE_LABEL[membre.qualite]}</Badge>
           </div>
           <div className="mt-1 font-mono text-xs text-gris">
             {membre.numInscription ?? `N° ${membre.num}`} · tableau N° {membre.num} · {membre.cabinet}
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button className="bpn-btn bpn-btn-ghost" onClick={() => setEdition(true)}>
-            <PencilSquareIcon className="h-4 w-4" /> Modifier
-          </button>
+          <button className="bpn-btn bpn-btn-ghost" onClick={() => setEdition(true)}><PencilSquareIcon className="h-4 w-4" /> Modifier</button>
           {membre.qualite !== "stagiaire" && (
-            <button className="bpn-btn bpn-btn-primary" onClick={() => setAttestation(membre)}>
-              <DocumentPlusIcon className="h-4 w-4" /> Attestation
-            </button>
+            <button className="bpn-btn bpn-btn-primary" onClick={() => setAttestation(membre)}><DocumentPlusIcon className="h-4 w-4" /> Attestation</button>
           )}
           {membre.statut !== "radie" && (
-            <button
-              className="bpn-btn bpn-btn-danger"
-              onClick={async () => {
-                const ok = await confirm({
-                  title: "Radier cet avocat ?",
-                  message: `Me ${membre.nom} sera radié(e) du tableau du Barreau. Cette action modifie son statut et l'exclut du corps électoral.`,
-                  confirmLabel: "Radier",
-                  danger: true,
-                });
-                if (ok) {
-                  modifierMembre(membre.id, { statut: "radie" });
-                  toast.success(`Me ${membre.nom} a été radié(e) du tableau.`);
-                }
-              }}
-            >
+            <button className="bpn-btn bpn-btn-danger" onClick={async () => {
+              const ok = await confirm({ title: "Radier cet avocat ?", message: `Me ${membre.nom} sera radié(e) du tableau et exclu(e) du corps électoral.`, confirmLabel: "Radier", danger: true });
+              if (ok) { try { await radierMembre(membre.id); toast.success(`Me ${membre.nom} a été radié(e).`); charger(); } catch (e) { toast.error(e.message); } }
+            }}>
               <NoSymbolIcon className="h-4 w-4" /> Radier
             </button>
           )}
@@ -143,30 +125,27 @@ export function AvocatDetail() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-display text-2xl font-bold" style={{ color: `var(--bpn-${cotMeta.ton === "vert" ? "vert" : cotMeta.ton === "rouge" ? "rouge" : cotMeta.ton === "or" ? "or" : "gris"})` }}>
-                  {cot.montantPaye ? formatFCFA(cot.montantPaye) : "—"}
+                  {paye ? formatFCFA(paye) : "—"}
                 </div>
-                <div className="mt-1 text-xs text-gris">sur {formatFCFA(cot.montantDu)} dus</div>
+                <div className="mt-1 text-xs text-gris">sur {formatFCFA(du)} dus</div>
               </div>
               <div className="flex flex-col items-end gap-1.5">
                 <Badge ton={cotMeta.ton}>{cotMeta.label}</Badge>
-                {cot.statut === "ajour" && estValide(membre.id, EXERCICE_COURANT) && (
-                  <Badge ton="vert">Validé Trésorière</Badge>
-                )}
+                {statutLigne(du, paye) === "ajour" && cot?.valideTresoriere && <Badge ton="vert">Validé Trésorière</Badge>}
               </div>
             </div>
           </Carte>
 
           <Carte titre={`Droits de plaidoirie ${EXERCICE_COURANT}`}>
             <div className="grid grid-cols-3 gap-3 text-center">
-              <div><div className="text-[10px] uppercase tracking-wide text-gris">Dû</div><div className="mt-1 font-medium">{formatFCFA(droit.du)}</div></div>
-              <div><div className="text-[10px] uppercase tracking-wide text-gris">Perçu</div><div className="mt-1 font-medium text-vert">{droit.paye ? formatFCFA(droit.paye) : "—"}</div></div>
-              <div><div className="text-[10px] uppercase tracking-wide text-gris">Solde</div><div className="mt-1 font-medium text-rouge">{droit.solde ? formatFCFA(droit.solde) : "✓"}</div></div>
+              <div><div className="text-[10px] uppercase tracking-wide text-gris">Dû</div><div className="mt-1 font-medium">{formatFCFA(droitDu)}</div></div>
+              <div><div className="text-[10px] uppercase tracking-wide text-gris">Perçu</div><div className="mt-1 font-medium text-vert">{droitPaye ? formatFCFA(droitPaye) : "—"}</div></div>
+              <div><div className="text-[10px] uppercase tracking-wide text-gris">Solde</div><div className="mt-1 font-medium text-rouge">{droitDu - droitPaye ? formatFCFA(droitDu - droitPaye) : "✓"}</div></div>
             </div>
           </Carte>
         </div>
       </div>
 
-      {/* Historique cotisations */}
       <Carte titre="Historique des cotisations">
         <table className="w-full text-sm">
           <thead>
@@ -176,14 +155,16 @@ export function AvocatDetail() {
           </thead>
           <tbody>
             {EXERCICES.map((annee) => {
-              const l = ligneCotisation(membre, annee);
-              const m = STATUT_META[l.statut];
+              const c = cotParAnnee[annee];
+              const d = c?.montantDu ?? du;
+              const p = c?.montantPaye ?? 0;
+              const m = STATUT_META[statutLigne(d, p)];
               return (
                 <tr key={annee} className="border-t border-grisL">
                   <td className="py-2 font-mono text-xs text-gris">{annee}</td>
-                  <td className="py-2">{formatFCFA(l.montantDu)}</td>
-                  <td className="py-2">{l.montantPaye ? formatFCFA(l.montantPaye) : "—"}</td>
-                  <td className="py-2">{l.solde ? formatFCFA(l.solde) : "✓"}</td>
+                  <td className="py-2">{formatFCFA(d)}</td>
+                  <td className="py-2">{p ? formatFCFA(p) : "—"}</td>
+                  <td className="py-2">{d - p > 0 ? formatFCFA(d - p) : "✓"}</td>
                   <td className="py-2"><Badge ton={m.ton}>{m.label}</Badge></td>
                 </tr>
               );
@@ -192,7 +173,6 @@ export function AvocatDetail() {
         </table>
       </Carte>
 
-      {/* Documents émis */}
       <Carte titre="Documents émis">
         {documents.length === 0 ? (
           <p className="py-4 text-center text-sm text-gris">Aucun document émis pour cet avocat.</p>
@@ -209,7 +189,7 @@ export function AvocatDetail() {
       </Carte>
 
       <AttestationModal membre={attestation} onClose={() => setAttestation(null)} />
-      <EditMembreModal membre={edition ? membre : null} open={edition} onClose={() => setEdition(false)} />
+      <EditMembreModal membre={edition ? membre : null} open={edition} onClose={() => setEdition(false)} onSaved={charger} />
     </div>
   );
 }
