@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeftIcon, DocumentPlusIcon } from "@heroicons/react/24/outline";
-import { Badge, StatutBadge, AttestationModal } from "../components";
+import { ArrowLeftIcon, DocumentPlusIcon, PencilSquareIcon, NoSymbolIcon } from "@heroicons/react/24/outline";
+import { Badge, StatutBadge, AttestationModal, EditMembreModal, useConfirm, useToast } from "../components";
 import { useBarreau } from "../store/BarreauStore";
 import {
   ligneCotisation,
@@ -37,8 +37,11 @@ function Ligne({ label, value }) {
 export function AvocatDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { membres, attestations, quitus, recus, estValide } = useBarreau();
+  const { membres, attestations, quitus, recus, estValide, modifierMembre } = useBarreau();
+  const confirm = useConfirm();
+  const toast = useToast();
   const [attestation, setAttestation] = useState(null);
+  const [edition, setEdition] = useState(false);
 
   const membre = membres.find((m) => m.id === Number(id));
 
@@ -85,11 +88,35 @@ export function AvocatDetail() {
             {membre.numInscription ?? `N° ${membre.num}`} · tableau N° {membre.num} · {membre.cabinet}
           </div>
         </div>
-        {membre.qualite !== "stagiaire" && (
-          <button className="bpn-btn bpn-btn-primary" onClick={() => setAttestation(membre)}>
-            <DocumentPlusIcon className="h-4 w-4" /> Générer une attestation
+        <div className="flex flex-wrap gap-2">
+          <button className="bpn-btn bpn-btn-ghost" onClick={() => setEdition(true)}>
+            <PencilSquareIcon className="h-4 w-4" /> Modifier
           </button>
-        )}
+          {membre.qualite !== "stagiaire" && (
+            <button className="bpn-btn bpn-btn-primary" onClick={() => setAttestation(membre)}>
+              <DocumentPlusIcon className="h-4 w-4" /> Attestation
+            </button>
+          )}
+          {membre.statut !== "radie" && (
+            <button
+              className="bpn-btn bpn-btn-danger"
+              onClick={async () => {
+                const ok = await confirm({
+                  title: "Radier cet avocat ?",
+                  message: `Me ${membre.nom} sera radié(e) du tableau du Barreau. Cette action modifie son statut et l'exclut du corps électoral.`,
+                  confirmLabel: "Radier",
+                  danger: true,
+                });
+                if (ok) {
+                  modifierMembre(membre.id, { statut: "radie" });
+                  toast.success(`Me ${membre.nom} a été radié(e) du tableau.`);
+                }
+              }}
+            >
+              <NoSymbolIcon className="h-4 w-4" /> Radier
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
@@ -182,6 +209,7 @@ export function AvocatDetail() {
       </Carte>
 
       <AttestationModal membre={attestation} onClose={() => setAttestation(null)} />
+      <EditMembreModal membre={edition ? membre : null} open={edition} onClose={() => setEdition(false)} />
     </div>
   );
 }

@@ -11,3 +11,5 @@ export { EmptyState } from "./EmptyState";
 export { ErrorBoundary } from "./ErrorBoundary";
 export { ToastProvider, useToast } from "./Toast";
 export { ConfirmProvider, useConfirm } from "./ConfirmDialog";
+export { EditMembreModal } from "./EditMembreModal";
+export { PaiementModal } from "./PaiementModal";

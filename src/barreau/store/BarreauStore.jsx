@@ -291,6 +291,11 @@ export function BarreauProvider({ children }) {
     ]);
   }, []);
 
+  /** Modifie la fiche d'un membre (FR-AV-01 : modifier). */
+  const modifierMembre = useCallback((id, patch) => {
+    setMembres((prev) => prev.map((m) => (m.id === id ? { ...m, ...patch } : m)));
+  }, []);
+
   // ─── Inscription d'un avocat (FR-AV-01 / flux « Inscription avocat ») ─────
   /** Numéro d'inscription auto, format PN-AAAA-NNN (aperçu). */
   const prochainNumInscription = useCallback(() => {
@@ -374,6 +379,7 @@ export function BarreauProvider({ children }) {
       journaliserDiscipline,
       prochainNumInscription,
       inscrireAvocat,
+      modifierMembre,
       creerPublication,
       changerStatutPublication,
       genererArticleLettre,
@@ -411,6 +417,7 @@ export function BarreauProvider({ children }) {
       journaliserDiscipline,
       prochainNumInscription,
       inscrireAvocat,
+      modifierMembre,
       creerPublication,
       changerStatutPublication,
       genererArticleLettre,

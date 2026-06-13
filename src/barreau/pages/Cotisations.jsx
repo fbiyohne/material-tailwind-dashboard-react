@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { MagnifyingGlassIcon, CheckCircleIcon } from "@heroicons/react/24/outline";
-import { Badge, Modal, useToast } from "../components";
+import { Badge, Modal, useToast, PaiementModal } from "../components";
 import { useBarreau } from "../store/BarreauStore";
 import { EXERCICES } from "../data/dashboard-data";
 import {
@@ -73,6 +73,7 @@ export function Cotisations() {
   const [recherche, setRecherche] = useState("");
   const [filtre, setFiltre] = useState("tous");
   const [historique, setHistorique] = useState(null);
+  const [paiement, setPaiement] = useState(null);
 
   const lignes = useMemo(() => {
     const q = recherche.trim().toLowerCase();
@@ -196,6 +197,15 @@ export function Cotisations() {
                     </td>
                     <td className="px-3 py-2.5">
                       <div className="flex items-center justify-end gap-1.5">
+                        {(l.statut === "retard" || l.statut === "partiel") && (
+                          <button
+                            type="button"
+                            onClick={() => setPaiement(l.membre)}
+                            className="bpn-btn bpn-btn-or !px-2.5 !py-1 text-[10px]"
+                          >
+                            Paiement
+                          </button>
+                        )}
                         {l.statut === "ajour" &&
                           (estValide(l.membre.id, exercice) ? (
                             <button
@@ -246,6 +256,7 @@ export function Cotisations() {
       </div>
 
       <HistoriqueModal membre={historique} onClose={() => setHistorique(null)} />
+      <PaiementModal membre={paiement} exercice={exercice} open={!!paiement} onClose={() => setPaiement(null)} />
     </div>
   );
 }
