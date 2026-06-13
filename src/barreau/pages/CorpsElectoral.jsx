@@ -3,6 +3,7 @@ import { PrinterIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
 import { StatCard, Badge } from "../components";
 import { useBarreau } from "../store/BarreauStore";
 import { eligibiliteElectorale } from "../data/derivations";
+import { exporterExcel } from "../utils/exports";
 import { EXERCICES } from "../data/dashboard-data";
 
 const MOTIF_LABEL = {
@@ -29,19 +30,12 @@ export function CorpsElectoral() {
     return { electeurs, exclusCotisation, exclusStatut };
   }, [membres, exercice]);
 
-  const exporterCSV = () => {
+  const exporterXlsx = () => {
     const lignes = [
-      ["N°", "Avocat", "Cabinet", "Date inscription"],
-      ...electeurs.map((m) => [m.num, `Me ${m.nom}`, m.cabinet, m.dateInscription ?? ""]),
+      ["N°", "Avocat électeur", "Cabinet", "Inscrit depuis"],
+      ...electeurs.map((m, i) => [i + 1, `Me ${m.nom}`, m.cabinet, m.dateInscription ?? ""]),
     ];
-    const csv = lignes.map((l) => l.map((c) => `"${c}"`).join(";")).join("\n");
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `corps-electoral-${exercice}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    exporterExcel(`corps-electoral-${exercice}`, lignes, `Corps électoral ${exercice}`);
   };
 
   return (
@@ -83,7 +77,7 @@ export function CorpsElectoral() {
         <button type="button" onClick={() => window.print()} className="bpn-btn bpn-btn-ghost">
           <PrinterIcon className="h-4 w-4" /> Imprimer
         </button>
-        <button type="button" onClick={exporterCSV} className="bpn-btn bpn-btn-or">
+        <button type="button" onClick={exporterXlsx} className="bpn-btn bpn-btn-or">
           <ArrowDownTrayIcon className="h-4 w-4" /> Export Excel
         </button>
       </div>

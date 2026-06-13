@@ -1,73 +1,47 @@
 import { useMemo, useState } from "react";
-import { PrinterIcon, CheckCircleIcon } from "@heroicons/react/24/outline";
+import { PrinterIcon, CheckCircleIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
 import { useBarreau } from "../store/BarreauStore";
 import { montantDu, QUALITE_LABEL } from "../data/derivations";
 import { EXERCICES } from "../data/dashboard-data";
 import { formatFCFA } from "../utils/format";
 import { montantEnLettresFCFA } from "../utils/nombreEnLettres";
+import { DocumentChrome } from "../components";
+import { exporterPdf } from "../utils/exports";
 
 const MODES = ["Espèces", "Virement", "Chèque", "Mobile Money"];
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
 
-/** Aperçu du reçu officiel — reproduction fidèle de la maquette annotée. */
+/** Aperçu du reçu officiel — bâti sur le gabarit unifié (annotations maquette). */
 function ApercuRecu({ numero, membre, montant, exercice, mode, date }) {
   return (
-    <div className="bpn-print-zone overflow-hidden rounded border border-grisM bg-white">
-      {/* En-tête institutionnel (annotation 2) */}
-      <div className="bg-navy px-5 py-3">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-or">
-          Barreau de Pointe-Noire
-        </div>
-        <div className="text-[9px] text-white/60">Trésorerie Générale · Ordre National des Avocats du Congo</div>
+    <DocumentChrome
+      org="Trésorerie Générale"
+      title={`Reçu N° ${numero}`}
+      date={date}
+      signataires={[{ role: "La Trésorière", nom: "Me ONDZE BOYA" }]}
+    >
+      <div className="flex justify-between border-b border-dashed border-grisM py-1.5 text-sm">
+        <span className="text-gris">Reçu de Me</span>
+        <span className="font-semibold text-encre">{membre?.nom ?? "—"}</span>
       </div>
-      <div className="h-[3px] bg-gradient-to-r from-or via-or-2 to-or" />
 
-      <div className="px-6 py-5">
-        <div className="mb-4 border-b border-or pb-2 text-center font-display text-xl text-navy">
-          Reçu N° {numero}
-        </div>
-
-        <div className="flex justify-between border-b border-dashed border-grisM py-1.5 text-sm">
-          <span className="text-gris">Reçu de Me</span>
-          <span className="font-semibold text-encre">{membre?.nom ?? "—"}</span>
-        </div>
-
-        {/* Montant mis en valeur (annotation 3) */}
-        <div className="my-3 rounded-r border-l-[3px] border-or bg-or-L px-4 py-2.5">
-          <div className="font-display text-lg font-bold text-navy">{formatFCFA(montant)}</div>
-          <div className="mt-0.5 text-[11px] italic text-gris first-letter:uppercase">
-            {montantEnLettresFCFA(montant)}
-          </div>
-        </div>
-
-        <div className="flex justify-between border-b border-dashed border-grisM py-1.5 text-sm">
-          <span className="text-gris">Pour</span>
-          <span className="text-encre">Cotisation ordinale {exercice}</span>
-        </div>
-        <div className="flex justify-between border-b border-dashed border-grisM py-1.5 text-xs text-gris">
-          <span>Mode de paiement</span>
-          <span>{mode}</span>
-        </div>
-
-        <div className="mt-5 flex items-end justify-between">
-          <div className="text-[11px] text-gris">
-            Pointe-Noire, le{" "}
-            {new Date(date).toLocaleDateString("fr-FR", {
-              day: "2-digit",
-              month: "long",
-              year: "numeric",
-            })}
-          </div>
-          {/* Signature (annotation 4) */}
-          <div className="text-right">
-            <div className="mb-6 text-[10px] uppercase tracking-wide text-gris">La Trésorière</div>
-            <div className="border-t border-grisM pt-1 text-[11px] font-medium text-navy">
-              Me ONDZE BOYA
-            </div>
-          </div>
+      {/* Montant mis en valeur (annotation 3) */}
+      <div className="my-3 rounded-r border-l-[3px] border-or bg-or-L px-4 py-2.5">
+        <div className="font-display text-lg font-bold text-navy">{formatFCFA(montant)}</div>
+        <div className="mt-0.5 text-[11px] italic text-gris first-letter:uppercase">
+          {montantEnLettresFCFA(montant)}
         </div>
       </div>
-    </div>
+
+      <div className="flex justify-between border-b border-dashed border-grisM py-1.5 text-sm">
+        <span className="text-gris">Pour</span>
+        <span className="text-encre">Cotisation ordinale {exercice}</span>
+      </div>
+      <div className="flex justify-between border-b border-dashed border-grisM py-1.5 text-xs text-gris">
+        <span>Mode de paiement</span>
+        <span>{mode}</span>
+      </div>
+    </DocumentChrome>
   );
 }
 
@@ -210,6 +184,15 @@ export function Recus() {
             >
               <PrinterIcon className="h-4 w-4" />
               Imprimer &amp; archiver
+            </button>
+            <button
+              type="button"
+              onClick={() => exporterPdf(`Recu-${succes?.numero ?? prochainNumeroRecu}`)}
+              disabled={!membre || montant <= 0}
+              className="bpn-btn bpn-btn-ghost w-full justify-center border-white/20 text-white/70 hover:bg-white/10 hover:text-white disabled:opacity-40"
+            >
+              <ArrowDownTrayIcon className="h-4 w-4" />
+              Télécharger PDF
             </button>
             <p className="text-center text-[10px] text-white/30">1 clic → impression · archivage · cotisation</p>
           </div>

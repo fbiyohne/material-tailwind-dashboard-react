@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { MagnifyingGlassIcon, ArrowDownTrayIcon, PrinterIcon } from "@heroicons/react/24/outline";
 import { StatutBadge } from "../components";
+import { exporterExcel } from "../utils/exports";
 import { useBarreau } from "../store/BarreauStore";
 
 export function Annuaire() {
@@ -17,19 +18,12 @@ export function Annuaire() {
       .filter((m) => (!q ? true : m.nom.toLowerCase().includes(q) || m.cabinet.toLowerCase().includes(q)));
   }, [membres, recherche]);
 
-  const exporterCSV = () => {
+  const exporterXlsx = () => {
     const entete = interne ? ["Nom", "Cabinet", "Téléphone", "Email", "Statut"] : ["Nom", "Cabinet", "Statut"];
     const rows = lignes.map((m) =>
       interne ? [`Me ${m.nom}`, m.cabinet, m.tel, m.email, m.statut] : [`Me ${m.nom}`, m.cabinet, m.statut]
     );
-    const csv = [entete, ...rows].map((l) => l.map((c) => `"${c}"`).join(";")).join("\n");
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `annuaire-${mode}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    exporterExcel(`annuaire-${mode}`, [entete, ...rows], `Annuaire ${mode}`);
   };
 
   return (
@@ -54,7 +48,7 @@ export function Annuaire() {
           <button className="bpn-btn bpn-btn-ghost !py-1.5 text-[11px]" onClick={() => window.print()}>
             <PrinterIcon className="h-4 w-4" /> Imprimer
           </button>
-          <button className="bpn-btn bpn-btn-or !py-1.5 text-[11px]" onClick={exporterCSV}>
+          <button className="bpn-btn bpn-btn-or !py-1.5 text-[11px]" onClick={exporterXlsx}>
             <ArrowDownTrayIcon className="h-4 w-4" /> Excel
           </button>
         </div>

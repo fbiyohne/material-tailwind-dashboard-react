@@ -150,6 +150,10 @@
 /* ─── Impression d'un document officiel — masquage total de l'interface
    (NFR-13) : seule la zone .bpn-print-zone reste visible. ─────────────── */
 @media print {
+  @page {
+    size: A4;
+    margin: 18mm;
+  }
   body * {
     visibility: hidden;
   }

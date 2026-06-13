@@ -15,3 +15,5 @@ export { EditMembreModal } from "./EditMembreModal";
 export { PaiementModal } from "./PaiementModal";
 export { SortTh } from "./SortTh";
 export { Pagination } from "./Pagination";
+export { Sceau } from "./Sceau";
+export { DocumentChrome } from "./DocumentChrome";

@@ -3,61 +3,35 @@ import {
   DocumentCheckIcon,
   CheckCircleIcon,
   LockClosedIcon,
+  ArrowDownTrayIcon,
 } from "@heroicons/react/24/outline";
 import { useBarreau } from "../store/BarreauStore";
 import { EXERCICES } from "../data/dashboard-data";
+import { DocumentChrome } from "../components";
+import { exporterPdf } from "../utils/exports";
 
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
 
 /** Aperçu du quitus officiel — destiné à l'impression / archivage (FR-QUI-03). */
 function ApercuQuitus({ numero, membre, exercice, date }) {
   return (
-    <div className="bpn-print-zone overflow-hidden rounded border border-grisM bg-white">
-      <div className="bg-navy px-5 py-3">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-or">
-          Barreau de Pointe-Noire
-        </div>
-        <div className="text-[9px] text-white/60">
-          Conseil de l'Ordre · Ordre National des Avocats du Congo
-        </div>
-      </div>
-      <div className="h-[3px] bg-gradient-to-r from-or via-or-2 to-or" />
-
-      <div className="px-8 py-7">
-        <div className="mb-1 text-center font-display text-2xl text-navy">
-          Quitus de cotisation
-        </div>
-        <div className="mb-6 text-center font-mono text-xs text-or">N° {numero}</div>
-
-        <p className="text-[13px] leading-7 text-encre">
-          Le Conseil de l'Ordre des Avocats du Barreau de Pointe-Noire certifie que{" "}
-          <strong>Me {membre?.nom}</strong>, avocat inscrit au tableau, est{" "}
-          <strong>entièrement à jour</strong> de ses cotisations ordinales au titre de
-          l'exercice <strong>{exercice}</strong>.
-        </p>
-        <p className="mt-3 text-[13px] leading-7 text-encre">
-          En foi de quoi le présent quitus lui est délivré pour servir et valoir ce que de
-          droit.
-        </p>
-
-        <div className="mt-8 flex items-end justify-between">
-          <div className="text-[11px] text-gris">
-            Fait à Pointe-Noire, le{" "}
-            {new Date(date).toLocaleDateString("fr-FR", {
-              day: "2-digit",
-              month: "long",
-              year: "numeric",
-            })}
-          </div>
-          <div className="text-right">
-            <div className="mb-6 text-[10px] uppercase tracking-wide text-gris">La Trésorière</div>
-            <div className="border-t border-grisM pt-1 text-[11px] font-medium text-navy">
-              Me ONDZE BOYA
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <DocumentChrome
+      org="Conseil de l'Ordre"
+      title="Quitus de cotisation"
+      reference={`N° ${numero}`}
+      date={date}
+      signataires={[{ role: "La Trésorière", nom: "Me ONDZE BOYA" }]}
+    >
+      <p className="text-[13px] leading-7 text-encre">
+        Le Conseil de l'Ordre des Avocats du Barreau de Pointe-Noire certifie que{" "}
+        <strong>Me {membre?.nom}</strong>, avocat inscrit au tableau, est{" "}
+        <strong>entièrement à jour</strong> de ses cotisations ordinales au titre de l'exercice{" "}
+        <strong>{exercice}</strong>.
+      </p>
+      <p className="mt-3 text-[13px] leading-7 text-encre">
+        En foi de quoi le présent quitus lui est délivré pour servir et valoir ce que de droit.
+      </p>
+    </DocumentChrome>
   );
 }
 
@@ -218,9 +192,15 @@ export function Quitus() {
               <DocumentCheckIcon className="h-4 w-4" />
               Générer &amp; archiver
             </button>
-            <p className="text-center text-[10px] text-white/30">
-              Génération PDF + archivage automatique
-            </p>
+            <button
+              type="button"
+              onClick={() => exporterPdf(`Quitus-${numero}`)}
+              disabled={!membreActif}
+              className="bpn-btn bpn-btn-ghost w-full justify-center border-white/20 text-white/70 hover:bg-white/10 hover:text-white disabled:opacity-40"
+            >
+              <ArrowDownTrayIcon className="h-4 w-4" />
+              Télécharger PDF
+            </button>
           </div>
         </div>
 
