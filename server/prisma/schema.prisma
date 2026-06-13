@@ -1,0 +1,196 @@
+// Schéma de données — Secrétariat Général du Barreau de Pointe-Noire (V2)
+// PostgreSQL + Prisma. Modélise les entités principales du PRD (§6.2).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SECRETAIRE_GENERAL
+  BATONNIER
+  TRESORIERE
+  ADMIN
+}
+
+enum Qualite {
+  AVOCAT
+  STAGIAIRE
+  HONORAIRE
+}
+
+enum StatutMembre {
+  INSCRIT
+  SUSPENDU
+  RADIE
+  OMIS
+  HONORAIRE
+  STAGIAIRE
+}
+
+enum TypeAssemblee {
+  AGO
+  AGE
+}
+
+enum StatutDossier {
+  OUVERT
+  INSTRUCTION
+  AUDIENCE
+  DECISION
+  CLASSE
+}
+
+enum StatutPublication {
+  BROUILLON
+  A_VALIDER
+  VALIDE
+  PUBLIE
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  nom          String
+  email        String   @unique
+  role         Role
+  passwordHash String
+  actif        Boolean  @default(true)
+  createdAt    DateTime @default(now())
+}
+
+model Membre {
+  id              Int          @id @default(autoincrement())
+  num             Int          @unique
+  numInscription  String?      @unique
+  nom             String
+  qualite         Qualite
+  statut          StatutMembre @default(INSCRIT)
+  cabinet         String?
+  tel             String?
+  email           String?
+  rccm            String?
+  cnss            String?
+  adresse         String?
+  dateNaissance   DateTime?
+  dateInscription DateTime?
+  observations    String?
+  // Stage (avocats stagiaires)
+  dateServment    DateTime?
+  dureeMois       Int?
+  maitreStage     String?
+
+  cotisations Cotisation[]
+  recus       Recu[]
+  quitus      Quitus[]
+  dossiers    DossierDisciplinaire[]
+  createdAt   DateTime               @default(now())
+}
+
+model Cotisation {
+  id               Int       @id @default(autoincrement())
+  membre           Membre    @relation(fields: [membreId], references: [id], onDelete: Cascade)
+  membreId         Int
+  annee            Int
+  montantDu        Int
+  montantPaye      Int       @default(0)
+  datePaiement     DateTime?
+  mode             String?
+  ref              String?
+  valideTresoriere Boolean   @default(false)
+
+  @@unique([membreId, annee])
+  @@index([annee])
+}
+
+model Recu {
+  id        Int      @id @default(autoincrement())
+  numero    String   @unique
+  membre    Membre   @relation(fields: [membreId], references: [id])
+  membreId  Int
+  montant   Int
+  annee     Int
+  date      DateTime
+  mode      String?
+  ref       String?
+  objet     String?
+  createdAt DateTime @default(now())
+}
+
+model Quitus {
+  id           Int      @id @default(autoincrement())
+  numero       String   @unique
+  membre       Membre   @relation(fields: [membreId], references: [id])
+  membreId     Int
+  annee        Int
+  dateEmission DateTime
+  createdAt    DateTime @default(now())
+}
+
+model DossierDisciplinaire {
+  id              Int           @id @default(autoincrement())
+  reference       String        @unique
+  membre          Membre?       @relation(fields: [membreId], references: [id])
+  membreId        Int?
+  avocatNom       String
+  objet           String
+  dateSaisine     DateTime
+  dateConvocation DateTime?
+  dateAudience    DateTime?
+  decision        String?
+  sanction        String?
+  statut          StatutDossier @default(OUVERT)
+  createdAt       DateTime      @default(now())
+}
+
+model Reunion {
+  id          Int      @id @default(autoincrement())
+  date        DateTime
+  heure       String?
+  lieu        String?
+  ordreDuJour String[]
+  statut      String   @default("planifiee")
+  pv          String?
+  presences   Json?
+}
+
+model Assemblee {
+  id            Int           @id @default(autoincrement())
+  type          TypeAssemblee
+  date          DateTime
+  lieu          String?
+  ordreDuJour   String[]
+  quorumPresent Int           @default(0)
+  statut        String        @default("convoquee")
+  decisions     String[]
+  pv            String?
+}
+
+model Archive {
+  id        Int       @id @default(autoincrement())
+  categorie String
+  titre     String
+  reference String?
+  date      DateTime?
+  membreNom String?
+  archiveLe DateTime  @default(now())
+}
+
+model Publication {
+  id      Int               @id @default(autoincrement())
+  titre   String
+  type    String
+  contenu String?
+  statut  StatutPublication @default(A_VALIDER)
+  date    DateTime          @default(now())
+}
+
+model JournalDiscipline {
+  id     Int      @id @default(autoincrement())
+  action String
+  quand  DateTime @default(now())
+  userId Int?
+}
