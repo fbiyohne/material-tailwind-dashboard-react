@@ -121,4 +121,34 @@
   .bpn-label {
     @apply text-[10px] font-medium uppercase tracking-wide text-gris;
   }
+
+  /* Champ de formulaire sur fond sombre (panneau navy du module Reçus) */
+  .bpn-input-dark {
+    @apply w-full rounded border border-white/10 bg-white/[0.06] px-3 py-2 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-or focus:bg-white/10;
+  }
+  select.bpn-input-dark option {
+    @apply bg-navy-3 text-white;
+  }
+}
+
+/* ─── Impression d'un document officiel — masquage total de l'interface
+   (NFR-13) : seule la zone .bpn-print-zone reste visible. ─────────────── */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .bpn-print-zone,
+  .bpn-print-zone * {
+    visibility: visible;
+  }
+  .bpn-print-zone {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    border: none;
+  }
+  .bpn-no-print {
+    display: none !important;
+  }
 }
