@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import { useNavigate } from "react-router-dom";
 import {
@@ -12,8 +12,8 @@ import {
   ArchiveBoxIcon,
   ChevronDownIcon,
 } from "@heroicons/react/24/outline";
-import { useBarreau } from "../store/BarreauStore";
 import { prochainesEcheances } from "../data/dashboard-data";
+import { listerMembres } from "../api/resources";
 
 const DOCS = [
   { label: "Émettre un reçu", to: "/recus", icon: ReceiptPercentIcon },
@@ -26,15 +26,17 @@ const DOCS = [
  * documents, notifications (échéances) et action d'inscription.
  */
 export function Topbar({ title, onOpenMenu, onAddAvocat }) {
-  const { membres } = useBarreau();
   const navigate = useNavigate();
   const [q, setQ] = useState("");
   const [menu, setMenu] = useState(null); // "docs" | "notifs" | null
+  const [membres, setMembres] = useState([]);
+
+  useEffect(() => {
+    listerMembres().then((d) => setMembres(d.items)).catch(() => {});
+  }, []);
 
   const resultats = q.trim()
-    ? membres
-        .filter((m) => m.nom.toLowerCase().includes(q.trim().toLowerCase()))
-        .slice(0, 6)
+    ? membres.filter((m) => m.nom.toLowerCase().includes(q.trim().toLowerCase())).slice(0, 6)
     : [];
 
   const aller = (path) => { setMenu(null); setQ(""); navigate(path); };

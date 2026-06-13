@@ -1,20 +1,22 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeftIcon, CheckIcon } from "@heroicons/react/24/outline";
 import { Badge, useToast } from "../components";
-import { useBarreau } from "../store/BarreauStore";
 import { STATUT_PUBLICATION_META } from "../data/publications";
+import { getPublication, majPublication, changerStatutPublication } from "../api/resources";
 
 export function PublicationDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { publications, mettreAJourPublication, changerStatutPublication } = useBarreau();
   const toast = useToast();
-  const publication = publications.find((p) => p.id === Number(id));
+  const [publication, setPublication] = useState(null);
+  const [form, setForm] = useState({});
 
-  const [form, setForm] = useState(publication ?? {});
+  const charger = () =>
+    getPublication(Number(id)).then((p) => { setPublication(p); setForm(p); }).catch(() => setPublication(false));
+  useEffect(() => { charger(); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!publication) {
+  if (publication === false) {
     return (
       <div className="py-20 text-center">
         <p className="text-gris">Publication introuvable.</p>
@@ -22,17 +24,20 @@ export function PublicationDetail() {
       </div>
     );
   }
+  if (!publication) return <div className="py-20 text-center text-sm text-gris">Chargement…</div>;
 
   const meta = STATUT_PUBLICATION_META[publication.statut];
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
-  const enregistrer = () => {
-    mettreAJourPublication(publication.id, { titre: form.titre, type: form.type, contenu: form.contenu });
+  const enregistrer = async () => {
+    await majPublication(publication.id, { titre: form.titre, type: form.type, contenu: form.contenu });
     toast.success("Publication enregistrée.");
+    charger();
   };
-  const transition = (statut, label) => {
-    changerStatutPublication(publication.id, statut);
+  const transition = async (statut, label) => {
+    await changerStatutPublication(publication.id, statut);
     toast.success(label);
+    charger();
   };
 
   return (

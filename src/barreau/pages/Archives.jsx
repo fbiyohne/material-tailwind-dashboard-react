@@ -1,8 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MagnifyingGlassIcon, DocumentArrowDownIcon } from "@heroicons/react/24/outline";
-import { Badge, SortTh, Pagination } from "../components";
-import { useBarreau } from "../store/BarreauStore";
+import { Badge, SortTh, Pagination, useToast } from "../components";
 import { useDataTable } from "../hooks/useDataTable";
+import { listerArchives } from "../api/resources";
 
 const ACCESSORS = {
   date: (a) => a.date,
@@ -11,24 +11,27 @@ const ACCESSORS = {
 };
 
 export function Archives() {
-  const { archives } = useBarreau();
+  const toast = useToast();
+  const [archives, setArchives] = useState([]);
+  const [categories, setCategories] = useState(["toutes"]);
   const [recherche, setRecherche] = useState("");
   const [categorie, setCategorie] = useState("toutes");
 
-  const categories = useMemo(
-    () => ["toutes", ...Array.from(new Set(archives.map((a) => a.categorie)))],
-    [archives]
-  );
+  useEffect(() => {
+    listerArchives()
+      .then((d) => {
+        setArchives(d.archives.map((a) => ({ ...a, date: a.date ? String(a.date).slice(0, 10) : "" })));
+        setCategories(["toutes", ...d.categories]);
+      })
+      .catch((e) => toast.error(e.message));
+  }, [toast]);
 
   const lignes = useMemo(() => {
     const q = recherche.trim().toLowerCase();
     return archives.filter((a) => {
       if (categorie !== "toutes" && a.categorie !== categorie) return false;
       if (!q) return true;
-      return (
-        a.titre.toLowerCase().includes(q) ||
-        String(a.reference).toLowerCase().includes(q)
-      );
+      return a.titre.toLowerCase().includes(q) || String(a.reference).toLowerCase().includes(q);
     });
   }, [archives, recherche, categorie]);
 

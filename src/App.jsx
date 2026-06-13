@@ -1,5 +1,4 @@
 import BarreauLayout from "@/barreau/layout/BarreauLayout";
-import { BarreauProvider } from "@/barreau/store/BarreauStore";
 import { ErrorBoundary, ToastProvider, ConfirmProvider } from "@/barreau/components";
 import { AuthProvider, useAuth } from "@/barreau/auth/AuthContext";
 import { Login } from "@/barreau/auth/Login";
@@ -19,9 +18,7 @@ function AuthGate() {
   if (!user) return <Login />;
   return (
     <ConfirmProvider>
-      <BarreauProvider>
-        <BarreauLayout />
-      </BarreauProvider>
+      <BarreauLayout />
     </ConfirmProvider>
   );
 }

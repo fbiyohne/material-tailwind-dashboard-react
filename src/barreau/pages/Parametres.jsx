@@ -1,9 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CheckIcon, LockClosedIcon } from "@heroicons/react/24/outline";
 import { Badge, useToast } from "../components";
-import { useBarreau } from "../store/BarreauStore";
 import { EXERCICES } from "../data/dashboard-data";
 import { formatFCFA } from "../utils/format";
+import { getParametres, majParametres } from "../api/resources";
+
+const DEFAUT = {
+  tarifs: { avocat: 150000, stagiaire: 75000, droitsPlaidoirie: 60000 },
+  exerciceCourant: 2026,
+  identite: { denomination: "", ordre: "", batonnier: "", tresoriere: "", secretaireGeneral: "", adresse: "" },
+};
 
 const ROLES = [
   { role: "Secrétaire Général", mission: "Administrateur fonctionnel principal", acces: "Accès complet", ton: "vert" },
@@ -25,23 +31,29 @@ function Section({ titre, description, children }) {
 }
 
 export function Parametres() {
-  const { parametres, mettreAJourParametres } = useBarreau();
   const toast = useToast();
+  const [tarifs, setTarifs] = useState(DEFAUT.tarifs);
+  const [exercice, setExercice] = useState(DEFAUT.exerciceCourant);
+  const [identite, setIdentite] = useState(DEFAUT.identite);
 
-  const [tarifs, setTarifs] = useState(parametres.tarifs);
-  const [exercice, setExercice] = useState(parametres.exerciceCourant);
-  const [identite, setIdentite] = useState(parametres.identite);
+  useEffect(() => {
+    getParametres().then((p) => {
+      setTarifs({ ...DEFAUT.tarifs, ...p.tarifs });
+      setExercice(p.exerciceCourant ?? DEFAUT.exerciceCourant);
+      setIdentite({ ...DEFAUT.identite, ...p.identite });
+    }).catch((e) => toast.error(e.message));
+  }, [toast]);
 
   const setT = (k) => (e) => setTarifs({ ...tarifs, [k]: Number(e.target.value) });
   const setI = (k) => (e) => setIdentite({ ...identite, [k]: e.target.value });
 
-  const sauverTarifs = () => {
-    mettreAJourParametres({ tarifs: { avocat: tarifs.avocat, stagiaire: tarifs.stagiaire, droitsPlaidoirie: tarifs.droitsPlaidoirie }, exerciceCourant: exercice });
-    toast.success("Tarifs et exercice courant enregistrés.");
+  const sauverTarifs = async () => {
+    try { await majParametres({ tarifs, exerciceCourant: exercice }); toast.success("Tarifs et exercice courant enregistrés."); }
+    catch (e) { toast.error(e.message); }
   };
-  const sauverIdentite = () => {
-    mettreAJourParametres({ identite });
-    toast.success("Identité de l'institution enregistrée.");
+  const sauverIdentite = async () => {
+    try { await majParametres({ identite }); toast.success("Identité de l'institution enregistrée."); }
+    catch (e) { toast.error(e.message); }
   };
 
   return (

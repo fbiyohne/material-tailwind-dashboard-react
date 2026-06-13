@@ -6,6 +6,18 @@ import { requireAuth } from "../middleware/auth.js";
 export const archivesRouter = Router();
 archivesRouter.use(requireAuth);
 
+/** POST /archives — archive manuelle d'un document généré (RG-14). */
+archivesRouter.post(
+  "/",
+  asyncH(async (req, res) => {
+    const { categorie, titre, reference, date, membreNom } = req.body ?? {};
+    const a = await prisma.archive.create({
+      data: { categorie, titre, reference, date: date ? new Date(date) : new Date(), membreNom },
+    });
+    res.status(201).json(a);
+  })
+);
+
 /** GET /archives — recherche par mot-clé et catégorie (FR-ARC). */
 archivesRouter.get(
   "/",

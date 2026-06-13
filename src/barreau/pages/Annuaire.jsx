@@ -1,21 +1,24 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MagnifyingGlassIcon, ArrowDownTrayIcon, PrinterIcon } from "@heroicons/react/24/outline";
-import { StatutBadge } from "../components";
+import { StatutBadge, useToast } from "../components";
 import { exporterExcel } from "../utils/exports";
-import { useBarreau } from "../store/BarreauStore";
+import { listerMembres } from "../api/resources";
 
 export function Annuaire() {
-  const { membres } = useBarreau();
+  const toast = useToast();
+  const [membres, setMembres] = useState([]);
   const [mode, setMode] = useState("public"); // public | interne
   const [recherche, setRecherche] = useState("");
+
+  useEffect(() => {
+    listerMembres().then((d) => setMembres(d.items.filter((m) => m.qualite !== "stagiaire"))).catch((e) => toast.error(e.message));
+  }, [toast]);
 
   const interne = mode === "interne";
 
   const lignes = useMemo(() => {
     const q = recherche.trim().toLowerCase();
-    return membres
-      .filter((m) => m.qualite !== "stagiaire")
-      .filter((m) => (!q ? true : m.nom.toLowerCase().includes(q) || m.cabinet.toLowerCase().includes(q)));
+    return membres.filter((m) => (!q ? true : m.nom.toLowerCase().includes(q) || (m.cabinet ?? "").toLowerCase().includes(q)));
   }, [membres, recherche]);
 
   const exporterXlsx = () => {

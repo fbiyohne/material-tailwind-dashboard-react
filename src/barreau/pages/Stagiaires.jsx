@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { PrinterIcon } from "@heroicons/react/24/outline";
-import { Badge, MembreFicheModal } from "../components";
-import { useBarreau } from "../store/BarreauStore";
+import { Badge, useToast } from "../components";
 import { infoStage } from "../data/derivations";
+import { listerMembres } from "../api/resources";
 
 const FILTRES = [
   { value: "tous", label: "Tous" },
@@ -66,22 +67,24 @@ function CarteStagiaire({ membre, stage, onFiche }) {
 }
 
 export function Stagiaires() {
-  const { membres } = useBarreau();
+  const navigate = useNavigate();
+  const toast = useToast();
+  const [membres, setMembres] = useState([]);
   const [filtre, setFiltre] = useState("tous");
-  const [fiche, setFiche] = useState(null);
+
+  useEffect(() => {
+    listerMembres({ qualite: "STAGIAIRE" })
+      .then((d) => setMembres(d.items))
+      .catch((e) => toast.error(e.message));
+  }, [toast]);
 
   const stagiaires = useMemo(
     () =>
       membres
-        .filter((m) => m.qualite === "stagiaire")
         .map((m) => ({ membre: m, stage: infoStage(m) }))
         .filter(({ stage }) => stage)
         .filter(({ stage }) =>
-          filtre === "tous"
-            ? true
-            : filtre === "termine"
-            ? stage.termine
-            : !stage.termine
+          filtre === "tous" ? true : filtre === "termine" ? stage.termine : !stage.termine
         ),
     [membres, filtre]
   );
@@ -122,7 +125,7 @@ export function Stagiaires() {
 
       <div className="bpn-no-print grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {stagiaires.map(({ membre, stage }) => (
-          <CarteStagiaire key={membre.id} membre={membre} stage={stage} onFiche={setFiche} />
+          <CarteStagiaire key={membre.id} membre={membre} stage={stage} onFiche={(m) => navigate(`/avocats/${m.id}`)} />
         ))}
         {stagiaires.length === 0 && (
           <p className="col-span-full py-10 text-center text-sm text-gris">
@@ -162,7 +165,6 @@ export function Stagiaires() {
         </table>
       </div>
 
-      <MembreFicheModal membre={fiche} onClose={() => setFiche(null)} />
     </div>
   );
 }

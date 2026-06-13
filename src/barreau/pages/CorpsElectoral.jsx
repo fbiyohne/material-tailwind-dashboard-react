@@ -1,10 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { PrinterIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
-import { StatCard, Badge } from "../components";
-import { useBarreau } from "../store/BarreauStore";
-import { eligibiliteElectorale } from "../data/derivations";
+import { StatCard, Badge, useToast } from "../components";
 import { exporterExcel } from "../utils/exports";
 import { EXERCICES } from "../data/dashboard-data";
+import { getCorpsElectoral } from "../api/resources";
 
 const MOTIF_LABEL = {
   cotisation: { label: "Cotisations non à jour", ton: "rouge" },
@@ -12,23 +11,15 @@ const MOTIF_LABEL = {
 };
 
 export function CorpsElectoral() {
-  const { membres } = useBarreau();
+  const toast = useToast();
   const [exercice, setExercice] = useState(2026);
+  const [data, setData] = useState({ electeurs: [], exclusCotisation: [], exclusStatut: [] });
 
-  const { electeurs, exclusCotisation, exclusStatut } = useMemo(() => {
-    const base = membres.filter((m) => m.qualite !== "stagiaire");
-    const electeurs = [];
-    const exclusCotisation = [];
-    const exclusStatut = [];
-    base.forEach((m) => {
-      const { eligible, raison } = eligibiliteElectorale(m, exercice);
-      if (eligible) electeurs.push(m);
-      else if (raison === "cotisation") exclusCotisation.push(m);
-      else if (raison === "statut") exclusStatut.push(m);
-      // honoraires : exclus de plein droit, non décomptés dans les arriérés (BR-08)
-    });
-    return { electeurs, exclusCotisation, exclusStatut };
-  }, [membres, exercice]);
+  useEffect(() => {
+    getCorpsElectoral(exercice).then(setData).catch((e) => toast.error(e.message));
+  }, [exercice, toast]);
+
+  const { electeurs, exclusCotisation, exclusStatut } = data;
 
   const exporterXlsx = () => {
     const lignes = [

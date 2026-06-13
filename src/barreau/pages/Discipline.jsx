@@ -1,36 +1,48 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   LockClosedIcon,
   ShieldExclamationIcon,
   PlusIcon,
 } from "@heroicons/react/24/outline";
-import { Badge, Modal } from "../components";
-import { useBarreau } from "../store/BarreauStore";
+import { Badge, Modal, useToast } from "../components";
 import { STATUT_DOSSIER_META } from "../data/institutionnel";
+import { listerMembres, listerDossiers, ouvrirDossier as apiOuvrirDossier, journalDiscipline as apiJournal } from "../api/resources";
 
 const fmtDateTime = (iso) =>
   new Date(iso).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 
-function OuvrirDossierModal({ open, onClose }) {
-  const { membres, ouvrirDossier, journaliserDiscipline, prochaineReferenceDossier } = useBarreau();
-  const avocats = membres.filter((m) => m.qualite !== "stagiaire");
-  const [form, setForm] = useState({ avocatNom: avocats[0]?.nom ?? "", objet: "", dateSaisine: new Date().toISOString().slice(0, 10) });
+function OuvrirDossierModal({ open, onClose, onCreated }) {
+  const toast = useToast();
+  const [avocats, setAvocats] = useState([]);
+  const [form, setForm] = useState({ avocatNom: "", objet: "", dateSaisine: new Date().toISOString().slice(0, 10) });
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
-  const valider = () => {
+  useEffect(() => {
+    if (open) listerMembres().then((d) => {
+      const a = d.items.filter((m) => m.qualite !== "stagiaire");
+      setAvocats(a);
+      setForm((f) => ({ ...f, avocatNom: f.avocatNom || a[0]?.nom || "" }));
+    }).catch(() => {});
+  }, [open]);
+
+  const valider = async () => {
     if (!form.objet.trim()) return;
-    const d = ouvrirDossier(form);
-    journaliserDiscipline(`Ouverture du dossier ${d.reference} — ${form.avocatNom}`);
-    onClose();
-    setForm({ avocatNom: avocats[0]?.nom ?? "", objet: "", dateSaisine: new Date().toISOString().slice(0, 10) });
+    try {
+      await apiOuvrirDossier(form);
+      onCreated?.();
+      onClose();
+      setForm({ avocatNom: avocats[0]?.nom ?? "", objet: "", dateSaisine: new Date().toISOString().slice(0, 10) });
+    } catch (e) {
+      toast.error(e.message);
+    }
   };
 
   return (
     <Modal open={open} onClose={onClose} title="Ouvrir un dossier disciplinaire"
       footer={<button className="bpn-btn bpn-btn-danger" onClick={valider}>Ouvrir le dossier</button>}>
       <div className="mb-3 rounded border-l-[3px] border-or bg-or-L px-3 py-2 text-xs text-gris">
-        Référence unique attribuée automatiquement : <span className="font-mono font-medium text-navy">{prochaineReferenceDossier()}</span> (format AAAA-NN, non réutilisable).
+        Référence unique attribuée automatiquement (format <span className="font-mono font-medium text-navy">AAAA-NN</span>, non réutilisable).
       </div>
       <div className="space-y-3">
         <label className="block"><span className="bpn-label">Avocat mis en cause</span>
@@ -47,10 +59,17 @@ function OuvrirDossierModal({ open, onClose }) {
 }
 
 export function Discipline() {
-  const { dossiers, journalDiscipline, journaliserDiscipline } = useBarreau();
   const navigate = useNavigate();
+  const toast = useToast();
   const [acces, setAcces] = useState(false);
   const [ouvrir, setOuvrir] = useState(false);
+  const [dossiers, setDossiers] = useState([]);
+  const [journalDiscipline, setJournalDiscipline] = useState([]);
+
+  const charger = () => {
+    listerDossiers().then(setDossiers).catch((e) => toast.error(e.message));
+    apiJournal().then(setJournalDiscipline).catch(() => {});
+  };
 
   // ─── Écran d'accès restreint (RG-13) ───────────────────────────────────
   if (!acces) {
@@ -67,10 +86,7 @@ export function Discipline() {
         </p>
         <button
           className="bpn-btn bpn-btn-danger mt-6"
-          onClick={() => {
-            journaliserDiscipline("Accès au module Discipline");
-            setAcces(true);
-          }}
+          onClick={() => { setAcces(true); charger(); }}
         >
           <LockClosedIcon className="h-4 w-4" /> Accéder — consultation journalisée
         </button>
@@ -158,7 +174,7 @@ export function Discipline() {
         </ul>
       </div>
 
-      <OuvrirDossierModal open={ouvrir} onClose={() => setOuvrir(false)} />
+      <OuvrirDossierModal open={ouvrir} onClose={() => setOuvrir(false)} onCreated={charger} />
     </div>
   );
 }

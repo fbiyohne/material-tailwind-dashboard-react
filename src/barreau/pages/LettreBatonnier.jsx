@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { SparklesIcon, DocumentTextIcon } from "@heroicons/react/24/outline";
 import { Badge, Modal } from "../components";
-import { useBarreau } from "../store/BarreauStore";
-import { calendrierLettre } from "../data/publications";
+import { calendrierLettre, genererBrouillonArticle } from "../data/publications";
+import { archiverDoc } from "../api/resources";
 
 const STATUT_META = {
   publie: { label: "Publié", ton: "vert" },
@@ -11,11 +11,16 @@ const STATUT_META = {
 };
 
 export function LettreBatonnier() {
-  const { articlesLettre, genererArticleLettre } = useBarreau();
+  const [articlesLettre, setArticlesLettre] = useState({});
   const [apercu, setApercu] = useState(null); // { mois, texte }
 
   const ouvrirGeneration = (mois, theme) => {
-    const texte = articlesLettre[mois] ?? genererArticleLettre(mois, theme);
+    let texte = articlesLettre[mois];
+    if (!texte) {
+      texte = genererBrouillonArticle(mois, theme);
+      setArticlesLettre((prev) => ({ ...prev, [mois]: texte }));
+      archiverDoc({ categorie: "Lettre du Bâtonnier", titre: `Projet d'article — ${mois}`, reference: mois, date: new Date().toISOString().slice(0, 10) }).catch(() => {});
+    }
     setApercu({ mois, texte });
   };
 

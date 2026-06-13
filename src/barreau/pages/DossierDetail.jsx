@@ -1,32 +1,27 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeftIcon, ShieldExclamationIcon, CheckIcon } from "@heroicons/react/24/outline";
-import { Badge, DocumentModal } from "../components";
-import { useBarreau } from "../store/BarreauStore";
+import { Badge, DocumentModal, useToast } from "../components";
 import { STATUT_DOSSIER_META } from "../data/institutionnel";
+import { getDossier, majDossier, archiverDoc } from "../api/resources";
 
 const STATUTS = ["ouvert", "instruction", "audience", "decision", "classe"];
 
 export function DossierDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { dossiers, mettreAJourDossier, journaliserDiscipline, archiver } = useBarreau();
-  const dossier = dossiers.find((d) => d.id === Number(id));
-
-  const [form, setForm] = useState(dossier);
+  const toast = useToast();
+  const [dossier, setDossier] = useState(null);
+  const [form, setForm] = useState(null);
   const [enregistre, setEnregistre] = useState(false);
   const [convocation, setConvocation] = useState(false);
-  const logued = useRef(false);
 
-  // Journalisation de l'accès au dossier (RG-13), une seule fois.
+  // getDossier journalise la consultation côté serveur (RG-13).
   useEffect(() => {
-    if (dossier && !logued.current) {
-      logued.current = true;
-      journaliserDiscipline(`Consultation du dossier ${dossier.reference}`);
-    }
-  }, [dossier, journaliserDiscipline]);
+    getDossier(Number(id)).then((d) => { setDossier(d); setForm(d); }).catch(() => setDossier(false));
+  }, [id]);
 
-  if (!dossier || !form) {
+  if (dossier === false) {
     return (
       <div className="py-20 text-center">
         <p className="text-gris">Dossier introuvable.</p>
@@ -34,17 +29,22 @@ export function DossierDetail() {
       </div>
     );
   }
+  if (!dossier || !form) return <div className="py-20 text-center text-sm text-gris">Chargement…</div>;
 
   const set = (k) => (e) => { setForm({ ...form, [k]: e.target.value }); setEnregistre(false); };
   const meta = STATUT_DOSSIER_META[form.statut];
 
-  const enregistrer = () => {
-    mettreAJourDossier(dossier.id, {
-      statut: form.statut, dateConvocation: form.dateConvocation, dateAudience: form.dateAudience,
-      decision: form.decision, sanction: form.sanction,
-    });
-    journaliserDiscipline(`Mise à jour du dossier ${dossier.reference}`);
-    setEnregistre(true);
+  const enregistrer = async () => {
+    try {
+      await majDossier(dossier.id, {
+        statut: form.statut, dateConvocation: form.dateConvocation, dateAudience: form.dateAudience,
+        decision: form.decision, sanction: form.sanction,
+      });
+      setEnregistre(true);
+      toast.success("Dossier mis à jour.");
+    } catch (e) {
+      toast.error(e.message);
+    }
   };
 
   return (
@@ -109,7 +109,7 @@ export function DossierDetail() {
         org="Conseil de discipline"
         reference={`Dossier N° ${dossier.reference}`}
         signataire={{ role: "Le Bâtonnier, Président du Conseil de discipline", nom: "Me BIKINDOU Audrey Séverin" }}
-        onArchive={() => archiver({ categorie: "Convocation disciplinaire", titre: `Convocation — dossier ${dossier.reference}`, reference: dossier.reference, date: new Date().toISOString().slice(0, 10) })}
+        onArchive={() => archiverDoc({ categorie: "Convocation disciplinaire", titre: `Convocation — dossier ${dossier.reference}`, reference: dossier.reference, date: new Date().toISOString().slice(0, 10) })}
       >
         <p>
           Dans le cadre du dossier disciplinaire <strong>N° {dossier.reference}</strong>,{" "}

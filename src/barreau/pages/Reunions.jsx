@@ -1,20 +1,25 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PlusIcon, CalendarDaysIcon, MapPinIcon, ArrowRightIcon } from "@heroicons/react/24/outline";
-import { Badge, Modal } from "../components";
-import { useBarreau } from "../store/BarreauStore";
+import { Badge, Modal, useToast } from "../components";
+import { listerReunions, creerReunion as apiCreerReunion } from "../api/resources";
 
 const fmt = (d) => new Date(d).toLocaleDateString("fr-FR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
 
-function NouvelleReunionModal({ open, onClose }) {
-  const { creerReunion } = useBarreau();
+function NouvelleReunionModal({ open, onClose, onCreated }) {
+  const toast = useToast();
   const [form, setForm] = useState({ date: "", heure: "15:00", lieu: "Maison de l'Avocat — Pointe-Noire", odj: "" });
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
-  const valider = () => {
+  const valider = async () => {
     if (!form.date) return;
-    creerReunion({ date: form.date, heure: form.heure, lieu: form.lieu, ordreDuJour: form.odj.split("\n").map((s) => s.trim()).filter(Boolean) });
-    onClose();
-    setForm({ date: "", heure: "15:00", lieu: "Maison de l'Avocat — Pointe-Noire", odj: "" });
+    try {
+      await apiCreerReunion({ date: form.date, heure: form.heure, lieu: form.lieu, ordreDuJour: form.odj.split("\n").map((s) => s.trim()).filter(Boolean) });
+      onCreated?.();
+      onClose();
+      setForm({ date: "", heure: "15:00", lieu: "Maison de l'Avocat — Pointe-Noire", odj: "" });
+    } catch (e) {
+      toast.error(e.message);
+    }
   };
   return (
     <Modal open={open} onClose={onClose} title="Planifier une réunion du Conseil"
@@ -32,9 +37,13 @@ function NouvelleReunionModal({ open, onClose }) {
 }
 
 export function Reunions() {
-  const { reunions } = useBarreau();
   const navigate = useNavigate();
+  const toast = useToast();
+  const [reunions, setReunions] = useState([]);
   const [creer, setCreer] = useState(false);
+
+  const charger = () => listerReunions().then(setReunions).catch((e) => toast.error(e.message));
+  useEffect(() => { charger(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="space-y-5">
@@ -73,7 +82,7 @@ export function Reunions() {
         ))}
       </div>
 
-      <NouvelleReunionModal open={creer} onClose={() => setCreer(false)} />
+      <NouvelleReunionModal open={creer} onClose={() => setCreer(false)} onCreated={charger} />
     </div>
   );
 }

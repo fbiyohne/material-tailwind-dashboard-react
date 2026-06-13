@@ -1,9 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeftIcon, PlusIcon, CheckIcon } from "@heroicons/react/24/outline";
 import { Badge, DocumentModal, useToast } from "../components";
-import { useBarreau } from "../store/BarreauStore";
-import { eligibiliteElectorale } from "../data/derivations";
+import { getAssemblee, majAssemblee, getCorpsElectoral, archiverDoc } from "../api/resources";
 
 const TYPE_LABEL = { AGO: "Assemblée Générale Ordinaire", AGE: "Assemblée Générale Extraordinaire" };
 const fmt = (d) => new Date(d).toLocaleDateString("fr-FR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
@@ -20,21 +19,25 @@ function Carte({ titre, action, children }) {
 export function AssembleeDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { assemblees, membres, mettreAJourAssemblee, archiver } = useBarreau();
   const toast = useToast();
-  const assemblee = assemblees.find((a) => a.id === Number(id));
-
-  const electeurs = useMemo(
-    () => membres.filter((m) => m.qualite !== "stagiaire" && eligibiliteElectorale(m, 2026).eligible).length,
-    [membres]
-  );
-
-  const [present, setPresent] = useState(assemblee?.quorumPresent ?? 0);
-  const [pv, setPv] = useState(assemblee?.pv ?? "");
+  const [assemblee, setAssemblee] = useState(null);
+  const [electeurs, setElecteurs] = useState(0);
+  const [present, setPresent] = useState(0);
+  const [pv, setPv] = useState("");
   const [nouvelleDecision, setNouvelleDecision] = useState("");
   const [convocation, setConvocation] = useState(false);
 
-  if (!assemblee) {
+  const charger = () =>
+    getAssemblee(Number(id))
+      .then((a) => { setAssemblee(a); setPresent(a.quorumPresent ?? 0); setPv(a.pv ?? ""); })
+      .catch(() => setAssemblee(false));
+
+  useEffect(() => {
+    charger();
+    getCorpsElectoral(2026).then((d) => setElecteurs(d.stats.electeurs)).catch(() => {});
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (assemblee === false) {
     return (
       <div className="py-20 text-center">
         <p className="text-gris">Assemblée introuvable.</p>
@@ -42,23 +45,26 @@ export function AssembleeDetail() {
       </div>
     );
   }
+  if (!assemblee) return <div className="py-20 text-center text-sm text-gris">Chargement…</div>;
 
+  const dateCourte = String(assemblee.date).slice(0, 10);
   const requis = Math.floor(electeurs / 2) + 1;
   const atteint = present >= requis;
 
-  const sauverQuorum = () => {
-    mettreAJourAssemblee(assemblee.id, { quorumPresent: present });
+  const sauverQuorum = async () => {
+    await majAssemblee(assemblee.id, { quorumPresent: present });
     toast.success(`Quorum enregistré : ${present}/${electeurs} (${atteint ? "atteint" : "non atteint"}).`);
   };
-  const ajouterDecision = () => {
+  const ajouterDecision = async () => {
     if (!nouvelleDecision.trim()) return;
-    mettreAJourAssemblee(assemblee.id, { decisions: [...(assemblee.decisions ?? []), nouvelleDecision.trim()] });
+    const maj = await majAssemblee(assemblee.id, { decisions: [...(assemblee.decisions ?? []), nouvelleDecision.trim()] });
+    setAssemblee(maj);
     setNouvelleDecision("");
     toast.success("Décision ajoutée.");
   };
-  const sauverPv = () => {
-    mettreAJourAssemblee(assemblee.id, { pv, statut: "tenue" });
-    archiver({ categorie: "Procès-verbal (AG)", titre: `PV ${assemblee.type} du ${assemblee.date}`, reference: assemblee.date, date: assemblee.date });
+  const sauverPv = async () => {
+    await majAssemblee(assemblee.id, { pv, statut: "tenue" });
+    await archiverDoc({ categorie: "Procès-verbal (AG)", titre: `PV ${assemblee.type} du ${dateCourte}`, reference: dateCourte, date: dateCourte });
     toast.success("Procès-verbal enregistré et archivé.");
   };
 
@@ -121,8 +127,8 @@ export function AssembleeDetail() {
 
       <DocumentModal
         open={convocation} onClose={() => setConvocation(false)} title="Convocation à l'Assemblée Générale"
-        reference={`${assemblee.type} du ${new Date(assemblee.date).toLocaleDateString("fr-FR")}`} date={assemblee.date}
-        onArchive={() => archiver({ categorie: "Convocation (AG)", titre: `Convocation ${assemblee.type} du ${assemblee.date}`, reference: assemblee.date, date: assemblee.date })}
+        reference={`${assemblee.type} du ${new Date(assemblee.date).toLocaleDateString("fr-FR")}`} date={dateCourte}
+        onArchive={() => archiverDoc({ categorie: "Convocation (AG)", titre: `Convocation ${assemblee.type} du ${dateCourte}`, reference: dateCourte, date: dateCourte })}
       >
         <p>Le Bâtonnier convoque les membres du corps électoral à l'<strong>{TYPE_LABEL[assemblee.type]}</strong> du{" "}
           <strong>{new Date(assemblee.date).toLocaleDateString("fr-FR")}</strong>, au <strong>{assemblee.lieu}</strong>.</p>

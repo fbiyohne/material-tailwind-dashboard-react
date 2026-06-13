@@ -1,21 +1,26 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PlusIcon, ArrowRightIcon } from "@heroicons/react/24/outline";
-import { Badge, Modal } from "../components";
-import { useBarreau } from "../store/BarreauStore";
+import { Badge, Modal, useToast } from "../components";
+import { listerAssemblees, creerAssemblee as apiCreerAssemblee } from "../api/resources";
 
 const TYPE_LABEL = { AGO: "Assemblée Générale Ordinaire", AGE: "Assemblée Générale Extraordinaire" };
 const fmt = (d) => new Date(d).toLocaleDateString("fr-FR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
 
-function NouvelleAssembleeModal({ open, onClose }) {
-  const { creerAssemblee } = useBarreau();
+function NouvelleAssembleeModal({ open, onClose, onCreated }) {
+  const toast = useToast();
   const [form, setForm] = useState({ type: "AGO", date: "", lieu: "Palais de Justice — Pointe-Noire", odj: "" });
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
-  const valider = () => {
+  const valider = async () => {
     if (!form.date) return;
-    creerAssemblee({ type: form.type, date: form.date, lieu: form.lieu, ordreDuJour: form.odj.split("\n").map((s) => s.trim()).filter(Boolean) });
-    onClose();
-    setForm({ type: "AGO", date: "", lieu: "Palais de Justice — Pointe-Noire", odj: "" });
+    try {
+      await apiCreerAssemblee({ type: form.type, date: form.date, lieu: form.lieu, ordreDuJour: form.odj.split("\n").map((s) => s.trim()).filter(Boolean) });
+      onCreated?.();
+      onClose();
+      setForm({ type: "AGO", date: "", lieu: "Palais de Justice — Pointe-Noire", odj: "" });
+    } catch (e) {
+      toast.error(e.message);
+    }
   };
   return (
     <Modal open={open} onClose={onClose} title="Convoquer une assemblée générale"
@@ -34,9 +39,13 @@ function NouvelleAssembleeModal({ open, onClose }) {
 }
 
 export function Assemblees() {
-  const { assemblees } = useBarreau();
   const navigate = useNavigate();
+  const toast = useToast();
+  const [assemblees, setAssemblees] = useState([]);
   const [creer, setCreer] = useState(false);
+
+  const charger = () => listerAssemblees().then(setAssemblees).catch((e) => toast.error(e.message));
+  useEffect(() => { charger(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="space-y-5">
@@ -71,7 +80,7 @@ export function Assemblees() {
         ))}
       </div>
 
-      <NouvelleAssembleeModal open={creer} onClose={() => setCreer(false)} />
+      <NouvelleAssembleeModal open={creer} onClose={() => setCreer(false)} onCreated={charger} />
     </div>
   );
 }

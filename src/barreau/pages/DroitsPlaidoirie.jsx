@@ -1,11 +1,10 @@
-import { useMemo, useState } from "react";
-import { Badge, StatCard, SortTh, Pagination } from "../components";
-import { useBarreau } from "../store/BarreauStore";
+import { useEffect, useState } from "react";
+import { Badge, StatCard, SortTh, Pagination, useToast } from "../components";
 import { useDataTable } from "../hooks/useDataTable";
-import { ligneDroit } from "../data/droits";
 import { STATUT_META } from "../data/derivations";
 import { EXERCICES } from "../data/dashboard-data";
 import { formatFCFA } from "../utils/format";
+import { getDroits } from "../api/resources";
 
 const ACCESSORS = {
   num: (l) => l.membre.num,
@@ -16,19 +15,16 @@ const ACCESSORS = {
 };
 
 export function DroitsPlaidoirie() {
-  const { membres, parametres } = useBarreau();
+  const toast = useToast();
   const [exercice, setExercice] = useState(2026);
+  const [lignes, setLignes] = useState([]);
+  const [totaux, setTotaux] = useState({ du: 0, paye: 0, solde: 0 });
 
-  const { lignes, totaux } = useMemo(() => {
-    const lignes = membres
-      .filter((m) => m.qualite === "avocat")
-      .map((m) => ligneDroit(m, exercice));
-    const totaux = lignes.reduce(
-      (acc, l) => ({ du: acc.du + l.du, paye: acc.paye + l.paye, solde: acc.solde + l.solde }),
-      { du: 0, paye: 0, solde: 0 }
-    );
-    return { lignes, totaux };
-  }, [membres, exercice, parametres]);
+  useEffect(() => {
+    getDroits(exercice)
+      .then((d) => { setLignes(d.lignes); setTotaux(d.totaux); })
+      .catch((e) => toast.error(e.message));
+  }, [exercice, toast]);
 
   const { rows, total, page, setPage, totalPages, sortKey, sortDir, toggleSort } = useDataTable(lignes, {
     accessors: ACCESSORS, pageSize: 10, initialSort: { key: "num", dir: "asc" },

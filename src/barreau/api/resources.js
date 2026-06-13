@@ -69,3 +69,49 @@ export const listerRecus = (annee) => api(`/recus${annee ? `?annee=${annee}` : "
 export const quitusEligibles = (annee) => api(`/quitus/eligibles?annee=${annee}`);
 export const listerQuitus = () => api("/quitus");
 export const genererQuitus = (membreId, annee) => api("/quitus", { method: "POST", body: { membreId, annee } });
+
+// ─── Droits / Corps électoral / Dashboard ────────────────────────────────
+export const getDroits = (annee) => api(`/droits?annee=${annee}`);
+export const getCorpsElectoral = (annee) => api(`/corps-electoral?annee=${annee}`);
+
+// ─── Réunions ─────────────────────────────────────────────────────────────
+export const listerReunions = () => api("/reunions");
+export const getReunion = (id) => api(`/reunions/${id}`);
+export const creerReunion = (data) => api("/reunions", { method: "POST", body: data });
+export const majReunion = (id, patch) => api(`/reunions/${id}`, { method: "PATCH", body: patch });
+
+// ─── Assemblées ───────────────────────────────────────────────────────────
+export const listerAssemblees = () => api("/assemblees");
+export const getAssemblee = (id) => api(`/assemblees/${id}`);
+export const creerAssemblee = (data) => api("/assemblees", { method: "POST", body: data });
+export const majAssemblee = (id, patch) => api(`/assemblees/${id}`, { method: "PATCH", body: patch });
+
+// ─── Discipline (statut enum → minuscule) ────────────────────────────────
+const normDossier = (d) => ({
+  ...d,
+  statut: d.statut?.toLowerCase(),
+  dateSaisine: dateCourte(d.dateSaisine),
+  dateConvocation: dateCourte(d.dateConvocation),
+  dateAudience: dateCourte(d.dateAudience),
+});
+export const listerDossiers = () => api("/discipline").then((a) => a.map(normDossier));
+export const getDossier = (id) => api(`/discipline/${id}`).then(normDossier);
+export const ouvrirDossier = (data) => api("/discipline", { method: "POST", body: data }).then(normDossier);
+export const majDossier = (id, patch) =>
+  api(`/discipline/${id}`, { method: "PATCH", body: { ...patch, statut: patch.statut ? patch.statut.toUpperCase() : undefined } }).then(normDossier);
+export const journalDiscipline = () => api("/discipline/journal");
+
+// ─── Publications (statut enum → minuscule) ──────────────────────────────
+const normPub = (p) => ({ ...p, statut: p.statut?.toLowerCase(), date: dateCourte(p.date) });
+export const listerPublications = () => api("/publications").then((a) => a.map(normPub));
+export const getPublication = (id) => api(`/publications/${id}`).then(normPub);
+export const creerPublication = (data) => api("/publications", { method: "POST", body: data }).then(normPub);
+export const majPublication = (id, patch) => api(`/publications/${id}`, { method: "PATCH", body: patch }).then(normPub);
+export const changerStatutPublication = (id, statut) =>
+  api(`/publications/${id}/statut`, { method: "POST", body: { statut: statut.toUpperCase() } }).then(normPub);
+
+// ─── Archives / Paramètres ───────────────────────────────────────────────
+export const listerArchives = (params = {}) => api(`/archives?${new URLSearchParams(params).toString()}`);
+export const archiverDoc = (entry) => api("/archives", { method: "POST", body: entry });
+export const getParametres = () => api("/parametres");
+export const majParametres = (patch) => api("/parametres", { method: "PUT", body: patch });

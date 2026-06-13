@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeftIcon, CalendarDaysIcon, MapPinIcon, CheckIcon } from "@heroicons/react/24/outline";
 import { Badge, DocumentModal, useToast } from "../components";
-import { useBarreau } from "../store/BarreauStore";
+import { getReunion, majReunion, archiverDoc } from "../api/resources";
 
 const fmt = (d) => new Date(d).toLocaleDateString("fr-FR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
 const CONSEIL = [
@@ -26,17 +26,26 @@ function Carte({ titre, action, children }) {
 export function ReunionDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { reunions, mettreAJourReunion, archiver } = useBarreau();
   const toast = useToast();
-  const reunion = reunions.find((r) => r.id === Number(id));
-
-  const [odj, setOdj] = useState(reunion ? reunion.ordreDuJour.join("\n") : "");
-  const [presences, setPresences] = useState(reunion?.presences ?? {});
-  const [pv, setPv] = useState(reunion?.pv ?? "");
+  const [reunion, setReunion] = useState(null);
+  const [odj, setOdj] = useState("");
+  const [presences, setPresences] = useState({});
+  const [pv, setPv] = useState("");
   const [convocation, setConvocation] = useState(false);
   const [feuille, setFeuille] = useState(false);
 
-  if (!reunion) {
+  useEffect(() => {
+    getReunion(Number(id))
+      .then((r) => {
+        setReunion(r);
+        setOdj((r.ordreDuJour ?? []).join("\n"));
+        setPresences(r.presences ?? {});
+        setPv(r.pv ?? "");
+      })
+      .catch(() => setReunion(false));
+  }, [id]);
+
+  if (reunion === false) {
     return (
       <div className="py-20 text-center">
         <p className="text-gris">Réunion introuvable.</p>
@@ -44,20 +53,23 @@ export function ReunionDetail() {
       </div>
     );
   }
+  if (!reunion) return <div className="py-20 text-center text-sm text-gris">Chargement…</div>;
 
+  const dateCourte = String(reunion.date).slice(0, 10);
   const nbPresents = Object.values(presences).filter(Boolean).length;
 
-  const sauverOdj = () => {
-    mettreAJourReunion(reunion.id, { ordreDuJour: odj.split("\n").map((s) => s.trim()).filter(Boolean) });
+  const sauverOdj = async () => {
+    await majReunion(reunion.id, { ordreDuJour: odj.split("\n").map((s) => s.trim()).filter(Boolean) });
     toast.success("Ordre du jour mis à jour.");
   };
-  const sauverPresences = () => {
-    mettreAJourReunion(reunion.id, { presences });
+  const sauverPresences = async () => {
+    await majReunion(reunion.id, { presences });
     toast.success(`Présences enregistrées (${nbPresents}/${CONSEIL.length}).`);
   };
-  const sauverPv = () => {
-    mettreAJourReunion(reunion.id, { pv, statut: "tenue" });
-    archiver({ categorie: "Procès-verbal (Conseil)", titre: `PV réunion du ${reunion.date}`, reference: reunion.date, date: reunion.date });
+  const sauverPv = async () => {
+    await majReunion(reunion.id, { pv, statut: "tenue" });
+    await archiverDoc({ categorie: "Procès-verbal (Conseil)", titre: `PV réunion du ${dateCourte}`, reference: dateCourte, date: dateCourte });
+    setReunion({ ...reunion, statut: "tenue" });
     toast.success("Procès-verbal enregistré et archivé.");
   };
 
@@ -109,8 +121,8 @@ export function ReunionDetail() {
 
       <DocumentModal
         open={convocation} onClose={() => setConvocation(false)} title="Convocation"
-        reference={`Réunion du ${new Date(reunion.date).toLocaleDateString("fr-FR")}`} date={reunion.date}
-        onArchive={() => archiver({ categorie: "Convocation (Conseil)", titre: `Convocation réunion du ${reunion.date}`, reference: reunion.date, date: reunion.date })}
+        reference={`Réunion du ${new Date(reunion.date).toLocaleDateString("fr-FR")}`} date={dateCourte}
+        onArchive={() => archiverDoc({ categorie: "Convocation (Conseil)", titre: `Convocation réunion du ${dateCourte}`, reference: dateCourte, date: dateCourte })}
       >
         <p>Le Bâtonnier a l'honneur de convier les membres du Conseil de l'Ordre à la réunion du{" "}
           <strong>{new Date(reunion.date).toLocaleDateString("fr-FR")}</strong> à <strong>{reunion.heure}</strong>, au <strong>{reunion.lieu}</strong>.</p>
@@ -120,9 +132,9 @@ export function ReunionDetail() {
 
       <DocumentModal
         open={feuille} onClose={() => setFeuille(false)} title="Feuille de présence"
-        reference={`Réunion du ${new Date(reunion.date).toLocaleDateString("fr-FR")}`} date={reunion.date}
+        reference={`Réunion du ${new Date(reunion.date).toLocaleDateString("fr-FR")}`} date={dateCourte}
         signataire={{ role: "Le Secrétaire Général", nom: "Me KALINA-MENGA Lionel" }}
-        onArchive={() => archiver({ categorie: "Feuille de présence", titre: `Feuille de présence du ${reunion.date}`, reference: reunion.date, date: reunion.date })}
+        onArchive={() => archiverDoc({ categorie: "Feuille de présence", titre: `Feuille de présence du ${dateCourte}`, reference: dateCourte, date: dateCourte })}
       >
         <table className="w-full text-[12px]">
           <thead><tr className="border-b border-navy text-left text-navy"><th className="py-1">Membre</th><th className="py-1 text-right">Émargement</th></tr></thead>

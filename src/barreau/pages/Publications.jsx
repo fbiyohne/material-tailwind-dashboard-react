@@ -1,19 +1,24 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PlusIcon } from "@heroicons/react/24/outline";
-import { Badge, Modal } from "../components";
-import { useBarreau } from "../store/BarreauStore";
+import { Badge, Modal, useToast } from "../components";
 import { STATUT_PUBLICATION_META } from "../data/publications";
+import { listerPublications, creerPublication as apiCreerPublication, changerStatutPublication as apiChangerStatut } from "../api/resources";
 
-function NouvellePublicationModal({ open, onClose }) {
-  const { creerPublication } = useBarreau();
+function NouvellePublicationModal({ open, onClose, onCreated }) {
+  const toast = useToast();
   const [form, setForm] = useState({ titre: "", type: "Avis", contenu: "" });
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
-  const valider = () => {
+  const valider = async () => {
     if (!form.titre.trim()) return;
-    creerPublication(form);
-    onClose();
-    setForm({ titre: "", type: "Avis", contenu: "" });
+    try {
+      await apiCreerPublication(form);
+      onCreated?.();
+      onClose();
+      setForm({ titre: "", type: "Avis", contenu: "" });
+    } catch (e) {
+      toast.error(e.message);
+    }
   };
   return (
     <Modal open={open} onClose={onClose} title="Nouvelle publication"
@@ -35,9 +40,17 @@ function NouvellePublicationModal({ open, onClose }) {
 }
 
 export function Publications() {
-  const { publications, changerStatutPublication } = useBarreau();
   const navigate = useNavigate();
+  const toast = useToast();
+  const [publications, setPublications] = useState([]);
   const [creer, setCreer] = useState(false);
+
+  const charger = () => listerPublications().then(setPublications).catch((e) => toast.error(e.message));
+  useEffect(() => { charger(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const changerStatutPublication = async (id, statut) => {
+    try { await apiChangerStatut(id, statut); charger(); } catch (e) { toast.error(e.message); }
+  };
 
   return (
     <div className="space-y-5">
@@ -92,7 +105,7 @@ export function Publications() {
         })}
       </div>
 
-      <NouvellePublicationModal open={creer} onClose={() => setCreer(false)} />
+      <NouvellePublicationModal open={creer} onClose={() => setCreer(false)} onCreated={charger} />
     </div>
   );
 }
