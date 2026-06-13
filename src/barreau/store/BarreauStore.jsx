@@ -278,6 +278,11 @@ export function BarreauProvider({ children }) {
     [prochaineReferenceDossier]
   );
 
+  /** Met à jour un dossier disciplinaire (statut, dates, décision, sanction). */
+  const mettreAJourDossier = useCallback((id, patch) => {
+    setDossiers((prev) => prev.map((d) => (d.id === id ? { ...d, ...patch } : d)));
+  }, []);
+
   /** Journalise toute consultation de données disciplinaires (RG-13). */
   const journaliserDiscipline = useCallback((action) => {
     setJournalDiscipline((prev) => [
@@ -335,6 +340,7 @@ export function BarreauProvider({ children }) {
       creerAssemblee,
       prochaineReferenceDossier,
       ouvrirDossier,
+      mettreAJourDossier,
       journaliserDiscipline,
       creerPublication,
       changerStatutPublication,
@@ -369,6 +375,7 @@ export function BarreauProvider({ children }) {
       creerAssemblee,
       prochaineReferenceDossier,
       ouvrirDossier,
+      mettreAJourDossier,
       journaliserDiscipline,
       creerPublication,
       changerStatutPublication,

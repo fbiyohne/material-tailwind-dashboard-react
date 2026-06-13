@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Routes, Route, useLocation, Navigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
-import { allModules } from "../routes";
+import { allModules, detailRoutes } from "../routes";
 import Placeholder from "../pages/Placeholder";
 
 /**
@@ -13,8 +13,13 @@ export function BarreauLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
 
+  // Titre de la barre : module exact, sinon module parent d'une page de détail.
   const moduleCourant = allModules.find((m) => m.path === location.pathname);
-  const titre = moduleCourant?.name ?? "Tableau de bord";
+  const detail = detailRoutes.find((d) =>
+    new RegExp(`^${d.path.replace(/:\w+/g, "[^/]+")}$`).test(location.pathname)
+  );
+  const parent = detail && allModules.find((m) => m.path === detail.parent);
+  const titre = moduleCourant?.name ?? parent?.name ?? "Tableau de bord";
 
   return (
     <div className="min-h-screen bg-creme">
@@ -31,6 +36,9 @@ export function BarreauLayout() {
                 path={path}
                 element={element ?? <Placeholder title={name} />}
               />
+            ))}
+            {detailRoutes.map(({ path, element }) => (
+              <Route key={path} path={path} element={element} />
             ))}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

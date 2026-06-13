@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
-import { Badge, StatutBadge, MembreFicheModal, AttestationModal } from "../components";
+import { Badge, StatutBadge, AttestationModal } from "../components";
 import { useBarreau } from "../store/BarreauStore";
 import { statutCotisation, STATUT_META, QUALITE_LABEL } from "../data/derivations";
 
@@ -16,9 +17,9 @@ const FILTRES = [
 
 export function Avocats() {
   const { membres } = useBarreau();
+  const navigate = useNavigate();
   const [recherche, setRecherche] = useState("");
   const [filtre, setFiltre] = useState("tous");
-  const [fiche, setFiche] = useState(null);
   const [attestation, setAttestation] = useState(null);
 
   const avocats = useMemo(() => {
@@ -97,7 +98,7 @@ export function Avocats() {
                       <div className="flex items-center justify-end gap-1.5">
                         <button
                           type="button"
-                          onClick={() => setFiche(m)}
+                          onClick={() => navigate(`/avocats/${m.id}`)}
                           className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-[10px]"
                         >
                           Fiche
@@ -129,14 +130,6 @@ export function Avocats() {
         </div>
       </div>
 
-      <MembreFicheModal
-        membre={fiche}
-        onClose={() => setFiche(null)}
-        onAttestation={(m) => {
-          setFiche(null);
-          setAttestation(m);
-        }}
-      />
       <AttestationModal membre={attestation} onClose={() => setAttestation(null)} />
     </div>
   );

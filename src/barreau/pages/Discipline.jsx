@@ -1,10 +1,11 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   LockClosedIcon,
   ShieldExclamationIcon,
   PlusIcon,
 } from "@heroicons/react/24/outline";
-import { Badge, Modal, DocumentModal } from "../components";
+import { Badge, Modal } from "../components";
 import { useBarreau } from "../store/BarreauStore";
 import { STATUT_DOSSIER_META } from "../data/institutionnel";
 
@@ -46,10 +47,10 @@ function OuvrirDossierModal({ open, onClose }) {
 }
 
 export function Discipline() {
-  const { dossiers, journalDiscipline, journaliserDiscipline, archiver } = useBarreau();
+  const { dossiers, journalDiscipline, journaliserDiscipline } = useBarreau();
+  const navigate = useNavigate();
   const [acces, setAcces] = useState(false);
   const [ouvrir, setOuvrir] = useState(false);
-  const [convocation, setConvocation] = useState(null);
 
   // ─── Écran d'accès restreint (RG-13) ───────────────────────────────────
   if (!acces) {
@@ -125,9 +126,9 @@ export function Discipline() {
                     <td className="px-3 py-2.5 text-right">
                       <button
                         className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-[10px]"
-                        onClick={() => { journaliserDiscipline(`Génération convocation — dossier ${d.reference}`); setConvocation(d); }}
+                        onClick={() => navigate(`/discipline/${d.id}`)}
                       >
-                        Convocation
+                        Ouvrir
                       </button>
                     </td>
                   </tr>
@@ -158,33 +159,6 @@ export function Discipline() {
       </div>
 
       <OuvrirDossierModal open={ouvrir} onClose={() => setOuvrir(false)} />
-
-      <DocumentModal
-        open={!!convocation}
-        onClose={() => setConvocation(null)}
-        title="Convocation disciplinaire"
-        org="Conseil de discipline"
-        reference={convocation ? `Dossier N° ${convocation.reference}` : ""}
-        signataire={{ role: "Le Bâtonnier, Président du Conseil de discipline", nom: "Me BIKINDOU Audrey Séverin" }}
-        onArchive={() => convocation && archiver({ categorie: "Convocation disciplinaire", titre: `Convocation — dossier ${convocation.reference}`, reference: convocation.reference, date: new Date().toISOString().slice(0, 10) })}
-      >
-        {convocation && (
-          <>
-            <p>
-              Dans le cadre du dossier disciplinaire référencé{" "}
-              <strong>N° {convocation.reference}</strong>,{" "}
-              <strong>{convocation.avocatNom === "Confidentiel" ? "l'avocat concerné" : `Me ${convocation.avocatNom}`}</strong>{" "}
-              est invité(e) à comparaître devant le Conseil de discipline de l'Ordre des Avocats du
-              Barreau de Pointe-Noire.
-            </p>
-            <p className="mt-3">Objet : {convocation.objet}.</p>
-            <p className="mt-3 text-[12px] text-gris">
-              L'intéressé(e) pourra se faire assister du conseil de son choix et consulter le dossier
-              au Secrétariat de l'Ordre.
-            </p>
-          </>
-        )}
-      </DocumentModal>
     </div>
   );
 }

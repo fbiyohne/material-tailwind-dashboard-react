@@ -31,6 +31,8 @@ import Archives from "./pages/Archives";
 import Annuaire from "./pages/Annuaire";
 import Publications from "./pages/Publications";
 import LettreBatonnier from "./pages/LettreBatonnier";
+import AvocatDetail from "./pages/AvocatDetail";
+import DossierDetail from "./pages/DossierDetail";
 
 /**
  * Arborescence des 15 modules fonctionnels du Secrétariat Général,
@@ -85,5 +87,14 @@ export const navSections = [
 
 /** Liste à plat de tous les modules (pour le routage). */
 export const allModules = navSections.flatMap((s) => s.items);
+
+/**
+ * Routes de détail (hors menu) — pages dédiées par entité.
+ * `parent` permet d'activer le bon module dans la sidebar et le titre de la barre.
+ */
+export const detailRoutes = [
+  { path: "/avocats/:id", element: <AvocatDetail />, parent: "/avocats" },
+  { path: "/discipline/:id", element: <DossierDetail />, parent: "/discipline" },
+];
 
 export default navSections;
