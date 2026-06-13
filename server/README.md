@@ -42,7 +42,23 @@ npm run dev                   # API sur http://localhost:4000/api
 | GET | `/api/quitus/eligibles?annee=` | authentifié |
 | POST | `/api/quitus` (BR-01) | SG / Admin |
 
-## Reste à faire (prochaines itérations)
-Modules institutionnels (réunions, assemblées, discipline + journalisation
-RG-13, publications), droits de plaidoirie, attestations/PDF serveur
-(Puppeteer), archives, paramètres, et le branchement du front sur l'API.
+## Sécurité & production
+- **Auth** : access token (15 min) + refresh token (7 j, rotation), `/auth/refresh`, `/auth/logout`
+- **Rate-limit** sur `/auth/login` + limiteur global ; en-têtes **helmet**
+- **PDF serveur** (Puppeteer) : `GET /recus/:id/pdf`, `GET /quitus/:id/pdf` (vectoriel)
+- **Relances email** : `POST /cotisations/relances?annee=` (SMTP réel ou simulation)
+- **Signature électronique** (HMAC) : `GET /quitus/:id/signature`, `POST /signatures/verifier`
+
+## Tests
+```bash
+# Base de test (une fois)
+createdb -O barreau barreau_pn_test
+DATABASE_URL=postgresql://barreau:barreau_dev@localhost:5432/barreau_pn_test npx prisma migrate deploy
+DATABASE_URL=postgresql://barreau:barreau_dev@localhost:5432/barreau_pn_test npm run seed
+# Lancer
+npm test          # vitest + supertest (auth, BR-01/03, RBAC, RG-13)
+```
+
+## Variables d'environnement complémentaires
+`ACCESS_TTL`, `REFRESH_TTL_DAYS`, `PUPPETEER_EXECUTABLE_PATH`, `SMTP_*`,
+`MAIL_FROM`, `SIGNATURE_SECRET` (voir `.env.example`).
