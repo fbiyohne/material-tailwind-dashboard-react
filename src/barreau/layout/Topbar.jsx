@@ -9,7 +9,7 @@ import {
  * Barre supérieure : titre de la page courante (Playfair Display) + actions
  * institutionnelles, reprises de la maquette (« Document », « + Avocat »).
  */
-export function Topbar({ title, onOpenMenu }) {
+export function Topbar({ title, onOpenMenu, onAddAvocat }) {
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-grisM bg-white/95 px-4 backdrop-blur md:px-5">
       <button
@@ -27,7 +27,7 @@ export function Topbar({ title, onOpenMenu }) {
         <DocumentTextIcon className="h-4 w-4" />
         <span className="hidden sm:inline">Document</span>
       </button>
-      <button type="button" className="bpn-btn bpn-btn-or">
+      <button type="button" className="bpn-btn bpn-btn-or" onClick={onAddAvocat}>
         <PlusIcon className="h-4 w-4" />
         <span className="hidden sm:inline">Avocat</span>
       </button>
@@ -38,6 +38,7 @@ export function Topbar({ title, onOpenMenu }) {
 Topbar.propTypes = {
   title: PropTypes.string,
   onOpenMenu: PropTypes.func,
+  onAddAvocat: PropTypes.func,
 };
 
 export default Topbar;

@@ -81,7 +81,9 @@ export function AvocatDetail() {
               {QUALITE_LABEL[membre.qualite]}
             </Badge>
           </div>
-          <div className="mt-1 font-mono text-xs text-gris">N° {membre.num} au tableau · {membre.cabinet}</div>
+          <div className="mt-1 font-mono text-xs text-gris">
+            {membre.numInscription ?? `N° ${membre.num}`} · tableau N° {membre.num} · {membre.cabinet}
+          </div>
         </div>
         {membre.qualite !== "stagiaire" && (
           <button className="bpn-btn bpn-btn-primary" onClick={() => setAttestation(membre)}>

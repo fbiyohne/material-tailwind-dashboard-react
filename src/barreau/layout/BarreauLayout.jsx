@@ -4,6 +4,7 @@ import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 import { allModules, detailRoutes } from "../routes";
 import Placeholder from "../pages/Placeholder";
+import { InscriptionModal } from "../components";
 
 /**
  * Ossature de l'application du Secrétariat Général :
@@ -11,6 +12,7 @@ import Placeholder from "../pages/Placeholder";
  */
 export function BarreauLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [inscription, setInscription] = useState(false);
   const location = useLocation();
 
   // Titre de la barre : module exact, sinon module parent d'une page de détail.
@@ -26,7 +28,11 @@ export function BarreauLayout() {
       <Sidebar open={menuOpen} onClose={() => setMenuOpen(false)} />
 
       <div className="min-h-screen bg-white xl:ml-[260px]">
-        <Topbar title={titre} onOpenMenu={() => setMenuOpen(true)} />
+        <Topbar
+          title={titre}
+          onOpenMenu={() => setMenuOpen(true)}
+          onAddAvocat={() => setInscription(true)}
+        />
 
         <main className="mx-auto max-w-container px-4 py-6 md:px-8 md:py-8">
           <Routes>
@@ -44,6 +50,8 @@ export function BarreauLayout() {
           </Routes>
         </main>
       </div>
+
+      <InscriptionModal open={inscription} onClose={() => setInscription(false)} />
     </div>
   );
 }

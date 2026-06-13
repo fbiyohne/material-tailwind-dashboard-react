@@ -291,6 +291,36 @@ export function BarreauProvider({ children }) {
     ]);
   }, []);
 
+  // ─── Inscription d'un avocat (FR-AV-01 / flux « Inscription avocat ») ─────
+  /** Numéro d'inscription auto, format PN-AAAA-NNN (aperçu). */
+  const prochainNumInscription = useCallback(() => {
+    const num = Math.max(0, ...membres.map((m) => m.num)) + 1;
+    return `PN-${new Date().getFullYear()}-${String(num).padStart(3, "0")}`;
+  }, [membres]);
+
+  const inscrireAvocat = useCallback(
+    ({ nom, cabinet, dateInscription, statut = "inscrit", qualite = "avocat", tel, email, rccm }) => {
+      const num = Math.max(0, ...membres.map((m) => m.num)) + 1;
+      const membre = {
+        id: Date.now(),
+        num,
+        numInscription: `PN-${new Date().getFullYear()}-${String(num).padStart(3, "0")}`,
+        nom,
+        cabinet,
+        qualite,
+        statut,
+        tel,
+        email,
+        rccm,
+        dateInscription: dateInscription || new Date().toISOString().slice(0, 10),
+        paiements: {},
+      };
+      setMembres((prev) => [...prev, membre]);
+      return membre;
+    },
+    [membres]
+  );
+
   // ─── Publications institutionnelles (FR-PUB) ─────────────────────────────
   const creerPublication = useCallback((data) => {
     setPublications((prev) => [
@@ -342,6 +372,8 @@ export function BarreauProvider({ children }) {
       ouvrirDossier,
       mettreAJourDossier,
       journaliserDiscipline,
+      prochainNumInscription,
+      inscrireAvocat,
       creerPublication,
       changerStatutPublication,
       genererArticleLettre,
@@ -377,6 +409,8 @@ export function BarreauProvider({ children }) {
       ouvrirDossier,
       mettreAJourDossier,
       journaliserDiscipline,
+      prochainNumInscription,
+      inscrireAvocat,
       creerPublication,
       changerStatutPublication,
       genererArticleLettre,

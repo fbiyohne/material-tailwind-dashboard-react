@@ -5,3 +5,4 @@ export { StatutBadge } from "./StatutBadge";
 export { MembreFicheModal } from "./MembreFicheModal";
 export { AttestationModal } from "./AttestationModal";
 export { DocumentModal } from "./DocumentModal";
+export { InscriptionModal } from "./InscriptionModal";
