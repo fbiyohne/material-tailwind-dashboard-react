@@ -1,17 +1,17 @@
 import PropTypes from "prop-types";
 import { NavLink } from "react-router-dom";
-import { XMarkIcon } from "@heroicons/react/24/outline";
+import { XMarkIcon, ScaleIcon } from "@heroicons/react/24/outline";
 import { navSections } from "../routes";
 
 /**
- * Sidebar institutionnelle marine & or — reproduction fidèle de la maquette.
- * Élément actif : bordure gauche or + fond teinté + libellé or (annotation 1
- * de la maquette « Navigation active »). Off-canvas sur mobile.
+ * Sidebar institutionnelle marine & or — version raffinée.
+ * Identité : emblème (balance) + filet or. Lisibilité renforcée (contraste
+ * conforme WCAG AA). Élément actif : liseré or + fond teinté + libellé or.
+ * Pied : carte d'identité de l'utilisateur (rôle). Off-canvas sur mobile.
  */
 export function Sidebar({ open, onClose }) {
   return (
     <>
-      {/* Voile mobile */}
       {open && (
         <div
           className="fixed inset-0 z-40 bg-navy-3/60 xl:hidden"
@@ -21,37 +21,47 @@ export function Sidebar({ open, onClose }) {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[260px] flex-col overflow-y-auto bg-navy-3 transition-transform duration-300 xl:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-[260px] flex-col bg-navy-3 transition-transform duration-300 xl:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
+        style={{
+          backgroundImage:
+            "radial-gradient(120% 60% at 50% 0%, rgba(196,153,10,0.06) 0%, transparent 55%)",
+        }}
       >
-        {/* Bloc logo */}
-        <div className="relative border-b border-white/[0.08] px-4 pb-5 pt-6">
-          <div className="mb-1 text-[8px] uppercase tracking-[0.3em] text-or">
-            République du Congo
+        {/* Filet or supérieur */}
+        <div className="h-px shrink-0 bg-gradient-to-r from-transparent via-or/50 to-transparent" />
+
+        {/* Bloc logo + emblème */}
+        <div className="relative flex shrink-0 items-center gap-3 border-b border-white/[0.08] px-4 pb-4 pt-5">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-or/40 bg-navy-2 shadow-[0_0_0_3px_rgba(196,153,10,0.06)]">
+            <ScaleIcon className="h-5 w-5 text-or-2" />
           </div>
-          <div className="font-display text-[14px] leading-tight text-white">
-            Barreau de
-            <br />
-            Pointe-Noire
+          <div className="min-w-0">
+            <div className="mb-0.5 text-[7px] font-medium uppercase tracking-[0.28em] text-or/80">
+              République du Congo
+            </div>
+            <div className="font-display text-[13px] font-semibold leading-[1.15] text-white">
+              Barreau de Pointe-Noire
+            </div>
+            <div className="mt-0.5 text-[9px] tracking-wide text-white/45">Secrétariat Général</div>
           </div>
-          <div className="mt-1 text-[9px] text-white/40">Secrétariat Général</div>
 
           <button
             type="button"
             onClick={onClose}
-            className="absolute right-3 top-5 text-white/40 hover:text-white xl:hidden"
+            className="absolute right-3 top-4 text-white/50 hover:text-white xl:hidden"
             aria-label="Fermer le menu"
           >
             <XMarkIcon className="h-5 w-5" />
           </button>
         </div>
 
-        {/* Sections de navigation */}
-        <nav className="flex-1 py-3">
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto py-3">
           {navSections.map((section) => (
-            <div key={section.label}>
-              <div className="px-4 pb-1 pt-3 text-[8px] font-medium uppercase tracking-[0.25em] text-or/40">
+            <div key={section.label} className="px-2">
+              <div className="px-3 pb-1.5 pt-4 text-[8px] font-semibold uppercase tracking-[0.22em] text-or/60">
                 {section.label}
               </div>
               {section.items.map((item) => {
@@ -63,19 +73,33 @@ export function Sidebar({ open, onClose }) {
                     end={item.path === "/"}
                     onClick={onClose}
                     className={({ isActive }) =>
-                      `flex items-center gap-2.5 border-l-2 px-4 py-[7px] text-[11px] transition-all duration-150 ${
+                      `group relative mb-0.5 flex items-center gap-3 rounded-md px-3 py-[9px] text-[12px] transition-all duration-150 ${
                         isActive
-                          ? "border-or bg-or/[0.08] text-or-2"
-                          : "border-transparent text-white/45 hover:bg-white/5 hover:text-white/80"
+                          ? "bg-or/[0.12] font-medium text-or-2"
+                          : "text-white/75 hover:bg-white/[0.05] hover:text-white"
                       }`
                     }
                   >
-                    <Icon className="h-4 w-4 shrink-0" />
-                    <span>{item.name}</span>
-                    {item.badge && (
-                      <span className="ml-auto rounded-lg bg-rouge px-1.5 text-[8px] font-medium text-white">
-                        {item.badge}
-                      </span>
+                    {({ isActive }) => (
+                      <>
+                        {/* Liseré or de l'élément actif */}
+                        <span
+                          className={`absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r bg-or transition-opacity ${
+                            isActive ? "opacity-100" : "opacity-0"
+                          }`}
+                        />
+                        <Icon
+                          className={`h-[18px] w-[18px] shrink-0 ${
+                            isActive ? "text-or-2" : "text-white/60 group-hover:text-white/90"
+                          }`}
+                        />
+                        <span className="truncate">{item.name}</span>
+                        {item.badge && (
+                          <span className="ml-auto flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-rouge px-1 text-[9px] font-semibold text-white">
+                            {item.badge}
+                          </span>
+                        )}
+                      </>
                     )}
                   </NavLink>
                 );
@@ -84,8 +108,21 @@ export function Sidebar({ open, onClose }) {
           ))}
         </nav>
 
-        <div className="border-t border-white/[0.08] px-4 py-3 text-[8px] uppercase tracking-[0.2em] text-white/20">
-          Ordre National des Avocats
+        {/* Carte d'identité utilisateur */}
+        <div className="shrink-0 border-t border-white/[0.08] p-3">
+          <div className="flex items-center gap-2.5 rounded-lg border border-white/[0.06] bg-white/[0.04] px-3 py-2.5">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-or/30 bg-or/15 text-[11px] font-semibold text-or-2">
+              LK
+            </div>
+            <div className="min-w-0">
+              <div className="truncate text-[11px] font-medium text-white/90">
+                Me KALINA-MENGA
+              </div>
+              <div className="text-[8px] uppercase tracking-[0.15em] text-or/70">
+                Secrétaire Général
+              </div>
+            </div>
+          </div>
         </div>
       </aside>
     </>
