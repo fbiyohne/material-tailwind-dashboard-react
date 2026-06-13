@@ -6,3 +6,8 @@ export { MembreFicheModal } from "./MembreFicheModal";
 export { AttestationModal } from "./AttestationModal";
 export { DocumentModal } from "./DocumentModal";
 export { InscriptionModal } from "./InscriptionModal";
+export { Button } from "./Button";
+export { EmptyState } from "./EmptyState";
+export { ErrorBoundary } from "./ErrorBoundary";
+export { ToastProvider, useToast } from "./Toast";
+export { ConfirmProvider, useConfirm } from "./ConfirmDialog";

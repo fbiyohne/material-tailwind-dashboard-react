@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { MagnifyingGlassIcon, CheckCircleIcon } from "@heroicons/react/24/outline";
-import { Badge, Modal } from "../components";
+import { Badge, Modal, useToast } from "../components";
 import { useBarreau } from "../store/BarreauStore";
 import { EXERCICES } from "../data/dashboard-data";
 import {
@@ -58,6 +58,17 @@ function HistoriqueModal({ membre, onClose }) {
 
 export function Cotisations() {
   const { cotisationsExercice, estValide, basculerValidation } = useBarreau();
+  const toast = useToast();
+
+  const validerSituation = (membre) => {
+    const dejaValide = estValide(membre.id, exercice);
+    basculerValidation(membre.id, exercice);
+    toast.success(
+      dejaValide
+        ? `Validation retirée — Me ${membre.nom}`
+        : `Situation validée — Me ${membre.nom} (exercice ${exercice})`
+    );
+  };
   const [exercice, setExercice] = useState(2026);
   const [recherche, setRecherche] = useState("");
   const [filtre, setFiltre] = useState("tous");
@@ -190,7 +201,7 @@ export function Cotisations() {
                             <button
                               type="button"
                               title="Situation validée par la Trésorière — cliquer pour annuler"
-                              onClick={() => basculerValidation(l.membre.id, exercice)}
+                              onClick={() => validerSituation(l.membre)}
                               className="bpn-badge bpn-badge-vert"
                             >
                               <CheckCircleIcon className="h-3.5 w-3.5" />
@@ -200,7 +211,7 @@ export function Cotisations() {
                             <button
                               type="button"
                               title="Valider la situation financière (Trésorière)"
-                              onClick={() => basculerValidation(l.membre.id, exercice)}
+                              onClick={() => validerSituation(l.membre)}
                               className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-[10px]"
                             >
                               Valider
