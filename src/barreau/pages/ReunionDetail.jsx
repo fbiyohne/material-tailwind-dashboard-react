@@ -122,6 +122,7 @@ export function ReunionDetail() {
       <DocumentModal
         open={convocation} onClose={() => setConvocation(false)} title="Convocation"
         reference={`Réunion du ${new Date(reunion.date).toLocaleDateString("fr-FR")}`} date={dateCourte}
+        pdfPath={`/reunions/${reunion.id}/convocation/pdf`} pdfFilename={`Convocation-reunion-${dateCourte}.pdf`}
         onArchive={() => archiverDoc({ categorie: "Convocation (Conseil)", titre: `Convocation réunion du ${dateCourte}`, reference: dateCourte, date: dateCourte })}
       >
         <p>Le Bâtonnier a l'honneur de convier les membres du Conseil de l'Ordre à la réunion du{" "}
@@ -133,6 +134,7 @@ export function ReunionDetail() {
       <DocumentModal
         open={feuille} onClose={() => setFeuille(false)} title="Feuille de présence"
         reference={`Réunion du ${new Date(reunion.date).toLocaleDateString("fr-FR")}`} date={dateCourte}
+        pdfPath={`/reunions/${reunion.id}/feuille-presence/pdf`} pdfFilename={`Feuille-presence-${dateCourte}.pdf`}
         signataire={{ role: "Le Secrétaire Général", nom: "Me KALINA-MENGA Lionel" }}
         onArchive={() => archiverDoc({ categorie: "Feuille de présence", titre: `Feuille de présence du ${dateCourte}`, reference: dateCourte, date: dateCourte })}
       >

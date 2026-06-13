@@ -108,6 +108,7 @@ export function DossierDetail() {
         title="Convocation disciplinaire"
         org="Conseil de discipline"
         reference={`Dossier N° ${dossier.reference}`}
+        pdfPath={`/discipline/${dossier.id}/convocation/pdf`} pdfFilename={`Convocation-disciplinaire-${dossier.reference}.pdf`}
         signataire={{ role: "Le Bâtonnier, Président du Conseil de discipline", nom: "Me BIKINDOU Audrey Séverin" }}
         onArchive={() => archiverDoc({ categorie: "Convocation disciplinaire", titre: `Convocation — dossier ${dossier.reference}`, reference: dossier.reference, date: new Date().toISOString().slice(0, 10) })}
       >

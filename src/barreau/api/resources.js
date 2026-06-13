@@ -2,6 +2,11 @@ import { api, telechargerPdf } from "./client";
 
 export const telechargerRecuPdf = (id, numero) => telechargerPdf(`/recus/${id}/pdf`, `Recu-${numero}.pdf`);
 export const telechargerQuitusPdf = (id, numero) => telechargerPdf(`/quitus/${id}/pdf`, `Quitus-${numero}.pdf`);
+export const telechargerAttestationPdf = (id, num) => telechargerPdf(`/membres/${id}/attestation/pdf`, `Attestation-${num}.pdf`);
+export const telechargerConvocationReunionPdf = (id) => telechargerPdf(`/reunions/${id}/convocation/pdf`, `Convocation-reunion.pdf`);
+export const telechargerFeuillePdf = (id) => telechargerPdf(`/reunions/${id}/feuille-presence/pdf`, `Feuille-presence.pdf`);
+export const telechargerConvocationAgPdf = (id) => telechargerPdf(`/assemblees/${id}/convocation/pdf`, `Convocation-AG.pdf`);
+export const telechargerConvocationDisciplinePdf = (id) => telechargerPdf(`/discipline/${id}/convocation/pdf`, `Convocation-disciplinaire.pdf`);
 
 /**
  * Couche d'accès aux ressources de l'API. Normalise les formats du backend

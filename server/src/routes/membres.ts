@@ -5,6 +5,8 @@ import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { prochainNumInscription, prochainNumeroAttestation, archiver } from "../lib/business.js";
+import { htmlVersPdf } from "../lib/pdf.js";
+import { attestationHtml } from "../lib/templates.js";
 
 export const membresRouter = Router();
 membresRouter.use(requireAuth);
@@ -145,5 +147,22 @@ membresRouter.post(
       membreNom: membre.nom,
     });
     res.status(201).json({ numero, membreNom: membre.nom, date });
+  })
+);
+
+/** GET /membres/:id/attestation/pdf — génère, archive et renvoie l'attestation en PDF. */
+membresRouter.get(
+  "/:id/attestation/pdf",
+  requireRole("SECRETAIRE_GENERAL"),
+  asyncH(async (req, res) => {
+    const membre = await prisma.membre.findUnique({ where: { id: Number(req.params.id) } });
+    if (!membre) throw new HttpError(404, "Avocat introuvable");
+    const numero = await prochainNumeroAttestation();
+    const date = new Date();
+    await archiver({ categorie: "Attestation d'inscription", titre: `Attestation ${numero} — Me ${membre.nom}`, reference: numero, date, membreNom: membre.nom });
+    const pdf = await htmlVersPdf(attestationHtml(membre, numero, date));
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="Attestation-${numero}.pdf"`);
+    res.end(pdf);
   })
 );

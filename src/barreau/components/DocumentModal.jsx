@@ -4,6 +4,7 @@ import { PrinterIcon, CheckCircleIcon, ArrowDownTrayIcon } from "@heroicons/reac
 import { Modal } from "./Modal";
 import { DocumentChrome } from "./DocumentChrome";
 import { exporterPdf } from "../utils/exports";
+import { telechargerPdf } from "../api/client";
 
 /**
  * Document officiel générique (convocation, feuille de présence, procès-verbal…)
@@ -20,6 +21,8 @@ export function DocumentModal({
   signataire = { role: "Le Bâtonnier", nom: "Me BIKINDOU Audrey Séverin" },
   date = new Date().toISOString().slice(0, 10),
   onArchive,
+  pdfPath,
+  pdfFilename,
 }) {
   const [archive, setArchive] = useState(false);
 
@@ -31,6 +34,10 @@ export function DocumentModal({
 
   const nomFichier = `${title} ${reference ?? ""}`.trim().replace(/\s+/g, "-");
 
+  // PDF serveur (Puppeteer, document scellé) si pdfPath fourni ; sinon export client.
+  const telecharger = () =>
+    pdfPath ? telechargerPdf(pdfPath, pdfFilename ?? `${nomFichier}.pdf`) : exporterPdf(nomFichier);
+
   return (
     <Modal
       open={open}
@@ -38,7 +45,7 @@ export function DocumentModal({
       title={title}
       footer={
         <>
-          <button type="button" className="bpn-btn bpn-btn-ghost" onClick={() => exporterPdf(nomFichier)}>
+          <button type="button" className="bpn-btn bpn-btn-ghost" onClick={telecharger}>
             <ArrowDownTrayIcon className="h-4 w-4" /> PDF
           </button>
           <button type="button" className="bpn-btn bpn-btn-or" onClick={generer}>
@@ -70,6 +77,8 @@ DocumentModal.propTypes = {
   signataire: PropTypes.object,
   date: PropTypes.string,
   onArchive: PropTypes.func,
+  pdfPath: PropTypes.string,
+  pdfFilename: PropTypes.string,
 };
 
 export default DocumentModal;

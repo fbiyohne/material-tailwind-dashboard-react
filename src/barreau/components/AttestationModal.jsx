@@ -1,27 +1,29 @@
 import { useState } from "react";
 import PropTypes from "prop-types";
-import { PrinterIcon, CheckCircleIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
+import { ArrowDownTrayIcon, CheckCircleIcon } from "@heroicons/react/24/outline";
 import { Modal } from "./Modal";
 import { DocumentChrome } from "./DocumentChrome";
-import { genererAttestation } from "../api/resources";
-import { exporterPdf } from "../utils/exports";
+import { useToast } from "./Toast";
+import { telechargerAttestationPdf } from "../api/resources";
 
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
 
-/** Génération + aperçu imprimable d'une attestation d'inscription (FR-AV-05). */
+/** Génération + téléchargement de l'attestation d'inscription (PDF serveur, FR-AV-05). */
 export function AttestationModal({ membre, onClose }) {
-  const [emise, setEmise] = useState(null);
+  const toast = useToast();
+  const [emise, setEmise] = useState(false);
   const [loading, setLoading] = useState(false);
 
   if (!membre) return null;
-  const date = emise?.date ? String(emise.date).slice(0, 10) : aujourdhui();
 
-  const emettre = async () => {
+  const generer = async () => {
     setLoading(true);
     try {
-      const att = await genererAttestation(membre.id);
-      setEmise(att);
-      setTimeout(() => window.print(), 50);
+      await telechargerAttestationPdf(membre.id, membre.num);
+      setEmise(true);
+      toast.success(`Attestation générée, archivée et téléchargée — Me ${membre.nom}.`);
+    } catch (e) {
+      toast.error(e.message);
     } finally {
       setLoading(false);
     }
@@ -33,29 +35,22 @@ export function AttestationModal({ membre, onClose }) {
       onClose={onClose}
       title="Attestation d'inscription"
       footer={
-        <>
-          {emise && (
-            <button type="button" className="bpn-btn bpn-btn-ghost" onClick={() => exporterPdf(`Attestation-${emise.numero}`)}>
-              <ArrowDownTrayIcon className="h-4 w-4" /> PDF
-            </button>
-          )}
-          <button type="button" className="bpn-btn bpn-btn-or" onClick={emettre} disabled={loading}>
-            <PrinterIcon className="h-4 w-4" /> Générer &amp; archiver
-          </button>
-        </>
+        <button type="button" className="bpn-btn bpn-btn-or" onClick={generer} disabled={loading}>
+          <ArrowDownTrayIcon className="h-4 w-4" /> Générer &amp; télécharger (PDF)
+        </button>
       }
     >
       {emise && (
         <div className="bpn-no-print mb-3 flex items-center gap-2 rounded border-l-[3px] border-vert bg-[#e6f4ee] px-3 py-2 text-sm text-vert">
-          <CheckCircleIcon className="h-5 w-5 shrink-0" /> Attestation {emise.numero} générée et archivée.
+          <CheckCircleIcon className="h-5 w-5 shrink-0" /> Attestation générée et archivée.
         </div>
       )}
 
       <DocumentChrome
         org="Le Bâtonnier"
         title="Attestation d'inscription"
-        reference={emise ? `N° ${emise.numero}` : "N° attribué à la génération"}
-        date={date}
+        reference="N° attribué à la génération"
+        date={aujourdhui()}
         signataires={[{ role: "Le Bâtonnier", nom: "Me BIKINDOU Audrey Séverin" }]}
       >
         <p className="text-[13px] leading-7 text-encre">
@@ -65,9 +60,7 @@ export function AttestationModal({ membre, onClose }) {
           {membre.dateInscription ? (
             <>
               , depuis le{" "}
-              <strong>
-                {new Date(membre.dateInscription).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })}
-              </strong>
+              <strong>{new Date(membre.dateInscription).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })}</strong>
             </>
           ) : null}
           .

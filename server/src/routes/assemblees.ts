@@ -3,9 +3,20 @@ import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { htmlVersPdf } from "../lib/pdf.js";
+import { convocationAgHtml } from "../lib/templates.js";
 
 export const assembleesRouter = Router();
 assembleesRouter.use(requireAuth);
+
+assembleesRouter.get("/:id/convocation/pdf", asyncH(async (req, res) => {
+  const a = await prisma.assemblee.findUnique({ where: { id: Number(req.params.id) } });
+  if (!a) throw new HttpError(404, "Assemblée introuvable");
+  const pdf = await htmlVersPdf(convocationAgHtml(a));
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename="Convocation-${a.type}-${String(a.date).slice(0, 10)}.pdf"`);
+  res.end(pdf);
+}));
 
 assembleesRouter.get("/", asyncH(async (_req, res) => {
   res.json(await prisma.assemblee.findMany({ orderBy: { date: "desc" } }));

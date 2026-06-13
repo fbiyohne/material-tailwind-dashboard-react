@@ -77,6 +77,86 @@ export function documentHtml({ org, title, reference, bodyHtml, signataire, date
 </body></html>`;
 }
 
+const liste = (items: string[]) =>
+  `<ol style="margin:6px 0 0 18px">${items.map((p) => `<li style="margin:2px 0">${p}</li>`).join("")}</ol>`;
+
+export function attestationHtml(membre: { nom: string; num: number; dateInscription?: Date | string | null }, numero: string, date: Date | string): string {
+  const depuis = membre.dateInscription ? `, depuis le <b>${fmtDate(membre.dateInscription)}</b>` : "";
+  return documentHtml({
+    org: "Le Bâtonnier",
+    title: "Attestation d'inscription",
+    reference: `N° ${numero}`,
+    bodyHtml: `
+      <p>Le Bâtonnier de l'Ordre des Avocats du Barreau de Pointe-Noire atteste que <b>Me ${membre.nom}</b> est inscrit(e) au Tableau de l'Ordre des Avocats du Barreau de Pointe-Noire sous le numéro <b>${membre.num}</b>${depuis}.</p>
+      <p style="margin-top:12px">La présente attestation est délivrée à l'intéressé(e) pour servir et valoir ce que de droit.</p>`,
+    signataire: { role: "Le Bâtonnier", nom: "Me BIKINDOU Audrey Séverin" },
+    date,
+  });
+}
+
+export function convocationReunionHtml(reunion: any): string {
+  return documentHtml({
+    org: "Conseil de l'Ordre",
+    title: "Convocation",
+    reference: `Réunion du ${fmtDate(reunion.date)}`,
+    bodyHtml: `
+      <p>Le Bâtonnier a l'honneur de convier Mesdames et Messieurs les membres du Conseil de l'Ordre à la réunion qui se tiendra le <b>${fmtDate(reunion.date)}</b>${reunion.heure ? ` à <b>${reunion.heure}</b>` : ""}, au <b>${reunion.lieu ?? "—"}</b>.</p>
+      <p style="margin-top:10px"><b>Ordre du jour :</b></p>${liste(reunion.ordreDuJour ?? [])}`,
+    signataire: { role: "Le Bâtonnier", nom: "Me BIKINDOU Audrey Séverin" },
+    date: reunion.date,
+  });
+}
+
+export function feuillePresenceHtml(reunion: any): string {
+  const membres = [
+    "Me BIKINDOU Audrey Séverin — Bâtonnier",
+    "Me ONDZE BOYA Armelle Laure Carine — Trésorière",
+    "Me KALINA-MENGA Lionel — Secrétaire Général",
+    "", "", "",
+  ];
+  const lignes = membres
+    .map((n) => `<tr><td style="padding:10px 0;border-bottom:1px solid #E0DBD0">${n}</td><td style="border-bottom:1px solid #E0DBD0"></td></tr>`)
+    .join("");
+  return documentHtml({
+    org: "Conseil de l'Ordre",
+    title: "Feuille de présence",
+    reference: `Réunion du ${fmtDate(reunion.date)}`,
+    bodyHtml: `<table style="width:100%;font-size:13px"><thead><tr><th style="text-align:left;border-bottom:1px solid #1A3A6B;color:#1A3A6B;padding-bottom:4px">Membre</th><th style="text-align:right;border-bottom:1px solid #1A3A6B;color:#1A3A6B">Émargement</th></tr></thead><tbody>${lignes}</tbody></table>`,
+    signataire: { role: "Le Secrétaire Général", nom: "Me KALINA-MENGA Lionel" },
+    date: reunion.date,
+  });
+}
+
+export function convocationAgHtml(a: any): string {
+  const type = a.type === "AGE" ? "Assemblée Générale Extraordinaire" : "Assemblée Générale Ordinaire";
+  return documentHtml({
+    org: "Conseil de l'Ordre",
+    title: "Convocation à l'Assemblée Générale",
+    reference: `${a.type} du ${fmtDate(a.date)}`,
+    bodyHtml: `
+      <p>Le Bâtonnier convoque l'ensemble des membres du corps électoral à l'<b>${type}</b> qui se tiendra le <b>${fmtDate(a.date)}</b>, au <b>${a.lieu ?? "—"}</b>.</p>
+      <p style="margin-top:10px"><b>Ordre du jour :</b></p>${liste(a.ordreDuJour ?? [])}`,
+    signataire: { role: "Le Bâtonnier", nom: "Me BIKINDOU Audrey Séverin" },
+    date: a.date,
+  });
+}
+
+export function convocationDisciplineHtml(d: any): string {
+  const qui = d.avocatNom === "Confidentiel" ? "l'avocat concerné" : `Me ${d.avocatNom}`;
+  const quand = d.dateAudience ? `, le <b>${fmtDate(d.dateAudience)}</b>` : "";
+  return documentHtml({
+    org: "Conseil de discipline",
+    title: "Convocation disciplinaire",
+    reference: `Dossier N° ${d.reference}`,
+    bodyHtml: `
+      <p>Dans le cadre du dossier disciplinaire <b>N° ${d.reference}</b>, <b>${qui}</b> est invité(e) à comparaître devant le Conseil de discipline de l'Ordre des Avocats du Barreau de Pointe-Noire${quand}.</p>
+      <p style="margin-top:10px">Objet : ${d.objet}.</p>
+      <p style="margin-top:10px;font-size:12px;color:#7A756A">L'intéressé(e) pourra se faire assister du conseil de son choix et consulter le dossier au Secrétariat de l'Ordre.</p>`,
+    signataire: { role: "Le Bâtonnier, Président du Conseil de discipline", nom: "Me BIKINDOU Audrey Séverin" },
+    date: new Date(),
+  });
+}
+
 export function recuHtml(recu: any, membre: { nom: string }): string {
   return documentHtml({
     org: "Trésorerie Générale",
@@ -93,8 +173,8 @@ export function recuHtml(recu: any, membre: { nom: string }): string {
 
 export function quitusHtml(quitus: any, membre: { nom: string }, signature?: string): string {
   const blocSignature = signature
-    ? `<div style="margin-top:16px;border-top:1px dashed #E0DBD0;padding-top:8px;font-size:9px;color:#7A756A">
-         Signature électronique (HMAC-SHA256) :
+    ? `<div style="margin-top:16px;border-top:1px dashed #E0DBD0;padding-top:8px;font-size:8.5px;color:#7A756A">
+         <b style="color:#1A3A6B">Signature numérique RSA-2048 / SHA-256</b> — vérifiable via la clé publique du Barreau (/api/signatures/cle-publique).<br>
          <span style="font-family:'DM Mono',monospace;color:#1A3A6B;word-break:break-all">${signature}</span>
        </div>`
     : "";

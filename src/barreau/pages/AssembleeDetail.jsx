@@ -128,6 +128,7 @@ export function AssembleeDetail() {
       <DocumentModal
         open={convocation} onClose={() => setConvocation(false)} title="Convocation à l'Assemblée Générale"
         reference={`${assemblee.type} du ${new Date(assemblee.date).toLocaleDateString("fr-FR")}`} date={dateCourte}
+        pdfPath={`/assemblees/${assemblee.id}/convocation/pdf`} pdfFilename={`Convocation-${assemblee.type}-${dateCourte}.pdf`}
         onArchive={() => archiverDoc({ categorie: "Convocation (AG)", titre: `Convocation ${assemblee.type} du ${dateCourte}`, reference: dateCourte, date: dateCourte })}
       >
         <p>Le Bâtonnier convoque les membres du corps électoral à l'<strong>{TYPE_LABEL[assemblee.type]}</strong> du{" "}
