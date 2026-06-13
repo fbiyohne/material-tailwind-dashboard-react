@@ -73,5 +73,12 @@ build_local_plugin "taste-quality" "VOIDXAI/taste" \
 build_local_plugin "taste-design" "Dragoon0x/taste-skills" \
   "Bibliotheque de jugement design : hierarchie, typographie, couleur, espacement, craft"
 
+# --- 4. Backend (PostgreSQL + API) ------------------------------------------
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if [ -f "$PROJECT_DIR/server/scripts/setup-dev.sh" ]; then
+  LOG "Bootstrap du backend (PostgreSQL + migrations)…"
+  bash "$PROJECT_DIR/server/scripts/setup-dev.sh" || true
+fi
+
 LOG "Terminé."
 exit 0
