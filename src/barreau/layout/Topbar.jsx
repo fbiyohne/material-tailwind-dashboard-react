@@ -77,7 +77,12 @@ export function Topbar({ title, onOpenMenu, onAddAvocat }) {
 
       {/* Menu Document */}
       <div className="relative shrink-0">
-        <button className="bpn-btn bpn-btn-ghost" onClick={() => setMenu(menu === "docs" ? null : "docs")}>
+        <button
+          className="bpn-btn bpn-btn-ghost"
+          onClick={() => setMenu(menu === "docs" ? null : "docs")}
+          aria-haspopup="menu"
+          aria-expanded={menu === "docs"}
+        >
           <DocumentTextIcon className="h-4 w-4" />
           <span className="hidden md:inline">Document</span>
           <ChevronDownIcon className="hidden h-3 w-3 md:inline" />
@@ -97,7 +102,13 @@ export function Topbar({ title, onOpenMenu, onAddAvocat }) {
 
       {/* Notifications */}
       <div className="relative shrink-0">
-        <button className="relative flex h-9 w-9 items-center justify-center rounded-full text-navy hover:bg-grisL" onClick={() => setMenu(menu === "notifs" ? null : "notifs")} aria-label="Notifications">
+        <button
+          className="relative flex h-9 w-9 items-center justify-center rounded-full text-navy hover:bg-grisL"
+          onClick={() => setMenu(menu === "notifs" ? null : "notifs")}
+          aria-label="Notifications — prochaines échéances"
+          aria-haspopup="true"
+          aria-expanded={menu === "notifs"}
+        >
           <BellIcon className="h-5 w-5" />
           {prochainesEcheances.length > 0 && (
             <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-rouge ring-2 ring-white" />

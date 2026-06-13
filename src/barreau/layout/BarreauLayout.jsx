@@ -25,6 +25,12 @@ export function BarreauLayout() {
 
   return (
     <div className="min-h-screen bg-creme">
+      <a
+        href="#contenu-principal"
+        className="sr-only z-[90] focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:rounded focus:bg-navy focus:px-4 focus:py-2 focus:text-sm focus:text-white"
+      >
+        Aller au contenu
+      </a>
       <Sidebar open={menuOpen} onClose={() => setMenuOpen(false)} />
 
       <div className="min-h-screen bg-white xl:ml-[260px]">
@@ -34,7 +40,7 @@ export function BarreauLayout() {
           onAddAvocat={() => setInscription(true)}
         />
 
-        <main className="mx-auto max-w-container px-4 py-6 md:px-8 md:py-8">
+        <main id="contenu-principal" tabIndex={-1} className="mx-auto max-w-container px-4 py-6 outline-none md:px-8 md:py-8">
           <Routes>
             {allModules.map(({ path, name, element }) => (
               <Route

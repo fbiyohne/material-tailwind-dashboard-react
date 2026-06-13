@@ -58,7 +58,7 @@ export function Sidebar({ open, onClose }) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-3">
+        <nav className="flex-1 overflow-y-auto py-3" aria-label="Navigation principale">
           {navSections.map((section) => (
             <div key={section.label} className="px-2">
               <div className="px-3 pb-1.5 pt-4 text-[8px] font-semibold uppercase tracking-[0.22em] text-or/60">

@@ -5,10 +5,15 @@ import { ChevronUpDownIcon, ChevronUpIcon, ChevronDownIcon } from "@heroicons/re
 export function SortTh({ label, sortKey, current, dir, onSort, className = "", align = "left" }) {
   const active = current === sortKey;
   return (
-    <th className={`px-3 py-2.5 font-medium ${className}`}>
+    <th
+      scope="col"
+      aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
+      className={`px-3 py-2.5 font-medium ${className}`}
+    >
       <button
         type="button"
         onClick={() => onSort(sortKey)}
+        aria-label={`Trier par ${label}`}
         className={`inline-flex items-center gap-1 transition hover:text-white ${align === "right" ? "flex-row-reverse" : ""}`}
       >
         {label}
