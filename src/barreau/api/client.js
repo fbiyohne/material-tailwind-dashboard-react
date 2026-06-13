@@ -70,3 +70,31 @@ export async function api(path, opts = {}) {
   if (!res.ok) throw new Error(data?.erreur || `Erreur ${res.status}`);
   return data;
 }
+
+/** Télécharge un PDF serveur authentifié (rafraîchissement automatique sur 401). */
+export async function telechargerPdf(path, filename) {
+  const charger = () => {
+    const headers = {};
+    const token = getToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return fetch(`${BASE}${path}`, { headers });
+  };
+  let res = await charger();
+  if (res.status === 401) {
+    refreshing = refreshing ?? rafraichir();
+    const ok = await refreshing;
+    refreshing = null;
+    if (ok) res = await charger();
+  }
+  if (!res.ok) {
+    if (res.status === 401) { clearSession(); onUnauthorized?.(); }
+    throw new Error("Échec du téléchargement du PDF");
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}

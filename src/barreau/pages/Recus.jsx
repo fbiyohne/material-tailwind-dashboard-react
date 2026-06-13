@@ -5,8 +5,7 @@ import { EXERCICES } from "../data/dashboard-data";
 import { formatFCFA } from "../utils/format";
 import { montantEnLettresFCFA } from "../utils/nombreEnLettres";
 import { DocumentChrome, useToast } from "../components";
-import { exporterPdf } from "../utils/exports";
-import { listerMembres, listerRecus, enregistrerPaiement } from "../api/resources";
+import { listerMembres, listerRecus, enregistrerPaiement, telechargerRecuPdf } from "../api/resources";
 
 const MODES = ["Espèces", "Virement", "Chèque", "Mobile Money"];
 const TARIF = { avocat: 150000, stagiaire: 75000, honoraire: 0 };
@@ -141,8 +140,8 @@ export function Recus() {
             <button type="button" onClick={emettre} disabled={!membre || montant <= 0} className="bpn-btn bpn-btn-or w-full justify-center !py-2.5">
               <PrinterIcon className="h-4 w-4" /> Imprimer &amp; archiver
             </button>
-            <button type="button" onClick={() => exporterPdf(`Recu-${numeroAffiche}`)} disabled={!membre} className="bpn-btn bpn-btn-ghost w-full justify-center border-white/20 text-white/70 hover:bg-white/10 hover:text-white disabled:opacity-40">
-              <ArrowDownTrayIcon className="h-4 w-4" /> Télécharger PDF
+            <button type="button" onClick={() => succes && telechargerRecuPdf(succes.id, succes.numero)} disabled={!succes} title={succes ? "" : "Émettez d'abord le reçu"} className="bpn-btn bpn-btn-ghost w-full justify-center border-white/20 text-white/70 hover:bg-white/10 hover:text-white disabled:opacity-40">
+              <ArrowDownTrayIcon className="h-4 w-4" /> Télécharger PDF (serveur)
             </button>
           </div>
         </div>

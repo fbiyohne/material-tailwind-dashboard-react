@@ -1,4 +1,7 @@
-import { api } from "./client";
+import { api, telechargerPdf } from "./client";
+
+export const telechargerRecuPdf = (id, numero) => telechargerPdf(`/recus/${id}/pdf`, `Recu-${numero}.pdf`);
+export const telechargerQuitusPdf = (id, numero) => telechargerPdf(`/quitus/${id}/pdf`, `Quitus-${numero}.pdf`);
 
 /**
  * Couche d'accès aux ressources de l'API. Normalise les formats du backend

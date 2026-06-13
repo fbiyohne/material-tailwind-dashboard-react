@@ -4,9 +4,24 @@ import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { eligibleQuitus, prochainNumeroQuitus } from "../lib/business.js";
+import { htmlVersPdf } from "../lib/pdf.js";
+import { quitusHtml } from "../lib/templates.js";
 
 export const quitusRouter = Router();
 quitusRouter.use(requireAuth);
+
+/** GET /quitus/:id/pdf — quitus officiel en PDF vectoriel (Puppeteer). */
+quitusRouter.get(
+  "/:id/pdf",
+  asyncH(async (req, res) => {
+    const quitus = await prisma.quitus.findUnique({ where: { id: Number(req.params.id) }, include: { membre: true } });
+    if (!quitus) throw new HttpError(404, "Quitus introuvable");
+    const pdf = await htmlVersPdf(quitusHtml(quitus, quitus.membre));
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="Quitus-${quitus.numero}.pdf"`);
+    res.end(pdf);
+  })
+);
 
 /** GET /quitus/eligibles?annee= — avocats éligibles (à jour ET validés). BR-01. */
 quitusRouter.get(
