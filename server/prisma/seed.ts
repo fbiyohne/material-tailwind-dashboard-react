@@ -91,8 +91,40 @@ async function main() {
     });
   }
 
+  // Données institutionnelles
+  await prisma.reunion.deleteMany();
+  await prisma.assemblee.deleteMany();
+  await prisma.publication.deleteMany();
+  await prisma.dossierDisciplinaire.deleteMany();
+
+  await prisma.reunion.createMany({
+    data: [
+      { date: new Date("2026-06-18"), heure: "15:00", lieu: "Maison de l'Avocat — Pointe-Noire", ordreDuJour: ["Approbation du procès-verbal précédent", "Point sur le recouvrement des cotisations 2026", "Préparation de l'AGO", "Questions diverses"], statut: "planifiee" },
+      { date: new Date("2026-05-14"), heure: "15:00", lieu: "Maison de l'Avocat — Pointe-Noire", ordreDuJour: ["Admissions sur la liste de stage", "Questions diverses"], statut: "tenue", pv: "Le Conseil a admis deux nouveaux stagiaires." },
+    ],
+  });
+
+  await prisma.assemblee.create({
+    data: { type: "AGO", date: new Date("2026-07-15"), lieu: "Palais de Justice — Pointe-Noire", ordreDuJour: ["Rapport moral du Bâtonnier", "Rapport financier de la Trésorière", "Renouvellement du Conseil de l'Ordre"], statut: "convoquee" },
+  });
+
+  await prisma.publication.createMany({
+    data: [
+      { titre: "Avis de fermeture du Secrétariat — congés annuels", type: "Avis", contenu: "Le Secrétariat sera fermé du 1er au 15 août 2026.", statut: "PUBLIE", date: new Date("2026-06-01") },
+      { titre: "Communiqué — Rentrée solennelle du Barreau", type: "Communiqué", contenu: "Le Bâtonnier annonce la tenue de la rentrée solennelle du Barreau.", statut: "A_VALIDER", date: new Date("2026-06-10") },
+    ],
+  });
+
+  const mavoungou = await prisma.membre.findFirst({ where: { num: 8 } });
+  await prisma.dossierDisciplinaire.createMany({
+    data: [
+      { reference: "2026-03", membreId: mavoungou?.id ?? null, avocatNom: "MAVOUNGOU Chris", objet: "Manquement présumé aux règles déontologiques", dateSaisine: new Date("2026-03-10"), dateConvocation: new Date("2026-03-25"), dateAudience: new Date("2026-04-15"), statut: "INSTRUCTION" },
+      { reference: "2026-04", avocatNom: "Confidentiel", objet: "Plainte d'un justiciable", dateSaisine: new Date("2026-05-02"), statut: "OUVERT" },
+    ],
+  });
+
   const nbMembres = await prisma.membre.count();
-  console.log(`Seed terminé : ${nbMembres} membres, 4 utilisateurs.`);
+  console.log(`Seed terminé : ${nbMembres} membres, 4 utilisateurs, données institutionnelles.`);
 }
 
 main()

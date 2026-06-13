@@ -4,7 +4,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
-import { prochainNumInscription } from "../lib/business.js";
+import { prochainNumInscription, prochainNumeroAttestation, archiver } from "../lib/business.js";
 
 export const membresRouter = Router();
 membresRouter.use(requireAuth);
@@ -117,5 +117,25 @@ membresRouter.post(
       data: { statut: "RADIE" },
     });
     res.json(membre);
+  })
+);
+
+/** POST /membres/:id/attestation — génère + archive l'attestation (FR-AV-05). */
+membresRouter.post(
+  "/:id/attestation",
+  requireRole("SECRETAIRE_GENERAL"),
+  asyncH(async (req, res) => {
+    const membre = await prisma.membre.findUnique({ where: { id: Number(req.params.id) } });
+    if (!membre) throw new HttpError(404, "Avocat introuvable");
+    const numero = await prochainNumeroAttestation();
+    const date = new Date();
+    await archiver({
+      categorie: "Attestation d'inscription",
+      titre: `Attestation ${numero} — Me ${membre.nom}`,
+      reference: numero,
+      date,
+      membreNom: membre.nom,
+    });
+    res.status(201).json({ numero, membreNom: membre.nom, date });
   })
 );

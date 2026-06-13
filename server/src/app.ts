@@ -7,6 +7,15 @@ import { membresRouter } from "./routes/membres.js";
 import { cotisationsRouter } from "./routes/cotisations.js";
 import { recusRouter } from "./routes/recus.js";
 import { quitusRouter } from "./routes/quitus.js";
+import { droitsRouter } from "./routes/droits.js";
+import { disciplineRouter } from "./routes/discipline.js";
+import { reunionsRouter } from "./routes/reunions.js";
+import { assembleesRouter } from "./routes/assemblees.js";
+import { publicationsRouter } from "./routes/publications.js";
+import { archivesRouter } from "./routes/archives.js";
+import { parametresRouter } from "./routes/parametres.js";
+import { corpsElectoralRouter } from "./routes/corpsElectoral.js";
+import { dashboardRouter } from "./routes/dashboard.js";
 
 export function creerApp() {
   const app = express();
@@ -20,6 +29,15 @@ export function creerApp() {
   app.use("/api/cotisations", cotisationsRouter);
   app.use("/api/recus", recusRouter);
   app.use("/api/quitus", quitusRouter);
+  app.use("/api/droits", droitsRouter);
+  app.use("/api/discipline", disciplineRouter);
+  app.use("/api/reunions", reunionsRouter);
+  app.use("/api/assemblees", assembleesRouter);
+  app.use("/api/publications", publicationsRouter);
+  app.use("/api/archives", archivesRouter);
+  app.use("/api/parametres", parametresRouter);
+  app.use("/api/corps-electoral", corpsElectoralRouter);
+  app.use("/api/dashboard", dashboardRouter);
 
   app.use((_req, res) => res.status(404).json({ erreur: "Ressource introuvable" }));
   app.use(errorHandler);

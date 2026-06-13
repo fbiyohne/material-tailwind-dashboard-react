@@ -194,3 +194,8 @@ model JournalDiscipline {
   quand  DateTime @default(now())
   userId Int?
 }
+
+model Parametres {
+  id   Int  @id @default(1)
+  data Json
+}

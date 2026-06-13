@@ -67,6 +67,39 @@ export async function prochainNumInscription(): Promise<{ num: number; numInscri
   return { num, numInscription: `PN-${new Date().getFullYear()}-${pad(num, 3)}` };
 }
 
+/** N° d'attestation ATT-AAAA-NNN. */
+export async function prochainNumeroAttestation(): Promise<string> {
+  const annee = new Date().getFullYear();
+  const n = await prisma.archive.count({
+    where: { categorie: "Attestation d'inscription", reference: { startsWith: `ATT-${annee}-` } },
+  });
+  return `ATT-${annee}-${pad(n + 1, 3)}`;
+}
+
+// ─── Droits de plaidoirie (FR-DROITS) ────────────────────────────────────────
+export function droitDu(qualite: Qualite): number {
+  return qualite === "AVOCAT" ? DROIT_PLAIDOIRIE : 0;
+}
+/** Encaissement simulé déterministe (prototype). */
+export function droitPaye(membreId: number, annee: number): number {
+  const du = DROIT_PLAIDOIRIE;
+  return [0, Math.round(du / 2), du][(membreId + annee) % 3];
+}
+
+// ─── Corps électoral (RG-04, RG-05) ──────────────────────────────────────────
+export function eligibiliteElectorale(
+  membre: { qualite: Qualite; statut: string },
+  cot: { montantDu: number; montantPaye: number } | null
+): { eligible: boolean; raison: string | null } {
+  if (membre.qualite === "HONORAIRE") return { eligible: false, raison: "honoraire" };
+  if (membre.qualite === "STAGIAIRE") return { eligible: false, raison: "stagiaire" };
+  if (["SUSPENDU", "RADIE", "OMIS"].includes(membre.statut)) return { eligible: false, raison: "statut" };
+  const du = cot?.montantDu ?? montantDu(membre.qualite);
+  const paye = cot?.montantPaye ?? 0;
+  if (statutCotisation(du, paye) !== "ajour") return { eligible: false, raison: "cotisation" };
+  return { eligible: true, raison: null };
+}
+
 /** Archive automatiquement un document (BR-05 / RG-14). */
 export async function archiver(entree: {
   categorie: string;
