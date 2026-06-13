@@ -14,6 +14,7 @@ import {
   BookOpenIcon,
   MegaphoneIcon,
   NewspaperIcon,
+  Cog6ToothIcon,
 } from "@heroicons/react/24/outline";
 
 import Dashboard from "./pages/Dashboard";
@@ -31,6 +32,7 @@ import Archives from "./pages/Archives";
 import Annuaire from "./pages/Annuaire";
 import Publications from "./pages/Publications";
 import LettreBatonnier from "./pages/LettreBatonnier";
+import Parametres from "./pages/Parametres";
 import AvocatDetail from "./pages/AvocatDetail";
 import DossierDetail from "./pages/DossierDetail";
 import ReunionDetail from "./pages/ReunionDetail";
@@ -84,6 +86,12 @@ export const navSections = [
       { name: "Annuaire", path: "/annuaire", icon: BookOpenIcon, element: <Annuaire /> },
       { name: "Publications", path: "/publications", icon: MegaphoneIcon, element: <Publications /> },
       { name: "Lettre du Bâtonnier", path: "/lettre-batonnier", icon: NewspaperIcon, element: <LettreBatonnier /> },
+    ],
+  },
+  {
+    label: "Système",
+    items: [
+      { name: "Paramètres", path: "/parametres", icon: Cog6ToothIcon, element: <Parametres /> },
     ],
   },
 ];

@@ -1,0 +1,127 @@
+import { useState } from "react";
+import { CheckIcon, LockClosedIcon } from "@heroicons/react/24/outline";
+import { Badge, useToast } from "../components";
+import { useBarreau } from "../store/BarreauStore";
+import { EXERCICES } from "../data/dashboard-data";
+import { formatFCFA } from "../utils/format";
+
+const ROLES = [
+  { role: "Secrétaire Général", mission: "Administrateur fonctionnel principal", acces: "Accès complet", ton: "vert" },
+  { role: "Bâtonnier", mission: "Validation des publications et décisions", acces: "Consultation + validation", ton: "bleu" },
+  { role: "Trésorière", mission: "Gestion financière et validation des quitus", acces: "Finances uniquement", ton: "or" },
+  { role: "Administrateur système", mission: "Configuration et maintenance", acces: "Accès technique total", ton: "gris" },
+];
+
+function Section({ titre, description, children }) {
+  return (
+    <div className="bpn-card">
+      <div className="bpn-card-header"><span className="bpn-card-heading">{titre}</span></div>
+      <div className="p-5">
+        {description && <p className="mb-4 text-sm text-gris">{description}</p>}
+        {children}
+      </div>
+    </div>
+  );
+}
+
+export function Parametres() {
+  const { parametres, mettreAJourParametres } = useBarreau();
+  const toast = useToast();
+
+  const [tarifs, setTarifs] = useState(parametres.tarifs);
+  const [exercice, setExercice] = useState(parametres.exerciceCourant);
+  const [identite, setIdentite] = useState(parametres.identite);
+
+  const setT = (k) => (e) => setTarifs({ ...tarifs, [k]: Number(e.target.value) });
+  const setI = (k) => (e) => setIdentite({ ...identite, [k]: e.target.value });
+
+  const sauverTarifs = () => {
+    mettreAJourParametres({ tarifs: { avocat: tarifs.avocat, stagiaire: tarifs.stagiaire, droitsPlaidoirie: tarifs.droitsPlaidoirie }, exerciceCourant: exercice });
+    toast.success("Tarifs et exercice courant enregistrés.");
+  };
+  const sauverIdentite = () => {
+    mettreAJourParametres({ identite });
+    toast.success("Identité de l'institution enregistrée.");
+  };
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <div className="bpn-eyebrow">Système</div>
+        <h2 className="bpn-title mt-2">Paramètres</h2>
+        <p className="mt-1 text-sm text-gris">Tarifs de référence, exercice courant, identité de l'institution et rôles.</p>
+      </div>
+
+      <Section titre="Tarifs de référence & exercice" description="Montants annuels appliqués aux calculs de cotisations et de droits (BR-07 / BR-08).">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <label className="block"><span className="bpn-label">Cotisation avocat (FCFA)</span>
+            <input type="number" step={25000} value={tarifs.avocat} onChange={setT("avocat")} className="bpn-input mt-1" /></label>
+          <label className="block"><span className="bpn-label">Cotisation stagiaire (FCFA)</span>
+            <input type="number" step={25000} value={tarifs.stagiaire} onChange={setT("stagiaire")} className="bpn-input mt-1" /></label>
+          <label className="block"><span className="bpn-label">Droit de plaidoirie (FCFA)</span>
+            <input type="number" step={10000} value={tarifs.droitsPlaidoirie} onChange={setT("droitsPlaidoirie")} className="bpn-input mt-1" /></label>
+          <label className="block"><span className="bpn-label">Exercice courant</span>
+            <select value={exercice} onChange={(e) => setExercice(Number(e.target.value))} className="bpn-input mt-1">
+              {EXERCICES.map((a) => <option key={a} value={a}>{a}</option>)}
+            </select></label>
+        </div>
+        <div className="mt-3 text-xs text-gris">
+          Aperçu : avocat {formatFCFA(tarifs.avocat)} · stagiaire {formatFCFA(tarifs.stagiaire)} · honoraires exonérés.
+        </div>
+        <div className="mt-4 flex justify-end">
+          <button className="bpn-btn bpn-btn-primary" onClick={sauverTarifs}><CheckIcon className="h-4 w-4" /> Enregistrer</button>
+        </div>
+      </Section>
+
+      <Section titre="Identité de l'institution" description="Utilisée dans les documents officiels et l'interface.">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <label className="block"><span className="bpn-label">Dénomination</span>
+            <input value={identite.denomination} onChange={setI("denomination")} className="bpn-input mt-1" /></label>
+          <label className="block"><span className="bpn-label">Ordre</span>
+            <input value={identite.ordre} onChange={setI("ordre")} className="bpn-input mt-1" /></label>
+          <label className="block"><span className="bpn-label">Bâtonnier</span>
+            <input value={identite.batonnier} onChange={setI("batonnier")} className="bpn-input mt-1" /></label>
+          <label className="block"><span className="bpn-label">Trésorière</span>
+            <input value={identite.tresoriere} onChange={setI("tresoriere")} className="bpn-input mt-1" /></label>
+          <label className="block"><span className="bpn-label">Secrétaire Général</span>
+            <input value={identite.secretaireGeneral} onChange={setI("secretaireGeneral")} className="bpn-input mt-1" /></label>
+          <label className="block"><span className="bpn-label">Adresse</span>
+            <input value={identite.adresse} onChange={setI("adresse")} className="bpn-input mt-1" /></label>
+        </div>
+        <div className="mt-4 flex justify-end">
+          <button className="bpn-btn bpn-btn-primary" onClick={sauverIdentite}><CheckIcon className="h-4 w-4" /> Enregistrer</button>
+        </div>
+      </Section>
+
+      <Section titre="Rôles & permissions" description="Profils d'accès de l'application (parties prenantes du CDC).">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-navy text-left text-[9px] uppercase tracking-[0.1em] text-white/90">
+                <th scope="col" className="px-3 py-2.5 font-medium">Profil</th>
+                <th scope="col" className="px-3 py-2.5 font-medium">Mission</th>
+                <th scope="col" className="px-3 py-2.5 font-medium">Niveau d'accès</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ROLES.map((r) => (
+                <tr key={r.role} className="border-b border-grisL">
+                  <td className="px-3 py-2.5 font-medium">{r.role}</td>
+                  <td className="px-3 py-2.5 text-gris">{r.mission}</td>
+                  <td className="px-3 py-2.5"><Badge ton={r.ton} dot={false}>{r.acces}</Badge></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="mt-4 flex items-start gap-2 rounded border-l-[3px] border-or bg-or-L px-4 py-2.5 text-xs text-gris">
+          <LockClosedIcon className="mt-0.5 h-4 w-4 shrink-0 text-or" />
+          La gestion des comptes et l'authentification par rôles (JWT + RBAC) seront activées en
+          version professionnelle V2. En V1, l'application fonctionne en profil unique.
+        </div>
+      </Section>
+    </div>
+  );
+}
+
+export default Parametres;

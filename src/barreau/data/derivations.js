@@ -1,13 +1,13 @@
-import { TARIFS } from "./membres";
+import { config } from "./config";
 
 /**
  * Règles dérivées des cotisations (BR-07, BR-08, RG-07/08).
  * Fonctions pures : montant dû, montant payé, solde et statut d'un membre
- * pour un exercice donné.
+ * pour un exercice donné. Les tarifs proviennent de la configuration (Paramètres).
  */
 
 export function montantDu(membre) {
-  return TARIFS[membre.qualite] ?? TARIFS.avocat;
+  return config.tarifs[membre.qualite] ?? config.tarifs.avocat;
 }
 
 export function montantPaye(membre, exercice) {

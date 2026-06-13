@@ -11,6 +11,7 @@ import {
   publicationsInitiales,
   genererBrouillonArticle,
 } from "../data/publications";
+import { config, appliquerConfig } from "../data/config";
 
 // Quelques documents déjà archivés au démarrage (RG-14).
 const ARCHIVES_INITIALES = [
@@ -61,6 +62,18 @@ export function BarreauProvider({ children }) {
   const [journalDiscipline, setJournalDiscipline] = useState([]);
   const [publications, setPublications] = useState(publicationsInitiales);
   const [articlesLettre, setArticlesLettre] = useState({});
+  const [parametres, setParametres] = useState(() => JSON.parse(JSON.stringify(config)));
+
+  /** Met à jour les paramètres (tarifs, exercice, identité) et la config vivante. */
+  const mettreAJourParametres = useCallback((patch) => {
+    appliquerConfig(patch); // synchronise l'objet lu par les dérivations
+    setParametres((prev) => ({
+      ...prev,
+      tarifs: { ...prev.tarifs, ...(patch.tarifs || {}) },
+      identite: { ...prev.identite, ...(patch.identite || {}) },
+      exerciceCourant: patch.exerciceCourant ?? prev.exerciceCourant,
+    }));
+  }, []);
 
   const prochainNumeroRecu = formatNumeroRecu(DERNIER_RECU + recus.length + 1);
 
@@ -72,7 +85,8 @@ export function BarreauProvider({ children }) {
   /** Liste consolidée des cotisations d'un exercice (FR-COT-*). */
   const cotisationsExercice = useCallback(
     (exercice) => membres.map((m) => ligneCotisation(m, exercice)),
-    [membres]
+    // parametres : recalcul si les tarifs changent (Paramètres)
+    [membres, parametres]
   );
 
   /**
@@ -381,6 +395,8 @@ export function BarreauProvider({ children }) {
       journalDiscipline,
       publications,
       articlesLettre,
+      parametres,
+      mettreAJourParametres,
       archiver,
       creerReunion,
       enregistrerPv,
@@ -422,6 +438,8 @@ export function BarreauProvider({ children }) {
       journalDiscipline,
       publications,
       articlesLettre,
+      parametres,
+      mettreAJourParametres,
       archiver,
       creerReunion,
       enregistrerPv,

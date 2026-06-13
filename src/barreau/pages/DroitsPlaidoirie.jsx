@@ -16,7 +16,7 @@ const ACCESSORS = {
 };
 
 export function DroitsPlaidoirie() {
-  const { membres } = useBarreau();
+  const { membres, parametres } = useBarreau();
   const [exercice, setExercice] = useState(2026);
 
   const { lignes, totaux } = useMemo(() => {
@@ -28,7 +28,7 @@ export function DroitsPlaidoirie() {
       { du: 0, paye: 0, solde: 0 }
     );
     return { lignes, totaux };
-  }, [membres, exercice]);
+  }, [membres, exercice, parametres]);
 
   const { rows, total, page, setPage, totalPages, sortKey, sortDir, toggleSort } = useDataTable(lignes, {
     accessors: ACCESSORS, pageSize: 10, initialSort: { key: "num", dir: "asc" },

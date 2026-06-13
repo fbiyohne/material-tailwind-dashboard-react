@@ -1,18 +1,19 @@
+import { config } from "./config";
+
 /**
  * Droits de plaidoirie (FR-DROITS / module 2.8 du CDC).
- * Contribution annuelle distincte de la cotisation ordinale. Modèle simplifié
- * (montant annuel fixe) avec encaissements simulés — remplacé par l'API en V2.
+ * Contribution annuelle distincte de la cotisation ordinale. Le montant de
+ * référence provient de la configuration (Paramètres). Encaissements simulés.
  */
-export const DROIT_ANNUEL = 60_000;
-
 export function droitDu(membre) {
-  return membre.qualite === "avocat" ? DROIT_ANNUEL : 0; // stagiaires/honoraires non concernés
+  return membre.qualite === "avocat" ? config.tarifs.droitsPlaidoirie : 0;
 }
 
 /** Encaissement simulé déterministe (0 / partiel / complet) selon le membre. */
 export function droitPaye(membre, annee) {
-  if (droitDu(membre) === 0) return 0;
-  return [0, 30_000, 60_000][(membre.id + annee) % 3];
+  const du = droitDu(membre);
+  if (du === 0) return 0;
+  return [0, Math.round(du / 2), du][(membre.id + annee) % 3];
 }
 
 export function ligneDroit(membre, annee) {
