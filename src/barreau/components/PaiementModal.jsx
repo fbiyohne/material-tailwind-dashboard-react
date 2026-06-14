@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import { Modal } from "./Modal";
+import { FormField } from "./FormField";
+import { Notice } from "./Notice";
 import { useToast } from "./Toast";
 import { enregistrerPaiement, enregistrerPaiementDroit } from "../api/resources";
 import { formatFCFA } from "../utils/format";
@@ -54,21 +56,25 @@ export function PaiementModal({ ligne, exercice, type = "cotisation", open, onCl
       title={`Enregistrer un paiement — ${libelle} — Me ${membre.nom}`}
       footer={<button className="bpn-btn bpn-btn-or" onClick={valider} disabled={Number(form.montant) <= 0 || loading}>Enregistrer &amp; émettre le reçu</button>}
     >
-      <div className="mb-3 rounded border border-grisM bg-grisL/40 px-3 py-2 text-xs text-gris">
+      <Notice ton="gris" className="mb-4">
         Exercice {exercice} · dû {formatFCFA(ligne.montantDu)} · déjà payé {formatFCFA(ligne.montantPaye)} · solde{" "}
         <span className="font-medium text-rouge">{formatFCFA(solde)}</span>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <label className="block"><span className="bpn-label">Montant (FCFA)</span>
-          <input type="number" min={0} step={25000} value={form.montant} onChange={set("montant")} className="bpn-input mt-1" /></label>
-        <label className="block"><span className="bpn-label">Mode</span>
-          <select value={form.mode} onChange={set("mode")} className="bpn-input mt-1">
+      </Notice>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <FormField label="Montant (FCFA)" required>
+          <input type="number" min={0} step={25000} value={form.montant} onChange={set("montant")} className="bpn-input" />
+        </FormField>
+        <FormField label="Mode de paiement">
+          <select value={form.mode} onChange={set("mode")} className="bpn-input">
             {MODES.map((m) => <option key={m} value={m}>{m}</option>)}
-          </select></label>
-        <label className="block"><span className="bpn-label">Date</span>
-          <input type="date" value={form.date} onChange={set("date")} className="bpn-input mt-1" /></label>
-        <label className="block"><span className="bpn-label">Référence (optionnel)</span>
-          <input value={form.ref} onChange={set("ref")} className="bpn-input mt-1" placeholder="Auto si vide" /></label>
+          </select>
+        </FormField>
+        <FormField label="Date">
+          <input type="date" value={form.date} onChange={set("date")} className="bpn-input" />
+        </FormField>
+        <FormField label="Référence" hint="optionnel">
+          <input value={form.ref} onChange={set("ref")} className="bpn-input" placeholder="Auto si vide" />
+        </FormField>
       </div>
     </Modal>
   );

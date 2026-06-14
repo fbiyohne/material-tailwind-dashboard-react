@@ -4,7 +4,7 @@ import { QUALITE_LABEL } from "../data/derivations";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { formatFCFA } from "../utils/format";
 import { montantEnLettresFCFA } from "../utils/nombreEnLettres";
-import { DocumentChrome, Pagination, useToast, useConfirm } from "../components";
+import { DocumentChrome, Pagination, useToast, useConfirm, PageHeader } from "../components";
 import { listerMembres, listerRecus, enregistrerPaiement, telechargerRecuPdf, annulerRecu } from "../api/resources";
 
 const MODES = ["Espèces", "Virement", "Chèque", "Mobile Money"];
@@ -114,11 +114,7 @@ export function Recus() {
 
   return (
     <div className="space-y-5">
-      <div className="bpn-no-print">
-        <div className="bpn-eyebrow">Finances</div>
-        <h2 className="bpn-title mt-2">Reçus de paiement</h2>
-        <p className="mt-1 text-sm text-gris">Émission d'un reçu officiel — mise à jour automatique des cotisations à l'enregistrement.</p>
-      </div>
+      <PageHeader className="bpn-no-print" eyebrow="Finances" titre="Reçus de paiement" sousTitre="Émission d'un reçu officiel — mise à jour automatique des cotisations à l'enregistrement." />
 
       {succes && (
         <div className="bpn-no-print flex items-center gap-2 rounded border-l-[3px] border-vert bg-[#e6f4ee] px-4 py-2.5 text-sm text-vert">

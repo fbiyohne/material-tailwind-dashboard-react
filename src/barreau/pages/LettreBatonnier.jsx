@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { SparklesIcon, DocumentTextIcon } from "@heroicons/react/24/outline";
-import { Badge, Modal } from "../components";
+import { Badge, Modal, PageHeader } from "../components";
 import { genererBrouillonArticle } from "../data/publications";
 import { archiverDoc, genererArticleLettre, getCalendrierEditorial } from "../api/resources";
 
@@ -44,13 +44,7 @@ export function LettreBatonnier() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <div className="bpn-eyebrow">Documents</div>
-        <h2 className="bpn-title mt-2">Lettre du Bâtonnier</h2>
-        <p className="mt-1 text-sm text-gris">
-          Calendrier éditorial mensuel — génération d'un projet d'article par assistance IA.
-        </p>
-      </div>
+      <PageHeader eyebrow="Documents" titre="Lettre du Bâtonnier" sousTitre="Calendrier éditorial mensuel — génération d'un projet d'article par assistance IA." />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {calendrier.map((c) => {

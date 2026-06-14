@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { CheckIcon, LockClosedIcon } from "@heroicons/react/24/outline";
-import { Badge, useToast } from "../components";
+import { Badge, useToast, PageHeader } from "../components";
 import { EXERCICES } from "../data/dashboard-data";
 import { formatFCFA } from "../utils/format";
 import { getParametres, majParametres } from "../api/resources";
@@ -59,11 +59,7 @@ export function Parametres() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <div className="bpn-eyebrow">Système</div>
-        <h2 className="bpn-title mt-2">Paramètres</h2>
-        <p className="mt-1 text-sm text-gris">Tarifs de référence, exercice courant, identité de l'institution et rôles.</p>
-      </div>
+      <PageHeader eyebrow="Système" titre="Paramètres" sousTitre="Tarifs de référence, exercice courant, identité de l'institution et rôles." />
 
       <Section titre="Tarifs de référence & exercice" description="Montants annuels appliqués aux calculs de cotisations et de droits (BR-07 / BR-08).">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

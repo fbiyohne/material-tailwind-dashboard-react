@@ -5,7 +5,7 @@ import {
   ShieldExclamationIcon,
   PlusIcon,
 } from "@heroicons/react/24/outline";
-import { Badge, Modal, SortTh, Pagination, useToast } from "../components";
+import { Badge, Modal, SortTh, Pagination, useToast, PageHeader } from "../components";
 import { useDataTable } from "../hooks/useDataTable";
 import { STATUT_DOSSIER_META } from "../data/institutionnel";
 import { listerMembres, listerDossiers, ouvrirDossier as apiOuvrirDossier, journalDiscipline as apiJournal } from "../api/resources";
@@ -109,18 +109,11 @@ export function Discipline() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-        <div>
-          <div className="bpn-eyebrow">Institutionnel · Confidentiel</div>
-          <h2 className="bpn-title mt-2">Conseil de discipline</h2>
-          <p className="mt-1 text-sm text-gris">
-            Dossiers disciplinaires — accès restreint et journalisé.
-          </p>
-        </div>
+      <PageHeader eyebrow="Institutionnel · Confidentiel" titre="Conseil de discipline" sousTitre="Dossiers disciplinaires — accès restreint et journalisé.">
         <button className="bpn-btn bpn-btn-danger" onClick={() => setOuvrir(true)}>
           <PlusIcon className="h-4 w-4" /> Ouvrir un dossier
         </button>
-      </div>
+      </PageHeader>
 
       <div className="flex items-center gap-2 rounded border-l-[3px] border-rouge bg-[#f4e6e6] px-4 py-2.5 text-sm text-rouge">
         <ShieldExclamationIcon className="h-5 w-5 shrink-0" />

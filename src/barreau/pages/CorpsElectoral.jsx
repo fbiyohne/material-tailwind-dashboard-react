@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { PrinterIcon, ArrowDownTrayIcon, CheckBadgeIcon } from "@heroicons/react/24/outline";
-import { StatCard, Badge, EmptyState, useToast } from "../components";
+import { StatCard, Badge, EmptyState, useToast, PageHeader } from "../components";
 import { exporterExcel } from "../utils/exports";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { getCorpsElectoral } from "../api/resources";
@@ -31,31 +31,21 @@ export function CorpsElectoral() {
 
   return (
     <div className="space-y-5">
-      <div className="bpn-no-print flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-        <div>
-          <div className="bpn-eyebrow">Membres</div>
-          <h2 className="bpn-title mt-2">Corps électoral</h2>
-          <p className="mt-1 text-sm text-gris">
-            Liste générée automatiquement : avocats inscrits, à jour de cotisations et non
-            suspendus (RG-04 à RG-06).
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="bpn-label mr-1">Exercice</span>
-          {EXERCICES.map((a) => (
-            <button
-              key={a}
-              type="button"
-              onClick={() => setExercice(a)}
-              className={`rounded px-3 py-1 font-mono text-xs transition ${
-                a === exercice ? "bg-navy text-white" : "bg-grisL text-gris hover:bg-grisM"
-              }`}
-            >
-              {a}
-            </button>
-          ))}
-        </div>
-      </div>
+      <PageHeader className="bpn-no-print" eyebrow="Membres" titre="Corps électoral" sousTitre="Liste générée automatiquement : avocats inscrits, à jour de cotisations et non suspendus (RG-04 à RG-06).">
+        <span className="bpn-label mr-1">Exercice</span>
+        {EXERCICES.map((a) => (
+          <button
+            key={a}
+            type="button"
+            onClick={() => setExercice(a)}
+            className={`rounded px-3 py-1 font-mono text-xs transition ${
+              a === exercice ? "bg-navy text-white" : "bg-grisL text-gris hover:bg-grisM"
+            }`}
+          >
+            {a}
+          </button>
+        ))}
+      </PageHeader>
 
       {/* Statistiques (FR-CE) */}
       <div className="bpn-no-print grid grid-cols-1 gap-4 sm:grid-cols-3">

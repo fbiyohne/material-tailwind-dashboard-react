@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { KeyIcon, CheckIcon, EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
-import { Badge, useToast } from "../components";
+import { Badge, useToast, PageHeader } from "../components";
 import { useAuth } from "../auth/AuthContext";
 import { changerMotDePasse } from "../api/resources";
 
@@ -54,11 +54,7 @@ export function Profil() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <div className="bpn-eyebrow">Compte</div>
-        <h2 className="bpn-title mt-2">Mon profil</h2>
-        <p className="mt-1 text-sm text-gris">Informations de votre compte et sécurité.</p>
-      </div>
+      <PageHeader eyebrow="Compte" titre="Mon profil" sousTitre="Informations de votre compte et sécurité." />
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <div className="bpn-card">

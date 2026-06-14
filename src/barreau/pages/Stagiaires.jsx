@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PrinterIcon } from "@heroicons/react/24/outline";
-import { Badge, useToast } from "../components";
+import { Badge, useToast, PageHeader } from "../components";
 import { infoStage } from "../data/derivations";
 import { listerMembres } from "../api/resources";
 
@@ -91,37 +91,28 @@ export function Stagiaires() {
 
   return (
     <div className="space-y-5">
-      <div className="bpn-no-print flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-        <div>
-          <div className="bpn-eyebrow">Membres</div>
-          <h2 className="bpn-title mt-2">Avocats stagiaires</h2>
-          <p className="mt-1 text-sm text-gris">
-            Liste de stage — suivi de la progression et du maître de stage.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {FILTRES.map((f) => (
-            <button
-              key={f.value}
-              type="button"
-              onClick={() => setFiltre(f.value)}
-              className={`rounded px-3 py-1 text-xs transition ${
-                filtre === f.value ? "bg-navy text-white" : "bg-grisL text-gris hover:bg-grisM"
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
+      <PageHeader className="bpn-no-print" eyebrow="Membres" titre="Avocats stagiaires" sousTitre="Liste de stage — suivi de la progression et du maître de stage.">
+        {FILTRES.map((f) => (
           <button
+            key={f.value}
             type="button"
-            onClick={() => window.print()}
-            className="bpn-btn bpn-btn-ghost !py-1.5 text-[11px]"
+            onClick={() => setFiltre(f.value)}
+            className={`rounded px-3 py-1 text-xs transition ${
+              filtre === f.value ? "bg-navy text-white" : "bg-grisL text-gris hover:bg-grisM"
+            }`}
           >
-            <PrinterIcon className="h-4 w-4" />
-            Liste
+            {f.label}
           </button>
-        </div>
-      </div>
+        ))}
+        <button
+          type="button"
+          onClick={() => window.print()}
+          className="bpn-btn bpn-btn-ghost !py-1.5 text-[11px]"
+        >
+          <PrinterIcon className="h-4 w-4" />
+          Liste
+        </button>
+      </PageHeader>
 
       <div className="bpn-no-print grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {stagiaires.map(({ membre, stage }) => (

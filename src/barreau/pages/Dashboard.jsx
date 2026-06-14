@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CalendarDaysIcon, ClockIcon } from "@heroicons/react/24/outline";
-import { StatCard, EmptyState } from "../components";
+import { StatCard, EmptyState, PageHeader } from "../components";
 import { formatFCFA, ratioPct } from "../utils/format";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { api } from "../api/client";
@@ -93,14 +93,9 @@ export function Dashboard() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-        <div>
-          <div className="bpn-eyebrow">Secrétariat Général</div>
-          <h2 className="bpn-title mt-2">Tableau de bord</h2>
-          <p className="mt-1 text-sm text-gris">Vue d'ensemble du Barreau — membres, finances et vie institutionnelle.</p>
-        </div>
+      <PageHeader eyebrow="Secrétariat Général" titre="Tableau de bord" sousTitre="Vue d'ensemble du Barreau — membres, finances et vie institutionnelle.">
         <SelecteurExercice valeur={exercice} onChange={setExercice} />
-      </div>
+      </PageHeader>
 
       {erreur && (
         <div className="rounded border-l-[3px] border-rouge bg-[#f4e6e6] px-4 py-2.5 text-sm text-rouge">{erreur}</div>

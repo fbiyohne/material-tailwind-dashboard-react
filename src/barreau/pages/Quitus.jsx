@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DocumentCheckIcon, CheckCircleIcon, LockClosedIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
-import { DocumentChrome, SortTh, Pagination, useToast } from "../components";
+import { DocumentChrome, SortTh, Pagination, useToast, PageHeader } from "../components";
 import { useDataTable } from "../hooks/useDataTable";
 import { quitusEligibles, listerQuitus, genererQuitus, getCotisations, telechargerQuitusPdf } from "../api/resources";
 
@@ -90,11 +90,7 @@ export function Quitus() {
 
   return (
     <div className="space-y-5">
-      <div className="bpn-no-print">
-        <div className="bpn-eyebrow">Finances</div>
-        <h2 className="bpn-title mt-2">Quitus de cotisation</h2>
-        <p className="mt-1 text-sm text-gris">Délivrance d'un quitus officiel — uniquement pour les avocats à jour et validés par la Trésorière.</p>
-      </div>
+      <PageHeader className="bpn-no-print" eyebrow="Finances" titre="Quitus de cotisation" sousTitre="Délivrance d'un quitus officiel — uniquement pour les avocats à jour et validés par la Trésorière." />
 
       <div className="bpn-no-print flex items-start gap-2 rounded border-l-[3px] border-vert bg-[#e6f4ee] px-4 py-2.5 text-sm text-vert">
         <CheckCircleIcon className="mt-0.5 h-5 w-5 shrink-0" />

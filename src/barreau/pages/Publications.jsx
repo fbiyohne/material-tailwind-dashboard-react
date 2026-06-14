@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PlusIcon, MegaphoneIcon, TrashIcon } from "@heroicons/react/24/outline";
-import { Badge, Modal, EmptyState, useToast, useConfirm } from "../components";
+import { Badge, Modal, EmptyState, useToast, useConfirm, PageHeader } from "../components";
 import { STATUT_PUBLICATION_META } from "../data/publications";
 import { listerPublications, creerPublication as apiCreerPublication, changerStatutPublication as apiChangerStatut, supprimerPublication } from "../api/resources";
 
@@ -66,18 +66,11 @@ export function Publications() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-        <div>
-          <div className="bpn-eyebrow">Documents</div>
-          <h2 className="bpn-title mt-2">Publications institutionnelles</h2>
-          <p className="mt-1 text-sm text-gris">
-            Avis et communiqués — validation par le Bâtonnier avant diffusion.
-          </p>
-        </div>
+      <PageHeader eyebrow="Documents" titre="Publications institutionnelles" sousTitre="Avis et communiqués — validation par le Bâtonnier avant diffusion.">
         <button className="bpn-btn bpn-btn-or" onClick={() => setCreer(true)}>
           <PlusIcon className="h-4 w-4" /> Nouvelle publication
         </button>
-      </div>
+      </PageHeader>
 
       <div className="space-y-4">
         {publications.length === 0 && (

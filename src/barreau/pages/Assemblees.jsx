@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PlusIcon, ArrowRightIcon, BuildingLibraryIcon } from "@heroicons/react/24/outline";
-import { Badge, Modal, EmptyState, useToast } from "../components";
+import { Badge, Modal, EmptyState, useToast, PageHeader } from "../components";
 import { listerAssemblees, creerAssemblee as apiCreerAssemblee } from "../api/resources";
 
 const TYPE_LABEL = { AGO: "Assemblée Générale Ordinaire", AGE: "Assemblée Générale Extraordinaire" };
@@ -49,14 +49,9 @@ export function Assemblees() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-        <div>
-          <div className="bpn-eyebrow">Institutionnel</div>
-          <h2 className="bpn-title mt-2">Assemblées générales</h2>
-          <p className="mt-1 text-sm text-gris">AGO et AGE — convocation du corps électoral, suivi du quorum et décisions.</p>
-        </div>
+      <PageHeader eyebrow="Institutionnel" titre="Assemblées générales" sousTitre="AGO et AGE — convocation du corps électoral, suivi du quorum et décisions.">
         <button className="bpn-btn bpn-btn-or" onClick={() => setCreer(true)}><PlusIcon className="h-4 w-4" /> Nouvelle assemblée</button>
-      </div>
+      </PageHeader>
 
       <div className="space-y-4">
         {assemblees.length === 0 && (

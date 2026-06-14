@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { MagnifyingGlassIcon, ArrowDownTrayIcon, PrinterIcon, BookOpenIcon } from "@heroicons/react/24/outline";
-import { StatutBadge, EmptyState, useToast } from "../components";
+import { StatutBadge, EmptyState, useToast, PageHeader } from "../components";
 import { exporterExcel } from "../utils/exports";
 import { listerMembres } from "../api/resources";
 
@@ -31,31 +31,22 @@ export function Annuaire() {
 
   return (
     <div className="space-y-5">
-      <div className="bpn-no-print flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-        <div>
-          <div className="bpn-eyebrow">Documents</div>
-          <h2 className="bpn-title mt-2">Annuaire du Barreau</h2>
-          <p className="mt-1 text-sm text-gris">
-            Annuaire {interne ? "interne (avec coordonnées)" : "public"} des avocats inscrits.
-          </p>
+      <PageHeader className="bpn-no-print" eyebrow="Documents" titre="Annuaire du Barreau" sousTitre={`Annuaire ${interne ? "interne (avec coordonnées)" : "public"} des avocats inscrits.`}>
+        <div className="flex rounded border border-grisM p-0.5">
+          {["public", "interne"].map((m) => (
+            <button key={m} onClick={() => setMode(m)}
+              className={`rounded px-3 py-1 text-xs capitalize transition ${mode === m ? "bg-navy text-white" : "text-gris hover:text-encre"}`}>
+              {m}
+            </button>
+          ))}
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex rounded border border-grisM p-0.5">
-            {["public", "interne"].map((m) => (
-              <button key={m} onClick={() => setMode(m)}
-                className={`rounded px-3 py-1 text-xs capitalize transition ${mode === m ? "bg-navy text-white" : "text-gris hover:text-encre"}`}>
-                {m}
-              </button>
-            ))}
-          </div>
-          <button className="bpn-btn bpn-btn-ghost !py-1.5 text-[11px]" onClick={() => window.print()}>
-            <PrinterIcon className="h-4 w-4" /> Imprimer
-          </button>
-          <button className="bpn-btn bpn-btn-or !py-1.5 text-[11px]" onClick={exporterXlsx}>
-            <ArrowDownTrayIcon className="h-4 w-4" /> Excel
-          </button>
-        </div>
-      </div>
+        <button className="bpn-btn bpn-btn-ghost !py-1.5 text-[11px]" onClick={() => window.print()}>
+          <PrinterIcon className="h-4 w-4" /> Imprimer
+        </button>
+        <button className="bpn-btn bpn-btn-or !py-1.5 text-[11px]" onClick={exporterXlsx}>
+          <ArrowDownTrayIcon className="h-4 w-4" /> Excel
+        </button>
+      </PageHeader>
 
       <div className="bpn-no-print relative max-w-md">
         <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gris" />

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PlusIcon, CalendarDaysIcon, MapPinIcon, ArrowRightIcon } from "@heroicons/react/24/outline";
-import { Badge, Modal, EmptyState, useToast } from "../components";
+import { Badge, Modal, EmptyState, useToast, PageHeader } from "../components";
 import { listerReunions, creerReunion as apiCreerReunion } from "../api/resources";
 
 const fmt = (d) => new Date(d).toLocaleDateString("fr-FR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
@@ -47,14 +47,9 @@ export function Reunions() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-        <div>
-          <div className="bpn-eyebrow">Institutionnel</div>
-          <h2 className="bpn-title mt-2">Réunions du Conseil de l'Ordre</h2>
-          <p className="mt-1 text-sm text-gris">Planification, convocations, feuilles de présence et procès-verbaux.</p>
-        </div>
+      <PageHeader eyebrow="Institutionnel" titre="Réunions du Conseil de l'Ordre" sousTitre="Planification, convocations, feuilles de présence et procès-verbaux.">
         <button className="bpn-btn bpn-btn-or" onClick={() => setCreer(true)}><PlusIcon className="h-4 w-4" /> Nouvelle réunion</button>
-      </div>
+      </PageHeader>
 
       <div className="space-y-4">
         {reunions.length === 0 && (

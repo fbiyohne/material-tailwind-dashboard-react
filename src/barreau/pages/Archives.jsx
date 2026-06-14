@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { MagnifyingGlassIcon, DocumentArrowDownIcon } from "@heroicons/react/24/outline";
-import { Badge, SortTh, Pagination, Modal, useToast } from "../components";
+import { Badge, SortTh, Pagination, Modal, useToast, PageHeader } from "../components";
 import { useDataTable } from "../hooks/useDataTable";
 import { listerArchives } from "../api/resources";
 
@@ -44,14 +44,7 @@ export function Archives() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <div className="bpn-eyebrow">Documents</div>
-        <h2 className="bpn-title mt-2">Archives institutionnelles</h2>
-        <p className="mt-1 text-sm text-gris">
-          Tout document officiel généré est archivé automatiquement (RG-14). Recherche par
-          mot-clé, catégorie et date.
-        </p>
-      </div>
+      <PageHeader eyebrow="Documents" titre="Archives institutionnelles" sousTitre="Tout document officiel généré est archivé automatiquement (RG-14). Recherche par mot-clé, catégorie et date." />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
