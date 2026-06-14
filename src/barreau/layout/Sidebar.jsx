@@ -126,15 +126,22 @@ export function Sidebar({ open, onClose }) {
         {/* Carte d'identité utilisateur + déconnexion */}
         <div className="shrink-0 border-t border-white/[0.08] p-3">
           <div className="flex items-center gap-2.5 rounded-lg border border-white/[0.06] bg-white/[0.04] px-3 py-2.5">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-or/30 bg-or/15 text-[11px] font-semibold text-or-2">
-              {initiales(user?.nom)}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-[11px] font-medium text-white/90">{user?.nom}</div>
-              <div className="text-[8px] uppercase tracking-[0.15em] text-or/70">
-                {ROLE_LABEL[user?.role] ?? user?.role}
+            <NavLink
+              to="/profil"
+              onClick={onClose}
+              className="flex min-w-0 flex-1 items-center gap-2.5 rounded transition hover:opacity-90"
+              title="Mon profil"
+            >
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-or/30 bg-or/15 text-[11px] font-semibold text-or-2">
+                {initiales(user?.nom)}
               </div>
-            </div>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[11px] font-medium text-white/90">{user?.nom}</div>
+                <div className="text-[8px] uppercase tracking-[0.15em] text-or/70">
+                  {ROLE_LABEL[user?.role] ?? user?.role}
+                </div>
+              </div>
+            </NavLink>
             <button
               type="button"
               onClick={logout}

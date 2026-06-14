@@ -62,9 +62,9 @@ export function DroitsPlaidoirie() {
 
       <div className="bpn-card">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="bpn-table">
             <thead>
-              <tr className="bg-navy text-left text-[9px] uppercase tracking-[0.1em] text-white/90">
+              <tr>
                 <SortTh label="N°" sortKey="num" current={sortKey} dir={sortDir} onSort={toggleSort} />
                 <SortTh label="Avocat" sortKey="nom" current={sortKey} dir={sortDir} onSort={toggleSort} />
                 <th className="px-3 py-2.5 font-medium">Droit dû</th>

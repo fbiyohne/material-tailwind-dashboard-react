@@ -56,3 +56,23 @@ authRouter.get(
     res.json({ id: user.id, nom: user.nom, email: user.email, role: user.role });
   })
 );
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(6),
+});
+
+/** POST /auth/password — changement de mot de passe en libre-service (compte courant). */
+authRouter.post(
+  "/password",
+  requireAuth,
+  asyncH(async (req: AuthRequest, res) => {
+    const { currentPassword, newPassword } = changePasswordSchema.parse(req.body);
+    const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
+    if (!user || !(await bcrypt.compare(currentPassword, user.passwordHash))) {
+      throw new HttpError(400, "Mot de passe actuel incorrect");
+    }
+    await prisma.user.update({ where: { id: user.id }, data: { passwordHash: bcrypt.hashSync(newPassword, 10) } });
+    res.json({ ok: true });
+  })
+);

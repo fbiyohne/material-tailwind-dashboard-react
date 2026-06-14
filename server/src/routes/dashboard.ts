@@ -42,6 +42,30 @@ dashboardRouter.get(
   })
 );
 
+/**
+ * GET /dashboard/agenda — prochaines échéances institutionnelles (réunions + AG).
+ * Ouvert à tout utilisateur authentifié : l'agenda alimente le tableau de bord et
+ * les notifications de tous les rôles, alors que les modules détaillés sont restreints.
+ */
+dashboardRouter.get(
+  "/agenda",
+  asyncH(async (_req, res) => {
+    const auj = new Date();
+    auj.setHours(0, 0, 0, 0);
+    const [reunions, assemblees] = await Promise.all([
+      prisma.reunion.findMany({ where: { date: { gte: auj } }, orderBy: { date: "asc" }, take: 5 }),
+      prisma.assemblee.findMany({ where: { date: { gte: auj } }, orderBy: { date: "asc" }, take: 5 }),
+    ]);
+    const items = [
+      ...reunions.map((r) => ({ date: r.date, libelle: `Réunion du Conseil${r.lieu ? ` — ${r.lieu}` : ""}` })),
+      ...assemblees.map((a) => ({ date: a.date, libelle: a.type === "AGE" ? "Assemblée Générale Extraordinaire" : "Assemblée Générale Ordinaire" })),
+    ]
+      .sort((a, b) => (a.date < b.date ? -1 : 1))
+      .slice(0, 5);
+    res.json(items);
+  })
+);
+
 /** GET /dashboard/journal — dernières actions effectuées (journal d'audit, FR-DB-10). */
 dashboardRouter.get(
   "/journal",

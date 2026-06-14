@@ -82,9 +82,9 @@ export function CorpsElectoral() {
           <span className="font-mono text-xs text-gris">{electeurs.length} électeurs</span>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="bpn-table">
             <thead>
-              <tr className="bg-navy text-left text-[9px] uppercase tracking-[0.1em] text-white/90">
+              <tr>
                 <th className="px-3 py-2.5 font-medium">N°</th>
                 <th className="px-3 py-2.5 font-medium">Avocat électeur</th>
                 <th className="px-3 py-2.5 font-medium">Cabinet</th>

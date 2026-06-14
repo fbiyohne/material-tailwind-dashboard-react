@@ -8,7 +8,8 @@ import { archiver } from "../lib/business.js";
 import { convocationAgHtml, pvAssembleeHtml } from "../lib/templates.js";
 
 export const assembleesRouter = Router();
-assembleesRouter.use(requireAuth);
+// Module institutionnel : lecture SG/Bâtonnier (l'agenda public passe par /dashboard/agenda).
+assembleesRouter.use(requireAuth, requireRole("SECRETAIRE_GENERAL", "BATONNIER"));
 
 assembleesRouter.get("/:id/convocation/pdf", asyncH(async (req, res) => {
   const a = await prisma.assemblee.findUnique({ where: { id: Number(req.params.id) } });

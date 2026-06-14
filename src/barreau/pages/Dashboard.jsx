@@ -4,7 +4,7 @@ import { StatCard } from "../components";
 import { formatFCFA, ratioPct } from "../utils/format";
 import { EXERCICES, prochainesEcheances, journalActivite } from "../data/dashboard-data";
 import { api } from "../api/client";
-import { getJournalAudit, listerReunions, listerAssemblees } from "../api/resources";
+import { getJournalAudit, getAgenda } from "../api/resources";
 
 /** Échéance institutionnelle datée, format court « 14 juin ». */
 const dateCourteFr = (v) => new Date(v).toLocaleDateString("fr-FR", { day: "2-digit", month: "long" });
@@ -75,22 +75,12 @@ export function Dashboard() {
     };
   }, []);
 
-  // Prochaines échéances réelles : réunions + assemblées à venir (FR-DB-09).
+  // Prochaines échéances réelles (réunions + AG) via l'agenda — accessible à tous les rôles.
   useEffect(() => {
     let actif = true;
-    const auj = new Date().toISOString().slice(0, 10);
-    Promise.all([listerReunions().catch(() => []), listerAssemblees().catch(() => [])])
-      .then(([reunions, assemblees]) => {
-        if (!actif) return;
-        const items = [
-          ...reunions.map((r) => ({ date: r.date, libelle: `Réunion du Conseil${r.lieu ? ` — ${r.lieu}` : ""}` })),
-          ...assemblees.map((a) => ({ date: a.date, libelle: `${a.type === "AGE" ? "Assemblée Générale Extraordinaire" : "Assemblée Générale Ordinaire"}` })),
-        ]
-          .filter((e) => String(e.date).slice(0, 10) >= auj)
-          .sort((a, b) => (a.date < b.date ? -1 : 1))
-          .slice(0, 5);
-        setEcheances(items);
-      });
+    getAgenda()
+      .then((items) => actif && setEcheances(items))
+      .catch(() => actif && setEcheances([]));
     return () => {
       actif = false;
     };

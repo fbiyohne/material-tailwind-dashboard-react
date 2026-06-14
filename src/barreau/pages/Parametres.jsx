@@ -108,9 +108,9 @@ export function Parametres() {
 
       <Section titre="Rôles & permissions" description="Profils d'accès de l'application (parties prenantes du CDC).">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="bpn-table">
             <thead>
-              <tr className="bg-navy text-left text-[9px] uppercase tracking-[0.1em] text-white/90">
+              <tr>
                 <th scope="col" className="px-3 py-2.5 font-medium">Profil</th>
                 <th scope="col" className="px-3 py-2.5 font-medium">Mission</th>
                 <th scope="col" className="px-3 py-2.5 font-medium">Niveau d'accès</th>

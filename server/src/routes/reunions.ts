@@ -8,7 +8,8 @@ import { archiver } from "../lib/business.js";
 import { convocationReunionHtml, feuillePresenceHtml, pvReunionHtml } from "../lib/templates.js";
 
 export const reunionsRouter = Router();
-reunionsRouter.use(requireAuth);
+// Module institutionnel : lecture SG/Bâtonnier (l'agenda public passe par /dashboard/agenda).
+reunionsRouter.use(requireAuth, requireRole("SECRETAIRE_GENERAL", "BATONNIER"));
 
 const envoyerPdf = (res: any, pdf: Buffer, filename: string) => {
   res.setHeader("Content-Type", "application/pdf");

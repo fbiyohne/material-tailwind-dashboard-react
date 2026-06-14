@@ -81,9 +81,9 @@ export function Avocats() {
 
       <div className="bpn-card">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="bpn-table">
             <thead>
-              <tr className="bg-navy text-left text-[9px] uppercase tracking-[0.1em] text-white/90">
+              <tr>
                 <SortTh label="N°" sortKey="num" current={sort.key} dir={sort.dir} onSort={toggleSort} />
                 <SortTh label="Avocat" sortKey="nom" current={sort.key} dir={sort.dir} onSort={toggleSort} />
                 <SortTh label="Cabinet" sortKey="cabinet" current={sort.key} dir={sort.dir} onSort={toggleSort} />

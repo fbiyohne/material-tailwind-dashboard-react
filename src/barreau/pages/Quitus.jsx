@@ -1,8 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DocumentCheckIcon, CheckCircleIcon, LockClosedIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
 import { EXERCICES } from "../data/dashboard-data";
-import { DocumentChrome, useToast } from "../components";
+import { DocumentChrome, SortTh, Pagination, useToast } from "../components";
+import { useDataTable } from "../hooks/useDataTable";
 import { quitusEligibles, listerQuitus, genererQuitus, getCotisations, telechargerQuitusPdf } from "../api/resources";
+
+const REGISTRE_ACCESSORS = {
+  numero: (q) => q.numero,
+  nom: (q) => (q.membre?.nom ?? "").toLowerCase(),
+  annee: (q) => q.annee,
+  date: (q) => q.dateEmission,
+};
 
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
 const pad3 = (n) => String(n).padStart(3, "0");
@@ -55,6 +63,10 @@ export function Quitus() {
     });
     return { eligibles: eligibles.length, aValider, bloques };
   }, [lignes, eligibles.length]);
+
+  const registreTable = useDataTable(registre, {
+    accessors: REGISTRE_ACCESSORS, pageSize: 8, initialSort: { key: "numero", dir: "desc" },
+  });
 
   const membreActif = eligibles.find((m) => m.id === membreId) ?? eligibles[0] ?? null;
 
@@ -149,23 +161,29 @@ export function Quitus() {
             {registre.length === 0 ? (
               <p className="px-4 py-6 text-center text-sm text-gris">Aucun quitus émis.</p>
             ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-navy text-left text-[9px] uppercase tracking-[0.1em] text-white/90">
-                    <th className="px-4 py-2 font-medium">N°</th><th className="px-4 py-2 font-medium">Avocat</th><th className="px-4 py-2 font-medium">Exercice</th><th className="px-4 py-2 font-medium">Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {registre.map((q) => (
-                    <tr key={q.numero} className="border-b border-grisL hover:bg-grisL/60">
-                      <td className="px-4 py-2 font-mono text-xs text-or">{q.numero}</td>
-                      <td className="px-4 py-2 font-medium">Me {q.membre?.nom}</td>
-                      <td className="px-4 py-2 font-mono text-xs text-gris">{q.annee}</td>
-                      <td className="px-4 py-2 text-xs text-gris">{String(q.dateEmission).slice(0, 10)}</td>
+              <>
+                <table className="bpn-table">
+                  <thead>
+                    <tr>
+                      <SortTh label="N°" sortKey="numero" current={registreTable.sortKey} dir={registreTable.sortDir} onSort={registreTable.toggleSort} />
+                      <SortTh label="Avocat" sortKey="nom" current={registreTable.sortKey} dir={registreTable.sortDir} onSort={registreTable.toggleSort} />
+                      <SortTh label="Exercice" sortKey="annee" current={registreTable.sortKey} dir={registreTable.sortDir} onSort={registreTable.toggleSort} />
+                      <SortTh label="Date" sortKey="date" current={registreTable.sortKey} dir={registreTable.sortDir} onSort={registreTable.toggleSort} />
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {registreTable.rows.map((q) => (
+                      <tr key={q.numero}>
+                        <td className="font-mono text-xs text-or">{q.numero}</td>
+                        <td className="font-medium">Me {q.membre?.nom}</td>
+                        <td className="font-mono text-xs text-gris">{q.annee}</td>
+                        <td className="text-xs text-gris">{String(q.dateEmission).slice(0, 10)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <Pagination page={registreTable.page} totalPages={registreTable.totalPages} total={registreTable.total} onPage={registreTable.setPage} libelle="quitus" />
+              </>
             )}
           </div>
         </div>

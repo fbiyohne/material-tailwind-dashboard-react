@@ -35,6 +35,7 @@ import Publications from "./pages/Publications";
 import LettreBatonnier from "./pages/LettreBatonnier";
 import Parametres from "./pages/Parametres";
 import Utilisateurs from "./pages/Utilisateurs";
+import Profil from "./pages/Profil";
 import AvocatDetail from "./pages/AvocatDetail";
 import DossierDetail from "./pages/DossierDetail";
 import ReunionDetail from "./pages/ReunionDetail";
@@ -118,6 +119,7 @@ export const allModules = navSections.flatMap((s) => s.items);
  * `parent` permet d'activer le bon module dans la sidebar et le titre de la barre.
  */
 export const detailRoutes = [
+  { path: "/profil", element: <Profil />, parent: "/" },
   { path: "/avocats/:id", element: <AvocatDetail />, parent: "/avocats" },
   { path: "/discipline/:id", element: <DossierDetail />, parent: "/discipline" },
   { path: "/reunions/:id", element: <ReunionDetail />, parent: "/reunions" },

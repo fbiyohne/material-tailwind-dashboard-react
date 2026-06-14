@@ -68,9 +68,9 @@ export function Archives() {
 
       <div className="bpn-card">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="bpn-table">
             <thead>
-              <tr className="bg-navy text-left text-[9px] uppercase tracking-[0.1em] text-white/90">
+              <tr>
                 <SortTh label="Date" sortKey="date" current={sortKey} dir={sortDir} onSort={toggleSort} />
                 <SortTh label="Catégorie" sortKey="categorie" current={sortKey} dir={sortDir} onSort={toggleSort} />
                 <SortTh label="Document" sortKey="titre" current={sortKey} dir={sortDir} onSort={toggleSort} />

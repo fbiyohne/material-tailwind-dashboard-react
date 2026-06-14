@@ -12,7 +12,7 @@ import {
   ArchiveBoxIcon,
   ChevronDownIcon,
 } from "@heroicons/react/24/outline";
-import { listerMembres, listerReunions, listerAssemblees } from "../api/resources";
+import { listerMembres, getAgenda } from "../api/resources";
 import { useAuth } from "../auth/AuthContext";
 import { aAcces } from "../routes";
 
@@ -41,18 +41,8 @@ export function Topbar({ title, onOpenMenu, onAddAvocat }) {
 
   useEffect(() => {
     listerMembres().then((d) => setMembres(d.items)).catch(() => {});
-    // Échéances réelles : réunions + AG à venir (mêmes sources que le tableau de bord).
-    const auj = new Date().toISOString().slice(0, 10);
-    Promise.all([listerReunions().catch(() => []), listerAssemblees().catch(() => [])]).then(([reunions, assemblees]) => {
-      const items = [
-        ...reunions.map((r) => ({ date: r.date, libelle: `Réunion du Conseil${r.lieu ? ` — ${r.lieu}` : ""}` })),
-        ...assemblees.map((a) => ({ date: a.date, libelle: a.type === "AGE" ? "Assemblée Générale Extraordinaire" : "Assemblée Générale Ordinaire" })),
-      ]
-        .filter((e) => String(e.date).slice(0, 10) >= auj)
-        .sort((a, b) => (a.date < b.date ? -1 : 1))
-        .slice(0, 5);
-      setEcheances(items);
-    });
+    // Échéances réelles (réunions + AG à venir) via l'agenda — même source que le dashboard.
+    getAgenda().then(setEcheances).catch(() => {});
   }, []);
 
   const resultats = q.trim()

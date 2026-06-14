@@ -5,9 +5,17 @@ import {
   ShieldExclamationIcon,
   PlusIcon,
 } from "@heroicons/react/24/outline";
-import { Badge, Modal, useToast } from "../components";
+import { Badge, Modal, SortTh, Pagination, useToast } from "../components";
+import { useDataTable } from "../hooks/useDataTable";
 import { STATUT_DOSSIER_META } from "../data/institutionnel";
 import { listerMembres, listerDossiers, ouvrirDossier as apiOuvrirDossier, journalDiscipline as apiJournal } from "../api/resources";
+
+const ACCESSORS = {
+  reference: (d) => d.reference,
+  avocat: (d) => (d.avocatNom ?? "").toLowerCase(),
+  saisine: (d) => d.dateSaisine,
+  statut: (d) => d.statut,
+};
 
 const fmtDateTime = (iso) =>
   new Date(iso).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
@@ -66,6 +74,11 @@ export function Discipline() {
   const [dossiers, setDossiers] = useState([]);
   const [journalDiscipline, setJournalDiscipline] = useState([]);
 
+  // Hook appelé inconditionnellement (avant la barrière d'accès RG-13).
+  const { rows, total, page, setPage, totalPages, sortKey, sortDir, toggleSort } = useDataTable(dossiers, {
+    accessors: ACCESSORS, pageSize: 10, initialSort: { key: "reference", dir: "desc" },
+  });
+
   const charger = () => {
     listerDossiers().then(setDossiers).catch((e) => toast.error(e.message));
     apiJournal().then(setJournalDiscipline).catch(() => {});
@@ -116,20 +129,20 @@ export function Discipline() {
 
       <div className="bpn-card">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="bpn-table">
             <thead>
-              <tr className="bg-navy text-left text-[9px] uppercase tracking-[0.1em] text-white/90">
-                <th className="px-3 py-2.5 font-medium">Référence</th>
-                <th className="px-3 py-2.5 font-medium">Avocat mis en cause</th>
+              <tr>
+                <SortTh label="Référence" sortKey="reference" current={sortKey} dir={sortDir} onSort={toggleSort} />
+                <SortTh label="Avocat mis en cause" sortKey="avocat" current={sortKey} dir={sortDir} onSort={toggleSort} />
                 <th className="px-3 py-2.5 font-medium">Objet</th>
-                <th className="px-3 py-2.5 font-medium">Saisine</th>
+                <SortTh label="Saisine" sortKey="saisine" current={sortKey} dir={sortDir} onSort={toggleSort} />
                 <th className="px-3 py-2.5 font-medium">Audience</th>
-                <th className="px-3 py-2.5 font-medium">Statut</th>
+                <SortTh label="Statut" sortKey="statut" current={sortKey} dir={sortDir} onSort={toggleSort} />
                 <th className="px-3 py-2.5 text-right font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {dossiers.map((d) => {
+              {rows.map((d) => {
                 const meta = STATUT_DOSSIER_META[d.statut];
                 return (
                   <tr key={d.id} className="border-b border-grisL hover:bg-grisL/60">
@@ -150,9 +163,13 @@ export function Discipline() {
                   </tr>
                 );
               })}
+              {rows.length === 0 && (
+                <tr><td colSpan={7} className="px-3 py-10 text-center text-sm text-gris">Aucun dossier disciplinaire.</td></tr>
+              )}
             </tbody>
           </table>
         </div>
+        <Pagination page={page} totalPages={totalPages} total={total} onPage={setPage} libelle="dossiers" />
       </div>
 
       {/* Journal d'accès (RG-13) */}

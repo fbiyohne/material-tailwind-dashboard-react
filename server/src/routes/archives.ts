@@ -1,10 +1,11 @@
 import { Router } from "express";
 import { prisma } from "../prisma.js";
 import { asyncH } from "../middleware/error.js";
-import { requireAuth } from "../middleware/auth.js";
+import { requireAuth, requireRole } from "../middleware/auth.js";
 
 export const archivesRouter = Router();
-archivesRouter.use(requireAuth);
+// Archives institutionnelles (réf. financières + disciplinaires) : SG/Bâtonnier/Admin.
+archivesRouter.use(requireAuth, requireRole("SECRETAIRE_GENERAL", "BATONNIER"));
 
 /** POST /archives — archive manuelle d'un document généré (RG-14). */
 archivesRouter.post(
