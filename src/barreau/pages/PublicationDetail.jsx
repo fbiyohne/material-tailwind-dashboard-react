@@ -30,14 +30,22 @@ export function PublicationDetail() {
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
   const enregistrer = async () => {
-    await majPublication(publication.id, { titre: form.titre, type: form.type, contenu: form.contenu });
-    toast.success("Publication enregistrée.");
-    charger();
+    try {
+      await majPublication(publication.id, { titre: form.titre, type: form.type, contenu: form.contenu });
+      toast.success("Publication enregistrée.");
+      charger();
+    } catch (e) {
+      toast.error(e.message);
+    }
   };
   const transition = async (statut, label) => {
-    await changerStatutPublication(publication.id, statut);
-    toast.success(label);
-    charger();
+    try {
+      await changerStatutPublication(publication.id, statut);
+      toast.success(label);
+      charger();
+    } catch (e) {
+      toast.error(e.message);
+    }
   };
 
   return (

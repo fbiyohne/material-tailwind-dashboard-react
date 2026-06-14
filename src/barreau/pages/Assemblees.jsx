@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { PlusIcon, ArrowRightIcon } from "@heroicons/react/24/outline";
-import { Badge, Modal, useToast } from "../components";
+import { PlusIcon, ArrowRightIcon, BuildingLibraryIcon } from "@heroicons/react/24/outline";
+import { Badge, Modal, EmptyState, useToast } from "../components";
 import { listerAssemblees, creerAssemblee as apiCreerAssemblee } from "../api/resources";
 
 const TYPE_LABEL = { AGO: "Assemblée Générale Ordinaire", AGE: "Assemblée Générale Extraordinaire" };
@@ -59,6 +59,16 @@ export function Assemblees() {
       </div>
 
       <div className="space-y-4">
+        {assemblees.length === 0 && (
+          <div className="bpn-card">
+            <EmptyState
+              icon={BuildingLibraryIcon}
+              title="Aucune assemblée générale"
+              description="Créez une AGO ou une AGE pour convoquer le corps électoral, suivre le quorum et consigner les décisions."
+              action={<button className="bpn-btn bpn-btn-or" onClick={() => setCreer(true)}><PlusIcon className="h-4 w-4" /> Nouvelle assemblée</button>}
+            />
+          </div>
+        )}
         {assemblees.map((a) => (
           <button key={a.id} onClick={() => navigate(`/assemblees/${a.id}`)} className="block w-full text-left">
             <div className="bpn-card p-5 transition hover:border-or hover:shadow-card">

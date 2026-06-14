@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { PrinterIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
-import { StatCard, Badge, useToast } from "../components";
+import { PrinterIcon, ArrowDownTrayIcon, CheckBadgeIcon } from "@heroicons/react/24/outline";
+import { StatCard, Badge, EmptyState, useToast } from "../components";
 import { exporterExcel } from "../utils/exports";
 import { EXERCICES } from "../data/dashboard-data";
 import { getCorpsElectoral } from "../api/resources";
@@ -81,28 +81,36 @@ export function CorpsElectoral() {
           </span>
           <span className="font-mono text-xs text-gris">{electeurs.length} électeurs</span>
         </div>
-        <div className="overflow-x-auto">
-          <table className="bpn-table">
-            <thead>
-              <tr>
-                <th className="px-3 py-2.5 font-medium">N°</th>
-                <th className="px-3 py-2.5 font-medium">Avocat électeur</th>
-                <th className="px-3 py-2.5 font-medium">Cabinet</th>
-                <th className="px-3 py-2.5 font-medium">Inscrit depuis</th>
-              </tr>
-            </thead>
-            <tbody>
-              {electeurs.map((m, i) => (
-                <tr key={m.id} className="border-b border-grisL hover:bg-grisL/60">
-                  <td className="px-3 py-2.5 font-mono text-xs text-gris">{i + 1}</td>
-                  <td className="px-3 py-2.5 font-medium">Me {m.nom}</td>
-                  <td className="px-3 py-2.5 text-gris">{m.cabinet}</td>
-                  <td className="px-3 py-2.5 text-xs text-gris">{m.dateInscription ?? "—"}</td>
+        {electeurs.length === 0 ? (
+          <EmptyState
+            icon={CheckBadgeIcon}
+            title="Aucun électeur qualifié"
+            description={`Aucun avocat ne remplit les conditions pour voter à l'exercice ${exercice} (inscrit, à jour de cotisations, non suspendu).`}
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="bpn-table">
+              <thead>
+                <tr>
+                  <th className="px-3 py-2.5 font-medium">N°</th>
+                  <th className="px-3 py-2.5 font-medium">Avocat électeur</th>
+                  <th className="px-3 py-2.5 font-medium">Cabinet</th>
+                  <th className="px-3 py-2.5 font-medium">Inscrit depuis</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {electeurs.map((m, i) => (
+                  <tr key={m.id} className="border-b border-grisL hover:bg-grisL/60">
+                    <td className="px-3 py-2.5 font-mono text-xs text-gris">{i + 1}</td>
+                    <td className="px-3 py-2.5 font-medium">Me {m.nom}</td>
+                    <td className="px-3 py-2.5 text-gris">{m.cabinet}</td>
+                    <td className="px-3 py-2.5 text-xs text-gris">{m.dateInscription ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Détail des exclusions */}

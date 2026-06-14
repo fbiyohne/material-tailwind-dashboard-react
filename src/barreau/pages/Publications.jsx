@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { PlusIcon } from "@heroicons/react/24/outline";
-import { Badge, Modal, useToast } from "../components";
+import { PlusIcon, MegaphoneIcon } from "@heroicons/react/24/outline";
+import { Badge, Modal, EmptyState, useToast } from "../components";
 import { STATUT_PUBLICATION_META } from "../data/publications";
 import { listerPublications, creerPublication as apiCreerPublication, changerStatutPublication as apiChangerStatut } from "../api/resources";
 
@@ -68,6 +68,16 @@ export function Publications() {
       </div>
 
       <div className="space-y-4">
+        {publications.length === 0 && (
+          <div className="bpn-card">
+            <EmptyState
+              icon={MegaphoneIcon}
+              title="Aucune publication"
+              description="Rédigez un avis ou un communiqué ; il sera soumis à la validation du Bâtonnier avant diffusion."
+              action={<button className="bpn-btn bpn-btn-or" onClick={() => setCreer(true)}><PlusIcon className="h-4 w-4" /> Nouvelle publication</button>}
+            />
+          </div>
+        )}
         {publications.map((p) => {
           const meta = STATUT_PUBLICATION_META[p.statut];
           return (

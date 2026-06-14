@@ -75,6 +75,9 @@ export function DroitsPlaidoirie() {
               </tr>
             </thead>
             <tbody>
+              {rows.length === 0 && (
+                <tr><td colSpan={7} className="px-3 py-10 text-center text-sm text-gris">Aucun avocat à afficher pour cet exercice.</td></tr>
+              )}
               {rows.map((l) => {
                 const meta = STATUT_META[l.statut];
                 return (

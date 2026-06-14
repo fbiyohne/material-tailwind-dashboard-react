@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { StatCard } from "../components";
+import { CalendarDaysIcon, ClockIcon } from "@heroicons/react/24/outline";
+import { StatCard, EmptyState } from "../components";
 import { formatFCFA, ratioPct } from "../utils/format";
-import { EXERCICES, prochainesEcheances, journalActivite } from "../data/dashboard-data";
+import { EXERCICES } from "../data/dashboard-data";
 import { api } from "../api/client";
 import { getJournalAudit, getAgenda } from "../api/resources";
 
@@ -91,8 +92,13 @@ export function Dashboard() {
   const totalDu = finances ? finances.payees + finances.impayees : 0;
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-end">
+    <div className="space-y-5">
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+        <div>
+          <div className="bpn-eyebrow">Secrétariat Général</div>
+          <h2 className="bpn-title mt-2">Tableau de bord</h2>
+          <p className="mt-1 text-sm text-gris">Vue d'ensemble du Barreau — membres, finances et vie institutionnelle.</p>
+        </div>
         <SelecteurExercice valeur={exercice} onChange={setExercice} />
       </div>
 
@@ -125,33 +131,39 @@ export function Dashboard() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="bpn-card">
           <div className="bpn-card-header"><span className="bpn-card-heading">Prochaines échéances</span></div>
-          <ul className="divide-y divide-grisL">
-            {(echeances && echeances.length
-              ? echeances.map((e) => ({ key: `${e.date}-${e.libelle}`, date: dateCourteFr(e.date), libelle: e.libelle }))
-              : prochainesEcheances.map((e) => ({ key: e.libelle, date: e.date, libelle: e.libelle }))
-            ).map((e) => (
-              <li key={e.key} className="flex items-center gap-3 px-4 py-3">
-                <span className="w-24 shrink-0 font-mono text-[11px] text-or">{e.date}</span>
-                <span className="text-sm text-encre">{e.libelle}</span>
-              </li>
-            ))}
-            {echeances && echeances.length === 0 && (
-              <li className="px-4 py-6 text-center text-sm text-gris">Aucune échéance institutionnelle à venir.</li>
-            )}
-          </ul>
+          {echeances === null ? (
+            <p className="px-4 py-6 text-center text-sm text-gris">Chargement…</p>
+          ) : echeances.length === 0 ? (
+            <EmptyState icon={CalendarDaysIcon} title="Aucune échéance à venir" description="Les réunions du Conseil et assemblées générales planifiées apparaîtront ici." />
+          ) : (
+            <ul className="divide-y divide-grisL">
+              {echeances.map((e) => (
+                <li key={`${e.date}-${e.libelle}`} className="flex items-center gap-3 px-4 py-3">
+                  <span className="w-24 shrink-0 font-mono text-[11px] text-or">{dateCourteFr(e.date)}</span>
+                  <span className="text-sm text-encre">{e.libelle}</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
         <div className="bpn-card">
           <div className="bpn-card-header"><span className="bpn-card-heading">Journal d'activité</span></div>
-          <ul className="divide-y divide-grisL">
-            {(journal && journal.length ? journal : journalActivite).map((j, i) => (
-              <li key={j.id ?? `${j.action}-${i}`} className="px-4 py-3">
-                <div className="text-sm text-encre">{j.action}{j.cible ? ` ${j.cible}` : ""}</div>
-                <div className="mt-0.5 flex items-center gap-2 text-[11px] text-gris">
-                  <span className="font-mono">{formatQuand(j.quand)}</span><span>·</span><span>{j.acteur}</span>
-                </div>
-              </li>
-            ))}
-          </ul>
+          {journal === null ? (
+            <p className="px-4 py-6 text-center text-sm text-gris">Chargement…</p>
+          ) : journal.length === 0 ? (
+            <EmptyState icon={ClockIcon} title="Aucune activité récente" description="Les dernières actions enregistrées dans le système s'afficheront ici." />
+          ) : (
+            <ul className="divide-y divide-grisL">
+              {journal.map((j, i) => (
+                <li key={j.id ?? `${j.action}-${i}`} className="px-4 py-3">
+                  <div className="text-sm text-encre">{j.action}{j.cible ? ` ${j.cible}` : ""}</div>
+                  <div className="mt-0.5 flex items-center gap-2 text-[11px] text-gris">
+                    <span className="font-mono">{formatQuand(j.quand)}</span><span>·</span><span>{j.acteur}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
     </div>

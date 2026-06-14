@@ -59,24 +59,40 @@ export function ReunionDetail() {
   const nbPresents = Object.values(presences).filter(Boolean).length;
 
   const sauverOdj = async () => {
-    await majReunion(reunion.id, { ordreDuJour: odj.split("\n").map((s) => s.trim()).filter(Boolean) });
-    toast.success("Ordre du jour mis à jour.");
+    try {
+      await majReunion(reunion.id, { ordreDuJour: odj.split("\n").map((s) => s.trim()).filter(Boolean) });
+      toast.success("Ordre du jour mis à jour.");
+    } catch (e) {
+      toast.error(e.message);
+    }
   };
   const sauverPresences = async () => {
-    await majReunion(reunion.id, { presences });
-    toast.success(`Présences enregistrées (${nbPresents}/${CONSEIL.length}).`);
+    try {
+      await majReunion(reunion.id, { presences });
+      toast.success(`Présences enregistrées (${nbPresents}/${CONSEIL.length}).`);
+    } catch (e) {
+      toast.error(e.message);
+    }
   };
   const telechargerPv = async () => {
-    await majReunion(reunion.id, { pv, statut: "tenue" });
-    await telechargerPvReunionPdf(reunion.id);
-    setReunion({ ...reunion, statut: "tenue" });
-    toast.success("Procès-verbal enregistré, archivé et téléchargé (PDF).");
+    try {
+      await majReunion(reunion.id, { pv, statut: "tenue" });
+      await telechargerPvReunionPdf(reunion.id);
+      setReunion({ ...reunion, statut: "tenue" });
+      toast.success("Procès-verbal enregistré, archivé et téléchargé (PDF).");
+    } catch (e) {
+      toast.error(e.message);
+    }
   };
   const sauverPv = async () => {
-    await majReunion(reunion.id, { pv, statut: "tenue" });
-    await archiverDoc({ categorie: "Procès-verbal (Conseil)", titre: `PV réunion du ${dateCourte}`, reference: dateCourte, date: dateCourte });
-    setReunion({ ...reunion, statut: "tenue" });
-    toast.success("Procès-verbal enregistré et archivé.");
+    try {
+      await majReunion(reunion.id, { pv, statut: "tenue" });
+      await archiverDoc({ categorie: "Procès-verbal (Conseil)", titre: `PV réunion du ${dateCourte}`, reference: dateCourte, date: dateCourte });
+      setReunion({ ...reunion, statut: "tenue" });
+      toast.success("Procès-verbal enregistré et archivé.");
+    } catch (e) {
+      toast.error(e.message);
+    }
   };
 
   return (

@@ -52,25 +52,41 @@ export function AssembleeDetail() {
   const atteint = present >= requis;
 
   const sauverQuorum = async () => {
-    await majAssemblee(assemblee.id, { quorumPresent: present });
-    toast.success(`Quorum enregistré : ${present}/${electeurs} (${atteint ? "atteint" : "non atteint"}).`);
+    try {
+      await majAssemblee(assemblee.id, { quorumPresent: present });
+      toast.success(`Quorum enregistré : ${present}/${electeurs} (${atteint ? "atteint" : "non atteint"}).`);
+    } catch (e) {
+      toast.error(e.message);
+    }
   };
   const ajouterDecision = async () => {
     if (!nouvelleDecision.trim()) return;
-    const maj = await majAssemblee(assemblee.id, { decisions: [...(assemblee.decisions ?? []), nouvelleDecision.trim()] });
-    setAssemblee(maj);
-    setNouvelleDecision("");
-    toast.success("Décision ajoutée.");
+    try {
+      const maj = await majAssemblee(assemblee.id, { decisions: [...(assemblee.decisions ?? []), nouvelleDecision.trim()] });
+      setAssemblee(maj);
+      setNouvelleDecision("");
+      toast.success("Décision ajoutée.");
+    } catch (e) {
+      toast.error(e.message);
+    }
   };
   const sauverPv = async () => {
-    await majAssemblee(assemblee.id, { pv, statut: "tenue" });
-    await archiverDoc({ categorie: "Procès-verbal (AG)", titre: `PV ${assemblee.type} du ${dateCourte}`, reference: dateCourte, date: dateCourte });
-    toast.success("Procès-verbal enregistré et archivé.");
+    try {
+      await majAssemblee(assemblee.id, { pv, statut: "tenue" });
+      await archiverDoc({ categorie: "Procès-verbal (AG)", titre: `PV ${assemblee.type} du ${dateCourte}`, reference: dateCourte, date: dateCourte });
+      toast.success("Procès-verbal enregistré et archivé.");
+    } catch (e) {
+      toast.error(e.message);
+    }
   };
   const telechargerPv = async () => {
-    await majAssemblee(assemblee.id, { pv, statut: "tenue" });
-    await telechargerPvAgPdf(assemblee.id);
-    toast.success("Procès-verbal enregistré, archivé et téléchargé (PDF).");
+    try {
+      await majAssemblee(assemblee.id, { pv, statut: "tenue" });
+      await telechargerPvAgPdf(assemblee.id);
+      toast.success("Procès-verbal enregistré, archivé et téléchargé (PDF).");
+    } catch (e) {
+      toast.error(e.message);
+    }
   };
 
   return (

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PlusIcon, CalendarDaysIcon, MapPinIcon, ArrowRightIcon } from "@heroicons/react/24/outline";
-import { Badge, Modal, useToast } from "../components";
+import { Badge, Modal, EmptyState, useToast } from "../components";
 import { listerReunions, creerReunion as apiCreerReunion } from "../api/resources";
 
 const fmt = (d) => new Date(d).toLocaleDateString("fr-FR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
@@ -57,6 +57,16 @@ export function Reunions() {
       </div>
 
       <div className="space-y-4">
+        {reunions.length === 0 && (
+          <div className="bpn-card">
+            <EmptyState
+              icon={CalendarDaysIcon}
+              title="Aucune réunion planifiée"
+              description="Planifiez une réunion du Conseil de l'Ordre pour générer convocations, feuilles de présence et procès-verbaux."
+              action={<button className="bpn-btn bpn-btn-or" onClick={() => setCreer(true)}><PlusIcon className="h-4 w-4" /> Nouvelle réunion</button>}
+            />
+          </div>
+        )}
         {reunions.map((r) => (
           <button key={r.id} onClick={() => navigate(`/reunions/${r.id}`)} className="block w-full text-left">
             <div className="bpn-card p-5 transition hover:border-or hover:shadow-card">

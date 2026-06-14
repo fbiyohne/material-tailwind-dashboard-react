@@ -78,6 +78,9 @@ export function Utilisateurs() {
             </tr>
           </thead>
           <tbody>
+            {users.length === 0 && (
+              <tr><td colSpan={5} className="px-3 py-10 text-center text-sm text-gris">Aucun compte utilisateur.</td></tr>
+            )}
             {users.map((u) => {
               const moi = u.id === courant?.id;
               return (
