@@ -45,9 +45,14 @@ membresRouter.get(
   })
 );
 
-/** GET /membres/:id — fiche complète. */
+/**
+ * GET /membres/:id — fiche complète (cotisations/reçus/quitus imbriqués).
+ * Données nominatives + financières : réservé à l'institutionnel (SG/Bâtonnier),
+ * contrairement à la liste `GET /` qui alimente l'annuaire ouvert. Cf. RG-15.
+ */
 membresRouter.get(
   "/:id",
+  requireRole("SECRETAIRE_GENERAL", "BATONNIER"),
   asyncH(async (req, res) => {
     const membre = await prisma.membre.findUnique({
       where: { id: Number(req.params.id) },

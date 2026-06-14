@@ -4,10 +4,11 @@ import { QUALITE_LABEL } from "../data/derivations";
 import { EXERCICES } from "../data/dashboard-data";
 import { formatFCFA } from "../utils/format";
 import { montantEnLettresFCFA } from "../utils/nombreEnLettres";
-import { DocumentChrome, useToast } from "../components";
+import { DocumentChrome, Pagination, useToast } from "../components";
 import { listerMembres, listerRecus, enregistrerPaiement, telechargerRecuPdf } from "../api/resources";
 
 const MODES = ["Espèces", "Virement", "Chèque", "Mobile Money"];
+const PAR_PAGE = 12;
 const TARIF = { avocat: 150000, stagiaire: 75000, honoraire: 0 };
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
 
@@ -53,6 +54,7 @@ export function Recus() {
   const [reference, setReference] = useState("");
   const [date, setDate] = useState(aujourdhui());
   const [succes, setSucces] = useState(null);
+  const [page, setPage] = useState(1);
 
   const chargerRecus = () => listerRecus().then(setRecus).catch(() => {});
 
@@ -65,6 +67,10 @@ export function Recus() {
   }, [toast]);
 
   const membre = useMemo(() => membres.find((m) => m.id === membreId), [membres, membreId]);
+
+  const totalPages = Math.max(1, Math.ceil(recus.length / PAR_PAGE));
+  const pageSure = Math.min(page, totalPages);
+  const recusPage = recus.slice((pageSure - 1) * PAR_PAGE, pageSure * PAR_PAGE);
 
   const choisirMembre = (id) => {
     setMembreId(id);
@@ -157,16 +163,19 @@ export function Recus() {
             {recus.length === 0 ? (
               <p className="px-4 py-6 text-center text-sm text-gris">Aucun reçu émis.</p>
             ) : (
-              <ul className="divide-y divide-grisL">
-                {recus.slice(0, 12).map((r) => (
-                  <li key={r.numero} className="flex items-center justify-between px-4 py-2.5 text-sm">
-                    <span className="font-mono text-xs text-or">N° {r.numero}</span>
-                    <span className="flex-1 px-3 text-encre">Me {r.membre?.nom}</span>
-                    <span className="text-gris">{formatFCFA(r.montant)}</span>
-                    <span className="ml-3 font-mono text-xs text-gris">{r.annee}</span>
-                  </li>
-                ))}
-              </ul>
+              <>
+                <ul className="divide-y divide-grisL">
+                  {recusPage.map((r) => (
+                    <li key={r.numero} className="flex items-center justify-between px-4 py-2.5 text-sm">
+                      <span className="font-mono text-xs text-or">N° {r.numero}</span>
+                      <span className="flex-1 px-3 text-encre">Me {r.membre?.nom}</span>
+                      <span className="text-gris">{formatFCFA(r.montant)}</span>
+                      <span className="ml-3 font-mono text-xs text-gris">{r.annee}</span>
+                    </li>
+                  ))}
+                </ul>
+                <Pagination page={pageSure} totalPages={totalPages} total={recus.length} onPage={setPage} libelle="reçus" />
+              </>
             )}
           </div>
         </div>
