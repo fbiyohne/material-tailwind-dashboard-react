@@ -75,21 +75,21 @@ export function Publications() {
         </button>
       </PageHeader>
 
-      <div className="space-y-5">
-        {publications.length === 0 && (
-          <div className="bpn-card">
-            <EmptyState
-              icon={MegaphoneIcon}
-              title="Aucune publication"
-              description="Rédigez un avis ou un communiqué ; il sera soumis à la validation du Bâtonnier avant diffusion."
-              action={<button className="bpn-btn bpn-btn-or" onClick={() => setCreer(true)}><PlusIcon className="h-4 w-4" /> Nouvelle publication</button>}
-            />
-          </div>
-        )}
+      {publications.length === 0 ? (
+        <div className="bpn-card">
+          <EmptyState
+            icon={MegaphoneIcon}
+            title="Aucune publication"
+            description="Rédigez un avis ou un communiqué ; il sera soumis à la validation du Bâtonnier avant diffusion."
+            action={<button className="bpn-btn bpn-btn-or" onClick={() => setCreer(true)}><PlusIcon className="h-4 w-4" /> Nouvelle publication</button>}
+          />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
         {publications.map((p) => {
           const meta = STATUT_PUBLICATION_META[p.statut];
           return (
-            <div key={p.id} className="bpn-card p-5">
+            <div key={p.id} className="bpn-card h-full p-5">
               <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
                 <div className="flex-1">
                   <div className="flex flex-wrap items-center gap-2">
@@ -126,7 +126,8 @@ export function Publications() {
             </div>
           );
         })}
-      </div>
+        </div>
+      )}
 
       <NouvellePublicationModal open={creer} onClose={() => setCreer(false)} onCreated={charger} />
     </div>

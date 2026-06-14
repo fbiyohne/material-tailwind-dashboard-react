@@ -51,20 +51,20 @@ export function Reunions() {
         <button className="bpn-btn bpn-btn-or" onClick={() => setCreer(true)}><PlusIcon className="h-4 w-4" /> Nouvelle réunion</button>
       </PageHeader>
 
-      <div className="space-y-5">
-        {reunions.length === 0 && (
-          <div className="bpn-card">
-            <EmptyState
-              icon={CalendarDaysIcon}
-              title="Aucune réunion planifiée"
-              description="Planifiez une réunion du Conseil de l'Ordre pour générer convocations, feuilles de présence et procès-verbaux."
-              action={<button className="bpn-btn bpn-btn-or" onClick={() => setCreer(true)}><PlusIcon className="h-4 w-4" /> Nouvelle réunion</button>}
-            />
-          </div>
-        )}
+      {reunions.length === 0 ? (
+        <div className="bpn-card">
+          <EmptyState
+            icon={CalendarDaysIcon}
+            title="Aucune réunion planifiée"
+            description="Planifiez une réunion du Conseil de l'Ordre pour générer convocations, feuilles de présence et procès-verbaux."
+            action={<button className="bpn-btn bpn-btn-or" onClick={() => setCreer(true)}><PlusIcon className="h-4 w-4" /> Nouvelle réunion</button>}
+          />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
         {reunions.map((r) => (
-          <button key={r.id} onClick={() => navigate(`/reunions/${r.id}`)} className="block w-full text-left">
-            <div className="bpn-card p-5 transition hover:border-or hover:shadow-card">
+          <button key={r.id} onClick={() => navigate(`/reunions/${r.id}`)} className="block h-full w-full text-left">
+            <div className="bpn-card h-full p-5 transition hover:border-or hover:shadow-card">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2">
@@ -85,7 +85,8 @@ export function Reunions() {
             </div>
           </button>
         ))}
-      </div>
+        </div>
+      )}
 
       <NouvelleReunionModal open={creer} onClose={() => setCreer(false)} onCreated={charger} />
     </div>

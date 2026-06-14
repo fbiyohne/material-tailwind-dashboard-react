@@ -54,20 +54,20 @@ export function Assemblees() {
         <button className="bpn-btn bpn-btn-or" onClick={() => setCreer(true)}><PlusIcon className="h-4 w-4" /> Nouvelle assemblée</button>
       </PageHeader>
 
-      <div className="space-y-5">
-        {assemblees.length === 0 && (
-          <div className="bpn-card">
-            <EmptyState
-              icon={BuildingLibraryIcon}
-              title="Aucune assemblée générale"
-              description="Créez une AGO ou une AGE pour convoquer le corps électoral, suivre le quorum et consigner les décisions."
-              action={<button className="bpn-btn bpn-btn-or" onClick={() => setCreer(true)}><PlusIcon className="h-4 w-4" /> Nouvelle assemblée</button>}
-            />
-          </div>
-        )}
+      {assemblees.length === 0 ? (
+        <div className="bpn-card">
+          <EmptyState
+            icon={BuildingLibraryIcon}
+            title="Aucune assemblée générale"
+            description="Créez une AGO ou une AGE pour convoquer le corps électoral, suivre le quorum et consigner les décisions."
+            action={<button className="bpn-btn bpn-btn-or" onClick={() => setCreer(true)}><PlusIcon className="h-4 w-4" /> Nouvelle assemblée</button>}
+          />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
         {assemblees.map((a) => (
-          <button key={a.id} onClick={() => navigate(`/assemblees/${a.id}`)} className="block w-full text-left">
-            <div className="bpn-card p-5 transition hover:border-or hover:shadow-card">
+          <button key={a.id} onClick={() => navigate(`/assemblees/${a.id}`)} className="block h-full w-full text-left">
+            <div className="bpn-card h-full p-5 transition hover:border-or hover:shadow-card">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2">
@@ -84,7 +84,8 @@ export function Assemblees() {
             </div>
           </button>
         ))}
-      </div>
+        </div>
+      )}
 
       <NouvelleAssembleeModal open={creer} onClose={() => setCreer(false)} onCreated={charger} />
     </div>
