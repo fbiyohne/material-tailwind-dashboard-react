@@ -63,11 +63,18 @@ export function eligibleQuitus(c: { montantDu: number; montantPaye: number; vali
 
 const pad = (n: number, l: number) => String(n).padStart(l, "0");
 
-/** N° de reçu séquentiel (0001, 0002…). */
-export async function prochainNumeroRecu(): Promise<string> {
-  const dernier = await prisma.recu.findFirst({ orderBy: { id: "desc" } });
-  const n = dernier ? parseInt(dernier.numero, 10) + 1 : 90;
-  return pad(n, 4);
+/**
+ * N° de reçu R-AAAA-NNN, séquence réinitialisée par exercice (RG-10).
+ * Le numéro est unique et jamais réutilisé (contrainte @unique sur Recu.numero).
+ */
+export async function prochainNumeroRecu(annee: number): Promise<string> {
+  const items = await prisma.recu.findMany({
+    where: { numero: { startsWith: `R-${annee}-` } },
+    select: { numero: true },
+  });
+  const suffixes = items.map((r) => parseInt(r.numero.split("-")[2] ?? "0", 10));
+  const suivant = (suffixes.length ? Math.max(...suffixes) : 0) + 1;
+  return `R-${annee}-${pad(suivant, 3)}`;
 }
 
 /** N° de quitus Q-AAAA-NNN, séquence par exercice (BR — registre). */

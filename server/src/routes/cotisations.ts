@@ -90,7 +90,7 @@ cotisationsRouter.post(
     const membre = await prisma.membre.findUnique({ where: { id: membreId } });
     if (!membre) throw new HttpError(404, "Avocat introuvable");
     const dateP = date ? new Date(date) : new Date();
-    const numero = await prochainNumeroRecu();
+    const numero = await prochainNumeroRecu(annee);
     const tarifs = await tarifsActuels();
 
     const resultat = await prisma.$transaction(async (tx) => {

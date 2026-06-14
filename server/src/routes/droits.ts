@@ -67,7 +67,7 @@ droitsRouter.post(
     if (membre.qualite !== "AVOCAT") throw new HttpError(400, "Seuls les avocats sont redevables du droit de plaidoirie");
     const tarifs = await tarifsActuels();
     const dateP = date ? new Date(date) : new Date();
-    const numero = await prochainNumeroRecu();
+    const numero = await prochainNumeroRecu(annee);
 
     const resultat = await prisma.$transaction(async (tx) => {
       const droit = await tx.droitPlaidoirie.upsert({
