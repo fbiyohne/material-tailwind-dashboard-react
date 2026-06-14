@@ -54,7 +54,7 @@ export function Assemblees() {
         <button className="bpn-btn bpn-btn-or" onClick={() => setCreer(true)}><PlusIcon className="h-4 w-4" /> Nouvelle assemblée</button>
       </PageHeader>
 
-      <div className="space-y-4">
+      <div className="space-y-5">
         {assemblees.length === 0 && (
           <div className="bpn-card">
             <EmptyState

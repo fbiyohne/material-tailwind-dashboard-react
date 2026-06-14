@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { MagnifyingGlassIcon, DocumentArrowDownIcon } from "@heroicons/react/24/outline";
-import { Badge, SortTh, Pagination, Modal, useToast, PageHeader } from "../components";
+import { Badge, SortTh, Pagination, Modal, useToast, PageHeader, EmptyState } from "../components";
 import { useDataTable } from "../hooks/useDataTable";
 import { listerArchives } from "../api/resources";
 
@@ -86,7 +86,7 @@ export function Archives() {
                 </tr>
               ))}
               {rows.length === 0 && (
-                <tr><td colSpan={5} className="px-3 py-10 text-center text-sm text-gris">Aucun document archivé pour ce filtre.</td></tr>
+                <tr><td colSpan={5} className="p-0"><EmptyState title="Aucun document" description="Aucun document archivé ne correspond à ce filtre." /></td></tr>
               )}
             </tbody>
           </table>

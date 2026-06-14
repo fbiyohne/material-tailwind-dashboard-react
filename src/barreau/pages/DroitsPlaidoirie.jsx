@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BanknotesIcon, ArrowDownTrayIcon, PrinterIcon } from "@heroicons/react/24/outline";
-import { Badge, StatCard, SortTh, Pagination, PaiementModal, useToast, EtatImprimable, PageHeader } from "../components";
+import { Badge, StatCard, SortTh, Pagination, PaiementModal, useToast, EtatImprimable, PageHeader, EmptyState } from "../components";
 import { useDataTable } from "../hooks/useDataTable";
 import { STATUT_META } from "../data/derivations";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
@@ -92,7 +92,7 @@ export function DroitsPlaidoirie() {
             </thead>
             <tbody>
               {rows.length === 0 && (
-                <tr><td colSpan={7} className="px-3 py-10 text-center text-sm text-gris">Aucun avocat à afficher pour cet exercice.</td></tr>
+                <tr><td colSpan={7} className="p-0"><EmptyState title="Aucun avocat" description="Aucun avocat à afficher pour cet exercice." /></td></tr>
               )}
               {rows.map((l) => {
                 const meta = STATUT_META[l.statut];

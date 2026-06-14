@@ -114,19 +114,19 @@ export function Quitus() {
           <div className="mb-4 text-[10px] uppercase tracking-[0.2em] text-white/40">Générer un quitus</div>
           <div className="space-y-3.5">
             <label className="block">
-              <span className="mb-1 block text-[9px] uppercase tracking-wide text-white/40">Exercice</span>
+              <span className="mb-1 block text-[11px] uppercase tracking-wide text-white/55">Exercice</span>
               <select value={exercice} onChange={(e) => { setExercice(Number(e.target.value)); setMembreId(null); setSucces(null); }} className="bpn-input-dark">
                 {EXERCICES.map((a) => <option key={a} value={a}>{a}</option>)}
               </select>
             </label>
             <label className="block">
-              <span className="mb-1 block text-[9px] uppercase tracking-wide text-white/40">Avocat bénéficiaire</span>
+              <span className="mb-1 block text-[11px] uppercase tracking-wide text-white/55">Avocat bénéficiaire</span>
               <select value={membreActif?.id ?? ""} onChange={(e) => setMembreId(Number(e.target.value))} disabled={eligibles.length === 0} className="bpn-input-dark disabled:opacity-50">
                 {eligibles.length === 0 ? <option>Aucun avocat éligible</option> : eligibles.map((m) => <option key={m.id} value={m.id}>{m.num}. Me {m.nom} — à jour ✓</option>)}
               </select>
             </label>
             <label className="block">
-              <span className="mb-1 block text-[9px] uppercase tracking-wide text-white/40">N° automatique</span>
+              <span className="mb-1 block text-[11px] uppercase tracking-wide text-white/55">N° automatique</span>
               <input value={numero} readOnly className="bpn-input-dark opacity-70" />
             </label>
             <button type="button" onClick={generer} disabled={!membreActif} className="bpn-btn bpn-btn-or w-full justify-center !py-2.5">

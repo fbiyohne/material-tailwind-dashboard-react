@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { MagnifyingGlassIcon, ArrowUpTrayIcon } from "@heroicons/react/24/outline";
-import { Badge, StatutBadge, AttestationModal, SortTh, Pagination, useToast, ImportMembresModal, PageHeader } from "../components";
+import { Badge, StatutBadge, AttestationModal, SortTh, Pagination, useToast, ImportMembresModal, PageHeader, EmptyState } from "../components";
 import { useAuth } from "../auth/AuthContext";
 import { STATUT_META, QUALITE_LABEL } from "../data/derivations";
 import { EXERCICE_COURANT } from "../data/dashboard-data";
@@ -121,7 +121,7 @@ export function Avocats() {
                 );
               })}
               {data.items.length === 0 && (
-                <tr><td colSpan={7} className="px-3 py-10 text-center text-sm text-gris">Aucun avocat ne correspond à la recherche.</td></tr>
+                <tr><td colSpan={7} className="p-0"><EmptyState title="Aucun avocat" description="Aucun avocat ne correspond à votre recherche." /></td></tr>
               )}
             </tbody>
           </table>

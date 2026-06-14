@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { MagnifyingGlassIcon, CheckCircleIcon, EnvelopeIcon, ArrowDownTrayIcon, PrinterIcon } from "@heroicons/react/24/outline";
-import { Badge, Modal, useToast, PaiementModal, PaiementEnLigneModal, SortTh, Pagination, EtatImprimable, PageHeader } from "../components";
+import { Badge, Modal, useToast, PaiementModal, PaiementEnLigneModal, SortTh, Pagination, EtatImprimable, PageHeader, EmptyState } from "../components";
 import { useDataTable } from "../hooks/useDataTable";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { STATUT_META, QUALITE_LABEL } from "../data/derivations";
@@ -41,6 +41,7 @@ function HistoriqueModal({ membreId, onClose }) {
   return (
     <Modal open={!!membreId} onClose={onClose} title={membre ? `Historique — Me ${membre.nom}` : "Historique"}>
       {membre && (
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-[10px] uppercase tracking-wide text-gris">
@@ -65,6 +66,7 @@ function HistoriqueModal({ membreId, onClose }) {
             })}
           </tbody>
         </table>
+        </div>
       )}
     </Modal>
   );
@@ -242,7 +244,7 @@ export function Cotisations() {
                 );
               })}
               {rows.length === 0 && (
-                <tr><td colSpan={9} className="px-3 py-10 text-center text-sm text-gris">Aucun membre ne correspond à la recherche.</td></tr>
+                <tr><td colSpan={9} className="p-0"><EmptyState title="Aucun membre" description="Aucun membre ne correspond à votre recherche." /></td></tr>
               )}
             </tbody>
           </table>

@@ -37,7 +37,7 @@ function ApercuRecu({ numero, membre, montant, exercice, mode, date }) {
 function Champ({ label, children }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-[9px] uppercase tracking-wide text-white/40">{label}</span>
+      <span className="mb-1 block text-[11px] uppercase tracking-wide text-white/55">{label}</span>
       {children}
     </label>
   );

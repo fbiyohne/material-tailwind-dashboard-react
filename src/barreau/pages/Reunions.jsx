@@ -51,7 +51,7 @@ export function Reunions() {
         <button className="bpn-btn bpn-btn-or" onClick={() => setCreer(true)}><PlusIcon className="h-4 w-4" /> Nouvelle réunion</button>
       </PageHeader>
 
-      <div className="space-y-4">
+      <div className="space-y-5">
         {reunions.length === 0 && (
           <div className="bpn-card">
             <EmptyState

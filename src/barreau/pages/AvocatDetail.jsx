@@ -163,6 +163,7 @@ export function AvocatDetail() {
       </div>
 
       <Carte titre="Historique des cotisations">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-[10px] uppercase tracking-wide text-gris">
@@ -187,6 +188,7 @@ export function AvocatDetail() {
             })}
           </tbody>
         </table>
+        </div>
       </Carte>
 
       <PiecesDossier membreId={membre.id} qualite={membre.qualite} peutGerer={["SECRETAIRE_GENERAL", "ADMIN"].includes(user?.role)} />

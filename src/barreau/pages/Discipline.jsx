@@ -5,7 +5,7 @@ import {
   ShieldExclamationIcon,
   PlusIcon,
 } from "@heroicons/react/24/outline";
-import { Badge, Modal, SortTh, Pagination, useToast, PageHeader, FormField, Notice } from "../components";
+import { Badge, Modal, SortTh, Pagination, useToast, PageHeader, FormField, Notice, EmptyState } from "../components";
 import { useDataTable } from "../hooks/useDataTable";
 import { STATUT_DOSSIER_META } from "../data/institutionnel";
 import { listerMembres, listerDossiers, ouvrirDossier as apiOuvrirDossier, journalDiscipline as apiJournal } from "../api/resources";
@@ -160,7 +160,7 @@ export function Discipline() {
                 );
               })}
               {rows.length === 0 && (
-                <tr><td colSpan={7} className="px-3 py-10 text-center text-sm text-gris">Aucun dossier disciplinaire.</td></tr>
+                <tr><td colSpan={7} className="p-0"><EmptyState title="Aucun dossier" description="Aucun dossier disciplinaire enregistré." /></td></tr>
               )}
             </tbody>
           </table>

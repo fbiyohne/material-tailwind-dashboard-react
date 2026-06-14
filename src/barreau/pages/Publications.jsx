@@ -75,7 +75,7 @@ export function Publications() {
         </button>
       </PageHeader>
 
-      <div className="space-y-4">
+      <div className="space-y-5">
         {publications.length === 0 && (
           <div className="bpn-card">
             <EmptyState
