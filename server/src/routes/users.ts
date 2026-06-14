@@ -39,7 +39,7 @@ const creerSchema = z.object({
   nom: z.string().min(1),
   email: z.string().email(),
   role: z.enum(ROLES),
-  password: z.string().min(6),
+  password: z.string().min(8),
 });
 
 usersRouter.post(
@@ -83,7 +83,7 @@ usersRouter.patch(
   })
 );
 
-const passwordSchema = z.object({ password: z.string().min(6) });
+const passwordSchema = z.object({ password: z.string().min(8) });
 
 usersRouter.post(
   "/:id/password",

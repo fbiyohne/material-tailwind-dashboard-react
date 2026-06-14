@@ -33,7 +33,7 @@ export function Profil() {
   const [montrer, setMontrer] = useState(false);
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
-  const assezLong = form.newPassword.length >= 6;
+  const assezLong = form.newPassword.length >= 8;
   const different = form.newPassword.length > 0 && form.newPassword !== form.currentPassword;
   const correspond = form.confirm.length > 0 && form.newPassword === form.confirm;
   const valide = form.currentPassword.length >= 1 && assezLong && different && correspond;
@@ -89,7 +89,7 @@ export function Profil() {
               <input type={montrer ? "text" : "password"} value={form.confirm} onChange={set("confirm")} className="bpn-input mt-1" autoComplete="new-password" /></label>
             {form.newPassword.length > 0 && (
               <ul className="space-y-1 pt-0.5">
-                <Critere ok={assezLong}>Au moins 6 caractères</Critere>
+                <Critere ok={assezLong}>Au moins 8 caractères</Critere>
                 <Critere ok={different}>Différent du mot de passe actuel</Critere>
                 <Critere ok={correspond}>Les deux saisies correspondent</Critere>
               </ul>

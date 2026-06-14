@@ -3,7 +3,7 @@ import { BanknotesIcon } from "@heroicons/react/24/outline";
 import { Badge, StatCard, SortTh, Pagination, PaiementModal, useToast } from "../components";
 import { useDataTable } from "../hooks/useDataTable";
 import { STATUT_META } from "../data/derivations";
-import { EXERCICES } from "../data/dashboard-data";
+import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { formatFCFA } from "../utils/format";
 import { getDroits } from "../api/resources";
 
@@ -17,7 +17,7 @@ const ACCESSORS = {
 
 export function DroitsPlaidoirie() {
   const toast = useToast();
-  const [exercice, setExercice] = useState(2026);
+  const [exercice, setExercice] = useState(EXERCICE_COURANT);
   const [lignes, setLignes] = useState([]);
   const [totaux, setTotaux] = useState({ du: 0, paye: 0, solde: 0 });
   const [paiement, setPaiement] = useState(null);

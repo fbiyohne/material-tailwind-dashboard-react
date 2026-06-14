@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { CalendarDaysIcon, ClockIcon } from "@heroicons/react/24/outline";
 import { StatCard, EmptyState } from "../components";
 import { formatFCFA, ratioPct } from "../utils/format";
-import { EXERCICES } from "../data/dashboard-data";
+import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { api } from "../api/client";
 import { getJournalAudit, getAgenda } from "../api/resources";
 
@@ -47,7 +47,7 @@ function ColonneFinance({ label, montant, total, accent }) {
 
 export function Dashboard() {
   const navigate = useNavigate();
-  const [exercice, setExercice] = useState(2026);
+  const [exercice, setExercice] = useState(EXERCICE_COURANT);
   const [data, setData] = useState(null);
   const [erreur, setErreur] = useState(null);
   const [journal, setJournal] = useState(null);

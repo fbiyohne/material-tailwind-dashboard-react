@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { MagnifyingGlassIcon, CheckCircleIcon } from "@heroicons/react/24/outline";
 import { Badge, Modal, useToast, PaiementModal, SortTh, Pagination } from "../components";
 import { useDataTable } from "../hooks/useDataTable";
-import { EXERCICES } from "../data/dashboard-data";
+import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { STATUT_META, QUALITE_LABEL } from "../data/derivations";
 import { formatFCFA } from "../utils/format";
 import { getCotisations, getMembre, validerCotisation, lancerRelances } from "../api/resources";
@@ -72,7 +72,7 @@ function HistoriqueModal({ membreId, onClose }) {
 export function Cotisations() {
   const toast = useToast();
   const [params, setParams] = useSearchParams();
-  const exercice = Number(params.get("exercice")) || 2026;
+  const exercice = Number(params.get("exercice")) || EXERCICE_COURANT;
   const filtre = params.get("statut") || "tous";
   const recherche = params.get("q") || "";
 
@@ -196,7 +196,7 @@ export function Cotisations() {
                           <button type="button" onClick={() => setPaiement(l)} className="bpn-btn bpn-btn-or !px-2.5 !py-1 text-[10px]">Paiement</button>
                         )}
                         {l.statut === "ajour" && (l.valideTresoriere ? (
-                          <button type="button" title="Validé — cliquer pour annuler" onClick={() => validerSituation(l)} className="bpn-badge bpn-badge-vert">
+                          <button type="button" title="Validé — cliquer pour annuler" onClick={() => validerSituation(l)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-[10px] text-vert">
                             <CheckCircleIcon className="h-3.5 w-3.5" /> Validé
                           </button>
                         ) : (

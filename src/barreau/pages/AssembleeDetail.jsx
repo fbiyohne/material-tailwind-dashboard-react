@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeftIcon, PlusIcon, CheckIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
 import { Badge, DocumentModal, useToast } from "../components";
+import { EXERCICE_COURANT } from "../data/dashboard-data";
 import { getAssemblee, majAssemblee, getCorpsElectoral, archiverDoc, telechargerPvAgPdf } from "../api/resources";
 
 const TYPE_LABEL = { AGO: "Assemblée Générale Ordinaire", AGE: "Assemblée Générale Extraordinaire" };
@@ -34,7 +35,7 @@ export function AssembleeDetail() {
 
   useEffect(() => {
     charger();
-    getCorpsElectoral(2026).then((d) => setElecteurs(d.stats.electeurs)).catch(() => {});
+    getCorpsElectoral(EXERCICE_COURANT).then((d) => setElecteurs(d.stats.electeurs)).catch(() => {});
   }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (assemblee === false) {

@@ -59,7 +59,7 @@ authRouter.get(
 
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1),
-  newPassword: z.string().min(6),
+  newPassword: z.string().min(8),
 });
 
 /** POST /auth/password — changement de mot de passe en libre-service (compte courant). */

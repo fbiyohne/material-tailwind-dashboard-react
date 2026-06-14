@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { PrinterIcon, ArrowDownTrayIcon, CheckBadgeIcon } from "@heroicons/react/24/outline";
 import { StatCard, Badge, EmptyState, useToast } from "../components";
 import { exporterExcel } from "../utils/exports";
-import { EXERCICES } from "../data/dashboard-data";
+import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { getCorpsElectoral } from "../api/resources";
 
 const MOTIF_LABEL = {
@@ -12,7 +12,7 @@ const MOTIF_LABEL = {
 
 export function CorpsElectoral() {
   const toast = useToast();
-  const [exercice, setExercice] = useState(2026);
+  const [exercice, setExercice] = useState(EXERCICE_COURANT);
   const [data, setData] = useState({ electeurs: [], exclusCotisation: [], exclusStatut: [] });
 
   useEffect(() => {

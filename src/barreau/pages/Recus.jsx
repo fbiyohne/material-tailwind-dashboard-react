@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { PrinterIcon, CheckCircleIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
 import { QUALITE_LABEL } from "../data/derivations";
-import { EXERCICES } from "../data/dashboard-data";
+import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { formatFCFA } from "../utils/format";
 import { montantEnLettresFCFA } from "../utils/nombreEnLettres";
 import { DocumentChrome, Pagination, useToast } from "../components";
@@ -48,7 +48,7 @@ export function Recus() {
   const [membres, setMembres] = useState([]);
   const [recus, setRecus] = useState([]);
   const [membreId, setMembreId] = useState(null);
-  const [exercice, setExercice] = useState(2026);
+  const [exercice, setExercice] = useState(EXERCICE_COURANT);
   const [montant, setMontant] = useState(150000);
   const [mode, setMode] = useState(MODES[0]);
   const [reference, setReference] = useState("");

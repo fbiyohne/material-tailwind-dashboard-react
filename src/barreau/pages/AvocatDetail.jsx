@@ -4,12 +4,11 @@ import { ArrowLeftIcon, DocumentPlusIcon, PencilSquareIcon, NoSymbolIcon } from 
 import { ScaleIcon } from "@heroicons/react/24/outline";
 import { Badge, StatutBadge, AttestationModal, EditMembreModal, useConfirm, useToast } from "../components";
 import { QUALITE_LABEL, STATUT_META, infoStage } from "../data/derivations";
-import { EXERCICES } from "../data/dashboard-data";
+import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { formatFCFA } from "../utils/format";
 import { getMembre, radierMembre, getDroits } from "../api/resources";
 import { useAuth } from "../auth/AuthContext";
 
-const EXERCICE_COURANT = 2026;
 const FINANCES = ["SECRETAIRE_GENERAL", "TRESORIERE", "ADMIN"];
 const dateFr = (v) => (v ? new Date(v).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" }) : null);
 const statutLigne = (du, paye) => (du === 0 ? "exonere" : paye <= 0 ? "retard" : paye >= du ? "ajour" : "partiel");

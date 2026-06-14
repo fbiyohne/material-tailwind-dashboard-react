@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DocumentCheckIcon, CheckCircleIcon, LockClosedIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
-import { EXERCICES } from "../data/dashboard-data";
+import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { DocumentChrome, SortTh, Pagination, useToast } from "../components";
 import { useDataTable } from "../hooks/useDataTable";
 import { quitusEligibles, listerQuitus, genererQuitus, getCotisations, telechargerQuitusPdf } from "../api/resources";
@@ -39,7 +39,7 @@ function PuceSynthese({ valeur, label, accent }) {
 
 export function Quitus() {
   const toast = useToast();
-  const [exercice, setExercice] = useState(2026);
+  const [exercice, setExercice] = useState(EXERCICE_COURANT);
   const [eligibles, setEligibles] = useState([]);
   const [registre, setRegistre] = useState([]);
   const [lignes, setLignes] = useState([]);

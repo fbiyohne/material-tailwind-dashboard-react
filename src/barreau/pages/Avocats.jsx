@@ -3,9 +3,9 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { Badge, StatutBadge, AttestationModal, SortTh, Pagination, useToast } from "../components";
 import { STATUT_META, QUALITE_LABEL } from "../data/derivations";
+import { EXERCICE_COURANT } from "../data/dashboard-data";
 import { listerMembres, getCotisations } from "../api/resources";
 
-const EXERCICE_COURANT = 2026;
 const PAGE_SIZE = 10;
 const FILTRES = [
   { value: "tous", label: "Tous les statuts" },

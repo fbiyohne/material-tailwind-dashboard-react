@@ -10,7 +10,6 @@ const ROLE_LABEL = {
   TRESORIERE: "Trésorière",
   ADMIN: "Administrateur",
 };
-const ROLE_TON = { SECRETAIRE_GENERAL: "vert", BATONNIER: "bleu", TRESORIERE: "or", ADMIN: "gris" };
 const ROLES = Object.keys(ROLE_LABEL);
 
 const videCreation = () => ({ nom: "", email: "", role: "SECRETAIRE_GENERAL", password: "" });
@@ -59,7 +58,7 @@ export function Utilisateurs() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-end justify-between gap-3">
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
         <div>
           <div className="bpn-eyebrow">Système</div>
           <h2 className="bpn-title mt-2">Utilisateurs</h2>
@@ -128,7 +127,7 @@ export function Utilisateurs() {
         title="Nouveau compte"
         footer={
           <button className="bpn-btn bpn-btn-or" onClick={enregistrerCreation}
-            disabled={loading || !creation?.nom?.trim() || !creation?.email?.trim() || (creation?.password?.length ?? 0) < 6}>
+            disabled={loading || !creation?.nom?.trim() || !creation?.email?.trim() || (creation?.password?.length ?? 0) < 8}>
             <CheckIcon className="h-4 w-4" /> Créer le compte
           </button>
         }
@@ -143,7 +142,7 @@ export function Utilisateurs() {
               <select value={creation.role} onChange={setC("role")} className="bpn-input mt-1">
                 {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
               </select></label>
-            <label className="block sm:col-span-2"><span className="bpn-label">Mot de passe (min. 6 caractères)</span>
+            <label className="block sm:col-span-2"><span className="bpn-label">Mot de passe (min. 8 caractères)</span>
               <input type="password" value={creation.password} onChange={setC("password")} className="bpn-input mt-1" /></label>
           </div>
         )}
@@ -156,13 +155,13 @@ export function Utilisateurs() {
         title={motDePasse ? `Mot de passe — ${motDePasse.nom}` : ""}
         footer={
           <button className="bpn-btn bpn-btn-primary" onClick={enregistrerMotDePasse}
-            disabled={loading || (motDePasse?.password?.length ?? 0) < 6}>
+            disabled={loading || (motDePasse?.password?.length ?? 0) < 8}>
             <CheckIcon className="h-4 w-4" /> Réinitialiser
           </button>
         }
       >
         {motDePasse && (
-          <label className="block"><span className="bpn-label">Nouveau mot de passe (min. 6 caractères)</span>
+          <label className="block"><span className="bpn-label">Nouveau mot de passe (min. 8 caractères)</span>
             <input type="password" value={motDePasse.password} onChange={(e) => setMotDePasse({ ...motDePasse, password: e.target.value })} className="bpn-input mt-1" /></label>
         )}
       </Modal>
