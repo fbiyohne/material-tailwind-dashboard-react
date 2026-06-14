@@ -5,6 +5,7 @@ export { FormField } from "./FormField";
 export { FormSection } from "./FormSection";
 export { Notice } from "./Notice";
 export { PageHeader } from "./PageHeader";
+export { Tabs } from "./Tabs";
 export { StatutBadge } from "./StatutBadge";
 export { MembreFicheModal } from "./MembreFicheModal";
 export { AttestationModal } from "./AttestationModal";

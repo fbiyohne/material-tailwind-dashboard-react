@@ -53,13 +53,13 @@ export function Sidebar({ open, onClose }) {
             <ScaleIcon className="h-5 w-5 text-or-2" />
           </div>
           <div className="min-w-0">
-            <div className="mb-0.5 text-[7px] font-medium uppercase tracking-[0.28em] text-or/80">
+            <div className="mb-0.5 text-[9px] font-medium uppercase tracking-[0.24em] text-or/80">
               République du Congo
             </div>
-            <div className="font-display text-[13px] font-semibold leading-[1.15] text-white">
+            <div className="font-display text-[15px] font-semibold leading-[1.15] text-white">
               Barreau de Pointe-Noire
             </div>
-            <div className="mt-0.5 text-[9px] tracking-wide text-white/45">Secrétariat Général</div>
+            <div className="mt-0.5 text-[11px] tracking-wide text-white/45">Secrétariat Général</div>
           </div>
 
           <button
@@ -76,7 +76,7 @@ export function Sidebar({ open, onClose }) {
         <nav className="flex-1 overflow-y-auto py-3" aria-label="Navigation principale">
           {sections.map((section) => (
             <div key={section.label} className="px-2">
-              <div className="px-3 pb-1.5 pt-4 text-[8px] font-semibold uppercase tracking-[0.22em] text-or/60">
+              <div className="px-3 pb-1.5 pt-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-or/60">
                 {section.label}
               </div>
               {section.items.map((item) => {
@@ -88,7 +88,7 @@ export function Sidebar({ open, onClose }) {
                     end={item.path === "/"}
                     onClick={onClose}
                     className={({ isActive }) =>
-                      `group relative mb-0.5 flex items-center gap-3 rounded-md px-3 py-[9px] text-[12px] transition-all duration-150 ${
+                      `group relative mb-0.5 flex items-center gap-3 rounded-md px-3 py-[9px] text-[13.5px] transition-all duration-150 ${
                         isActive
                           ? "bg-or/[0.12] font-medium text-or-2"
                           : "text-white/75 hover:bg-white/[0.05] hover:text-white"
@@ -110,7 +110,7 @@ export function Sidebar({ open, onClose }) {
                         />
                         <span className="truncate">{item.name}</span>
                         {item.badge && (
-                          <span className="ml-auto flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-rouge px-1 text-[9px] font-semibold text-white">
+                          <span className="ml-auto flex h-[19px] min-w-[19px] items-center justify-center rounded-full bg-rouge px-1 text-[10px] font-semibold text-white">
                             {item.badge}
                           </span>
                         )}
@@ -132,12 +132,12 @@ export function Sidebar({ open, onClose }) {
               className="flex min-w-0 flex-1 items-center gap-2.5 rounded transition hover:opacity-90"
               title="Mon profil"
             >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-or/30 bg-or/15 text-[11px] font-semibold text-or-2">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-or/30 bg-or/15 text-xs font-semibold text-or-2">
                 {initiales(user?.nom)}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="truncate text-[11px] font-medium text-white/90">{user?.nom}</div>
-                <div className="text-[8px] uppercase tracking-[0.15em] text-or/70">
+                <div className="truncate text-[13px] font-medium text-white/90">{user?.nom}</div>
+                <div className="text-[10px] uppercase tracking-[0.12em] text-or/70">
                   {ROLE_LABEL[user?.role] ?? user?.role}
                 </div>
               </div>

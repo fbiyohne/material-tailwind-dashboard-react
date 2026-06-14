@@ -64,7 +64,7 @@
 @layer components {
   /* ─── Eyebrow / titres de section ─────────────────────────── */
   .bpn-eyebrow {
-    @apply flex items-center gap-2.5 text-[10px] font-semibold uppercase tracking-[0.4em] text-or;
+    @apply flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-[0.4em] text-or;
   }
   .bpn-eyebrow::before {
     content: "";
@@ -81,18 +81,18 @@
     @apply rounded-lg border border-grisM border-l-[3px] bg-creme p-4;
   }
   .bpn-stat-label {
-    @apply mb-2 text-[10px] font-medium uppercase tracking-wide text-gris;
+    @apply mb-2 text-[11px] font-medium uppercase tracking-wide text-gris;
   }
   .bpn-stat-value {
     @apply font-display text-[28px] font-bold leading-none;
   }
   .bpn-stat-sub {
-    @apply mt-1 text-[11px] text-gris;
+    @apply mt-1 text-xs text-gris;
   }
 
   /* ─── Badges pastilles statut ─────────────────────────────── */
   .bpn-badge {
-    @apply inline-flex items-center gap-1.5 rounded-xl px-2.5 py-[3px] text-[11px] font-medium;
+    @apply inline-flex items-center gap-1.5 rounded-xl px-2.5 py-[3px] text-xs font-medium;
   }
   .bpn-badge-dot {
     @apply h-[5px] w-[5px] rounded-full bg-current;
@@ -115,7 +115,7 @@
 
   /* ─── Boutons ─────────────────────────────────────────────── */
   .bpn-btn {
-    @apply inline-flex items-center gap-1.5 rounded border border-transparent px-4 py-2 text-xs font-medium transition-all duration-150;
+    @apply inline-flex items-center gap-1.5 rounded border border-transparent px-4 py-2 text-sm font-medium transition-all duration-150;
   }
   .bpn-btn-primary {
     @apply bg-navy text-white hover:bg-navy-2;
@@ -141,7 +141,7 @@
     @apply flex items-center justify-between border-b border-grisM px-4 py-2.5;
   }
   .bpn-card-heading {
-    @apply font-display text-sm text-navy;
+    @apply font-display text-base text-navy;
   }
 
   /* ─── Tableau institutionnel unifié (en-tête navy, lignes, hover) ─── */
@@ -149,7 +149,7 @@
     @apply w-full text-sm;
   }
   .bpn-table thead tr {
-    @apply bg-navy text-left text-[9px] uppercase tracking-[0.12em] text-white/90;
+    @apply bg-navy text-left text-[11px] uppercase tracking-[0.1em] text-white/90;
   }
   .bpn-table thead th {
     @apply px-3 py-2.5 font-medium;
@@ -170,7 +170,7 @@
     @apply border-rouge focus:border-rouge focus:shadow-[0_0_0_3px_rgba(139,26,26,0.12)];
   }
   .bpn-label {
-    @apply text-[10px] font-medium uppercase tracking-wide text-gris;
+    @apply text-[11px] font-medium uppercase tracking-wide text-gris;
   }
 
   /* Champ de formulaire sur fond sombre (panneau navy du module Reçus) */

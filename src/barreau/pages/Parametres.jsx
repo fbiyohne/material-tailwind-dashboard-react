@@ -1,7 +1,16 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { CheckIcon, LockClosedIcon, EnvelopeIcon, DevicePhoneMobileIcon } from "@heroicons/react/24/outline";
-import { Badge, useToast, PageHeader, FormField } from "../components";
+import {
+  CheckIcon,
+  LockClosedIcon,
+  EnvelopeIcon,
+  DevicePhoneMobileIcon,
+  BanknotesIcon,
+  BuildingLibraryIcon,
+  ShieldCheckIcon,
+  BellIcon,
+} from "@heroicons/react/24/outline";
+import { Badge, useToast, PageHeader, FormField, Tabs } from "../components";
 import { EXERCICES } from "../data/dashboard-data";
 import { formatFCFA } from "../utils/format";
 import { getParametres, majParametres, getNotifications } from "../api/resources";
@@ -67,10 +76,7 @@ export function Parametres() {
     catch (e) { toast.error(e.message); }
   };
 
-  return (
-    <div className="space-y-5">
-      <PageHeader eyebrow="Système" titre="Paramètres" sousTitre="Tarifs de référence, exercice courant, identité de l'institution et rôles." />
-
+  const panneauTarifs = (
       <Section titre="Tarifs de référence & exercice" description="Montants annuels appliqués aux calculs de cotisations et de droits (BR-07 / BR-08).">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <FormField label="Cotisation avocat (FCFA)">
@@ -95,7 +101,9 @@ export function Parametres() {
           <button className="bpn-btn bpn-btn-primary" onClick={sauverTarifs}><CheckIcon className="h-4 w-4" /> Enregistrer</button>
         </div>
       </Section>
+  );
 
+  const panneauIdentite = (
       <Section titre="Identité de l'institution" description="Utilisée dans les documents officiels et l'interface.">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField label="Dénomination">
@@ -121,7 +129,9 @@ export function Parametres() {
           <button className="bpn-btn bpn-btn-primary" onClick={sauverIdentite}><CheckIcon className="h-4 w-4" /> Enregistrer</button>
         </div>
       </Section>
+  );
 
+  const panneauRoles = (
       <Section titre="Rôles & permissions" description="Profils d'accès de l'application (parties prenantes du CDC).">
         <div className="overflow-x-auto">
           <table className="bpn-table">
@@ -150,7 +160,9 @@ export function Parametres() {
           <Link to="/utilisateurs" className="font-medium text-navy underline">Utilisateurs</Link>.
         </div>
       </Section>
+  );
 
+  const panneauNotifications = (
       <Section titre="Notifications" description="Canaux d'envoi (email / SMS) et journal des envois récents (RG-16).">
         <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="flex items-center justify-between rounded border border-grisM bg-grisL/40 px-3 py-2.5">
@@ -191,6 +203,26 @@ export function Parametres() {
           <p className="text-sm text-gris">Aucune notification émise pour l'instant. Les envois apparaîtront ici (mode simulation tant que SMTP/SMS ne sont pas configurés).</p>
         )}
       </Section>
+  );
+
+  return (
+    <div className="space-y-5">
+      <PageHeader eyebrow="Système" titre="Paramètres" sousTitre="Tarifs de référence, exercice courant, identité de l'institution et rôles." />
+
+      <Tabs
+        tabs={[
+          { id: "tarifs", label: "Tarifs & exercice", icon: BanknotesIcon, content: panneauTarifs },
+          { id: "identite", label: "Identité", icon: BuildingLibraryIcon, content: panneauIdentite },
+          { id: "roles", label: "Rôles & permissions", icon: ShieldCheckIcon, content: panneauRoles },
+          {
+            id: "notifications",
+            label: "Notifications",
+            icon: BellIcon,
+            badge: notif?.journal?.length || null,
+            content: panneauNotifications,
+          },
+        ]}
+      />
     </div>
   );
 }

@@ -35,8 +35,19 @@ module.exports = withMT({
         sans: ["'DM Sans'", "sans-serif"], // corps de texte
         mono: ["'DM Mono'", "monospace"], // références & codes
       },
+      // Échelle typographique relevée pour la lisibilité / accessibilité
+      // (malvoyants) : corps de texte plus généreux, sans toucher aux espacements.
+      // xs 12→13 · sm 14→15 · base 16→17 · lg 18→19.
+      fontSize: {
+        xs: ["0.8125rem", { lineHeight: "1.15rem" }],
+        sm: ["0.9375rem", { lineHeight: "1.4rem" }],
+        base: ["1.0625rem", { lineHeight: "1.65rem" }],
+        lg: ["1.1875rem", { lineHeight: "1.75rem" }],
+      },
       maxWidth: {
-        container: "1120px",
+        // Largeur de contenu élargie : les modules denses (tableaux, grilles)
+        // exploitent l'espace disponible au lieu d'être tassés au centre.
+        container: "1500px",
       },
       boxShadow: {
         card: "0 4px 24px rgba(0,0,0,.08)",

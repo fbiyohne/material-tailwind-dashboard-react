@@ -52,7 +52,7 @@ export function Topbar({ title, onOpenMenu, onAddAvocat }) {
   const aller = (path) => { setMenu(null); setQ(""); navigate(path); };
 
   return (
-    <header className="sticky top-0 z-30 flex h-[50px] items-center gap-3 border-b border-grisM bg-white/95 px-4 backdrop-blur md:px-6">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-grisM bg-white/95 px-4 backdrop-blur md:px-6">
       <button type="button" onClick={onOpenMenu} className="text-navy hover:text-or xl:hidden" aria-label="Ouvrir le menu">
         <Bars3Icon className="h-6 w-6" />
       </button>
@@ -130,7 +130,7 @@ export function Topbar({ title, onOpenMenu, onAddAvocat }) {
         </button>
         {menu === "notifs" && (
           <div className="absolute right-0 top-full z-50 mt-1 w-72 overflow-hidden rounded-lg border border-grisM bg-white shadow-card">
-            <div className="border-b border-grisM px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-gris">
+            <div className="border-b border-grisM px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-gris">
               Prochaines échéances
             </div>
             {echeances.length === 0 ? (
