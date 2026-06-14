@@ -7,7 +7,8 @@ import { archiver, montantDu, prochainNumeroRecu, statutCotisation } from "../li
 import { envoyerMail, modeSimulation } from "../lib/mail.js";
 
 export const cotisationsRouter = Router();
-cotisationsRouter.use(requireAuth);
+// Données financières restreintes aux profils autorisés (RG-15) : SG, Trésorière, Admin.
+cotisationsRouter.use(requireAuth, requireRole("SECRETAIRE_GENERAL", "TRESORIERE"));
 
 /** POST /cotisations/relances?annee= — relance email des retardataires (FR). */
 cotisationsRouter.post(

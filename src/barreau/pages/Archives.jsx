@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { MagnifyingGlassIcon, DocumentArrowDownIcon } from "@heroicons/react/24/outline";
-import { Badge, SortTh, Pagination, useToast } from "../components";
+import { Badge, SortTh, Pagination, Modal, useToast } from "../components";
 import { useDataTable } from "../hooks/useDataTable";
 import { listerArchives } from "../api/resources";
+
+const dateFr = (v) => (v ? new Date(v).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" }) : "—");
 
 const ACCESSORS = {
   date: (a) => a.date,
@@ -16,6 +18,7 @@ export function Archives() {
   const [categories, setCategories] = useState(["toutes"]);
   const [recherche, setRecherche] = useState("");
   const [categorie, setCategorie] = useState("toutes");
+  const [apercu, setApercu] = useState(null);
 
   useEffect(() => {
     listerArchives()
@@ -83,7 +86,7 @@ export function Archives() {
                   <td className="px-3 py-2.5 font-medium">{a.titre}</td>
                   <td className="px-3 py-2.5 font-mono text-xs text-or">{a.reference}</td>
                   <td className="px-3 py-2.5 text-right">
-                    <button className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-[10px]">
+                    <button className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-[10px]" onClick={() => setApercu(a)}>
                       <DocumentArrowDownIcon className="h-3.5 w-3.5" /> Consulter
                     </button>
                   </td>
@@ -97,6 +100,27 @@ export function Archives() {
         </div>
         <Pagination page={page} totalPages={totalPages} total={total} onPage={setPage} libelle="documents" />
       </div>
+
+      <Modal open={!!apercu} onClose={() => setApercu(null)} title={apercu?.titre ?? "Document archivé"}>
+        {apercu && (
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge ton="bleu" dot={false}>{apercu.categorie}</Badge>
+              <span className="font-mono text-xs text-or">{apercu.reference}</span>
+            </div>
+            <dl className="divide-y divide-grisL text-sm">
+              <div className="flex justify-between gap-4 py-2"><dt className="text-gris">Date d'archivage</dt><dd className="font-medium text-encre">{dateFr(apercu.date)}</dd></div>
+              <div className="flex justify-between gap-4 py-2"><dt className="text-gris">Catégorie</dt><dd className="font-medium text-encre">{apercu.categorie}</dd></div>
+              <div className="flex justify-between gap-4 py-2"><dt className="text-gris">Référence</dt><dd className="font-mono text-encre">{apercu.reference}</dd></div>
+              {apercu.membreNom && <div className="flex justify-between gap-4 py-2"><dt className="text-gris">Concerné</dt><dd className="font-medium text-encre">Me {apercu.membreNom}</dd></div>}
+            </dl>
+            <p className="rounded border-l-[3px] border-or bg-or-L px-3 py-2 text-xs text-gris">
+              Cette entrée trace un document officiel généré par l'application. Le PDF se régénère
+              depuis le module d'origine (reçu, quitus, attestation, convocation…).
+            </p>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

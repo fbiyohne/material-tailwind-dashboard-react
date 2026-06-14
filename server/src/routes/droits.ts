@@ -1,11 +1,12 @@
 import { Router } from "express";
 import { prisma } from "../prisma.js";
 import { asyncH } from "../middleware/error.js";
-import { requireAuth } from "../middleware/auth.js";
+import { requireAuth, requireRole } from "../middleware/auth.js";
 import { droitDu, droitPaye } from "../lib/business.js";
 
 export const droitsRouter = Router();
-droitsRouter.use(requireAuth);
+// Données financières restreintes (RG-15) : SG, Trésorière, Admin.
+droitsRouter.use(requireAuth, requireRole("SECRETAIRE_GENERAL", "TRESORIERE"));
 
 /** GET /droits?annee= — suivi des droits de plaidoirie (FR-DROITS). */
 droitsRouter.get(

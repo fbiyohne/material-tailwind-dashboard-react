@@ -64,14 +64,16 @@
 @layer components {
   /* ─── Eyebrow / titres de section ─────────────────────────── */
   .bpn-eyebrow {
-    @apply flex items-center gap-2.5 text-[10px] font-semibold uppercase tracking-[0.25em] text-or;
+    @apply flex items-center gap-2.5 text-[10px] font-semibold uppercase tracking-[0.4em] text-or;
   }
   .bpn-eyebrow::before {
     content: "";
     @apply h-px w-6 bg-or;
   }
+  /* Titre de section — échelle fluide fidèle à la maquette (28→44px). */
   .bpn-title {
-    @apply font-display text-3xl font-semibold leading-tight text-navy;
+    @apply font-display font-semibold leading-tight text-navy;
+    font-size: clamp(28px, 3vw, 44px);
   }
 
   /* ─── Carte indicateur (stat card) ────────────────────────── */
@@ -82,7 +84,7 @@
     @apply mb-2 text-[10px] font-medium uppercase tracking-wide text-gris;
   }
   .bpn-stat-value {
-    @apply font-display text-3xl font-bold leading-none;
+    @apply font-display text-[28px] font-bold leading-none;
   }
   .bpn-stat-sub {
     @apply mt-1 text-[11px] text-gris;
@@ -133,13 +135,30 @@
 
   /* ─── Carte panneau ───────────────────────────────────────── */
   .bpn-card {
-    @apply overflow-hidden rounded-lg border border-grisM bg-white;
+    @apply overflow-hidden rounded-xl border border-grisM bg-white;
   }
   .bpn-card-header {
     @apply flex items-center justify-between border-b border-grisM px-4 py-2.5;
   }
   .bpn-card-heading {
     @apply font-display text-sm text-navy;
+  }
+
+  /* ─── Tableau institutionnel unifié (en-tête navy, lignes, hover) ─── */
+  .bpn-table {
+    @apply w-full text-sm;
+  }
+  .bpn-table thead tr {
+    @apply bg-navy text-left text-[9px] uppercase tracking-[0.12em] text-white/90;
+  }
+  .bpn-table thead th {
+    @apply px-3 py-2.5 font-medium;
+  }
+  .bpn-table tbody td {
+    @apply px-3 py-2.5;
+  }
+  .bpn-table tbody tr {
+    @apply border-b border-grisL transition-colors hover:bg-grisL/60;
   }
 
   /* ─── Champs de formulaire ────────────────────────────────── */

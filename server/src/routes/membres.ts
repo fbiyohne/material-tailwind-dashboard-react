@@ -70,6 +70,10 @@ const inscriptionSchema = z.object({
   tel: z.string().optional(),
   email: z.string().optional(),
   rccm: z.string().optional(),
+  cnss: z.string().optional(),
+  adresse: z.string().optional(),
+  observations: z.string().optional(),
+  dateNaissance: z.string().optional(),
   dateInscription: z.string().optional(),
 });
 
@@ -91,6 +95,10 @@ membresRouter.post(
         tel: data.tel,
         email: data.email,
         rccm: data.rccm,
+        cnss: data.cnss,
+        adresse: data.adresse,
+        observations: data.observations,
+        dateNaissance: data.dateNaissance ? new Date(data.dateNaissance) : null,
         dateInscription: data.dateInscription ? new Date(data.dateInscription) : new Date(),
       },
     });
@@ -110,6 +118,7 @@ membresRouter.patch(
       where: { id: Number(req.params.id) },
       data: {
         ...data,
+        dateNaissance: data.dateNaissance ? new Date(data.dateNaissance) : undefined,
         dateInscription: data.dateInscription ? new Date(data.dateInscription) : undefined,
       },
     });

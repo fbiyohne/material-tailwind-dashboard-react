@@ -1,7 +1,7 @@
 import PropTypes from "prop-types";
 import { NavLink } from "react-router-dom";
 import { XMarkIcon, ScaleIcon, ArrowRightOnRectangleIcon } from "@heroicons/react/24/outline";
-import { navSections } from "../routes";
+import { sectionsPourRole } from "../routes";
 import { useAuth } from "../auth/AuthContext";
 
 const initiales = (nom) => {
@@ -24,6 +24,7 @@ const ROLE_LABEL = {
  */
 export function Sidebar({ open, onClose }) {
   const { user, logout } = useAuth();
+  const sections = sectionsPourRole(user?.role); // RBAC : menu filtré par rôle.
   return (
     <>
       {open && (
@@ -73,7 +74,7 @@ export function Sidebar({ open, onClose }) {
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-3" aria-label="Navigation principale">
-          {navSections.map((section) => (
+          {sections.map((section) => (
             <div key={section.label} className="px-2">
               <div className="px-3 pb-1.5 pt-4 text-[8px] font-semibold uppercase tracking-[0.22em] text-or/60">
                 {section.label}

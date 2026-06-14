@@ -2,9 +2,10 @@ import { useState } from "react";
 import { Routes, Route, useLocation, Navigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
-import { allModules, detailRoutes } from "../routes";
+import { allModules, detailRoutes, aAcces } from "../routes";
 import Placeholder from "../pages/Placeholder";
 import { InscriptionModal } from "../components";
+import { useAuth } from "../auth/AuthContext";
 
 /**
  * Ossature de l'application du Secrétariat Général :
@@ -14,6 +15,9 @@ export function BarreauLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [inscription, setInscription] = useState(false);
   const location = useLocation();
+  const { user } = useAuth();
+  const role = user?.role;
+  const peutInscrire = aAcces({ roles: ["SECRETAIRE_GENERAL", "ADMIN"] }, role);
 
   // Titre de la barre : module exact, sinon module parent d'une page de détail.
   const moduleCourant = allModules.find((m) => m.path === location.pathname);
@@ -37,16 +41,18 @@ export function BarreauLayout() {
         <Topbar
           title={titre}
           onOpenMenu={() => setMenuOpen(true)}
-          onAddAvocat={() => setInscription(true)}
+          onAddAvocat={peutInscrire ? () => setInscription(true) : null}
         />
 
         <main id="contenu-principal" tabIndex={-1} className="mx-auto max-w-container px-4 py-6 outline-none md:px-8 md:py-8">
           <Routes>
-            {allModules.map(({ path, name, element }) => (
+            {allModules.map(({ path, name, element, roles }) => (
               <Route
                 key={path}
                 path={path}
-                element={element ?? <Placeholder title={name} />}
+                element={
+                  aAcces({ roles }, role) ? (element ?? <Placeholder title={name} />) : <Navigate to="/" replace />
+                }
               />
             ))}
             {detailRoutes.map(({ path, element }) => (

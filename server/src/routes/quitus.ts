@@ -9,7 +9,8 @@ import { quitusHtml } from "../lib/templates.js";
 import { signerDocument, quitusPayload } from "../lib/signature.js";
 
 export const quitusRouter = Router();
-quitusRouter.use(requireAuth);
+// Données financières restreintes (RG-15) : SG, Trésorière, Admin.
+quitusRouter.use(requireAuth, requireRole("SECRETAIRE_GENERAL", "TRESORIERE"));
 
 /** GET /quitus/:id/pdf — quitus officiel signé en PDF vectoriel (Puppeteer). */
 quitusRouter.get(

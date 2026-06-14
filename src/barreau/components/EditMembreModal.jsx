@@ -21,7 +21,8 @@ export function EditMembreModal({ membre, open, onClose, onSaved }) {
     try {
       const maj = await modifierMembre(membre.id, {
         nom: form.nom, cabinet: form.cabinet, statut: form.statut,
-        tel: form.tel, email: form.email, rccm: form.rccm, dateInscription: form.dateInscription,
+        tel: form.tel, email: form.email, adresse: form.adresse, rccm: form.rccm, cnss: form.cnss,
+        observations: form.observations, dateNaissance: form.dateNaissance, dateInscription: form.dateInscription,
       });
       toast.success(`Fiche mise à jour — Me ${maj.nom}`);
       onSaved?.(maj);
@@ -55,12 +56,20 @@ export function EditMembreModal({ membre, open, onClose, onSaved }) {
           <input value={form.cabinet ?? ""} onChange={set("cabinet")} className="bpn-input mt-1" /></label>
         <label className="block"><span className="bpn-label">Date d'inscription</span>
           <input type="date" value={form.dateInscription ?? ""} onChange={set("dateInscription")} className="bpn-input mt-1" /></label>
-        <label className="block"><span className="bpn-label">RCCM</span>
-          <input value={form.rccm ?? ""} onChange={set("rccm")} className="bpn-input mt-1" /></label>
+        <label className="block"><span className="bpn-label">Date de naissance</span>
+          <input type="date" value={form.dateNaissance ?? ""} onChange={set("dateNaissance")} className="bpn-input mt-1" /></label>
         <label className="block"><span className="bpn-label">Téléphone</span>
           <input value={form.tel ?? ""} onChange={set("tel")} className="bpn-input mt-1" /></label>
         <label className="block"><span className="bpn-label">Email</span>
           <input type="email" value={form.email ?? ""} onChange={set("email")} className="bpn-input mt-1" /></label>
+        <label className="block sm:col-span-2"><span className="bpn-label">Adresse</span>
+          <input value={form.adresse ?? ""} onChange={set("adresse")} className="bpn-input mt-1" /></label>
+        <label className="block"><span className="bpn-label">RCCM</span>
+          <input value={form.rccm ?? ""} onChange={set("rccm")} className="bpn-input mt-1" /></label>
+        <label className="block"><span className="bpn-label">CNSS</span>
+          <input value={form.cnss ?? ""} onChange={set("cnss")} className="bpn-input mt-1" /></label>
+        <label className="block sm:col-span-2"><span className="bpn-label">Observations</span>
+          <textarea rows={2} value={form.observations ?? ""} onChange={set("observations")} className="bpn-input mt-1" /></label>
       </div>
     </Modal>
   );

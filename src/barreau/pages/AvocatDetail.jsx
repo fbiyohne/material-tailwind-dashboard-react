@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeftIcon, DocumentPlusIcon, PencilSquareIcon, NoSymbolIcon } from "@heroicons/react/24/outline";
+import { ScaleIcon } from "@heroicons/react/24/outline";
 import { Badge, StatutBadge, AttestationModal, EditMembreModal, useConfirm, useToast } from "../components";
 import { QUALITE_LABEL, STATUT_META, infoStage } from "../data/derivations";
 import { EXERCICES } from "../data/dashboard-data";
 import { formatFCFA } from "../utils/format";
-import { getMembre, radierMembre } from "../api/resources";
+import { getMembre, radierMembre, getDroits } from "../api/resources";
+import { useAuth } from "../auth/AuthContext";
 
 const EXERCICE_COURANT = 2026;
-const DROIT = 60000;
+const FINANCES = ["SECRETAIRE_GENERAL", "TRESORIERE", "ADMIN"];
+const dateFr = (v) => (v ? new Date(v).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" }) : null);
 const statutLigne = (du, paye) => (du === 0 ? "exonere" : paye <= 0 ? "retard" : paye >= du ? "ajour" : "partiel");
 
 function Carte({ titre, children }) {
@@ -33,7 +36,10 @@ export function AvocatDetail() {
   const navigate = useNavigate();
   const confirm = useConfirm();
   const toast = useToast();
+  const { user } = useAuth();
+  const peutVoirFinances = FINANCES.includes(user?.role);
   const [membre, setMembre] = useState(null);
+  const [droit, setDroit] = useState(null); // ligne de droits réelle (rôles finances)
   const [attestation, setAttestation] = useState(null);
   const [edition, setEdition] = useState(false);
 
@@ -41,6 +47,14 @@ export function AvocatDetail() {
     getMembre(Number(id)).then(setMembre).catch(() => setMembre(false));
   }, [id]);
   useEffect(() => { charger(); }, [charger]);
+
+  // Droits de plaidoirie : source unique (API), réservée aux rôles financiers (RG-15).
+  useEffect(() => {
+    if (!peutVoirFinances) return;
+    getDroits(EXERCICE_COURANT)
+      .then((d) => setDroit((d.lignes ?? []).find((l) => l.membre.id === Number(id)) ?? null))
+      .catch(() => setDroit(null));
+  }, [id, peutVoirFinances]);
 
   const cotParAnnee = useMemo(() => Object.fromEntries((membre?.cotisations ?? []).map((c) => [c.annee, c])), [membre]);
 
@@ -59,9 +73,6 @@ export function AvocatDetail() {
   const du = cot?.montantDu ?? (membre.qualite === "honoraire" ? 0 : membre.qualite === "stagiaire" ? 75000 : 150000);
   const paye = cot?.montantPaye ?? 0;
   const cotMeta = STATUT_META[statutLigne(du, paye)];
-
-  const droitDu = membre.qualite === "avocat" ? DROIT : 0;
-  const droitPaye = droitDu ? Math.min(droitDu, [0, DROIT / 2, DROIT][(membre.id + EXERCICE_COURANT) % 3]) : 0;
 
   const documents = [
     ...(membre.quitus ?? []).map((q) => ({ type: "Quitus", ref: q.numero, date: q.date })),
@@ -104,10 +115,14 @@ export function AvocatDetail() {
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <Carte titre="Identité & coordonnées">
           <Ligne label="Cabinet" value={membre.cabinet} />
-          <Ligne label="Date d'inscription" value={membre.dateInscription} />
-          <Ligne label="RCCM" value={membre.rccm} />
+          <Ligne label="Date d'inscription" value={dateFr(membre.dateInscription)} />
+          <Ligne label="Date de naissance" value={dateFr(membre.dateNaissance)} />
+          <Ligne label="Adresse" value={membre.adresse} />
           <Ligne label="Téléphone" value={membre.tel} />
           <Ligne label="Email" value={membre.email} />
+          <Ligne label="RCCM" value={membre.rccm} />
+          <Ligne label="CNSS" value={membre.cnss} />
+          {membre.observations && <Ligne label="Observations" value={membre.observations} />}
           {stage && (
             <>
               <Ligne label="Prestation de serment" value={stage.debut.toLocaleDateString("fr-FR")} />
@@ -136,13 +151,15 @@ export function AvocatDetail() {
             </div>
           </Carte>
 
-          <Carte titre={`Droits de plaidoirie ${EXERCICE_COURANT}`}>
-            <div className="grid grid-cols-3 gap-3 text-center">
-              <div><div className="text-[10px] uppercase tracking-wide text-gris">Dû</div><div className="mt-1 font-medium">{formatFCFA(droitDu)}</div></div>
-              <div><div className="text-[10px] uppercase tracking-wide text-gris">Perçu</div><div className="mt-1 font-medium text-vert">{droitPaye ? formatFCFA(droitPaye) : "—"}</div></div>
-              <div><div className="text-[10px] uppercase tracking-wide text-gris">Solde</div><div className="mt-1 font-medium text-rouge">{droitDu - droitPaye ? formatFCFA(droitDu - droitPaye) : "✓"}</div></div>
-            </div>
-          </Carte>
+          {peutVoirFinances && droit && (
+            <Carte titre={`Droits de plaidoirie ${EXERCICE_COURANT}`}>
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <div><div className="text-[10px] uppercase tracking-wide text-gris">Dû</div><div className="mt-1 font-medium">{formatFCFA(droit.du)}</div></div>
+                <div><div className="text-[10px] uppercase tracking-wide text-gris">Perçu</div><div className="mt-1 font-medium text-vert">{droit.paye ? formatFCFA(droit.paye) : "—"}</div></div>
+                <div><div className="text-[10px] uppercase tracking-wide text-gris">Solde</div><div className="mt-1 font-medium text-rouge">{droit.solde ? formatFCFA(droit.solde) : "✓"}</div></div>
+              </div>
+            </Carte>
+          )}
         </div>
       </div>
 
@@ -186,6 +203,18 @@ export function AvocatDetail() {
             ))}
           </ul>
         )}
+      </Carte>
+
+      <Carte titre="Historique disciplinaire">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm text-gris">
+            Les dossiers disciplinaires sont consultables dans le module dédié — accès restreint et
+            journalisé (RG-13).
+          </p>
+          <Link to="/discipline" className="bpn-btn bpn-btn-ghost shrink-0">
+            <ScaleIcon className="h-4 w-4" /> Conseil de discipline
+          </Link>
+        </div>
       </Carte>
 
       <AttestationModal membre={attestation} onClose={() => setAttestation(null)} />

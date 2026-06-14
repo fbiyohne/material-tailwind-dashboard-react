@@ -14,11 +14,15 @@ import {
 } from "@heroicons/react/24/outline";
 import { prochainesEcheances } from "../data/dashboard-data";
 import { listerMembres } from "../api/resources";
+import { useAuth } from "../auth/AuthContext";
+import { aAcces } from "../routes";
 
+const FINANCES = ["SECRETAIRE_GENERAL", "TRESORIERE", "ADMIN"];
+const INSTITUTIONNEL = ["SECRETAIRE_GENERAL", "BATONNIER", "ADMIN"];
 const DOCS = [
-  { label: "Émettre un reçu", to: "/recus", icon: ReceiptPercentIcon },
-  { label: "Générer un quitus", to: "/quitus", icon: DocumentCheckIcon },
-  { label: "Consulter les archives", to: "/archives", icon: ArchiveBoxIcon },
+  { label: "Émettre un reçu", to: "/recus", icon: ReceiptPercentIcon, roles: FINANCES },
+  { label: "Générer un quitus", to: "/quitus", icon: DocumentCheckIcon, roles: FINANCES },
+  { label: "Consulter les archives", to: "/archives", icon: ArchiveBoxIcon, roles: INSTITUTIONNEL },
 ];
 
 /**
@@ -27,9 +31,11 @@ const DOCS = [
  */
 export function Topbar({ title, onOpenMenu, onAddAvocat }) {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [q, setQ] = useState("");
   const [menu, setMenu] = useState(null); // "docs" | "notifs" | null
   const [membres, setMembres] = useState([]);
+  const docs = DOCS.filter((d) => aAcces(d, user?.role)); // RBAC : raccourcis filtrés.
 
   useEffect(() => {
     listerMembres().then((d) => setMembres(d.items)).catch(() => {});
@@ -42,7 +48,7 @@ export function Topbar({ title, onOpenMenu, onAddAvocat }) {
   const aller = (path) => { setMenu(null); setQ(""); navigate(path); };
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-grisM bg-white/95 px-4 backdrop-blur md:px-6">
+    <header className="sticky top-0 z-30 flex h-[50px] items-center gap-3 border-b border-grisM bg-white/95 px-4 backdrop-blur md:px-6">
       <button type="button" onClick={onOpenMenu} className="text-navy hover:text-or xl:hidden" aria-label="Ouvrir le menu">
         <Bars3Icon className="h-6 w-6" />
       </button>
@@ -78,6 +84,7 @@ export function Topbar({ title, onOpenMenu, onAddAvocat }) {
       </div>
 
       {/* Menu Document */}
+      {docs.length > 0 && (
       <div className="relative shrink-0">
         <button
           className="bpn-btn bpn-btn-ghost"
@@ -91,7 +98,7 @@ export function Topbar({ title, onOpenMenu, onAddAvocat }) {
         </button>
         {menu === "docs" && (
           <ul className="absolute right-0 top-full z-50 mt-1 w-56 overflow-hidden rounded-lg border border-grisM bg-white py-1 shadow-card">
-            {DOCS.map((d) => (
+            {docs.map((d) => (
               <li key={d.to}>
                 <button className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-encre hover:bg-grisL" onClick={() => aller(d.to)}>
                   <d.icon className="h-4 w-4 text-gris" /> {d.label}
@@ -101,6 +108,7 @@ export function Topbar({ title, onOpenMenu, onAddAvocat }) {
           </ul>
         )}
       </div>
+      )}
 
       {/* Notifications */}
       <div className="relative shrink-0">
@@ -133,10 +141,12 @@ export function Topbar({ title, onOpenMenu, onAddAvocat }) {
         )}
       </div>
 
-      <button type="button" className="bpn-btn bpn-btn-or shrink-0" onClick={onAddAvocat}>
-        <PlusIcon className="h-4 w-4" />
-        <span className="hidden sm:inline">Avocat</span>
-      </button>
+      {onAddAvocat && (
+        <button type="button" className="bpn-btn bpn-btn-or shrink-0" onClick={onAddAvocat}>
+          <PlusIcon className="h-4 w-4" />
+          <span className="hidden sm:inline">Avocat</span>
+        </button>
+      )}
 
       {/* Voile de fermeture des menus */}
       {menu && <div className="fixed inset-0 z-40" onClick={() => setMenu(null)} aria-hidden="true" />}

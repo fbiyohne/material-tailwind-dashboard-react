@@ -26,6 +26,7 @@ export function normaliserMembre(m) {
     qualite: m.qualite?.toLowerCase(),
     statut: m.statut?.toLowerCase(),
     dateInscription: dateCourte(m.dateInscription),
+    dateNaissance: dateCourte(m.dateNaissance),
     stage: m.dateServment
       ? { dateServment: dateCourte(m.dateServment), dureeMois: m.dureeMois ?? 24, maitreStage: m.maitreStage }
       : undefined,
@@ -130,3 +131,9 @@ export const listerArchives = (params = {}) => api(`/archives?${new URLSearchPar
 export const archiverDoc = (entry) => api("/archives", { method: "POST", body: entry });
 export const getParametres = () => api("/parametres");
 export const majParametres = (patch) => api("/parametres", { method: "PUT", body: patch });
+
+// ─── Utilisateurs (comptes & rôles, SG/Admin) ────────────────────────────
+export const listerUsers = () => api("/users");
+export const creerUser = (data) => api("/users", { method: "POST", body: data });
+export const majUser = (id, patch) => api(`/users/${id}`, { method: "PATCH", body: patch });
+export const resetPasswordUser = (id, password) => api(`/users/${id}/password`, { method: "POST", body: { password } });

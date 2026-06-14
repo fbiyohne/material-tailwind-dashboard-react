@@ -1,12 +1,13 @@
 import { Router } from "express";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
-import { requireAuth } from "../middleware/auth.js";
+import { requireAuth, requireRole } from "../middleware/auth.js";
 import { htmlVersPdf } from "../lib/pdf.js";
 import { recuHtml } from "../lib/templates.js";
 
 export const recusRouter = Router();
-recusRouter.use(requireAuth);
+// Données financières restreintes (RG-15) : SG, Trésorière, Admin.
+recusRouter.use(requireAuth, requireRole("SECRETAIRE_GENERAL", "TRESORIERE"));
 
 /** GET /recus/:id/pdf — reçu officiel en PDF vectoriel (Puppeteer). */
 recusRouter.get(

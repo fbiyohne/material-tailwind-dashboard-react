@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { CheckIcon, LockClosedIcon } from "@heroicons/react/24/outline";
 import { Badge, useToast } from "../components";
 import { EXERCICES } from "../data/dashboard-data";
@@ -128,8 +129,9 @@ export function Parametres() {
         </div>
         <div className="mt-4 flex items-start gap-2 rounded border-l-[3px] border-or bg-or-L px-4 py-2.5 text-xs text-gris">
           <LockClosedIcon className="mt-0.5 h-4 w-4 shrink-0 text-or" />
-          La gestion des comptes et l'authentification par rôles (JWT + RBAC) seront activées en
-          version professionnelle V2. En V1, l'application fonctionne en profil unique.
+          Authentification multi-utilisateurs (JWT + RBAC) active. La création des comptes et
+          l'attribution des rôles se font dans la page{" "}
+          <Link to="/utilisateurs" className="font-medium text-navy underline">Utilisateurs</Link>.
         </div>
       </Section>
     </div>

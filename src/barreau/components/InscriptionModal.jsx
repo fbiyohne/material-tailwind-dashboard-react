@@ -8,7 +8,8 @@ import { inscrireMembre } from "../api/resources";
 
 const vide = () => ({
   nom: "", qualite: "avocat", statut: "inscrit", cabinet: "",
-  dateInscription: new Date().toISOString().slice(0, 10), tel: "", email: "", rccm: "",
+  dateInscription: new Date().toISOString().slice(0, 10), dateNaissance: "",
+  tel: "", email: "", adresse: "", rccm: "", cnss: "", observations: "",
 });
 
 /** Formulaire d'inscription d'un avocat (flux « Inscription avocat »). */
@@ -80,8 +81,8 @@ export function InscriptionModal({ open, onClose }) {
           <input type="date" value={form.dateInscription} onChange={set("dateInscription")} className="bpn-input mt-1" />
         </label>
         <label className="block">
-          <span className="bpn-label">RCCM (le cas échéant)</span>
-          <input value={form.rccm} onChange={set("rccm")} className="bpn-input mt-1" />
+          <span className="bpn-label">Date de naissance</span>
+          <input type="date" value={form.dateNaissance} onChange={set("dateNaissance")} className="bpn-input mt-1" />
         </label>
         <label className="block">
           <span className="bpn-label">Téléphone</span>
@@ -90,6 +91,22 @@ export function InscriptionModal({ open, onClose }) {
         <label className="block">
           <span className="bpn-label">Email</span>
           <input type="email" value={form.email} onChange={set("email")} className="bpn-input mt-1" />
+        </label>
+        <label className="block sm:col-span-2">
+          <span className="bpn-label">Adresse</span>
+          <input value={form.adresse} onChange={set("adresse")} className="bpn-input mt-1" />
+        </label>
+        <label className="block">
+          <span className="bpn-label">RCCM (le cas échéant)</span>
+          <input value={form.rccm} onChange={set("rccm")} className="bpn-input mt-1" />
+        </label>
+        <label className="block">
+          <span className="bpn-label">CNSS (le cas échéant)</span>
+          <input value={form.cnss} onChange={set("cnss")} className="bpn-input mt-1" />
+        </label>
+        <label className="block sm:col-span-2">
+          <span className="bpn-label">Observations</span>
+          <textarea rows={2} value={form.observations} onChange={set("observations")} className="bpn-input mt-1" />
         </label>
       </div>
     </Modal>
