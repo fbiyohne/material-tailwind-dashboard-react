@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { KeyIcon, CheckIcon } from "@heroicons/react/24/outline";
+import { KeyIcon, CheckIcon, EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import { Badge, useToast } from "../components";
 import { useAuth } from "../auth/AuthContext";
 import { changerMotDePasse } from "../api/resources";
@@ -14,16 +14,29 @@ const ROLE_TON = { SECRETAIRE_GENERAL: "vert", BATONNIER: "bleu", TRESORIERE: "o
 
 const vide = () => ({ currentPassword: "", newPassword: "", confirm: "" });
 
+/** Ligne d'un critère de validation du nouveau mot de passe. */
+function Critere({ ok, children }) {
+  return (
+    <li className={`flex items-center gap-1.5 text-xs ${ok ? "text-vert" : "text-gris"}`}>
+      <CheckIcon className={`h-3.5 w-3.5 shrink-0 ${ok ? "opacity-100" : "opacity-30"}`} />
+      {children}
+    </li>
+  );
+}
+
 /** Mon compte — informations du profil et changement de mot de passe en libre-service. */
 export function Profil() {
   const toast = useToast();
   const { user } = useAuth();
   const [form, setForm] = useState(vide());
   const [loading, setLoading] = useState(false);
+  const [montrer, setMontrer] = useState(false);
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
-  const valide =
-    form.currentPassword.length >= 1 && form.newPassword.length >= 6 && form.newPassword === form.confirm;
+  const assezLong = form.newPassword.length >= 6;
+  const different = form.newPassword.length > 0 && form.newPassword !== form.currentPassword;
+  const correspond = form.confirm.length > 0 && form.newPassword === form.confirm;
+  const valide = form.currentPassword.length >= 1 && assezLong && different && correspond;
 
   const enregistrer = async () => {
     if (!valide) return;
@@ -60,23 +73,33 @@ export function Profil() {
         </div>
 
         <div className="bpn-card">
-          <div className="bpn-card-header"><span className="bpn-card-heading">Changer mon mot de passe</span></div>
-          <div className="space-y-3 p-4">
+          <div className="bpn-card-header">
+            <span className="bpn-card-heading">Changer mon mot de passe</span>
+            <button type="button" onClick={() => setMontrer((v) => !v)} className="flex items-center gap-1 text-xs text-gris transition hover:text-encre">
+              {montrer ? <EyeSlashIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+              {montrer ? "Masquer" : "Afficher"}
+            </button>
+          </div>
+          <form className="space-y-3 p-4" onSubmit={(e) => { e.preventDefault(); enregistrer(); }}>
             <label className="block"><span className="bpn-label">Mot de passe actuel</span>
-              <input type="password" value={form.currentPassword} onChange={set("currentPassword")} className="bpn-input mt-1" autoComplete="current-password" /></label>
-            <label className="block"><span className="bpn-label">Nouveau mot de passe (min. 6 caractères)</span>
-              <input type="password" value={form.newPassword} onChange={set("newPassword")} className="bpn-input mt-1" autoComplete="new-password" /></label>
+              <input type={montrer ? "text" : "password"} value={form.currentPassword} onChange={set("currentPassword")} className="bpn-input mt-1" autoComplete="current-password" /></label>
+            <label className="block"><span className="bpn-label">Nouveau mot de passe</span>
+              <input type={montrer ? "text" : "password"} value={form.newPassword} onChange={set("newPassword")} className="bpn-input mt-1" autoComplete="new-password" /></label>
             <label className="block"><span className="bpn-label">Confirmer le nouveau mot de passe</span>
-              <input type="password" value={form.confirm} onChange={set("confirm")} className="bpn-input mt-1" autoComplete="new-password" /></label>
-            {form.confirm.length > 0 && form.newPassword !== form.confirm && (
-              <p className="text-xs text-rouge">Les mots de passe ne correspondent pas.</p>
+              <input type={montrer ? "text" : "password"} value={form.confirm} onChange={set("confirm")} className="bpn-input mt-1" autoComplete="new-password" /></label>
+            {form.newPassword.length > 0 && (
+              <ul className="space-y-1 pt-0.5">
+                <Critere ok={assezLong}>Au moins 6 caractères</Critere>
+                <Critere ok={different}>Différent du mot de passe actuel</Critere>
+                <Critere ok={correspond}>Les deux saisies correspondent</Critere>
+              </ul>
             )}
             <div className="flex justify-end pt-1">
-              <button className="bpn-btn bpn-btn-primary" onClick={enregistrer} disabled={!valide || loading}>
+              <button type="submit" className="bpn-btn bpn-btn-primary" disabled={!valide || loading}>
                 {loading ? "Enregistrement…" : <><KeyIcon className="h-4 w-4" /> Mettre à jour</>}
               </button>
             </div>
-          </div>
+          </form>
         </div>
       </div>
     </div>
