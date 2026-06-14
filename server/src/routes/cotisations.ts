@@ -79,6 +79,30 @@ cotisationsRouter.get(
   })
 );
 
+/**
+ * POST /cotisations/generer?annee= — lot annuel : matérialise une ligne de
+ * cotisation pour chaque avocat (hors radiés) au titre de l'exercice. Les lignes
+ * déjà existantes (paiements/validations) sont préservées ; seules les manquantes
+ * sont créées, avec le montant dû calculé d'après la qualité et les tarifs en vigueur.
+ */
+cotisationsRouter.post(
+  "/generer",
+  requireRole("SECRETAIRE_GENERAL", "TRESORIERE"),
+  asyncH(async (req, res) => {
+    const annee = Number(req.query.annee ?? new Date().getFullYear());
+    const tarifs = await tarifsActuels();
+    const membres = await prisma.membre.findMany({
+      where: { statut: { not: "RADIE" } },
+      include: { cotisations: { where: { annee } } },
+    });
+    const aCreer = membres
+      .filter((m) => m.cotisations.length === 0)
+      .map((m) => ({ membreId: m.id, annee, montantDu: montantDuAvec(tarifs, m.qualite), montantPaye: 0, valideTresoriere: false }));
+    if (aCreer.length > 0) await prisma.cotisation.createMany({ data: aCreer });
+    res.status(201).json({ annee, crees: aCreer.length, existantes: membres.length - aCreer.length, total: membres.length });
+  })
+);
+
 const paiementSchema = z.object({
   membreId: z.number().int(),
   annee: z.number().int(),

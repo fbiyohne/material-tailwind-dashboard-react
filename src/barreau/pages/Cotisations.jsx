@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { MagnifyingGlassIcon, CheckCircleIcon, EnvelopeIcon, ArrowDownTrayIcon, PrinterIcon } from "@heroicons/react/24/outline";
-import { Badge, Modal, useToast, PaiementModal, PaiementEnLigneModal, SortTh, Pagination, EtatImprimable, PageHeader, EmptyState } from "../components";
+import { MagnifyingGlassIcon, CheckCircleIcon, EnvelopeIcon, ArrowDownTrayIcon, PrinterIcon, RectangleStackIcon } from "@heroicons/react/24/outline";
+import { Badge, Modal, useToast, useConfirm, PaiementModal, PaiementEnLigneModal, SortTh, Pagination, EtatImprimable, PageHeader, EmptyState } from "../components";
 import { useDataTable } from "../hooks/useDataTable";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { STATUT_META, QUALITE_LABEL } from "../data/derivations";
 import { formatFCFA } from "../utils/format";
 import { exporterExcel, exporterPdf } from "../utils/exports";
 import { PERIODES, moisDePeriode, libellePeriode } from "../utils/periode";
-import { getCotisations, getMembre, validerCotisation, lancerRelances } from "../api/resources";
+import { getCotisations, getMembre, validerCotisation, lancerRelances, genererCotisations } from "../api/resources";
 
 const FILTRES = [
   { value: "tous", label: "Tous les statuts" },
@@ -74,6 +74,7 @@ function HistoriqueModal({ membreId, onClose }) {
 
 export function Cotisations() {
   const toast = useToast();
+  const confirm = useConfirm();
   const [params, setParams] = useSearchParams();
   const exercice = Number(params.get("exercice")) || EXERCICE_COURANT;
   const filtre = params.get("statut") || "tous";
@@ -153,6 +154,24 @@ export function Cotisations() {
         </button>
         <button className="bpn-btn bpn-btn-or !py-1.5 text-xs" onClick={() => exporterEtat("xlsx")}>
           <ArrowDownTrayIcon className="h-4 w-4" /> Excel
+        </button>
+        <button
+          className="bpn-btn bpn-btn-ghost"
+          onClick={async () => {
+            const ok = await confirm({
+              title: `Générer les cotisations ${exercice} ?`,
+              message: `Une ligne de cotisation sera créée pour chaque avocat (hors radiés) au titre de l'exercice ${exercice}. Les lignes déjà existantes (paiements, validations) sont préservées.`,
+              confirmLabel: "Générer",
+            });
+            if (!ok) return;
+            try {
+              const r = await genererCotisations(exercice);
+              toast.success(r.crees > 0 ? `${r.crees} cotisation${r.crees > 1 ? "s" : ""} générée${r.crees > 1 ? "s" : ""} (${r.existantes} déjà présentes).` : `Aucune nouvelle ligne — les ${r.existantes} cotisations existent déjà.`);
+              charger();
+            } catch (e) { toast.error(e.message); }
+          }}
+        >
+          <RectangleStackIcon className="h-4 w-4" /> Générer l'exercice
         </button>
         <button
           className="bpn-btn bpn-btn-ghost"
