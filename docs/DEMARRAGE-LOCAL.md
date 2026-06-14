@@ -6,6 +6,9 @@ Application de gestion du Secrétariat Général du **Barreau de Pointe-Noire**
 Cette procédure lance l'application **entièrement en local**, sans aucun compte
 externe : email et SMS tournent en **simulation**, les paiements en **sandbox**.
 
+> 🌐 Pour une **URL publique de démo** (gratuite), voir
+> [`DEPLOIEMENT-RENDER.md`](DEPLOIEMENT-RENDER.md).
+
 ---
 
 ## Prérequis

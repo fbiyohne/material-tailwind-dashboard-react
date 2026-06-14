@@ -1,4 +1,5 @@
 import express from "express";
+import path from "node:path";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
@@ -34,7 +35,9 @@ import { calendrierEditorialRouter } from "./routes/calendrierEditorial.js";
 export function creerApp() {
   const app = express();
   app.set("trust proxy", 1);
-  app.use(helmet());
+  // En mono-service (front servi par l'API), la CSP stricte de helmet bloque
+  // les styles en ligne de Material Tailwind : on la désactive dans ce mode.
+  app.use(helmet({ contentSecurityPolicy: env.staticDir ? false : undefined }));
   app.use(cors({ origin: env.clientOrigin }));
   // Journalisation structurée des requêtes (id de corrélation + durée + statut).
   app.use(
@@ -81,6 +84,17 @@ export function creerApp() {
   app.use("/api/signatures", signaturesRouter);
   app.use("/api/conseil", conseilRouter);
   app.use("/api/calendrier-editorial", calendrierEditorialRouter);
+
+  // Déploiement mono-service : sert le front compilé (dist) sur la même origine
+  // que l'API (pas de CORS). Les routes /api inconnues retombent sur le 404 JSON.
+  if (env.staticDir) {
+    const dist = path.resolve(env.staticDir);
+    app.use(express.static(dist));
+    app.get("*", (req, res, next) => {
+      if (req.path.startsWith("/api")) return next();
+      res.sendFile(path.join(dist, "index.html"));
+    });
+  }
 
   app.use((_req, res) => res.status(404).json({ erreur: "Ressource introuvable" }));
   app.use(errorHandler);

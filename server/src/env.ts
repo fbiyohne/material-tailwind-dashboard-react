@@ -14,4 +14,7 @@ export const env = {
   clientOrigin: requis("CLIENT_ORIGIN", "http://localhost:5173"),
   accessTtl: requis("ACCESS_TTL", "15m"),
   refreshTtlDays: Number(requis("REFRESH_TTL_DAYS", "7")),
+  // Dossier du front compilé à servir avec l'API (déploiement mono-service).
+  // Vide → l'API ne sert que /api (comportement de développement).
+  staticDir: process.env.STATIC_DIR ?? "",
 };

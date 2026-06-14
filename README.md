@@ -2,7 +2,9 @@
 > Ce dépôt héberge l'**application de gestion du Secrétariat Général du Barreau de
 > Pointe-Noire** (front React + back Node/Express/Prisma/PostgreSQL), bâtie sur ce
 > gabarit. Pour la **lancer en local** : voir **[`docs/DEMARRAGE-LOCAL.md`](docs/DEMARRAGE-LOCAL.md)**
-> (ou `./scripts/bootstrap-local.sh`). Backend : [`server/README.md`](server/README.md).
+> (ou `./scripts/bootstrap-local.sh`). Pour une **démo en ligne gratuite** :
+> **[`docs/DEPLOIEMENT-RENDER.md`](docs/DEPLOIEMENT-RENDER.md)**.
+> Backend : [`server/README.md`](server/README.md).
 >
 > _La documentation ci-dessous est celle du gabarit Material Tailwind d'origine._
 
