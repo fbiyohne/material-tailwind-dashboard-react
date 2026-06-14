@@ -95,13 +95,14 @@ disciplineRouter.patch(
   })
 );
 
-/** GET /discipline/:id/convocation/pdf — convocation disciplinaire (PDF), journalisée. */
+/** GET /discipline/:id/convocation/pdf — convocation disciplinaire (PDF), journalisée + archivée (RG-14). */
 disciplineRouter.get(
   "/:id/convocation/pdf",
   asyncH(async (req: AuthRequest, res) => {
     const d = await prisma.dossierDisciplinaire.findUnique({ where: { id: Number(req.params.id) } });
     if (!d) throw new HttpError(404, "Dossier introuvable");
     await journaliser(`Génération convocation — dossier ${d.reference}`, req.user!.id);
+    await archiver({ categorie: "Convocation disciplinaire", titre: `Convocation — dossier ${d.reference}`, reference: d.reference, date: new Date() });
     const pdf = await htmlVersPdf(convocationDisciplineHtml(d));
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="Convocation-disciplinaire-${d.reference}.pdf"`);
