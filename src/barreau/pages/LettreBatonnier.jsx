@@ -57,7 +57,7 @@ export function LettreBatonnier() {
                 <Badge ton={meta.ton}>{meta.label}</Badge>
               </div>
               <p className="mt-2 min-h-[2.5rem] text-sm text-gris">
-                <span className="text-[10px] uppercase tracking-wide text-or">Thème</span>
+                <span className="text-[11px] uppercase tracking-wide text-or">Thème</span>
                 <br />
                 {c.theme}
               </p>

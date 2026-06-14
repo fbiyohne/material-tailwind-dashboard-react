@@ -125,7 +125,7 @@ export function Recus() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[320px_1fr]">
         <div className="bpn-no-print rounded-lg bg-navy-3 p-5">
-          <div className="mb-4 text-[10px] uppercase tracking-[0.2em] text-white/40">Formulaire</div>
+          <div className="mb-4 text-[11px] uppercase tracking-[0.2em] text-white/40">Formulaire</div>
           <div className="space-y-3.5">
             <Champ label="Avocat bénéficiaire">
               <select value={membreId ?? ""} onChange={(e) => choisirMembre(Number(e.target.value))} className="bpn-input-dark">

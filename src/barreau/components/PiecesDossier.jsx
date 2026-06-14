@@ -102,7 +102,7 @@ export function PiecesDossier({ membreId, qualite, peutGerer }) {
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2 text-sm text-encre">
               {TYPE_LABEL[type] ?? type}
-              {requise && <span className="text-[10px] uppercase tracking-wide text-or">requise</span>}
+              {requise && <span className="text-[11px] uppercase tracking-wide text-or">requise</span>}
             </div>
             {piece ? (
               <div className="truncate text-[11px] text-gris">{piece.nomFichier}{piece.statut === "REJETEE" && piece.note ? ` · motif : ${piece.note}` : ""}</div>

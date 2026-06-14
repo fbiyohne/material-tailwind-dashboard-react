@@ -132,7 +132,7 @@ export function Utilisateurs() {
               const moi = u.id === courant?.id;
               return (
                 <tr key={u.id}>
-                  <td className="font-medium text-encre">{u.nom}{moi && <span className="ml-1 text-[10px] text-gris">(vous)</span>}</td>
+                  <td className="font-medium text-encre">{u.nom}{moi && <span className="ml-1 text-[11px] text-gris">(vous)</span>}</td>
                   <td className="text-gris">{u.email}</td>
                   <td>
                     <select

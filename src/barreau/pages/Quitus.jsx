@@ -111,7 +111,7 @@ export function Quitus() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[320px_1fr]">
         <div className="bpn-no-print rounded-lg bg-navy-3 p-5">
-          <div className="mb-4 text-[10px] uppercase tracking-[0.2em] text-white/40">Générer un quitus</div>
+          <div className="mb-4 text-[11px] uppercase tracking-[0.2em] text-white/40">Générer un quitus</div>
           <div className="space-y-3.5">
             <label className="block">
               <span className="mb-1 block text-[11px] uppercase tracking-wide text-white/55">Exercice</span>

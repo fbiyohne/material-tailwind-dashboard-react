@@ -80,12 +80,12 @@ export function MembreFicheModal({ membre, onClose, onAttestation }) {
       )}
 
       <div className="mt-5">
-        <div className="mb-2 text-[10px] uppercase tracking-wide text-gris">
+        <div className="mb-2 text-[11px] uppercase tracking-wide text-gris">
           Historique des cotisations
         </div>
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left text-[10px] uppercase tracking-wide text-gris">
+            <tr className="text-left text-[11px] uppercase tracking-wide text-gris">
               <th className="pb-1">Exercice</th>
               <th className="pb-1">Payé</th>
               <th className="pb-1">Statut</th>

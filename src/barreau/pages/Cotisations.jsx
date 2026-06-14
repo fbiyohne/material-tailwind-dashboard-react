@@ -44,7 +44,7 @@ function HistoriqueModal({ membreId, onClose }) {
         <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left text-[10px] uppercase tracking-wide text-gris">
+            <tr className="text-left text-[11px] uppercase tracking-wide text-gris">
               <th className="pb-2">Exercice</th><th className="pb-2">Dû</th><th className="pb-2">Payé</th><th className="pb-2">Date</th><th className="pb-2">Statut</th>
             </tr>
           </thead>

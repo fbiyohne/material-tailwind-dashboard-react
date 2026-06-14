@@ -125,7 +125,7 @@ export function ImportMembresModal({ open, onClose, onDone }) {
             </div>
             <div className="max-h-44 overflow-auto">
               <table className="w-full text-xs">
-                <thead className="text-left text-[10px] uppercase tracking-wide text-gris">
+                <thead className="text-left text-[11px] uppercase tracking-wide text-gris">
                   <tr><th className="px-3 py-1.5">N°</th><th className="px-3 py-1.5">Nom</th><th className="px-3 py-1.5">Qualité</th><th className="px-3 py-1.5">Statut</th></tr>
                 </thead>
                 <tbody>
