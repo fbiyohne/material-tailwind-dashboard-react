@@ -11,12 +11,15 @@ export const assembleesRouter = Router();
 // Module institutionnel : lecture SG/Bâtonnier (l'agenda public passe par /dashboard/agenda).
 assembleesRouter.use(requireAuth, requireRole("SECRETAIRE_GENERAL", "BATONNIER"));
 
+/** GET /assemblees/:id/convocation/pdf — convocation d'AG (PDF) + archivage auto (RG-14). */
 assembleesRouter.get("/:id/convocation/pdf", asyncH(async (req, res) => {
   const a = await prisma.assemblee.findUnique({ where: { id: Number(req.params.id) } });
   if (!a) throw new HttpError(404, "Assemblée introuvable");
+  const jour = String(a.date).slice(0, 10);
+  await archiver({ categorie: "Convocation", titre: `Convocation ${a.type} du ${jour}`, reference: `CONV-${a.type}-${jour}`, date: new Date() });
   const pdf = await htmlVersPdf(convocationAgHtml(a));
   res.setHeader("Content-Type", "application/pdf");
-  res.setHeader("Content-Disposition", `attachment; filename="Convocation-${a.type}-${String(a.date).slice(0, 10)}.pdf"`);
+  res.setHeader("Content-Disposition", `attachment; filename="Convocation-${a.type}-${jour}.pdf"`);
   res.end(pdf);
 }));
 

@@ -17,10 +17,13 @@ const envoyerPdf = (res: any, pdf: Buffer, filename: string) => {
   res.end(pdf);
 };
 
+/** GET /reunions/:id/convocation/pdf — convocation (PDF) + archivage auto (RG-14). */
 reunionsRouter.get("/:id/convocation/pdf", asyncH(async (req, res) => {
   const r = await prisma.reunion.findUnique({ where: { id: Number(req.params.id) } });
   if (!r) throw new HttpError(404, "Réunion introuvable");
-  envoyerPdf(res, await htmlVersPdf(convocationReunionHtml(r)), `Convocation-reunion-${String(r.date).slice(0, 10)}.pdf`);
+  const jour = String(r.date).slice(0, 10);
+  await archiver({ categorie: "Convocation", titre: `Convocation réunion du ${jour}`, reference: `CONV-REU-${jour}`, date: new Date() });
+  envoyerPdf(res, await htmlVersPdf(convocationReunionHtml(r)), `Convocation-reunion-${jour}.pdf`);
 }));
 
 reunionsRouter.get("/:id/feuille-presence/pdf", asyncH(async (req, res) => {
