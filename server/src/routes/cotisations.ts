@@ -3,7 +3,8 @@ import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
-import { archiver, montantDuAvec, prochainNumeroRecu, statutCotisation, tarifsActuels } from "../lib/business.js";
+import { montantDuAvec, statutCotisation, tarifsActuels } from "../lib/business.js";
+import { encaisser } from "../lib/encaissement.js";
 import { envoyerEmail, envoyerSms, modeSimulationEmail } from "../lib/notifications.js";
 
 export const cotisationsRouter = Router();
@@ -98,35 +99,7 @@ cotisationsRouter.post(
     const { membreId, annee, montant, mode, ref, date } = paiementSchema.parse(req.body);
     const membre = await prisma.membre.findUnique({ where: { id: membreId } });
     if (!membre) throw new HttpError(404, "Avocat introuvable");
-    const dateP = date ? new Date(date) : new Date();
-    const numero = await prochainNumeroRecu(annee);
-    const tarifs = await tarifsActuels();
-
-    const resultat = await prisma.$transaction(async (tx) => {
-      const cotisation = await tx.cotisation.upsert({
-        where: { membreId_annee: { membreId, annee } },
-        create: { membreId, annee, montantDu: montantDuAvec(tarifs, membre.qualite), montantPaye: montant, datePaiement: dateP, mode, ref },
-        update: { montantPaye: { increment: montant }, datePaiement: dateP, mode, ref },
-      });
-      const recu = await tx.recu.create({
-        data: { numero, membreId, montant, annee, date: dateP, mode, ref, objet: `Cotisation ordinale ${annee}` },
-      });
-      await tx.archive.create({
-        data: { categorie: "Reçu de paiement", titre: `Reçu N° ${numero} — Me ${membre.nom}`, reference: numero, date: dateP, membreNom: membre.nom },
-      });
-      return { cotisation, recu };
-    });
-
-    // Notification du reçu émis (n'échoue pas le paiement si l'envoi échoue).
-    if (membre.email) {
-      void envoyerEmail({
-        to: membre.email,
-        subject: `Reçu N° ${numero} — cotisation ${annee} · Barreau de Pointe-Noire`,
-        text: `Maître ${membre.nom},\n\nNous accusons réception de votre versement de ${montant.toLocaleString("fr-FR")} FCFA au titre de la cotisation ordinale ${annee}.\nVotre reçu officiel N° ${numero} a été établi.\n\nLe Secrétariat Général du Barreau de Pointe-Noire.`,
-        evenement: "RECU",
-      });
-    }
-
+    const resultat = await encaisser({ membre, annee, montant, type: "cotisation", mode, ref, date: date ? new Date(date) : undefined });
     res.status(201).json(resultat);
   })
 );

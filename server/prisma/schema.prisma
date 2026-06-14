@@ -100,7 +100,34 @@ model Membre {
   droitsPlaidoirie DroitPlaidoirie[]
   dossiers    DossierDisciplinaire[]
   pieces      PieceDossier[]
+  paiements   Paiement[]
   createdAt   DateTime               @default(now())
+}
+
+enum StatutPaiement {
+  INITIE
+  EN_ATTENTE
+  REUSSI
+  ECHEC
+}
+
+/// Paiement en ligne (passerelle) — cotisation ou droit de plaidoirie.
+/// À la réussite, alimente le flux d'encaissement (reçu + situation, BR-03).
+model Paiement {
+  id         Int            @id @default(autoincrement())
+  ref        String         @unique
+  canal      String // MTN, AIRTEL, CARTE, VIREMENT, SANDBOX
+  type       String // cotisation, droit
+  membre     Membre         @relation(fields: [membreId], references: [id])
+  membreId   Int
+  annee      Int
+  montant    Int
+  statut     StatutPaiement @default(INITIE)
+  recuNumero String? // reçu émis à la réussite (garantit l'idempotence)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  @@index([membreId])
 }
 
 enum StatutPiece {

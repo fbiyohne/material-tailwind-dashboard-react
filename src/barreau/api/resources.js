@@ -161,6 +161,11 @@ export const getCalendrierEditorial = () => api("/calendrier-editorial");
 export const listerArchives = (params = {}) => api(`/archives?${new URLSearchParams(params).toString()}`);
 export const archiverDoc = (entry) => api("/archives", { method: "POST", body: entry });
 export const getNotifications = () => api("/notifications");
+
+// ─── Paiements en ligne (passerelle) ─────────────────────────────────────────
+export const initierPaiement = (body) => api("/paiements/initier", { method: "POST", body });
+export const confirmerPaiementSandbox = (ref, succes = true) => api(`/paiements/${ref}/confirmer-sandbox`, { method: "POST", body: { succes } });
+export const getPaiement = (ref) => api(`/paiements/${ref}`);
 export const getParametres = () => api("/parametres");
 export const majParametres = (patch) => api("/parametres", { method: "PUT", body: patch });
 

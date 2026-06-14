@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { MagnifyingGlassIcon, CheckCircleIcon, EnvelopeIcon, ArrowDownTrayIcon, PrinterIcon } from "@heroicons/react/24/outline";
-import { Badge, Modal, useToast, PaiementModal, SortTh, Pagination, EtatImprimable, PageHeader } from "../components";
+import { Badge, Modal, useToast, PaiementModal, PaiementEnLigneModal, SortTh, Pagination, EtatImprimable, PageHeader } from "../components";
 import { useDataTable } from "../hooks/useDataTable";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { STATUT_META, QUALITE_LABEL } from "../data/derivations";
@@ -81,6 +81,7 @@ export function Cotisations() {
   const [lignes, setLignes] = useState([]);
   const [historique, setHistorique] = useState(null);
   const [paiement, setPaiement] = useState(null);
+  const [enLigne, setEnLigne] = useState(null);
 
   const charger = useCallback(() => {
     getCotisations(exercice).then(setLignes).catch((e) => toast.error(e.message));
@@ -222,7 +223,10 @@ export function Cotisations() {
                     <td className="px-3 py-2.5">
                       <div className="flex items-center justify-end gap-1.5">
                         {(l.statut === "retard" || l.statut === "partiel") && (
-                          <button type="button" onClick={() => setPaiement(l)} className="bpn-btn bpn-btn-or !px-2.5 !py-1 text-[10px]">Paiement</button>
+                          <>
+                            <button type="button" onClick={() => setPaiement(l)} className="bpn-btn bpn-btn-or !px-2.5 !py-1 text-[10px]">Paiement</button>
+                            <button type="button" onClick={() => setEnLigne(l)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-[10px]">En ligne</button>
+                          </>
                         )}
                         {l.statut === "ajour" && (l.valideTresoriere ? (
                           <button type="button" title="Validé — cliquer pour annuler" onClick={() => validerSituation(l)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-[10px] text-vert">
@@ -250,6 +254,7 @@ export function Cotisations() {
 
       <HistoriqueModal membreId={historique} onClose={() => setHistorique(null)} />
       <PaiementModal ligne={paiement} exercice={exercice} open={!!paiement} onClose={() => setPaiement(null)} onDone={charger} />
+      <PaiementEnLigneModal ligne={enLigne} exercice={exercice} type="cotisation" open={!!enLigne} onClose={() => setEnLigne(null)} onDone={charger} />
     </div>
   );
 }

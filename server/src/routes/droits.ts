@@ -3,7 +3,8 @@ import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
-import { droitDuAvec, statutCotisation, tarifsActuels, prochainNumeroRecu } from "../lib/business.js";
+import { droitDuAvec, statutCotisation, tarifsActuels } from "../lib/business.js";
+import { encaisser } from "../lib/encaissement.js";
 
 export const droitsRouter = Router();
 // Données financières restreintes (RG-15) : SG, Trésorière, Admin.
@@ -65,25 +66,7 @@ droitsRouter.post(
     const membre = await prisma.membre.findUnique({ where: { id: membreId } });
     if (!membre) throw new HttpError(404, "Avocat introuvable");
     if (membre.qualite !== "AVOCAT") throw new HttpError(400, "Seuls les avocats sont redevables du droit de plaidoirie");
-    const tarifs = await tarifsActuels();
-    const dateP = date ? new Date(date) : new Date();
-    const numero = await prochainNumeroRecu(annee);
-
-    const resultat = await prisma.$transaction(async (tx) => {
-      const droit = await tx.droitPlaidoirie.upsert({
-        where: { membreId_annee: { membreId, annee } },
-        create: { membreId, annee, montantDu: droitDuAvec(tarifs, membre.qualite), montantPaye: montant, datePaiement: dateP, mode, ref },
-        update: { montantPaye: { increment: montant }, datePaiement: dateP, mode, ref },
-      });
-      const recu = await tx.recu.create({
-        data: { numero, membreId, montant, annee, date: dateP, mode, ref, objet: `Droit de plaidoirie ${annee}` },
-      });
-      await tx.archive.create({
-        data: { categorie: "Reçu de paiement", titre: `Reçu N° ${numero} — Me ${membre.nom}`, reference: numero, date: dateP, membreNom: membre.nom },
-      });
-      return { droit, recu };
-    });
-
+    const resultat = await encaisser({ membre, annee, montant, type: "droit", mode, ref, date: date ? new Date(date) : undefined });
     res.status(201).json(resultat);
   })
 );
