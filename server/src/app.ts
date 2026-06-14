@@ -24,6 +24,8 @@ import { parametresRouter } from "./routes/parametres.js";
 import { corpsElectoralRouter } from "./routes/corpsElectoral.js";
 import { dashboardRouter } from "./routes/dashboard.js";
 import { signaturesRouter } from "./routes/signatures.js";
+import { conseilRouter } from "./routes/conseil.js";
+import { calendrierEditorialRouter } from "./routes/calendrierEditorial.js";
 
 export function creerApp() {
   const app = express();
@@ -68,6 +70,8 @@ export function creerApp() {
   app.use("/api/corps-electoral", corpsElectoralRouter);
   app.use("/api/dashboard", dashboardRouter);
   app.use("/api/signatures", signaturesRouter);
+  app.use("/api/conseil", conseilRouter);
+  app.use("/api/calendrier-editorial", calendrierEditorialRouter);
 
   app.use((_req, res) => res.status(404).json({ erreur: "Ressource introuvable" }));
   app.use(errorHandler);

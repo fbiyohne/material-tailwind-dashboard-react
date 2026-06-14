@@ -139,6 +139,29 @@ async function main() {
     ],
   });
 
+  // Composition du Conseil de l'Ordre (feuilles de présence des réunions)
+  await prisma.membreConseil.deleteMany();
+  await prisma.membreConseil.createMany({
+    data: [
+      { nom: "Me BIKINDOU Audrey Séverin", fonction: "Bâtonnier", ordre: 1 },
+      { nom: "Me ONDZE BOYA Armelle Laure Carine", fonction: "Trésorière", ordre: 2 },
+      { nom: "Me KALINA-MENGA Lionel", fonction: "Secrétaire Général", ordre: 3 },
+    ],
+  });
+
+  // Calendrier éditorial de la Lettre du Bâtonnier
+  await prisma.calendrierEditorial.deleteMany();
+  await prisma.calendrierEditorial.createMany({
+    data: [
+      { mois: "Mars 2026", theme: "Déontologie et secret professionnel", statut: "publie", ordre: 1 },
+      { mois: "Avril 2026", theme: "L'accès au droit pour tous", statut: "publie", ordre: 2 },
+      { mois: "Mai 2026", theme: "La formation continue de l'avocat", statut: "publie", ordre: 3 },
+      { mois: "Juin 2026", theme: "Le rôle social du Barreau", statut: "a_rediger", ordre: 4 },
+      { mois: "Juillet 2026", theme: "Justice et numérique au Congo", statut: "a_rediger", ordre: 5 },
+      { mois: "Août 2026", theme: "L'indépendance de la profession", statut: "a_rediger", ordre: 6 },
+    ],
+  });
+
   const nbMembres = await prisma.membre.count();
   console.log(`Seed terminé : ${nbMembres} membres, 4 utilisateurs, données institutionnelles.`);
 }

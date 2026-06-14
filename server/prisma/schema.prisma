@@ -241,3 +241,21 @@ model Parametres {
   id   Int  @id @default(1)
   data Json
 }
+
+/// Composition du Conseil de l'Ordre — alimente les feuilles de présence des réunions (FR-REU).
+model MembreConseil {
+  id       Int     @id @default(autoincrement())
+  nom      String
+  fonction String
+  ordre    Int     @default(0)
+  actif    Boolean @default(true)
+}
+
+/// Calendrier éditorial mensuel de la Lettre du Bâtonnier (FR-BAT).
+model CalendrierEditorial {
+  id     Int    @id @default(autoincrement())
+  mois   String @unique
+  theme  String
+  statut String @default("a_rediger")
+  ordre  Int    @default(0)
+}

@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SparklesIcon, DocumentTextIcon } from "@heroicons/react/24/outline";
 import { Badge, Modal } from "../components";
-import { calendrierLettre, genererBrouillonArticle } from "../data/publications";
-import { archiverDoc, genererArticleLettre } from "../api/resources";
+import { genererBrouillonArticle } from "../data/publications";
+import { archiverDoc, genererArticleLettre, getCalendrierEditorial } from "../api/resources";
 
 const STATUT_META = {
   publie: { label: "Publié", ton: "vert" },
@@ -11,9 +11,14 @@ const STATUT_META = {
 };
 
 export function LettreBatonnier() {
+  const [calendrier, setCalendrier] = useState([]);
   const [articlesLettre, setArticlesLettre] = useState({});
   const [apercu, setApercu] = useState(null); // { mois, texte, simule }
   const [chargement, setChargement] = useState(null); // mois en cours de génération
+
+  useEffect(() => {
+    getCalendrierEditorial().then(setCalendrier).catch(() => setCalendrier([]));
+  }, []);
 
   const ouvrirGeneration = async (mois, theme) => {
     const existant = articlesLettre[mois];
@@ -48,7 +53,7 @@ export function LettreBatonnier() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {calendrierLettre.map((c) => {
+        {calendrier.map((c) => {
           const genere = !!articlesLettre[c.mois];
           const meta = STATUT_META[genere ? "redige" : c.statut];
           return (

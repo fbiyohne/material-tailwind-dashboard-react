@@ -2,14 +2,11 @@ import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeftIcon, CalendarDaysIcon, MapPinIcon, CheckIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
 import { Badge, DocumentModal, useToast } from "../components";
-import { getReunion, majReunion, archiverDoc, telechargerPvReunionPdf } from "../api/resources";
+import { getReunion, majReunion, archiverDoc, telechargerPvReunionPdf, getConseil } from "../api/resources";
 
 const fmt = (d) => new Date(d).toLocaleDateString("fr-FR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
-const CONSEIL = [
-  "Me BIKINDOU Audrey Séverin — Bâtonnier",
-  "Me ONDZE BOYA Armelle Laure Carine — Trésorière",
-  "Me KALINA-MENGA Lionel — Secrétaire Général",
-];
+/** Libellé d'émargement d'un membre du Conseil — sert aussi de clé de présence. */
+const labelConseil = (c) => `${c.nom} — ${c.fonction}`;
 
 function Carte({ titre, action, children }) {
   return (
@@ -28,6 +25,7 @@ export function ReunionDetail() {
   const navigate = useNavigate();
   const toast = useToast();
   const [reunion, setReunion] = useState(null);
+  const [conseil, setConseil] = useState([]);
   const [odj, setOdj] = useState("");
   const [presences, setPresences] = useState({});
   const [pv, setPv] = useState("");
@@ -44,6 +42,12 @@ export function ReunionDetail() {
       })
       .catch(() => setReunion(false));
   }, [id]);
+
+  useEffect(() => {
+    getConseil().then(setConseil).catch(() => setConseil([]));
+  }, []);
+
+  const membresConseil = conseil.map(labelConseil);
 
   if (reunion === false) {
     return (
@@ -69,7 +73,7 @@ export function ReunionDetail() {
   const sauverPresences = async () => {
     try {
       await majReunion(reunion.id, { presences });
-      toast.success(`Présences enregistrées (${nbPresents}/${CONSEIL.length}).`);
+      toast.success(`Présences enregistrées (${nbPresents}/${membresConseil.length}).`);
     } catch (e) {
       toast.error(e.message);
     }
@@ -123,9 +127,9 @@ export function ReunionDetail() {
           <textarea rows={6} value={odj} onChange={(e) => setOdj(e.target.value)} className="bpn-input" placeholder="Un point par ligne…" />
         </Carte>
 
-        <Carte titre={`Présences (${nbPresents}/${CONSEIL.length})`} action={<button className="bpn-btn bpn-btn-primary !px-3 !py-1 text-[11px]" onClick={sauverPresences}>Enregistrer</button>}>
+        <Carte titre={`Présences (${nbPresents}/${membresConseil.length})`} action={<button className="bpn-btn bpn-btn-primary !px-3 !py-1 text-[11px]" onClick={sauverPresences}>Enregistrer</button>}>
           <ul className="space-y-2">
-            {CONSEIL.map((nom) => (
+            {membresConseil.map((nom) => (
               <li key={nom}>
                 <label className="flex cursor-pointer items-center gap-2.5 text-sm">
                   <input type="checkbox" checked={!!presences[nom]} onChange={(e) => setPresences({ ...presences, [nom]: e.target.checked })} className="h-4 w-4 accent-[#1A5C3A]" />
@@ -167,7 +171,7 @@ export function ReunionDetail() {
       >
         <table className="w-full text-[12px]">
           <thead><tr className="border-b border-navy text-left text-navy"><th className="py-1">Membre</th><th className="py-1 text-right">Émargement</th></tr></thead>
-          <tbody>{[...CONSEIL, "", "", ""].map((nom, i) => <tr key={i} className="border-b border-grisM"><td className="py-3">{nom}</td><td /></tr>)}</tbody>
+          <tbody>{[...membresConseil, "", "", ""].map((nom, i) => <tr key={i} className="border-b border-grisM"><td className="py-3">{nom}</td><td /></tr>)}</tbody>
         </table>
       </DocumentModal>
     </div>

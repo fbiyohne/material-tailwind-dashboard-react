@@ -31,17 +31,12 @@ export const publicationsInitiales = [
   },
 ];
 
-/** Calendrier éditorial mensuel de la Lettre du Bâtonnier (FR-BAT). */
-export const calendrierLettre = [
-  { mois: "Mars 2026", theme: "Déontologie et secret professionnel", statut: "publie" },
-  { mois: "Avril 2026", theme: "L'accès au droit pour tous", statut: "publie" },
-  { mois: "Mai 2026", theme: "La formation continue de l'avocat", statut: "publie" },
-  { mois: "Juin 2026", theme: "Le rôle social du Barreau", statut: "a_rediger" },
-  { mois: "Juillet 2026", theme: "Justice et numérique au Congo", statut: "a_rediger" },
-  { mois: "Août 2026", theme: "L'indépendance de la profession", statut: "a_rediger" },
-];
+/**
+ * Le calendrier éditorial de la Lettre du Bâtonnier est désormais servi par
+ * l'API (`GET /calendrier-editorial`) — voir resources.js → getCalendrierEditorial.
+ */
 
-/** Génère un projet d'article (gabarit). En V2, remplacé par l'IA (API Claude). */
+/** Génère un projet d'article (gabarit). Repli client si l'IA serveur est injoignable. */
 export function genererBrouillonArticle(mois, theme) {
   return (
     `Lettre du Bâtonnier — ${mois}\n\n` +

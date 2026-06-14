@@ -100,6 +100,9 @@ export const getReunion = (id) => api(`/reunions/${id}`);
 export const creerReunion = (data) => api("/reunions", { method: "POST", body: data });
 export const majReunion = (id, patch) => api(`/reunions/${id}`, { method: "PATCH", body: patch });
 
+// ─── Conseil de l'Ordre (feuilles de présence) ───────────────────────────
+export const getConseil = () => api("/conseil");
+
 // ─── Assemblées ───────────────────────────────────────────────────────────
 export const listerAssemblees = () => api("/assemblees");
 export const getAssemblee = (id) => api(`/assemblees/${id}`);
@@ -131,6 +134,9 @@ export const changerStatutPublication = (id, statut) =>
   api(`/publications/${id}/statut`, { method: "POST", body: { statut: statut.toUpperCase() } }).then(normPub);
 export const genererArticleLettre = (mois, theme) =>
   api("/publications/lettre/generer", { method: "POST", body: { mois, theme } });
+
+// ─── Calendrier éditorial (Lettre du Bâtonnier) ──────────────────────────
+export const getCalendrierEditorial = () => api("/calendrier-editorial");
 
 // ─── Archives / Paramètres ───────────────────────────────────────────────
 export const listerArchives = (params = {}) => api(`/archives?${new URLSearchParams(params).toString()}`);
