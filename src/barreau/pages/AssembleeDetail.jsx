@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeftIcon, PlusIcon, CheckIcon, ArrowDownTrayIcon, TrashIcon } from "@heroicons/react/24/outline";
-import { Badge, DocumentModal, useToast, useConfirm, PageHeader } from "../components";
+import { ArrowLeftIcon, PlusIcon, CheckIcon, ArrowDownTrayIcon, TrashIcon, ListBulletIcon, UserGroupIcon, ClipboardDocumentCheckIcon, DocumentTextIcon } from "@heroicons/react/24/outline";
+import { Badge, DocumentModal, useToast, useConfirm, PageHeader, Tabs } from "../components";
 import { EXERCICE_COURANT } from "../data/dashboard-data";
 import { getAssemblee, majAssemblee, getCorpsElectoral, archiverDoc, telechargerPvAgPdf, supprimerAssemblee } from "../api/resources";
 
@@ -129,50 +129,78 @@ export function AssembleeDetail() {
         )}
       </PageHeader>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <Carte titre="Ordre du jour">
-          <ol className="list-inside list-decimal space-y-1 text-sm text-encre">
-            {assemblee.ordreDuJour.map((pt, i) => <li key={i}>{pt}</li>)}
-          </ol>
-        </Carte>
-
-        <Carte titre="Quorum" action={<button className="bpn-btn bpn-btn-primary !px-3 !py-1 text-xs" onClick={sauverQuorum}>Enregistrer</button>}>
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
-              <div><span className="text-gris">Corps électoral : </span><span className="font-medium">{electeurs}</span></div>
-              <div><span className="text-gris">Quorum requis : </span><span className="font-medium">{requis}</span></div>
-            </div>
-            <label className="flex items-center gap-2 text-sm">
-              <span className="text-gris">Présents :</span>
-              <input type="number" min={0} max={electeurs} value={present} onChange={(e) => setPresent(Math.max(0, Math.min(electeurs, Number(e.target.value))))} className="bpn-input w-24 !py-1" />
-              <Badge ton={atteint ? "vert" : "rouge"}>{atteint ? "Quorum atteint" : "Quorum non atteint"}</Badge>
-            </label>
-          </div>
-        </Carte>
-      </div>
-
-      <Carte titre="Décisions">
-        <div className="mb-3 flex gap-2">
-          <input value={nouvelleDecision} onChange={(e) => setNouvelleDecision(e.target.value)} className="bpn-input flex-1" placeholder="Ajouter une décision adoptée…" onKeyDown={(e) => e.key === "Enter" && ajouterDecision()} />
-          <button className="bpn-btn bpn-btn-or" onClick={ajouterDecision}><PlusIcon className="h-4 w-4" /> Ajouter</button>
-        </div>
-        {(assemblee.decisions ?? []).length === 0 ? (
-          <p className="py-3 text-center text-sm text-gris">Aucune décision enregistrée.</p>
-        ) : (
-          <ul className="list-inside list-decimal space-y-1 text-sm text-encre">
-            {assemblee.decisions.map((d, i) => <li key={i}>{d}</li>)}
-          </ul>
-        )}
-      </Carte>
-
-      <Carte titre="Procès-verbal" action={
-        <div className="flex gap-2">
-          <button className="bpn-btn bpn-btn-ghost !px-3 !py-1 text-xs" onClick={telechargerPv}><ArrowDownTrayIcon className="h-3.5 w-3.5" /> PDF</button>
-          <button className="bpn-btn bpn-btn-or !px-3 !py-1 text-xs" onClick={sauverPv}><CheckIcon className="h-3.5 w-3.5" /> Enregistrer &amp; archiver</button>
-        </div>
-      }>
-        <textarea rows={7} value={pv} onChange={(e) => setPv(e.target.value)} className="bpn-input" placeholder="Rédiger le procès-verbal de l'assemblée…" />
-      </Carte>
+      <Tabs
+        tabs={[
+          {
+            id: "odj",
+            label: "Ordre du jour",
+            icon: ListBulletIcon,
+            content: (
+              <Carte titre="Ordre du jour">
+                <ol className="list-inside list-decimal space-y-1 text-sm text-encre">
+                  {assemblee.ordreDuJour.map((pt, i) => <li key={i}>{pt}</li>)}
+                </ol>
+              </Carte>
+            ),
+          },
+          {
+            id: "quorum",
+            label: "Quorum",
+            icon: UserGroupIcon,
+            content: (
+              <Carte titre="Quorum" action={<button className="bpn-btn bpn-btn-primary !px-3 !py-1 text-xs" onClick={sauverQuorum}>Enregistrer</button>}>
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+                    <div><span className="text-gris">Corps électoral : </span><span className="font-medium">{electeurs}</span></div>
+                    <div><span className="text-gris">Quorum requis : </span><span className="font-medium">{requis}</span></div>
+                  </div>
+                  <label className="flex items-center gap-2 text-sm">
+                    <span className="text-gris">Présents :</span>
+                    <input type="number" min={0} max={electeurs} value={present} onChange={(e) => setPresent(Math.max(0, Math.min(electeurs, Number(e.target.value))))} className="bpn-input w-24 !py-1" />
+                    <Badge ton={atteint ? "vert" : "rouge"}>{atteint ? "Quorum atteint" : "Quorum non atteint"}</Badge>
+                  </label>
+                </div>
+              </Carte>
+            ),
+          },
+          {
+            id: "decisions",
+            label: "Décisions",
+            icon: ClipboardDocumentCheckIcon,
+            badge: (assemblee.decisions ?? []).length || null,
+            content: (
+              <Carte titre="Décisions">
+                <div className="mb-3 flex gap-2">
+                  <input value={nouvelleDecision} onChange={(e) => setNouvelleDecision(e.target.value)} className="bpn-input flex-1" placeholder="Ajouter une décision adoptée…" onKeyDown={(e) => e.key === "Enter" && ajouterDecision()} />
+                  <button className="bpn-btn bpn-btn-or" onClick={ajouterDecision}><PlusIcon className="h-4 w-4" /> Ajouter</button>
+                </div>
+                {(assemblee.decisions ?? []).length === 0 ? (
+                  <p className="py-3 text-center text-sm text-gris">Aucune décision enregistrée.</p>
+                ) : (
+                  <ul className="list-inside list-decimal space-y-1 text-sm text-encre">
+                    {assemblee.decisions.map((d, i) => <li key={i}>{d}</li>)}
+                  </ul>
+                )}
+              </Carte>
+            ),
+          },
+          {
+            id: "pv",
+            label: "Procès-verbal",
+            icon: DocumentTextIcon,
+            content: (
+              <Carte titre="Procès-verbal" action={
+                <div className="flex gap-2">
+                  <button className="bpn-btn bpn-btn-ghost !px-3 !py-1 text-xs" onClick={telechargerPv}><ArrowDownTrayIcon className="h-3.5 w-3.5" /> PDF</button>
+                  <button className="bpn-btn bpn-btn-or !px-3 !py-1 text-xs" onClick={sauverPv}><CheckIcon className="h-3.5 w-3.5" /> Enregistrer &amp; archiver</button>
+                </div>
+              }>
+                <textarea rows={7} value={pv} onChange={(e) => setPv(e.target.value)} className="bpn-input" placeholder="Rédiger le procès-verbal de l'assemblée…" />
+              </Carte>
+            ),
+          },
+        ]}
+      />
 
       <DocumentModal
         open={convocation} onClose={() => setConvocation(false)} title="Convocation à l'Assemblée Générale"

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeftIcon, CalendarDaysIcon, MapPinIcon, CheckIcon, ArrowDownTrayIcon, TrashIcon } from "@heroicons/react/24/outline";
-import { Badge, DocumentModal, useToast, useConfirm, PageHeader } from "../components";
+import { ArrowLeftIcon, CalendarDaysIcon, MapPinIcon, CheckIcon, ArrowDownTrayIcon, TrashIcon, ListBulletIcon, UserGroupIcon, DocumentTextIcon } from "@heroicons/react/24/outline";
+import { Badge, DocumentModal, useToast, useConfirm, PageHeader, Tabs } from "../components";
 import { getReunion, majReunion, archiverDoc, telechargerPvReunionPdf, getConseil, supprimerReunion } from "../api/resources";
 
 const fmt = (d) => new Date(d).toLocaleDateString("fr-FR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
@@ -140,33 +140,55 @@ export function ReunionDetail() {
         )}
       </PageHeader>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <Carte titre="Ordre du jour" action={<button className="bpn-btn bpn-btn-primary !px-3 !py-1 text-xs" onClick={sauverOdj}>Enregistrer</button>}>
-          <textarea rows={6} value={odj} onChange={(e) => setOdj(e.target.value)} className="bpn-input" placeholder="Un point par ligne…" />
-        </Carte>
-
-        <Carte titre={`Présences (${nbPresents}/${membresConseil.length})`} action={<button className="bpn-btn bpn-btn-primary !px-3 !py-1 text-xs" onClick={sauverPresences}>Enregistrer</button>}>
-          <ul className="space-y-2">
-            {membresConseil.map((nom) => (
-              <li key={nom}>
-                <label className="flex cursor-pointer items-center gap-2.5 text-sm">
-                  <input type="checkbox" checked={!!presences[nom]} onChange={(e) => setPresences({ ...presences, [nom]: e.target.checked })} className="h-4 w-4 accent-vert" />
-                  <span className={presences[nom] ? "text-encre" : "text-gris"}>{nom}</span>
-                </label>
-              </li>
-            ))}
-          </ul>
-        </Carte>
-      </div>
-
-      <Carte titre="Procès-verbal" action={
-        <div className="flex gap-2">
-          <button className="bpn-btn bpn-btn-ghost !px-3 !py-1 text-xs" onClick={telechargerPv}><ArrowDownTrayIcon className="h-3.5 w-3.5" /> PDF</button>
-          <button className="bpn-btn bpn-btn-or !px-3 !py-1 text-xs" onClick={sauverPv}><CheckIcon className="h-3.5 w-3.5" /> Enregistrer &amp; archiver</button>
-        </div>
-      }>
-        <textarea rows={8} value={pv} onChange={(e) => setPv(e.target.value)} className="bpn-input" placeholder="Rédiger le procès-verbal de la réunion…" />
-      </Carte>
+      <Tabs
+        tabs={[
+          {
+            id: "odj",
+            label: "Ordre du jour",
+            icon: ListBulletIcon,
+            content: (
+              <Carte titre="Ordre du jour" action={<button className="bpn-btn bpn-btn-primary !px-3 !py-1 text-xs" onClick={sauverOdj}>Enregistrer</button>}>
+                <textarea rows={6} value={odj} onChange={(e) => setOdj(e.target.value)} className="bpn-input" placeholder="Un point par ligne…" />
+              </Carte>
+            ),
+          },
+          {
+            id: "presences",
+            label: "Présences",
+            icon: UserGroupIcon,
+            badge: `${nbPresents}/${membresConseil.length}`,
+            content: (
+              <Carte titre={`Présences (${nbPresents}/${membresConseil.length})`} action={<button className="bpn-btn bpn-btn-primary !px-3 !py-1 text-xs" onClick={sauverPresences}>Enregistrer</button>}>
+                <ul className="space-y-2">
+                  {membresConseil.map((nom) => (
+                    <li key={nom}>
+                      <label className="flex cursor-pointer items-center gap-2.5 text-sm">
+                        <input type="checkbox" checked={!!presences[nom]} onChange={(e) => setPresences({ ...presences, [nom]: e.target.checked })} className="h-4 w-4 accent-vert" />
+                        <span className={presences[nom] ? "text-encre" : "text-gris"}>{nom}</span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              </Carte>
+            ),
+          },
+          {
+            id: "pv",
+            label: "Procès-verbal",
+            icon: DocumentTextIcon,
+            content: (
+              <Carte titre="Procès-verbal" action={
+                <div className="flex gap-2">
+                  <button className="bpn-btn bpn-btn-ghost !px-3 !py-1 text-xs" onClick={telechargerPv}><ArrowDownTrayIcon className="h-3.5 w-3.5" /> PDF</button>
+                  <button className="bpn-btn bpn-btn-or !px-3 !py-1 text-xs" onClick={sauverPv}><CheckIcon className="h-3.5 w-3.5" /> Enregistrer &amp; archiver</button>
+                </div>
+              }>
+                <textarea rows={8} value={pv} onChange={(e) => setPv(e.target.value)} className="bpn-input" placeholder="Rédiger le procès-verbal de la réunion…" />
+              </Carte>
+            ),
+          },
+        ]}
+      />
 
       <DocumentModal
         open={convocation} onClose={() => setConvocation(false)} title="Convocation"
