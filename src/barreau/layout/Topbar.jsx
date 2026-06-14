@@ -12,10 +12,11 @@ import {
   ArchiveBoxIcon,
   ChevronDownIcon,
 } from "@heroicons/react/24/outline";
-import { prochainesEcheances } from "../data/dashboard-data";
-import { listerMembres } from "../api/resources";
+import { listerMembres, listerReunions, listerAssemblees } from "../api/resources";
 import { useAuth } from "../auth/AuthContext";
 import { aAcces } from "../routes";
+
+const dateCourteFr = (v) => new Date(v).toLocaleDateString("fr-FR", { day: "2-digit", month: "long" });
 
 const FINANCES = ["SECRETAIRE_GENERAL", "TRESORIERE", "ADMIN"];
 const INSTITUTIONNEL = ["SECRETAIRE_GENERAL", "BATONNIER", "ADMIN"];
@@ -35,10 +36,23 @@ export function Topbar({ title, onOpenMenu, onAddAvocat }) {
   const [q, setQ] = useState("");
   const [menu, setMenu] = useState(null); // "docs" | "notifs" | null
   const [membres, setMembres] = useState([]);
+  const [echeances, setEcheances] = useState([]);
   const docs = DOCS.filter((d) => aAcces(d, user?.role)); // RBAC : raccourcis filtrés.
 
   useEffect(() => {
     listerMembres().then((d) => setMembres(d.items)).catch(() => {});
+    // Échéances réelles : réunions + AG à venir (mêmes sources que le tableau de bord).
+    const auj = new Date().toISOString().slice(0, 10);
+    Promise.all([listerReunions().catch(() => []), listerAssemblees().catch(() => [])]).then(([reunions, assemblees]) => {
+      const items = [
+        ...reunions.map((r) => ({ date: r.date, libelle: `Réunion du Conseil${r.lieu ? ` — ${r.lieu}` : ""}` })),
+        ...assemblees.map((a) => ({ date: a.date, libelle: a.type === "AGE" ? "Assemblée Générale Extraordinaire" : "Assemblée Générale Ordinaire" })),
+      ]
+        .filter((e) => String(e.date).slice(0, 10) >= auj)
+        .sort((a, b) => (a.date < b.date ? -1 : 1))
+        .slice(0, 5);
+      setEcheances(items);
+    });
   }, []);
 
   const resultats = q.trim()
@@ -120,7 +134,7 @@ export function Topbar({ title, onOpenMenu, onAddAvocat }) {
           aria-expanded={menu === "notifs"}
         >
           <BellIcon className="h-5 w-5" />
-          {prochainesEcheances.length > 0 && (
+          {echeances.length > 0 && (
             <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-rouge ring-2 ring-white" />
           )}
         </button>
@@ -129,14 +143,18 @@ export function Topbar({ title, onOpenMenu, onAddAvocat }) {
             <div className="border-b border-grisM px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-gris">
               Prochaines échéances
             </div>
-            <ul className="divide-y divide-grisL">
-              {prochainesEcheances.map((e) => (
-                <li key={e.libelle} className="px-3 py-2.5">
-                  <div className="text-sm text-encre">{e.libelle}</div>
-                  <div className="mt-0.5 font-mono text-[11px] text-or">{e.date}</div>
-                </li>
-              ))}
-            </ul>
+            {echeances.length === 0 ? (
+              <p className="px-3 py-4 text-center text-xs text-gris">Aucune échéance à venir.</p>
+            ) : (
+              <ul className="divide-y divide-grisL">
+                {echeances.map((e) => (
+                  <li key={`${e.date}-${e.libelle}`} className="px-3 py-2.5">
+                    <div className="text-sm text-encre">{e.libelle}</div>
+                    <div className="mt-0.5 font-mono text-[11px] text-or">{dateCourteFr(e.date)}</div>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
       </div>

@@ -78,7 +78,7 @@ export function DossierDetail() {
             Mis en cause : <span className="font-medium text-encre">{dossier.avocatNom === "Confidentiel" ? "Confidentiel" : `Me ${dossier.avocatNom}`}</span> · saisine du {dossier.dateSaisine}
           </div>
         </div>
-        <button className="bpn-btn bpn-btn-danger" onClick={() => { journaliserDiscipline(`Génération convocation — dossier ${dossier.reference}`); setConvocation(true); }}>
+        <button className="bpn-btn bpn-btn-danger" onClick={() => setConvocation(true)}>
           Convocation disciplinaire
         </button>
       </div>

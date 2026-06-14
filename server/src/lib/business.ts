@@ -17,6 +17,35 @@ export function montantDu(qualite: Qualite): number {
   return TARIFS[qualite] ?? TARIFS.AVOCAT;
 }
 
+export type Tarifs = { AVOCAT: number; STAGIAIRE: number; HONORAIRE: number; droitPlaidoirie: number };
+
+/**
+ * Tarifs effectifs lus depuis la configuration (module Paramètres), avec repli
+ * sur les barèmes de référence. Source de vérité unique pour tous les calculs
+ * financiers (cotisations, droits, dashboard) — évite le formulaire « placebo ».
+ */
+export async function tarifsActuels(): Promise<Tarifs> {
+  const row = await prisma.parametres.findUnique({ where: { id: 1 } });
+  const t = ((row?.data as any)?.tarifs ?? {}) as Record<string, unknown>;
+  const n = (v: unknown, defaut: number) => (Number(v) > 0 ? Number(v) : defaut);
+  return {
+    AVOCAT: n(t.avocat, TARIFS.AVOCAT),
+    STAGIAIRE: n(t.stagiaire, TARIFS.STAGIAIRE),
+    HONORAIRE: 0,
+    droitPlaidoirie: n(t.droitsPlaidoirie, DROIT_PLAIDOIRIE),
+  };
+}
+
+/** Cotisation due selon les tarifs effectifs. */
+export function montantDuAvec(tarifs: Tarifs, qualite: Qualite): number {
+  return tarifs[qualite] ?? tarifs.AVOCAT;
+}
+
+/** Droit de plaidoirie dû selon les tarifs effectifs (seuls les avocats sont redevables). */
+export function droitDuAvec(tarifs: Tarifs, qualite: Qualite): number {
+  return qualite === "AVOCAT" ? tarifs.droitPlaidoirie : 0;
+}
+
 export type StatutCotisation = "ajour" | "partiel" | "retard" | "exonere";
 
 /** Statut dérivé d'une cotisation (BR-07/08). */
@@ -74,16 +103,6 @@ export async function prochainNumeroAttestation(): Promise<string> {
     where: { categorie: "Attestation d'inscription", reference: { startsWith: `ATT-${annee}-` } },
   });
   return `ATT-${annee}-${pad(n + 1, 3)}`;
-}
-
-// ─── Droits de plaidoirie (FR-DROITS) ────────────────────────────────────────
-export function droitDu(qualite: Qualite): number {
-  return qualite === "AVOCAT" ? DROIT_PLAIDOIRIE : 0;
-}
-/** Encaissement simulé déterministe (prototype). */
-export function droitPaye(membreId: number, annee: number): number {
-  const du = DROIT_PLAIDOIRIE;
-  return [0, Math.round(du / 2), du][(membreId + annee) % 3];
 }
 
 // ─── Corps électoral (RG-04, RG-05) ──────────────────────────────────────────

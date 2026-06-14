@@ -46,8 +46,8 @@ publicationsRouter.patch("/:id", requireRole("SECRETAIRE_GENERAL"), asyncH(async
 
 const statutSchema = z.object({ statut: z.enum(["BROUILLON", "A_VALIDER", "VALIDE", "PUBLIE"]) });
 
-/** Workflow de validation : le passage à VALIDE requiert le Bâtonnier. */
-publicationsRouter.post("/:id/statut", asyncH(async (req, res) => {
+/** Workflow de validation : transition réservée SG/Bâtonnier ; VALIDE requiert le Bâtonnier. */
+publicationsRouter.post("/:id/statut", requireRole("SECRETAIRE_GENERAL", "BATONNIER"), asyncH(async (req, res) => {
   const { statut } = statutSchema.parse(req.body);
   const role = (req as any).user?.role;
   if (statut === "VALIDE" && role !== "BATONNIER" && role !== "ADMIN") {

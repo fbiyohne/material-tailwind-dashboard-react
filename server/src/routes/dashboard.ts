@@ -2,7 +2,7 @@ import { Router } from "express";
 import { prisma } from "../prisma.js";
 import { asyncH } from "../middleware/error.js";
 import { requireAuth } from "../middleware/auth.js";
-import { montantDu, statutCotisation } from "../lib/business.js";
+import { montantDuAvec, statutCotisation, tarifsActuels } from "../lib/business.js";
 
 export const dashboardRouter = Router();
 dashboardRouter.use(requireAuth);
@@ -12,6 +12,7 @@ dashboardRouter.get(
   "/",
   asyncH(async (req, res) => {
     const annee = Number(req.query.annee ?? new Date().getFullYear());
+    const tarifs = await tarifsActuels();
     const membres = await prisma.membre.findMany({ include: { cotisations: { where: { annee } } } });
 
     let inscrits = 0;
@@ -24,7 +25,7 @@ dashboardRouter.get(
     for (const m of membres) {
       if (m.qualite === "AVOCAT") inscrits += 1;
       if (m.qualite === "STAGIAIRE") stagiaires += 1;
-      const montantDuM = montantDu(m.qualite);
+      const montantDuM = m.cotisations[0]?.montantDu ?? montantDuAvec(tarifs, m.qualite);
       const paye = m.cotisations[0]?.montantPaye ?? 0;
       du += montantDuM;
       payees += paye;

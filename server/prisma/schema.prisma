@@ -97,8 +97,24 @@ model Membre {
   cotisations Cotisation[]
   recus       Recu[]
   quitus      Quitus[]
+  droitsPlaidoirie DroitPlaidoirie[]
   dossiers    DossierDisciplinaire[]
   createdAt   DateTime               @default(now())
+}
+
+model DroitPlaidoirie {
+  id           Int       @id @default(autoincrement())
+  membre       Membre    @relation(fields: [membreId], references: [id], onDelete: Cascade)
+  membreId     Int
+  annee        Int
+  montantDu    Int
+  montantPaye  Int       @default(0)
+  datePaiement DateTime?
+  mode         String?
+  ref          String?
+
+  @@unique([membreId, annee])
+  @@index([annee])
 }
 
 model Cotisation {

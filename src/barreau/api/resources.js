@@ -85,6 +85,7 @@ export const genererQuitus = (membreId, annee) => api("/quitus", { method: "POST
 
 // ─── Droits / Corps électoral / Dashboard ────────────────────────────────
 export const getDroits = (annee) => api(`/droits?annee=${annee}`);
+export const enregistrerPaiementDroit = (payload) => api("/droits/paiement", { method: "POST", body: payload });
 export const getCorpsElectoral = (annee) => api(`/corps-electoral?annee=${annee}`);
 export const getJournalAudit = (limit = 12) => api(`/dashboard/journal?limit=${limit}`);
 

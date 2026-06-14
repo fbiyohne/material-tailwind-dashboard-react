@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
-import { Badge, StatCard, SortTh, Pagination, useToast } from "../components";
+import { useCallback, useEffect, useState } from "react";
+import { BanknotesIcon } from "@heroicons/react/24/outline";
+import { Badge, StatCard, SortTh, Pagination, PaiementModal, useToast } from "../components";
 import { useDataTable } from "../hooks/useDataTable";
 import { STATUT_META } from "../data/derivations";
 import { EXERCICES } from "../data/dashboard-data";
@@ -19,12 +20,14 @@ export function DroitsPlaidoirie() {
   const [exercice, setExercice] = useState(2026);
   const [lignes, setLignes] = useState([]);
   const [totaux, setTotaux] = useState({ du: 0, paye: 0, solde: 0 });
+  const [paiement, setPaiement] = useState(null);
 
-  useEffect(() => {
+  const charger = useCallback(() => {
     getDroits(exercice)
       .then((d) => { setLignes(d.lignes); setTotaux(d.totaux); })
       .catch((e) => toast.error(e.message));
   }, [exercice, toast]);
+  useEffect(() => { charger(); }, [charger]);
 
   const { rows, total, page, setPage, totalPages, sortKey, sortDir, toggleSort } = useDataTable(lignes, {
     accessors: ACCESSORS, pageSize: 10, initialSort: { key: "num", dir: "asc" },
@@ -68,6 +71,7 @@ export function DroitsPlaidoirie() {
                 <SortTh label="Perçu" sortKey="paye" current={sortKey} dir={sortDir} onSort={toggleSort} />
                 <SortTh label="Solde" sortKey="solde" current={sortKey} dir={sortDir} onSort={toggleSort} />
                 <SortTh label="Statut" sortKey="statut" current={sortKey} dir={sortDir} onSort={toggleSort} />
+                <th className="px-3 py-2.5 text-right font-medium">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -85,6 +89,15 @@ export function DroitsPlaidoirie() {
                       {l.solde ? formatFCFA(l.solde) : "✓ Soldé"}
                     </td>
                     <td className="px-3 py-2.5"><Badge ton={meta.ton}>{meta.label}</Badge></td>
+                    <td className="px-3 py-2.5 text-right">
+                      {l.solde > 0 ? (
+                        <button className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-[11px]" onClick={() => setPaiement(l)}>
+                          <BanknotesIcon className="h-3.5 w-3.5" /> Encaisser
+                        </button>
+                      ) : (
+                        <span className="text-[11px] text-vert">✓ Soldé</span>
+                      )}
+                    </td>
                   </tr>
                 );
               })}
@@ -93,6 +106,15 @@ export function DroitsPlaidoirie() {
         </div>
         <Pagination page={page} totalPages={totalPages} total={total} onPage={setPage} libelle="avocats" />
       </div>
+
+      <PaiementModal
+        ligne={paiement}
+        exercice={exercice}
+        type="droit"
+        open={!!paiement}
+        onClose={() => setPaiement(null)}
+        onDone={charger}
+      />
     </div>
   );
 }

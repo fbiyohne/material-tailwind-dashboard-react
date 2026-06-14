@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
-import { archiver, montantDu, prochainNumeroRecu, statutCotisation } from "../lib/business.js";
+import { archiver, montantDuAvec, prochainNumeroRecu, statutCotisation, tarifsActuels } from "../lib/business.js";
 import { envoyerMail, modeSimulation } from "../lib/mail.js";
 
 export const cotisationsRouter = Router();
@@ -16,10 +16,11 @@ cotisationsRouter.post(
   requireRole("SECRETAIRE_GENERAL", "TRESORIERE"),
   asyncH(async (req, res) => {
     const annee = Number(req.query.annee ?? new Date().getFullYear());
+    const tarifs = await tarifsActuels();
     const membres = await prisma.membre.findMany({ include: { cotisations: { where: { annee } } } });
     const cibles = membres.filter((m) => {
       const c = m.cotisations[0];
-      const du = c?.montantDu ?? montantDu(m.qualite);
+      const du = c?.montantDu ?? montantDuAvec(tarifs, m.qualite);
       const st = statutCotisation(du, c?.montantPaye ?? 0);
       return (st === "retard" || st === "partiel") && m.email;
     });
@@ -27,7 +28,7 @@ cotisationsRouter.post(
     let envoyes = 0;
     for (const m of cibles) {
       const c = m.cotisations[0];
-      const du = c?.montantDu ?? montantDu(m.qualite);
+      const du = c?.montantDu ?? montantDuAvec(tarifs, m.qualite);
       const solde = du - (c?.montantPaye ?? 0);
       await envoyerMail({
         to: m.email!,
@@ -45,13 +46,14 @@ cotisationsRouter.get(
   "/",
   asyncH(async (req, res) => {
     const annee = Number(req.query.annee ?? new Date().getFullYear());
+    const tarifs = await tarifsActuels();
     const membres = await prisma.membre.findMany({
       orderBy: { num: "asc" },
       include: { cotisations: { where: { annee } } },
     });
     const lignes = membres.map((m) => {
       const c = m.cotisations[0];
-      const du = c?.montantDu ?? montantDu(m.qualite);
+      const du = c?.montantDu ?? montantDuAvec(tarifs, m.qualite);
       const paye = c?.montantPaye ?? 0;
       return {
         membre: { id: m.id, num: m.num, nom: m.nom, qualite: m.qualite, cabinet: m.cabinet },
@@ -89,11 +91,12 @@ cotisationsRouter.post(
     if (!membre) throw new HttpError(404, "Avocat introuvable");
     const dateP = date ? new Date(date) : new Date();
     const numero = await prochainNumeroRecu();
+    const tarifs = await tarifsActuels();
 
     const resultat = await prisma.$transaction(async (tx) => {
       const cotisation = await tx.cotisation.upsert({
         where: { membreId_annee: { membreId, annee } },
-        create: { membreId, annee, montantDu: montantDu(membre.qualite), montantPaye: montant, datePaiement: dateP, mode, ref },
+        create: { membreId, annee, montantDu: montantDuAvec(tarifs, membre.qualite), montantPaye: montant, datePaiement: dateP, mode, ref },
         update: { montantPaye: { increment: montant }, datePaiement: dateP, mode, ref },
       });
       const recu = await tx.recu.create({
@@ -120,9 +123,10 @@ cotisationsRouter.post(
     const { annee, valide } = validationSchema.parse(req.body);
     const membre = await prisma.membre.findUnique({ where: { id: membreId } });
     if (!membre) throw new HttpError(404, "Avocat introuvable");
+    const tarifs = await tarifsActuels();
     const cotisation = await prisma.cotisation.upsert({
       where: { membreId_annee: { membreId, annee } },
-      create: { membreId, annee, montantDu: montantDu(membre.qualite), montantPaye: 0, valideTresoriere: valide },
+      create: { membreId, annee, montantDu: montantDuAvec(tarifs, membre.qualite), montantPaye: 0, valideTresoriere: valide },
       update: { valideTresoriere: valide },
     });
     res.json(cotisation);

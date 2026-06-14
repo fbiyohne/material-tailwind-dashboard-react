@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "../src/prisma.js";
-import { montantDu } from "../src/lib/business.js";
+import { montantDu, DROIT_PLAIDOIRIE } from "../src/lib/business.js";
 // Réutilise les données d'échantillon du front (source unique pour le prototype).
 import { membres as membresFront } from "../../src/barreau/data/membres.js";
 
@@ -28,6 +28,7 @@ async function main() {
     prisma.quitus.deleteMany(),
     prisma.recu.deleteMany(),
     prisma.cotisation.deleteMany(),
+    prisma.droitPlaidoirie.deleteMany(),
     prisma.dossierDisciplinaire.deleteMany(),
     prisma.membre.deleteMany(),
     prisma.user.deleteMany(),
@@ -77,6 +78,21 @@ async function main() {
           mode: paiement.mode ?? null,
           ref: paiement.ref ?? null,
           valideTresoriere: a === 2026 && VALIDES_2026.has(m.num),
+        },
+      });
+    }
+
+    // Droits de plaidoirie 2026 (avocats) — données réelles persistées (FR-DROITS).
+    if (qualite === "AVOCAT") {
+      const paye = [0, Math.round(DROIT_PLAIDOIRIE / 2), DROIT_PLAIDOIRIE][m.num % 3];
+      await prisma.droitPlaidoirie.create({
+        data: {
+          membreId: membre.id,
+          annee: 2026,
+          montantDu: DROIT_PLAIDOIRIE,
+          montantPaye: paye,
+          datePaiement: paye ? new Date("2026-03-15") : null,
+          mode: paye ? "Espèces" : null,
         },
       });
     }

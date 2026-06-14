@@ -4,6 +4,7 @@ import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 import { allModules, detailRoutes, aAcces } from "../routes";
 import Placeholder from "../pages/Placeholder";
+import NotFound from "../pages/NotFound";
 import { InscriptionModal } from "../components";
 import { useAuth } from "../auth/AuthContext";
 
@@ -58,7 +59,7 @@ export function BarreauLayout() {
             {detailRoutes.map(({ path, element }) => (
               <Route key={path} path={path} element={element} />
             ))}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
       </div>
