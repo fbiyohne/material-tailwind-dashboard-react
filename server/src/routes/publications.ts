@@ -6,7 +6,8 @@ import { requireAuth, requireRole } from "../middleware/auth.js";
 import { genererArticleLettre, iaDisponible } from "../lib/ia.js";
 
 export const publicationsRouter = Router();
-publicationsRouter.use(requireAuth);
+// Module institutionnel (Documents) : réservé SG/Bâtonnier comme au front (RG-15).
+publicationsRouter.use(requireAuth, requireRole("SECRETAIRE_GENERAL", "BATONNIER"));
 
 /** POST /publications/lettre/generer — projet d'article IA (FR-BAT-01 / CDC §2.15). */
 const lettreSchema = z.object({ mois: z.string().min(1), theme: z.string().min(1) });

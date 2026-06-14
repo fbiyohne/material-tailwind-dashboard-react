@@ -4,7 +4,8 @@ import { asyncH } from "../middleware/error.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 
 export const parametresRouter = Router();
-parametresRouter.use(requireAuth);
+// Configuration système (tarifs, identité) : réservé SG/Admin comme au front.
+parametresRouter.use(requireAuth, requireRole("SECRETAIRE_GENERAL"));
 
 const DEFAUT = {
   tarifs: { avocat: 150000, stagiaire: 75000, droitsPlaidoirie: 60000 },
