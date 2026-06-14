@@ -260,3 +260,24 @@ model CalendrierEditorial {
   statut String @default("a_rediger")
   ordre  Int    @default(0)
 }
+
+enum StatutDemande {
+  EN_ATTENTE
+  APPROUVEE
+  REFUSEE
+}
+
+/// Demande d'accès soumise publiquement (page « Demander un accès »).
+/// Ne crée aucun compte : la demande est mise en file d'attente puis validée
+/// par le SG/Admin, qui provisionne le compte (cloisonnement RBAC).
+model DemandeAcces {
+  id             Int           @id @default(autoincrement())
+  nom            String
+  email          String
+  numInscription String?
+  cabinet        String?
+  motif          String
+  statut         StatutDemande @default(EN_ATTENTE)
+  createdAt      DateTime      @default(now())
+  traiteeAt      DateTime?
+}

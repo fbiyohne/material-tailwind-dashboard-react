@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
-import { UserPlusIcon, KeyIcon, CheckIcon } from "@heroicons/react/24/outline";
+import { UserPlusIcon, KeyIcon, CheckIcon, XMarkIcon, InboxArrowDownIcon, IdentificationIcon, BuildingOffice2Icon } from "@heroicons/react/24/outline";
 import { Badge, Modal, useToast } from "../components";
 import { useAuth } from "../auth/AuthContext";
-import { listerUsers, creerUser, majUser, resetPasswordUser } from "../api/resources";
+import {
+  listerUsers, creerUser, majUser, resetPasswordUser,
+  listerDemandesAcces, approuverDemandeAcces, refuserDemandeAcces,
+} from "../api/resources";
 
 const ROLE_LABEL = {
   SECRETAIRE_GENERAL: "Secrétaire Général",
@@ -12,19 +15,29 @@ const ROLE_LABEL = {
 };
 const ROLES = Object.keys(ROLE_LABEL);
 
-const videCreation = () => ({ nom: "", email: "", role: "SECRETAIRE_GENERAL", password: "" });
+const videCreation = (prefill = {}) => ({ nom: "", email: "", role: "SECRETAIRE_GENERAL", password: "", demandeId: null, ...prefill });
+
+const formatDate = (iso) => new Date(iso).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" });
 
 /** Gestion des comptes utilisateurs et des rôles (CDC §5.1). Réservé SG/Admin. */
 export function Utilisateurs() {
   const toast = useToast();
   const { user: courant } = useAuth();
   const [users, setUsers] = useState([]);
+  const [demandes, setDemandes] = useState([]);
   const [creation, setCreation] = useState(null); // form objet ou null
   const [motDePasse, setMotDePasse] = useState(null); // { id, nom, password }
   const [loading, setLoading] = useState(false);
 
   const charger = () => listerUsers().then(setUsers).catch((e) => toast.error(e.message));
-  useEffect(() => { charger(); /* eslint-disable-line */ }, []);
+  const chargerDemandes = () => listerDemandesAcces("EN_ATTENTE").then(setDemandes).catch((e) => toast.error(e.message));
+  useEffect(() => { charger(); chargerDemandes(); /* eslint-disable-line */ }, []);
+
+  const provisionner = (d) => setCreation(videCreation({ nom: d.nom, email: d.email, demandeId: d.id }));
+  const refuser = async (d) => {
+    try { await refuserDemandeAcces(d.id); await chargerDemandes(); toast.success(`Demande de ${d.nom} refusée.`); }
+    catch (e) { toast.error(e.message); }
+  };
 
   const changerRole = async (u, role) => {
     try { setUsers(await majUser(u.id, { role }).then(() => listerUsers())); toast.success(`Rôle mis à jour — ${u.nom}.`); }
@@ -38,7 +51,10 @@ export function Utilisateurs() {
   const enregistrerCreation = async () => {
     setLoading(true);
     try {
-      await creerUser(creation);
+      const { demandeId, ...payload } = creation;
+      await creerUser(payload);
+      // Si le compte provient d'une demande d'accès, on la marque approuvée.
+      if (demandeId) { await approuverDemandeAcces(demandeId); await chargerDemandes(); }
       toast.success(`Compte créé — ${creation.nom}.`);
       setCreation(null);
       await charger();
@@ -68,6 +84,43 @@ export function Utilisateurs() {
           <UserPlusIcon className="h-4 w-4" /> Nouveau compte
         </button>
       </div>
+
+      {demandes.length > 0 && (
+        <div className="bpn-card">
+          <div className="bpn-card-header">
+            <span className="bpn-card-heading flex items-center gap-2">
+              <InboxArrowDownIcon className="h-4 w-4 text-or" /> Demandes d'accès
+            </span>
+            <Badge ton="or">{demandes.length} en attente</Badge>
+          </div>
+          <ul className="divide-y divide-grisL">
+            {demandes.map((d) => (
+              <li key={d.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span className="font-medium text-encre">{d.nom}</span>
+                    <span className="text-sm text-gris">{d.email}</span>
+                    <span className="text-[11px] text-gris">· {formatDate(d.createdAt)}</span>
+                  </div>
+                  <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] text-gris">
+                    {d.numInscription && <span className="inline-flex items-center gap-1"><IdentificationIcon className="h-3.5 w-3.5" /> {d.numInscription}</span>}
+                    {d.cabinet && <span className="inline-flex items-center gap-1"><BuildingOffice2Icon className="h-3.5 w-3.5" /> {d.cabinet}</span>}
+                  </div>
+                  {d.motif && <p className="mt-1.5 max-w-prose text-sm text-encre/80">{d.motif}</p>}
+                </div>
+                <div className="flex shrink-0 gap-2">
+                  <button className="bpn-btn bpn-btn-or !py-1.5 text-[11px]" onClick={() => provisionner(d)}>
+                    <CheckIcon className="h-3.5 w-3.5" /> Créer le compte
+                  </button>
+                  <button className="bpn-btn bpn-btn-ghost !py-1.5 text-[11px]" onClick={() => refuser(d)}>
+                    <XMarkIcon className="h-3.5 w-3.5" /> Refuser
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="bpn-card overflow-x-auto">
         <table className="bpn-table">
@@ -124,7 +177,7 @@ export function Utilisateurs() {
       <Modal
         open={!!creation}
         onClose={() => setCreation(null)}
-        title="Nouveau compte"
+        title={creation?.demandeId ? `Provisionner l'accès — ${creation.nom || "demande"}` : "Nouveau compte"}
         footer={
           <button className="bpn-btn bpn-btn-or" onClick={enregistrerCreation}
             disabled={loading || !creation?.nom?.trim() || !creation?.email?.trim() || (creation?.password?.length ?? 0) < 8}>

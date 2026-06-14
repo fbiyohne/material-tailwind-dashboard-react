@@ -176,6 +176,28 @@
   select.bpn-input-dark option {
     @apply bg-navy-3 text-white;
   }
+
+  /* ─── Pages d'authentification (split-screen institutionnel) ──────────── */
+  /* Champ sombre soigné : icône à gauche, anneau de focus or, état erreur. */
+  .auth-input {
+    @apply w-full rounded-lg border border-white/[0.12] bg-white/[0.04] py-2.5 pl-10 pr-3 text-sm text-white outline-none transition-all duration-150 placeholder:text-white/25 focus:border-or focus:bg-white/[0.07] focus:shadow-[0_0_0_3px_rgba(196,153,10,0.18)];
+  }
+  .auth-input.is-error {
+    @apply border-[#c2554f] focus:border-[#c2554f] focus:shadow-[0_0_0_3px_rgba(194,85,79,0.22)];
+  }
+  textarea.auth-input {
+    @apply pl-3 pt-2.5 leading-relaxed;
+  }
+  /* Révélation orchestrée au chargement (durée/easing uniques) — désactivée
+     sous prefers-reduced-motion par la règle globale plus haut. */
+  @keyframes authReveal {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: none; }
+  }
+  .auth-reveal {
+    opacity: 0;
+    animation: authReveal 0.62s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
 }
 
 /* ─── Impression d'un document officiel — masquage total de l'interface

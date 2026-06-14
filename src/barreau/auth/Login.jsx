@@ -1,6 +1,9 @@
 import { useState } from "react";
-import { ScaleIcon, ArrowRightIcon } from "@heroicons/react/24/outline";
+import PropTypes from "prop-types";
+import { EnvelopeIcon, LockClosedIcon, EyeIcon, EyeSlashIcon, ArrowRightIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "./AuthContext";
+import { AuthLayout } from "./AuthLayout";
+import { Field } from "./Field";
 import { Button } from "../components";
 
 const COMPTES = [
@@ -9,10 +12,11 @@ const COMPTES = [
   { email: "batonnier@barreau-pn.cg", role: "Bâtonnier" },
 ];
 
-export function Login() {
+export function Login({ onDemande }) {
   const { login } = useAuth();
   const [email, setEmail] = useState("sg@barreau-pn.cg");
   const [password, setPassword] = useState("barreau");
+  const [voirMdp, setVoirMdp] = useState(false);
   const [erreur, setErreur] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -23,58 +27,99 @@ export function Login() {
     try {
       await login(email, password);
     } catch (err) {
-      setErreur(err.message || "Échec de la connexion");
+      setErreur(err.message || "Identifiants invalides. Vérifiez votre email et votre mot de passe.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-navy-3 p-4" style={{ backgroundImage: "radial-gradient(ellipse 80% 60% at 50% 30%, rgba(196,153,10,.08) 0%, transparent 70%)" }}>
-      <div className="w-full max-w-md">
-        <div className="mb-6 flex flex-col items-center text-center">
-          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-or/40 bg-navy-2 shadow-[0_0_0_4px_rgba(196,153,10,0.08)]">
-            <ScaleIcon className="h-8 w-8 text-or-2" />
+    <AuthLayout
+      devise="La probité, l'indépendance et l'honneur sont les premiers devoirs de l'avocat."
+      deviseAuteur="Serment de l'avocat"
+      eyebrow="Espace sécurisé"
+      titre="Connexion"
+      sousTitre="Secrétariat Général — accès réservé aux membres du Conseil de l'Ordre."
+      pied={
+        <span>
+          Pas encore d'accès ?{" "}
+          <button type="button" onClick={onDemande} className="font-medium text-or-2 underline-offset-4 transition hover:text-or-3 hover:underline">
+            Demander un accès
+          </button>
+        </span>
+      }
+    >
+      <form onSubmit={soumettre} noValidate className="space-y-4">
+        {erreur && (
+          <div role="alert" className="flex items-start gap-2.5 rounded-lg border border-[#c2554f]/40 bg-[#c2554f]/[0.12] px-3.5 py-3 text-sm text-[#eab1ad]">
+            <ExclamationCircleIcon className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>{erreur}</span>
           </div>
-          <div className="text-[10px] uppercase tracking-[0.3em] text-or">République du Congo</div>
-          <h1 className="mt-1 font-display text-2xl text-white">Barreau de Pointe-Noire</h1>
-          <p className="mt-1 text-xs text-white/45">Secrétariat Général — accès sécurisé</p>
+        )}
+
+        <Field
+          id="login-email"
+          label="Adresse email"
+          icon={EnvelopeIcon}
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          autoComplete="username"
+          placeholder="vous@barreau-pn.cg"
+        />
+
+        <Field
+          id="login-password"
+          label="Mot de passe"
+          icon={LockClosedIcon}
+          type={voirMdp ? "text" : "password"}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          autoComplete="current-password"
+          placeholder="••••••••"
+          trailing={
+            <button
+              type="button"
+              onClick={() => setVoirMdp((v) => !v)}
+              aria-label={voirMdp ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+              className="rounded-md p-1.5 text-white/35 transition hover:text-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-or/50"
+            >
+              {voirMdp ? <EyeSlashIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+            </button>
+          }
+        />
+
+        <Button type="submit" variant="or" loading={loading} className="!w-full justify-center !rounded-lg !py-2.5 !text-sm">
+          Se connecter <ArrowRightIcon className="h-4 w-4" />
+        </Button>
+      </form>
+
+      <div className="mt-6">
+        <div className="mb-2.5 text-[10px] uppercase tracking-[0.18em] text-white/30">Comptes de démonstration · mot de passe « barreau »</div>
+        <div className="flex flex-wrap gap-2">
+          {COMPTES.map((c) => {
+            const actif = email === c.email;
+            return (
+              <button
+                key={c.email}
+                type="button"
+                onClick={() => { setEmail(c.email); setPassword("barreau"); setErreur(null); }}
+                className={`rounded-full border px-3 py-1.5 text-[11px] transition ${
+                  actif ? "border-or/60 bg-or/15 text-or-2" : "border-white/10 bg-white/[0.03] text-white/55 hover:border-or/40 hover:text-or-2"
+                }`}
+              >
+                {c.role}
+              </button>
+            );
+          })}
         </div>
-
-        <form onSubmit={soumettre} className="rounded-xl border border-white/10 bg-white/[0.04] p-6 backdrop-blur">
-          {erreur && (
-            <div className="mb-4 rounded border-l-[3px] border-rouge bg-rouge/10 px-3 py-2 text-sm text-rouge" role="alert">
-              {erreur}
-            </div>
-          )}
-          <label className="block">
-            <span className="mb-1 block text-[10px] uppercase tracking-wide text-white/45">Email</span>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="bpn-input-dark" autoComplete="username" />
-          </label>
-          <label className="mt-4 block">
-            <span className="mb-1 block text-[10px] uppercase tracking-wide text-white/45">Mot de passe</span>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="bpn-input-dark" autoComplete="current-password" />
-          </label>
-
-          <Button type="submit" variant="or" loading={loading} className="mt-6 w-full justify-center !py-2.5">
-            Se connecter <ArrowRightIcon className="h-4 w-4" />
-          </Button>
-
-          <div className="mt-5 border-t border-white/10 pt-4">
-            <div className="mb-2 text-[10px] uppercase tracking-wide text-white/30">Comptes de démonstration (mdp : barreau)</div>
-            <div className="flex flex-wrap gap-1.5">
-              {COMPTES.map((c) => (
-                <button key={c.email} type="button" onClick={() => { setEmail(c.email); setPassword("barreau"); }}
-                  className="rounded border border-white/10 px-2 py-1 text-[11px] text-white/60 hover:border-or/40 hover:text-or-2">
-                  {c.role}
-                </button>
-              ))}
-            </div>
-          </div>
-        </form>
       </div>
-    </div>
+    </AuthLayout>
   );
 }
+
+Login.propTypes = { onDemande: PropTypes.func };
 
 export default Login;

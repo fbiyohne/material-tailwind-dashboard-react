@@ -1,7 +1,7 @@
 import BarreauLayout from "@/barreau/layout/BarreauLayout";
 import { ErrorBoundary, ToastProvider, ConfirmProvider } from "@/barreau/components";
 import { AuthProvider, useAuth } from "@/barreau/auth/AuthContext";
-import { Login } from "@/barreau/auth/Login";
+import { AuthShell } from "@/barreau/auth/AuthShell";
 
 function Splash() {
   return (
@@ -15,7 +15,7 @@ function Splash() {
 function AuthGate() {
   const { user, loading } = useAuth();
   if (loading) return <Splash />;
-  if (!user) return <Login />;
+  if (!user) return <AuthShell />;
   return (
     <ConfirmProvider>
       <BarreauLayout />

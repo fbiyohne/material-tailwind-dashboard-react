@@ -67,6 +67,12 @@ export const radierMembre = (id) => api(`/membres/${id}/radier`, { method: "POST
 export const importerMembres = (membres) => api("/membres/import", { method: "POST", body: { membres } });
 export const genererAttestation = (id) => api(`/membres/${id}/attestation`, { method: "POST" });
 
+// ─── Demandes d'accès (page publique « Demander un accès ») ──────────────────
+export const soumettreDemandeAcces = (body) => api("/auth/demande-acces", { method: "POST", auth: false, body });
+export const listerDemandesAcces = (statut) => api(`/demandes-acces${statut ? `?statut=${statut}` : ""}`);
+export const approuverDemandeAcces = (id) => api(`/demandes-acces/${id}/approuver`, { method: "POST" });
+export const refuserDemandeAcces = (id) => api(`/demandes-acces/${id}/refuser`, { method: "POST" });
+
 // ─── Cotisations ─────────────────────────────────────────────────────────
 export async function getCotisations(annee) {
   const data = await api(`/cotisations?annee=${annee}`);

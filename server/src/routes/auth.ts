@@ -27,6 +27,35 @@ authRouter.post(
   })
 );
 
+// Anti-spam sur les demandes d'accès publiques (5 demandes / heure / IP).
+const demandeLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 5, standardHeaders: true, legacyHeaders: false, message: { erreur: "Trop de demandes envoyées, réessayez plus tard." } });
+
+const vide = (s?: string) => (s && s.trim() ? s.trim() : undefined);
+const demandeSchema = z.object({
+  nom: z.string().min(2, "Nom requis").max(120),
+  email: z.string().email("Email invalide"),
+  numInscription: z.string().max(40).optional(),
+  cabinet: z.string().max(160).optional(),
+  motif: z.string().min(10, "Motif trop court").max(2000),
+});
+
+/**
+ * POST /auth/demande-acces — demande d'accès publique (page « Demander un accès »).
+ * Ne crée aucun compte : la demande est enregistrée EN_ATTENTE pour validation
+ * par le SG/Admin (cloisonnement RBAC). Réponse volontairement minimale.
+ */
+authRouter.post(
+  "/demande-acces",
+  demandeLimiter,
+  asyncH(async (req, res) => {
+    const data = demandeSchema.parse(req.body);
+    await prisma.demandeAcces.create({
+      data: { nom: data.nom.trim(), email: data.email.trim().toLowerCase(), motif: data.motif.trim(), numInscription: vide(data.numInscription), cabinet: vide(data.cabinet) },
+    });
+    res.status(201).json({ ok: true });
+  })
+);
+
 const refreshSchema = z.object({ refreshToken: z.string().min(1) });
 
 authRouter.post(
