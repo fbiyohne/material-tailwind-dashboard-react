@@ -2,6 +2,7 @@ import { Router } from "express";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { envoyerEmail } from "../lib/notifications.js";
 
 /**
  * Revue des demandes d'accès (page publique « Demander un accès »).
@@ -24,7 +25,13 @@ demandesAccesRouter.get(
 async function trancher(id: number, statut: "APPROUVEE" | "REFUSEE") {
   const demande = await prisma.demandeAcces.findUnique({ where: { id } });
   if (!demande) throw new HttpError(404, "Demande introuvable");
-  return prisma.demandeAcces.update({ where: { id }, data: { statut, traiteeAt: new Date() } });
+  const maj = await prisma.demandeAcces.update({ where: { id }, data: { statut, traiteeAt: new Date() } });
+  // Notification de la décision au demandeur.
+  const texte = statut === "APPROUVEE"
+    ? `Bonjour ${demande.nom},\n\nVotre demande d'accès a été approuvée par le Secrétariat Général du Barreau de Pointe-Noire. Vos identifiants de connexion vous seront communiqués séparément.\n\nLe Secrétariat Général.`
+    : `Bonjour ${demande.nom},\n\nAprès examen, votre demande d'accès à l'application du Barreau de Pointe-Noire n'a pas été retenue. Pour toute précision, rapprochez-vous du Secrétariat Général.\n\nLe Secrétariat Général.`;
+  void envoyerEmail({ to: demande.email, subject: "Suite à votre demande d'accès · Barreau de Pointe-Noire", text: texte, evenement: "DEMANDE_DECISION" });
+  return maj;
 }
 
 demandesAccesRouter.post("/:id/approuver", asyncH(async (req, res) => {

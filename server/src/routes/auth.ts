@@ -6,6 +6,7 @@ import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, type AuthRequest } from "../middleware/auth.js";
 import { emettrePaire, rafraichir, revoquer } from "../lib/tokens.js";
+import { envoyerEmail } from "../lib/notifications.js";
 
 export const authRouter = Router();
 
@@ -49,8 +50,16 @@ authRouter.post(
   demandeLimiter,
   asyncH(async (req, res) => {
     const data = demandeSchema.parse(req.body);
+    const email = data.email.trim().toLowerCase();
     await prisma.demandeAcces.create({
-      data: { nom: data.nom.trim(), email: data.email.trim().toLowerCase(), motif: data.motif.trim(), numInscription: vide(data.numInscription), cabinet: vide(data.cabinet) },
+      data: { nom: data.nom.trim(), email, motif: data.motif.trim(), numInscription: vide(data.numInscription), cabinet: vide(data.cabinet) },
+    });
+    // Accusé de réception (n'échoue jamais la demande si l'envoi échoue).
+    void envoyerEmail({
+      to: email,
+      subject: "Demande d'accès reçue · Barreau de Pointe-Noire",
+      text: `Bonjour ${data.nom.trim()},\n\nNous accusons réception de votre demande d'accès à l'application du Secrétariat Général du Barreau de Pointe-Noire.\nElle sera examinée par le Secrétariat Général ; vous serez recontacté(e) à cette adresse.\n\nLe Secrétariat Général du Barreau de Pointe-Noire.`,
+      evenement: "DEMANDE_ACCUSE",
     });
     res.status(201).json({ ok: true });
   })

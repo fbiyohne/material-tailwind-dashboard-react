@@ -4,7 +4,7 @@ import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { archiver, montantDuAvec, prochainNumeroRecu, statutCotisation, tarifsActuels } from "../lib/business.js";
-import { envoyerMail, modeSimulation } from "../lib/mail.js";
+import { envoyerEmail, envoyerSms, modeSimulationEmail } from "../lib/notifications.js";
 
 export const cotisationsRouter = Router();
 // Données financières restreintes aux profils autorisés (RG-15) : SG, Trésorière, Admin.
@@ -30,14 +30,23 @@ cotisationsRouter.post(
       const c = m.cotisations[0];
       const du = c?.montantDu ?? montantDuAvec(tarifs, m.qualite);
       const solde = du - (c?.montantPaye ?? 0);
-      await envoyerMail({
+      await envoyerEmail({
         to: m.email!,
         subject: `Relance — cotisation ordinale ${annee} · Barreau de Pointe-Noire`,
         text: `Maître ${m.nom},\n\nVotre cotisation ordinale au titre de l'exercice ${annee} présente un solde restant dû de ${solde.toLocaleString("fr-FR")} FCFA.\nNous vous invitons à régulariser votre situation auprès de la Trésorerie.\n\nLe Secrétariat Général du Barreau de Pointe-Noire.`,
+        evenement: "RELANCE",
       });
+      // SMS complémentaire si un numéro est renseigné.
+      if (m.tel) {
+        await envoyerSms({
+          to: m.tel,
+          message: `Barreau de Pointe-Noire : votre cotisation ${annee} présente un solde de ${solde.toLocaleString("fr-FR")} FCFA. Merci de régulariser auprès de la Trésorerie.`,
+          evenement: "RELANCE",
+        });
+      }
       envoyes += 1;
     }
-    res.json({ annee, envoyes, simulation: modeSimulation, destinataires: cibles.map((m) => ({ nom: m.nom, email: m.email })) });
+    res.json({ annee, envoyes, simulation: modeSimulationEmail, destinataires: cibles.map((m) => ({ nom: m.nom, email: m.email })) });
   })
 );
 
@@ -107,6 +116,16 @@ cotisationsRouter.post(
       });
       return { cotisation, recu };
     });
+
+    // Notification du reçu émis (n'échoue pas le paiement si l'envoi échoue).
+    if (membre.email) {
+      void envoyerEmail({
+        to: membre.email,
+        subject: `Reçu N° ${numero} — cotisation ${annee} · Barreau de Pointe-Noire`,
+        text: `Maître ${membre.nom},\n\nNous accusons réception de votre versement de ${montant.toLocaleString("fr-FR")} FCFA au titre de la cotisation ordinale ${annee}.\nVotre reçu officiel N° ${numero} a été établi.\n\nLe Secrétariat Général du Barreau de Pointe-Noire.`,
+        evenement: "RECU",
+      });
+    }
 
     res.status(201).json(resultat);
   })

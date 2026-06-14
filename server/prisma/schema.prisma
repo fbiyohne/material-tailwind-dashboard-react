@@ -109,6 +109,20 @@ enum StatutPiece {
   REJETEE
 }
 
+/// Journal des notifications émises (email / SMS) — traçabilité des envois.
+model JournalNotification {
+  id           Int      @id @default(autoincrement())
+  canal        String // EMAIL, SMS
+  destinataire String
+  sujet        String
+  evenement    String // RELANCE, DEMANDE_ACCUSE, DEMANDE_DECISION, RECU, …
+  statut       String // ENVOYE, ECHEC
+  simulation   Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+}
+
 /// Pièce du dossier d'inscription (vérification documentaire — KYC proportionné).
 /// Accès cloisonné (données personnelles) ; vérification par le SG/Admin.
 model PieceDossier {

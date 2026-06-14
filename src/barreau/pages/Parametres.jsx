@@ -1,10 +1,18 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { CheckIcon, LockClosedIcon } from "@heroicons/react/24/outline";
+import { CheckIcon, LockClosedIcon, EnvelopeIcon, DevicePhoneMobileIcon } from "@heroicons/react/24/outline";
 import { Badge, useToast, PageHeader, FormField } from "../components";
 import { EXERCICES } from "../data/dashboard-data";
 import { formatFCFA } from "../utils/format";
-import { getParametres, majParametres } from "../api/resources";
+import { getParametres, majParametres, getNotifications } from "../api/resources";
+
+const EVT_LABEL = {
+  RELANCE: "Relance cotisation",
+  DEMANDE_ACCUSE: "Demande d'accès — accusé",
+  DEMANDE_DECISION: "Demande d'accès — décision",
+  RECU: "Reçu émis",
+  CONVOCATION: "Convocation",
+};
 
 const DEFAUT = {
   tarifs: { avocat: 150000, stagiaire: 75000, droitsPlaidoirie: 60000 },
@@ -36,6 +44,7 @@ export function Parametres() {
   const [tarifs, setTarifs] = useState(DEFAUT.tarifs);
   const [exercice, setExercice] = useState(DEFAUT.exerciceCourant);
   const [identite, setIdentite] = useState(DEFAUT.identite);
+  const [notif, setNotif] = useState(null);
 
   useEffect(() => {
     getParametres().then((p) => {
@@ -43,6 +52,7 @@ export function Parametres() {
       setExercice(p.exerciceCourant ?? DEFAUT.exerciceCourant);
       setIdentite({ ...DEFAUT.identite, ...p.identite });
     }).catch((e) => toast.error(e.message));
+    getNotifications().then(setNotif).catch(() => setNotif(null));
   }, [toast]);
 
   const setT = (k) => (e) => setTarifs({ ...tarifs, [k]: Number(e.target.value) });
@@ -139,6 +149,47 @@ export function Parametres() {
           l'attribution des rôles se font dans la page{" "}
           <Link to="/utilisateurs" className="font-medium text-navy underline">Utilisateurs</Link>.
         </div>
+      </Section>
+
+      <Section titre="Notifications" description="Canaux d'envoi (email / SMS) et journal des envois récents (RG-16).">
+        <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="flex items-center justify-between rounded border border-grisM bg-grisL/40 px-3 py-2.5">
+            <span className="flex items-center gap-2 text-sm text-encre"><EnvelopeIcon className="h-4 w-4 text-gris" /> Email (SMTP)</span>
+            <Badge ton={notif?.emailSimulation === false ? "vert" : "or"} dot={false}>{notif?.emailSimulation === false ? "Configuré" : "Simulation"}</Badge>
+          </div>
+          <div className="flex items-center justify-between rounded border border-grisM bg-grisL/40 px-3 py-2.5">
+            <span className="flex items-center gap-2 text-sm text-encre"><DevicePhoneMobileIcon className="h-4 w-4 text-gris" /> SMS</span>
+            <Badge ton={notif?.smsSimulation === false ? "vert" : "or"} dot={false}>{notif?.smsSimulation === false ? "Configuré" : "Simulation"}</Badge>
+          </div>
+        </div>
+        {notif?.journal?.length ? (
+          <div className="overflow-x-auto">
+            <table className="bpn-table">
+              <thead>
+                <tr>
+                  <th scope="col" className="px-3 py-2.5 font-medium">Canal</th>
+                  <th scope="col" className="px-3 py-2.5 font-medium">Destinataire</th>
+                  <th scope="col" className="px-3 py-2.5 font-medium">Événement</th>
+                  <th scope="col" className="px-3 py-2.5 font-medium">Statut</th>
+                  <th scope="col" className="px-3 py-2.5 font-medium">Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {notif.journal.slice(0, 12).map((n) => (
+                  <tr key={n.id} className="border-b border-grisL">
+                    <td className="px-3 py-2"><Badge ton={n.canal === "EMAIL" ? "bleu" : "gris"} dot={false}>{n.canal}</Badge></td>
+                    <td className="px-3 py-2 text-gris">{n.destinataire}</td>
+                    <td className="px-3 py-2 text-gris">{EVT_LABEL[n.evenement] ?? n.evenement}</td>
+                    <td className="px-3 py-2"><Badge ton={n.statut === "ENVOYE" ? (n.simulation ? "or" : "vert") : "rouge"} dot={false}>{n.statut === "ENVOYE" ? (n.simulation ? "Simulé" : "Envoyé") : "Échec"}</Badge></td>
+                    <td className="px-3 py-2 font-mono text-[11px] text-gris">{new Date(n.createdAt).toLocaleString("fr-FR")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-sm text-gris">Aucune notification émise pour l'instant. Les envois apparaîtront ici (mode simulation tant que SMTP/SMS ne sont pas configurés).</p>
+        )}
       </Section>
     </div>
   );

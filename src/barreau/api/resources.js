@@ -160,6 +160,7 @@ export const getCalendrierEditorial = () => api("/calendrier-editorial");
 // ─── Archives / Paramètres ───────────────────────────────────────────────
 export const listerArchives = (params = {}) => api(`/archives?${new URLSearchParams(params).toString()}`);
 export const archiverDoc = (entry) => api("/archives", { method: "POST", body: entry });
+export const getNotifications = () => api("/notifications");
 export const getParametres = () => api("/parametres");
 export const majParametres = (patch) => api("/parametres", { method: "PUT", body: patch });
 

@@ -13,6 +13,7 @@ import { membresRouter } from "./routes/membres.js";
 import { usersRouter } from "./routes/users.js";
 import { demandesAccesRouter } from "./routes/demandesAcces.js";
 import { piecesRouter } from "./routes/pieces.js";
+import { notificationsRouter } from "./routes/notifications.js";
 import { cotisationsRouter } from "./routes/cotisations.js";
 import { recusRouter } from "./routes/recus.js";
 import { quitusRouter } from "./routes/quitus.js";
@@ -62,6 +63,7 @@ export function creerApp() {
   app.use("/api/users", usersRouter);
   app.use("/api/demandes-acces", demandesAccesRouter);
   app.use("/api/pieces", piecesRouter);
+  app.use("/api/notifications", notificationsRouter);
   app.use("/api/cotisations", cotisationsRouter);
   app.use("/api/recus", recusRouter);
   app.use("/api/quitus", quitusRouter);
