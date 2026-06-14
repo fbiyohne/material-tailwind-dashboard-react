@@ -81,7 +81,7 @@
     @apply rounded-lg border border-grisM border-l-[3px] bg-creme p-4;
   }
   .bpn-stat-label {
-    @apply mb-2 text-[11px] font-medium uppercase tracking-wide text-gris;
+    @apply mb-2 text-xs font-medium uppercase tracking-wide text-gris;
   }
   .bpn-stat-value {
     @apply font-display text-[28px] font-bold leading-none;

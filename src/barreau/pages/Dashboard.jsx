@@ -40,8 +40,8 @@ function SelecteurExercice({ valeur, onChange }) {
 function ColonneFinance({ label, montant, total, accent }) {
   return (
     <div className="border-l-[3px] p-4" style={{ borderLeftColor: `var(--bpn-${accent})` }}>
-      <div className="mb-1 text-[10px] uppercase tracking-wide text-gris">{label}</div>
-      <div className="font-display text-base font-bold" style={{ color: `var(--bpn-${accent})` }}>{formatFCFA(montant)}</div>
+      <div className="mb-1 text-xs uppercase tracking-wide text-gris">{label}</div>
+      <div className="font-display text-2xl font-bold" style={{ color: `var(--bpn-${accent})` }}>{formatFCFA(montant)}</div>
       <div className="mt-2 h-1.5 overflow-hidden rounded bg-grisM">
         <div className="h-full rounded transition-all duration-500" style={{ width: `${ratioPct(montant, total)}%`, backgroundColor: `var(--bpn-${accent})` }} />
       </div>
