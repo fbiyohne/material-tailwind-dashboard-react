@@ -111,6 +111,73 @@ membresRouter.post(
   })
 );
 
+/**
+ * POST /membres/import — mise à jour du tableau du Barreau par lot (NFR-10).
+ * Upsert par numéro d'inscription (num) : met à jour les membres existants,
+ * crée les nouveaux. Renvoie un résumé (créés / mis à jour / erreurs par ligne).
+ */
+const importRowSchema = z.object({
+  num: z.coerce.number().int().positive(),
+  nom: z.string().min(1),
+  qualite: z.string().optional(),
+  statut: z.string().optional(),
+  cabinet: z.string().optional(),
+  tel: z.string().optional(),
+  email: z.string().optional(),
+  rccm: z.string().optional(),
+  cnss: z.string().optional(),
+  adresse: z.string().optional(),
+  observations: z.string().optional(),
+  maitreStage: z.string().optional(),
+  dateNaissance: z.string().optional(),
+  dateInscription: z.string().optional(),
+  dateServment: z.string().optional(),
+});
+
+const QUALITES: Record<string, "AVOCAT" | "STAGIAIRE" | "HONORAIRE"> = { avocat: "AVOCAT", stagiaire: "STAGIAIRE", honoraire: "HONORAIRE" };
+const STATUTS: Record<string, "INSCRIT" | "SUSPENDU" | "RADIE" | "OMIS" | "HONORAIRE" | "STAGIAIRE"> = {
+  inscrit: "INSCRIT", suspendu: "SUSPENDU", radie: "RADIE", "radié": "RADIE", omis: "OMIS", honoraire: "HONORAIRE", stagiaire: "STAGIAIRE",
+};
+const norm = <T,>(v: string | undefined, map: Record<string, T>, def: T): T => map[(v ?? "").toString().trim().toLowerCase()] ?? def;
+const toDate = (v?: string) => { if (!v) return undefined; const d = new Date(v); return Number.isNaN(d.getTime()) ? undefined : d; };
+
+membresRouter.post(
+  "/import",
+  requireRole("SECRETAIRE_GENERAL"),
+  asyncH(async (req, res) => {
+    const rows = z.array(importRowSchema).max(2000).parse(req.body?.membres ?? []);
+    let crees = 0;
+    let maj = 0;
+    const erreurs: { ligne: number; message: string }[] = [];
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      try {
+        const qualite = norm(r.qualite, QUALITES, "AVOCAT");
+        const statut = norm(r.statut, STATUTS, qualite === "STAGIAIRE" ? "STAGIAIRE" : qualite === "HONORAIRE" ? "HONORAIRE" : "INSCRIT");
+        const base = {
+          nom: r.nom, qualite, statut,
+          cabinet: r.cabinet, tel: r.tel, email: r.email, rccm: r.rccm, cnss: r.cnss,
+          adresse: r.adresse, observations: r.observations, maitreStage: r.maitreStage,
+          dateNaissance: toDate(r.dateNaissance), dateServment: toDate(r.dateServment),
+        };
+        const existant = await prisma.membre.findUnique({ where: { num: r.num } });
+        if (existant) {
+          await prisma.membre.update({ where: { num: r.num }, data: { ...base, dateInscription: toDate(r.dateInscription) } });
+          maj += 1;
+        } else {
+          await prisma.membre.create({
+            data: { num: r.num, numInscription: `T${r.num}`, ...base, dateInscription: toDate(r.dateInscription) ?? new Date() },
+          });
+          crees += 1;
+        }
+      } catch (e) {
+        erreurs.push({ ligne: i + 1, message: e instanceof Error ? e.message : "Erreur" });
+      }
+    }
+    res.json({ total: rows.length, crees, maj, erreurs });
+  })
+);
+
 const editSchema = inscriptionSchema.partial();
 
 /** PATCH /membres/:id — modification de la fiche (FR-AV-01). SG/Admin. */

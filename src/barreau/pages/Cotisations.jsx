@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { MagnifyingGlassIcon, CheckCircleIcon } from "@heroicons/react/24/outline";
-import { Badge, Modal, useToast, PaiementModal, SortTh, Pagination } from "../components";
+import { MagnifyingGlassIcon, CheckCircleIcon, EnvelopeIcon, ArrowDownTrayIcon, PrinterIcon } from "@heroicons/react/24/outline";
+import { Badge, Modal, useToast, PaiementModal, SortTh, Pagination, EtatImprimable } from "../components";
 import { useDataTable } from "../hooks/useDataTable";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { STATUT_META, QUALITE_LABEL } from "../data/derivations";
 import { formatFCFA } from "../utils/format";
+import { exporterExcel, exporterPdf } from "../utils/exports";
+import { PERIODES, moisDePeriode, libellePeriode } from "../utils/periode";
 import { getCotisations, getMembre, validerCotisation, lancerRelances } from "../api/resources";
-import { EnvelopeIcon } from "@heroicons/react/24/outline";
 
 const FILTRES = [
   { value: "tous", label: "Tous les statuts" },
@@ -75,6 +76,7 @@ export function Cotisations() {
   const exercice = Number(params.get("exercice")) || EXERCICE_COURANT;
   const filtre = params.get("statut") || "tous";
   const recherche = params.get("q") || "";
+  const periode = params.get("periode") || "annee";
 
   const [lignes, setLignes] = useState([]);
   const [historique, setHistorique] = useState(null);
@@ -106,12 +108,35 @@ export function Cotisations() {
 
   const filtrees = useMemo(() => {
     const q = recherche.trim().toLowerCase();
+    const mois = moisDePeriode(periode);
     return lignes.filter((l) => {
       if (filtre !== "tous" && l.statut !== filtre) return false;
+      if (mois) {
+        if (!l.datePaiement) return false;
+        if (!mois.includes(new Date(l.datePaiement).getMonth() + 1)) return false;
+      }
       if (!q) return true;
       return l.membre.nom.toLowerCase().includes(q) || (l.membre.cabinet ?? "").toLowerCase().includes(q) || String(l.membre.num).includes(q);
     });
-  }, [lignes, recherche, filtre]);
+  }, [lignes, recherche, filtre, periode]);
+
+  const sousTitreEtat = `Exercice ${exercice} — ${libellePeriode(periode)}${filtre !== "tous" ? ` · ${FILTRES.find((f) => f.value === filtre)?.label}` : ""}`;
+  const lignesEtat = useMemo(
+    () => filtrees.map((l) => [
+      l.membre.num, `Me ${l.membre.nom}`, QUALITE_LABEL[l.membre.qualite],
+      formatFCFA(l.montantDu), l.montantPaye ? formatFCFA(l.montantPaye) : "—",
+      l.solde ? formatFCFA(l.solde) : "Soldé", l.datePaiement ?? "—", STATUT_META[l.statut].label,
+    ]),
+    [filtrees]
+  );
+  const ENTETE_ETAT = ["N°", "Avocat", "Qualité", "Dû", "Payé", "Solde", "Date", "Statut"];
+
+  const exporterEtat = (fmt) => {
+    if (filtrees.length === 0) { toast.error("Aucune ligne à exporter pour cette sélection."); return; }
+    const nom = `etat-cotisations-${exercice}-${periode}`;
+    if (fmt === "xlsx") exporterExcel(nom, [ENTETE_ETAT, ...lignesEtat], `Cotisations ${exercice}`);
+    else exporterPdf(nom, "#etat-cotisations");
+  };
 
   const { rows, total, page, setPage, totalPages, sortKey, sortDir, toggleSort } = useDataTable(filtrees, {
     accessors: ACCESSORS, pageSize: 10, initialSort: { key: "num", dir: "asc" },
@@ -125,17 +150,25 @@ export function Cotisations() {
           <h2 className="bpn-title mt-2">Cotisations ordinales</h2>
           <p className="mt-1 text-sm text-gris">Suivi des cotisations 2020–2026, recherche en temps réel et historique par avocat.</p>
         </div>
-        <button
-          className="bpn-btn bpn-btn-ghost"
-          onClick={async () => {
-            try {
-              const r = await lancerRelances(exercice);
-              toast.success(`${r.envoyes} relance${r.envoyes > 1 ? "s" : ""} envoyée${r.envoyes > 1 ? "s" : ""}${r.simulation ? " (simulation)" : ""}.`);
-            } catch (e) { toast.error(e.message); }
-          }}
-        >
-          <EnvelopeIcon className="h-4 w-4" /> Relancer les retardataires
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button className="bpn-btn bpn-btn-ghost !py-1.5 text-[11px]" onClick={() => exporterEtat("pdf")}>
+            <PrinterIcon className="h-4 w-4" /> État PDF
+          </button>
+          <button className="bpn-btn bpn-btn-or !py-1.5 text-[11px]" onClick={() => exporterEtat("xlsx")}>
+            <ArrowDownTrayIcon className="h-4 w-4" /> Excel
+          </button>
+          <button
+            className="bpn-btn bpn-btn-ghost"
+            onClick={async () => {
+              try {
+                const r = await lancerRelances(exercice);
+                toast.success(`${r.envoyes} relance${r.envoyes > 1 ? "s" : ""} envoyée${r.envoyes > 1 ? "s" : ""}${r.simulation ? " (simulation)" : ""}.`);
+              } catch (e) { toast.error(e.message); }
+            }}
+          >
+            <EnvelopeIcon className="h-4 w-4" /> Relancer les retardataires
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-1 border-b border-grisM">
@@ -152,8 +185,11 @@ export function Cotisations() {
           <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gris" />
           <input type="text" value={recherche} onChange={(e) => setParam("q", e.target.value, "")} placeholder="Rechercher par nom, cabinet ou n°…" className="bpn-input pl-9" />
         </div>
-        <select value={filtre} onChange={(e) => setParam("statut", e.target.value, "tous")} className="bpn-input sm:w-56">
+        <select value={filtre} onChange={(e) => setParam("statut", e.target.value, "tous")} className="bpn-input sm:w-48">
           {FILTRES.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
+        </select>
+        <select value={periode} onChange={(e) => setParam("periode", e.target.value, "annee")} className="bpn-input sm:w-48" title="Période de l'état (par date de paiement)">
+          {PERIODES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
         </select>
       </div>
 
@@ -216,6 +252,8 @@ export function Cotisations() {
         </div>
         <Pagination page={page} totalPages={totalPages} total={total} onPage={setPage} libelle="membres" />
       </div>
+
+      <EtatImprimable id="etat-cotisations" titre="État des cotisations ordinales" sousTitre={sousTitreEtat} entete={ENTETE_ETAT} lignes={lignesEtat} />
 
       <HistoriqueModal membreId={historique} onClose={() => setHistorique(null)} />
       <PaiementModal ligne={paiement} exercice={exercice} open={!!paiement} onClose={() => setPaiement(null)} onDone={charger} />

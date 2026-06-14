@@ -1,11 +1,14 @@
-import { useCallback, useEffect, useState } from "react";
-import { BanknotesIcon } from "@heroicons/react/24/outline";
-import { Badge, StatCard, SortTh, Pagination, PaiementModal, useToast } from "../components";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { BanknotesIcon, ArrowDownTrayIcon, PrinterIcon } from "@heroicons/react/24/outline";
+import { Badge, StatCard, SortTh, Pagination, PaiementModal, useToast, EtatImprimable } from "../components";
 import { useDataTable } from "../hooks/useDataTable";
 import { STATUT_META } from "../data/derivations";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { formatFCFA } from "../utils/format";
+import { exporterExcel, exporterPdf } from "../utils/exports";
 import { getDroits } from "../api/resources";
+
+const ENTETE_ETAT = ["N°", "Avocat", "Dû", "Perçu", "Solde", "Statut"];
 
 const ACCESSORS = {
   num: (l) => l.membre.num,
@@ -33,6 +36,22 @@ export function DroitsPlaidoirie() {
     accessors: ACCESSORS, pageSize: 10, initialSort: { key: "num", dir: "asc" },
   });
 
+  const lignesEtat = useMemo(
+    () => lignes.map((l) => [
+      l.membre.num, `Me ${l.membre.nom}`, formatFCFA(l.du),
+      l.paye ? formatFCFA(l.paye) : "—", l.solde ? formatFCFA(l.solde) : "Soldé", STATUT_META[l.statut].label,
+    ]),
+    [lignes]
+  );
+  const totauxEtat = ["", "TOTAUX", formatFCFA(totaux.du), formatFCFA(totaux.paye), formatFCFA(totaux.solde), ""];
+
+  const exporterEtat = (fmt) => {
+    if (lignes.length === 0) { toast.error("Aucune ligne à exporter pour cet exercice."); return; }
+    const nom = `etat-droits-plaidoirie-${exercice}`;
+    if (fmt === "xlsx") exporterExcel(nom, [ENTETE_ETAT, ...lignesEtat, totauxEtat], `Droits ${exercice}`);
+    else exporterPdf(nom, "#etat-droits");
+  };
+
   return (
     <div className="space-y-5">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
@@ -51,6 +70,12 @@ export function DroitsPlaidoirie() {
               {a}
             </button>
           ))}
+          <button className="bpn-btn bpn-btn-ghost !py-1.5 text-[11px]" onClick={() => exporterEtat("pdf")}>
+            <PrinterIcon className="h-4 w-4" /> État PDF
+          </button>
+          <button className="bpn-btn bpn-btn-or !py-1.5 text-[11px]" onClick={() => exporterEtat("xlsx")}>
+            <ArrowDownTrayIcon className="h-4 w-4" /> Excel
+          </button>
         </div>
       </div>
 
@@ -109,6 +134,8 @@ export function DroitsPlaidoirie() {
         </div>
         <Pagination page={page} totalPages={totalPages} total={total} onPage={setPage} libelle="avocats" />
       </div>
+
+      <EtatImprimable id="etat-droits" titre="État des droits de plaidoirie" sousTitre={`Exercice ${exercice}`} entete={ENTETE_ETAT} lignes={lignesEtat} totaux={totauxEtat} />
 
       <PaiementModal
         ligne={paiement}

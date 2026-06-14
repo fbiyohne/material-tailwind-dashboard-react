@@ -72,6 +72,7 @@ const patchSchema = z.object({
   dateAudience: z.string().optional(),
   decision: z.string().optional(),
   sanction: z.string().optional(),
+  pieces: z.array(z.string()).optional(),
 });
 
 disciplineRouter.patch(
@@ -84,6 +85,7 @@ disciplineRouter.patch(
         statut: data.statut,
         decision: data.decision,
         sanction: data.sanction,
+        pieces: data.pieces,
         dateConvocation: data.dateConvocation ? new Date(data.dateConvocation) : undefined,
         dateAudience: data.dateAudience ? new Date(data.dateAudience) : undefined,
       },

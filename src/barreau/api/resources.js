@@ -64,6 +64,7 @@ export function modifierMembre(id, patch) {
 }
 
 export const radierMembre = (id) => api(`/membres/${id}/radier`, { method: "POST" }).then(normaliserMembre);
+export const importerMembres = (membres) => api("/membres/import", { method: "POST", body: { membres } });
 export const genererAttestation = (id) => api(`/membres/${id}/attestation`, { method: "POST" });
 
 // ─── Cotisations ─────────────────────────────────────────────────────────

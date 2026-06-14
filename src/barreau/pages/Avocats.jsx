@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
-import { Badge, StatutBadge, AttestationModal, SortTh, Pagination, useToast } from "../components";
+import { MagnifyingGlassIcon, ArrowUpTrayIcon } from "@heroicons/react/24/outline";
+import { Badge, StatutBadge, AttestationModal, SortTh, Pagination, useToast, ImportMembresModal } from "../components";
+import { useAuth } from "../auth/AuthContext";
 import { STATUT_META, QUALITE_LABEL } from "../data/derivations";
 import { EXERCICE_COURANT } from "../data/dashboard-data";
 import { listerMembres, getCotisations } from "../api/resources";
@@ -19,8 +20,12 @@ const FILTRES = [
 export function Avocats() {
   const navigate = useNavigate();
   const toast = useToast();
+  const { user } = useAuth();
+  const peutImporter = user?.role === "SECRETAIRE_GENERAL" || user?.role === "ADMIN";
   const [params, setParams] = useSearchParams();
   const [attestation, setAttestation] = useState(null);
+  const [importOuvert, setImportOuvert] = useState(false);
+  const [refresh, setRefresh] = useState(0);
   const [data, setData] = useState({ items: [], total: 0, totalPages: 1, page: 1 });
   const [statutCot, setStatutCot] = useState({});
   const [page, setPage] = useState(1);
@@ -52,7 +57,7 @@ export function Avocats() {
     })
       .then(setData)
       .catch((e) => toast.error(e.message));
-  }, [recherche, filtre, page, sort, toast]);
+  }, [recherche, filtre, page, sort, toast, refresh]);
 
   // Statut de cotisation de l'exercice courant (jointure côté client)
   useEffect(() => {
@@ -63,10 +68,17 @@ export function Avocats() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <div className="bpn-eyebrow">Membres</div>
-        <h2 className="bpn-title mt-2">Avocats inscrits</h2>
-        <p className="mt-1 text-sm text-gris">Tableau du Barreau — recherche multicritères, fiche individuelle et attestation d'inscription.</p>
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+        <div>
+          <div className="bpn-eyebrow">Membres</div>
+          <h2 className="bpn-title mt-2">Avocats inscrits</h2>
+          <p className="mt-1 text-sm text-gris">Tableau du Barreau — recherche multicritères, fiche individuelle et attestation d'inscription.</p>
+        </div>
+        {peutImporter && (
+          <button className="bpn-btn bpn-btn-ghost" onClick={() => setImportOuvert(true)}>
+            <ArrowUpTrayIcon className="h-4 w-4" /> Importer (Excel/CSV)
+          </button>
+        )}
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -123,6 +135,7 @@ export function Avocats() {
       </div>
 
       <AttestationModal membre={attestation} onClose={() => setAttestation(null)} />
+      <ImportMembresModal open={importOuvert} onClose={() => setImportOuvert(false)} onDone={() => setRefresh((n) => n + 1)} />
     </div>
   );
 }

@@ -17,3 +17,5 @@ export { SortTh } from "./SortTh";
 export { Pagination } from "./Pagination";
 export { Sceau } from "./Sceau";
 export { DocumentChrome } from "./DocumentChrome";
+export { EtatImprimable } from "./EtatImprimable";
+export { ImportMembresModal } from "./ImportMembresModal";

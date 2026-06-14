@@ -169,6 +169,7 @@ model DossierDisciplinaire {
   dateAudience    DateTime?
   decision        String?
   sanction        String?
+  pieces          String[]      @default([])
   statut          StatutDossier @default(OUVERT)
   createdAt       DateTime      @default(now())
 }

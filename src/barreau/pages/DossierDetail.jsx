@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeftIcon, ShieldExclamationIcon, CheckIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
+import { ArrowLeftIcon, ShieldExclamationIcon, CheckIcon, ArrowDownTrayIcon, PaperClipIcon, PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { Badge, DocumentModal, useToast } from "../components";
 import { STATUT_DOSSIER_META } from "../data/institutionnel";
 import { getDossier, majDossier, archiverDoc, telechargerDecisionDisciplinePdf } from "../api/resources";
@@ -15,6 +15,7 @@ export function DossierDetail() {
   const [form, setForm] = useState(null);
   const [enregistre, setEnregistre] = useState(false);
   const [convocation, setConvocation] = useState(false);
+  const [nouvellePiece, setNouvellePiece] = useState("");
 
   // getDossier journalise la consultation côté serveur (RG-13).
   useEffect(() => {
@@ -33,12 +34,22 @@ export function DossierDetail() {
 
   const set = (k) => (e) => { setForm({ ...form, [k]: e.target.value }); setEnregistre(false); };
   const meta = STATUT_DOSSIER_META[form.statut];
+  const pieces = form.pieces ?? [];
+
+  const ajouterPiece = () => {
+    const v = nouvellePiece.trim();
+    if (!v) return;
+    setForm({ ...form, pieces: [...pieces, v] });
+    setNouvellePiece("");
+    setEnregistre(false);
+  };
+  const retirerPiece = (i) => { setForm({ ...form, pieces: pieces.filter((_, j) => j !== i) }); setEnregistre(false); };
 
   const enregistrer = async () => {
     try {
       await majDossier(dossier.id, {
         statut: form.statut, dateConvocation: form.dateConvocation, dateAudience: form.dateAudience,
-        decision: form.decision, sanction: form.sanction,
+        decision: form.decision, sanction: form.sanction, pieces: form.pieces ?? [],
       });
       setEnregistre(true);
       toast.success("Dossier mis à jour.");
@@ -86,6 +97,31 @@ export function DossierDetail() {
       <div className="bpn-card">
         <div className="bpn-card-header"><span className="bpn-card-heading">Objet de la saisine</span></div>
         <p className="p-4 text-sm text-encre">{dossier.objet}</p>
+      </div>
+
+      {/* Pièces du dossier (CDC 2.11) */}
+      <div className="bpn-card">
+        <div className="bpn-card-header"><span className="bpn-card-heading">Pièces du dossier</span><span className="font-mono text-xs text-gris">{pieces.length}</span></div>
+        <div className="p-4">
+          {pieces.length > 0 ? (
+            <ul className="mb-3 space-y-1.5">
+              {pieces.map((p, i) => (
+                <li key={i} className="flex items-center justify-between gap-3 rounded border border-grisL bg-grisL/40 px-3 py-2 text-sm">
+                  <span className="flex items-center gap-2 text-encre"><PaperClipIcon className="h-4 w-4 shrink-0 text-gris" /> {p}</span>
+                  <button type="button" onClick={() => retirerPiece(i)} title="Retirer" className="text-gris transition hover:text-rouge"><XMarkIcon className="h-4 w-4" /></button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mb-3 text-sm text-gris">Aucune pièce enregistrée. Référencez ici les pièces versées au dossier (plaintes, PV d'audition, correspondances…).</p>
+          )}
+          <div className="flex gap-2">
+            <input value={nouvellePiece} onChange={(e) => setNouvellePiece(e.target.value)} onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), ajouterPiece())}
+              className="bpn-input flex-1" placeholder="Référence ou intitulé de la pièce…" />
+            <button type="button" className="bpn-btn bpn-btn-ghost shrink-0" onClick={ajouterPiece}><PlusIcon className="h-4 w-4" /> Ajouter</button>
+          </div>
+          <p className="mt-2 text-[11px] text-gris">Pensez à « Enregistrer le dossier » pour conserver les pièces.</p>
+        </div>
       </div>
 
       {/* Instruction du dossier */}
