@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { PrinterIcon, CheckCircleIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
+import { PrinterIcon, CheckCircleIcon, ArrowDownTrayIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { QUALITE_LABEL } from "../data/derivations";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { formatFCFA } from "../utils/format";
 import { montantEnLettresFCFA } from "../utils/nombreEnLettres";
-import { DocumentChrome, Pagination, useToast } from "../components";
-import { listerMembres, listerRecus, enregistrerPaiement, telechargerRecuPdf } from "../api/resources";
+import { DocumentChrome, Pagination, useToast, useConfirm } from "../components";
+import { listerMembres, listerRecus, enregistrerPaiement, telechargerRecuPdf, annulerRecu } from "../api/resources";
 
 const MODES = ["Espèces", "Virement", "Chèque", "Mobile Money"];
 const PAR_PAGE = 12;
@@ -45,6 +45,7 @@ function Champ({ label, children }) {
 
 export function Recus() {
   const toast = useToast();
+  const confirm = useConfirm();
   const [membres, setMembres] = useState([]);
   const [recus, setRecus] = useState([]);
   const [membreId, setMembreId] = useState(null);
@@ -87,6 +88,23 @@ export function Recus() {
       setReference("");
       chargerRecus();
       setTimeout(() => window.print(), 50);
+    } catch (e) {
+      toast.error(e.message);
+    }
+  };
+
+  const annuler = async (r) => {
+    const ok = await confirm({
+      title: "Annuler le reçu",
+      message: `Le reçu N° ${r.numero} sera annulé : le paiement correspondant (${formatFCFA(r.montant)}) sera retiré de la situation de l'avocat. Continuer ?`,
+      confirmLabel: "Annuler le reçu",
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await annulerRecu(r.id);
+      toast.success(`Reçu N° ${r.numero} annulé.`);
+      chargerRecus();
     } catch (e) {
       toast.error(e.message);
     }
@@ -171,6 +189,9 @@ export function Recus() {
                       <span className="flex-1 px-3 text-encre">Me {r.membre?.nom}</span>
                       <span className="text-gris">{formatFCFA(r.montant)}</span>
                       <span className="ml-3 font-mono text-xs text-gris">{r.annee}</span>
+                      <button type="button" onClick={() => annuler(r)} title="Annuler le reçu" className="ml-3 text-gris transition hover:text-rouge">
+                        <TrashIcon className="h-4 w-4" />
+                      </button>
                     </li>
                   ))}
                 </ul>

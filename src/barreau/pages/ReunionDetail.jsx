@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeftIcon, CalendarDaysIcon, MapPinIcon, CheckIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
-import { Badge, DocumentModal, useToast } from "../components";
-import { getReunion, majReunion, archiverDoc, telechargerPvReunionPdf, getConseil } from "../api/resources";
+import { ArrowLeftIcon, CalendarDaysIcon, MapPinIcon, CheckIcon, ArrowDownTrayIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { Badge, DocumentModal, useToast, useConfirm } from "../components";
+import { getReunion, majReunion, archiverDoc, telechargerPvReunionPdf, getConseil, supprimerReunion } from "../api/resources";
 
 const fmt = (d) => new Date(d).toLocaleDateString("fr-FR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
 /** Libellé d'émargement d'un membre du Conseil — sert aussi de clé de présence. */
@@ -24,6 +24,7 @@ export function ReunionDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
+  const confirm = useConfirm();
   const [reunion, setReunion] = useState(null);
   const [conseil, setConseil] = useState([]);
   const [odj, setOdj] = useState("");
@@ -98,6 +99,22 @@ export function ReunionDetail() {
       toast.error(e.message);
     }
   };
+  const supprimer = async () => {
+    const ok = await confirm({
+      title: "Supprimer la réunion",
+      message: "Cette réunion planifiée sera définitivement supprimée. Continuer ?",
+      confirmLabel: "Supprimer",
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await supprimerReunion(reunion.id);
+      toast.success("Réunion supprimée.");
+      navigate("/reunions");
+    } catch (e) {
+      toast.error(e.message);
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -119,6 +136,9 @@ export function ReunionDetail() {
         <div className="flex flex-wrap gap-2">
           <button className="bpn-btn bpn-btn-ghost" onClick={() => setConvocation(true)}>Convocation</button>
           <button className="bpn-btn bpn-btn-ghost" onClick={() => setFeuille(true)}>Feuille de présence</button>
+          {reunion.statut !== "tenue" && (
+            <button className="bpn-btn bpn-btn-ghost text-rouge" onClick={supprimer}><TrashIcon className="h-4 w-4" /> Supprimer</button>
+          )}
         </div>
       </div>
 

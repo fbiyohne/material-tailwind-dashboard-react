@@ -57,3 +57,12 @@ publicationsRouter.post("/:id/statut", requireRole("SECRETAIRE_GENERAL", "BATONN
   const p = await prisma.publication.update({ where: { id: Number(req.params.id) }, data: { statut } });
   res.json(p);
 }));
+
+/** DELETE /publications/:id — suppression d'un projet (jamais une publication diffusée). SG. */
+publicationsRouter.delete("/:id", requireRole("SECRETAIRE_GENERAL"), asyncH(async (req, res) => {
+  const p = await prisma.publication.findUnique({ where: { id: Number(req.params.id) } });
+  if (!p) throw new HttpError(404, "Publication introuvable");
+  if (p.statut === "PUBLIE") throw new HttpError(409, "Une publication diffusée ne peut être supprimée.");
+  await prisma.publication.delete({ where: { id: p.id } });
+  res.json({ ok: true });
+}));

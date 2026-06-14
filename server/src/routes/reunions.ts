@@ -75,3 +75,12 @@ reunionsRouter.patch("/:id", requireRole("SECRETAIRE_GENERAL"), asyncH(async (re
   const r = await prisma.reunion.update({ where: { id: Number(req.params.id) }, data });
   res.json(r);
 }));
+
+/** DELETE /reunions/:id — suppression d'une réunion planifiée (jamais une réunion tenue). SG. */
+reunionsRouter.delete("/:id", requireRole("SECRETAIRE_GENERAL"), asyncH(async (req, res) => {
+  const r = await prisma.reunion.findUnique({ where: { id: Number(req.params.id) } });
+  if (!r) throw new HttpError(404, "Réunion introuvable");
+  if (r.statut === "tenue") throw new HttpError(409, "Une réunion tenue ne peut être supprimée (procès-verbal archivé).");
+  await prisma.reunion.delete({ where: { id: r.id } });
+  res.json({ ok: true });
+}));

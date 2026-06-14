@@ -79,6 +79,7 @@ export const validerCotisation = (membreId, annee, valide = true) =>
 
 // ─── Reçus / Quitus ──────────────────────────────────────────────────────
 export const listerRecus = (annee) => api(`/recus${annee ? `?annee=${annee}` : ""}`);
+export const annulerRecu = (id) => api(`/recus/${id}`, { method: "DELETE" });
 export const quitusEligibles = (annee) => api(`/quitus/eligibles?annee=${annee}`);
 export const listerQuitus = () => api("/quitus");
 export const genererQuitus = (membreId, annee) => api("/quitus", { method: "POST", body: { membreId, annee } });
@@ -99,6 +100,7 @@ export const listerReunions = () => api("/reunions");
 export const getReunion = (id) => api(`/reunions/${id}`);
 export const creerReunion = (data) => api("/reunions", { method: "POST", body: data });
 export const majReunion = (id, patch) => api(`/reunions/${id}`, { method: "PATCH", body: patch });
+export const supprimerReunion = (id) => api(`/reunions/${id}`, { method: "DELETE" });
 
 // ─── Conseil de l'Ordre (feuilles de présence) ───────────────────────────
 export const getConseil = () => api("/conseil");
@@ -108,6 +110,7 @@ export const listerAssemblees = () => api("/assemblees");
 export const getAssemblee = (id) => api(`/assemblees/${id}`);
 export const creerAssemblee = (data) => api("/assemblees", { method: "POST", body: data });
 export const majAssemblee = (id, patch) => api(`/assemblees/${id}`, { method: "PATCH", body: patch });
+export const supprimerAssemblee = (id) => api(`/assemblees/${id}`, { method: "DELETE" });
 
 // ─── Discipline (statut enum → minuscule) ────────────────────────────────
 const normDossier = (d) => ({
@@ -132,6 +135,7 @@ export const creerPublication = (data) => api("/publications", { method: "POST",
 export const majPublication = (id, patch) => api(`/publications/${id}`, { method: "PATCH", body: patch }).then(normPub);
 export const changerStatutPublication = (id, statut) =>
   api(`/publications/${id}/statut`, { method: "POST", body: { statut: statut.toUpperCase() } }).then(normPub);
+export const supprimerPublication = (id) => api(`/publications/${id}`, { method: "DELETE" });
 export const genererArticleLettre = (mois, theme) =>
   api("/publications/lettre/generer", { method: "POST", body: { mois, theme } });
 

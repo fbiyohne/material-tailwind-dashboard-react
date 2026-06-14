@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { PlusIcon, MegaphoneIcon } from "@heroicons/react/24/outline";
-import { Badge, Modal, EmptyState, useToast } from "../components";
+import { PlusIcon, MegaphoneIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { Badge, Modal, EmptyState, useToast, useConfirm } from "../components";
 import { STATUT_PUBLICATION_META } from "../data/publications";
-import { listerPublications, creerPublication as apiCreerPublication, changerStatutPublication as apiChangerStatut } from "../api/resources";
+import { listerPublications, creerPublication as apiCreerPublication, changerStatutPublication as apiChangerStatut, supprimerPublication } from "../api/resources";
 
 function NouvellePublicationModal({ open, onClose, onCreated }) {
   const toast = useToast();
@@ -42,6 +42,7 @@ function NouvellePublicationModal({ open, onClose, onCreated }) {
 export function Publications() {
   const navigate = useNavigate();
   const toast = useToast();
+  const confirm = useConfirm();
   const [publications, setPublications] = useState([]);
   const [creer, setCreer] = useState(false);
 
@@ -50,6 +51,17 @@ export function Publications() {
 
   const changerStatutPublication = async (id, statut) => {
     try { await apiChangerStatut(id, statut); charger(); } catch (e) { toast.error(e.message); }
+  };
+  const supprimer = async (p) => {
+    const ok = await confirm({
+      title: "Supprimer la publication",
+      message: `« ${p.titre} » sera définitivement supprimée. Continuer ?`,
+      confirmLabel: "Supprimer",
+      danger: true,
+    });
+    if (!ok) return;
+    try { await supprimerPublication(p.id); toast.success("Publication supprimée."); charger(); }
+    catch (e) { toast.error(e.message); }
   };
 
   return (
@@ -108,6 +120,11 @@ export function Publications() {
                   <button className="bpn-btn bpn-btn-ghost !py-1.5 text-[11px]" onClick={() => navigate(`/publications/${p.id}`)}>
                     Ouvrir
                   </button>
+                  {p.statut !== "publie" && (
+                    <button className="bpn-btn bpn-btn-ghost !py-1.5 text-[11px] text-rouge" onClick={() => supprimer(p)} title="Supprimer">
+                      <TrashIcon className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

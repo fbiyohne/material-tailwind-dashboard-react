@@ -69,3 +69,12 @@ assembleesRouter.patch("/:id", requireRole("SECRETAIRE_GENERAL"), asyncH(async (
   const a = await prisma.assemblee.update({ where: { id: Number(req.params.id) }, data });
   res.json(a);
 }));
+
+/** DELETE /assemblees/:id — suppression d'une assemblée convoquée (jamais une AG tenue). SG. */
+assembleesRouter.delete("/:id", requireRole("SECRETAIRE_GENERAL"), asyncH(async (req, res) => {
+  const a = await prisma.assemblee.findUnique({ where: { id: Number(req.params.id) } });
+  if (!a) throw new HttpError(404, "Assemblée introuvable");
+  if (a.statut === "tenue") throw new HttpError(409, "Une assemblée tenue ne peut être supprimée (procès-verbal archivé).");
+  await prisma.assemblee.delete({ where: { id: a.id } });
+  res.json({ ok: true });
+}));

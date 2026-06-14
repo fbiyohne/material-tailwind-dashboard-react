@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeftIcon, PlusIcon, CheckIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
-import { Badge, DocumentModal, useToast } from "../components";
+import { ArrowLeftIcon, PlusIcon, CheckIcon, ArrowDownTrayIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { Badge, DocumentModal, useToast, useConfirm } from "../components";
 import { EXERCICE_COURANT } from "../data/dashboard-data";
-import { getAssemblee, majAssemblee, getCorpsElectoral, archiverDoc, telechargerPvAgPdf } from "../api/resources";
+import { getAssemblee, majAssemblee, getCorpsElectoral, archiverDoc, telechargerPvAgPdf, supprimerAssemblee } from "../api/resources";
 
 const TYPE_LABEL = { AGO: "Assemblée Générale Ordinaire", AGE: "Assemblée Générale Extraordinaire" };
 const fmt = (d) => new Date(d).toLocaleDateString("fr-FR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
@@ -21,6 +21,7 @@ export function AssembleeDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
+  const confirm = useConfirm();
   const [assemblee, setAssemblee] = useState(null);
   const [electeurs, setElecteurs] = useState(0);
   const [present, setPresent] = useState(0);
@@ -89,6 +90,22 @@ export function AssembleeDetail() {
       toast.error(e.message);
     }
   };
+  const supprimer = async () => {
+    const ok = await confirm({
+      title: "Supprimer l'assemblée",
+      message: "Cette assemblée convoquée sera définitivement supprimée. Continuer ?",
+      confirmLabel: "Supprimer",
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await supprimerAssemblee(assemblee.id);
+      toast.success("Assemblée supprimée.");
+      navigate("/assemblees");
+    } catch (e) {
+      toast.error(e.message);
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -104,7 +121,12 @@ export function AssembleeDetail() {
           </div>
           <div className="mt-1 text-xs text-gris">{TYPE_LABEL[assemblee.type]} · {assemblee.lieu}</div>
         </div>
-        <button className="bpn-btn bpn-btn-ghost" onClick={() => setConvocation(true)}>Convocation</button>
+        <div className="flex flex-wrap gap-2">
+          <button className="bpn-btn bpn-btn-ghost" onClick={() => setConvocation(true)}>Convocation</button>
+          {assemblee.statut !== "tenue" && (
+            <button className="bpn-btn bpn-btn-ghost text-rouge" onClick={supprimer}><TrashIcon className="h-4 w-4" /> Supprimer</button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
