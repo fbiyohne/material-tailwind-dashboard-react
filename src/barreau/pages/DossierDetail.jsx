@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeftIcon, ShieldExclamationIcon, CheckIcon, ArrowDownTrayIcon, PaperClipIcon, PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
-import { Badge, DocumentModal, useToast } from "../components";
+import { Badge, DocumentModal, useToast, FormField } from "../components";
 import { STATUT_DOSSIER_META } from "../data/institutionnel";
 import { getDossier, majDossier, archiverDoc, telechargerDecisionDisciplinePdf } from "../api/resources";
 
@@ -128,19 +128,24 @@ export function DossierDetail() {
       <div className="bpn-card">
         <div className="bpn-card-header"><span className="bpn-card-heading">Instruction & décision</span></div>
         <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2">
-          <label className="block"><span className="bpn-label">Statut de la procédure</span>
-            <select value={form.statut} onChange={set("statut")} className="bpn-input mt-1">
+          <FormField label="Statut de la procédure">
+            <select value={form.statut} onChange={set("statut")} className="bpn-input">
               {STATUTS.map((s) => <option key={s} value={s}>{STATUT_DOSSIER_META[s].label}</option>)}
-            </select></label>
+            </select>
+          </FormField>
           <div />
-          <label className="block"><span className="bpn-label">Date de convocation</span>
-            <input type="date" value={form.dateConvocation ?? ""} onChange={set("dateConvocation")} className="bpn-input mt-1" /></label>
-          <label className="block"><span className="bpn-label">Date d'audience</span>
-            <input type="date" value={form.dateAudience ?? ""} onChange={set("dateAudience")} className="bpn-input mt-1" /></label>
-          <label className="block sm:col-span-2"><span className="bpn-label">Décision rendue</span>
-            <textarea rows={3} value={form.decision ?? ""} onChange={set("decision")} className="bpn-input mt-1" placeholder="Motifs et dispositif de la décision…" /></label>
-          <label className="block sm:col-span-2"><span className="bpn-label">Sanction éventuelle</span>
-            <input value={form.sanction ?? ""} onChange={set("sanction")} className="bpn-input mt-1" placeholder="Avertissement, blâme, suspension, radiation…" /></label>
+          <FormField label="Date de convocation">
+            <input type="date" value={form.dateConvocation ?? ""} onChange={set("dateConvocation")} className="bpn-input" />
+          </FormField>
+          <FormField label="Date d'audience">
+            <input type="date" value={form.dateAudience ?? ""} onChange={set("dateAudience")} className="bpn-input" />
+          </FormField>
+          <FormField label="Décision rendue" full>
+            <textarea rows={3} value={form.decision ?? ""} onChange={set("decision")} className="bpn-input" placeholder="Motifs et dispositif de la décision…" />
+          </FormField>
+          <FormField label="Sanction éventuelle" full>
+            <input value={form.sanction ?? ""} onChange={set("sanction")} className="bpn-input" placeholder="Avertissement, blâme, suspension, radiation…" />
+          </FormField>
         </div>
         <div className="flex items-center justify-end gap-3 border-t border-grisM px-4 py-3">
           {enregistre && <span className="flex items-center gap-1 text-sm text-vert"><CheckIcon className="h-4 w-4" /> Enregistré</span>}

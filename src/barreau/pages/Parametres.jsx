@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { CheckIcon, LockClosedIcon } from "@heroicons/react/24/outline";
-import { Badge, useToast, PageHeader } from "../components";
+import { Badge, useToast, PageHeader, FormField } from "../components";
 import { EXERCICES } from "../data/dashboard-data";
 import { formatFCFA } from "../utils/format";
 import { getParametres, majParametres } from "../api/resources";
@@ -63,16 +63,20 @@ export function Parametres() {
 
       <Section titre="Tarifs de référence & exercice" description="Montants annuels appliqués aux calculs de cotisations et de droits (BR-07 / BR-08).">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <label className="block"><span className="bpn-label">Cotisation avocat (FCFA)</span>
-            <input type="number" step={25000} value={tarifs.avocat} onChange={setT("avocat")} className="bpn-input mt-1" /></label>
-          <label className="block"><span className="bpn-label">Cotisation stagiaire (FCFA)</span>
-            <input type="number" step={25000} value={tarifs.stagiaire} onChange={setT("stagiaire")} className="bpn-input mt-1" /></label>
-          <label className="block"><span className="bpn-label">Droit de plaidoirie (FCFA)</span>
-            <input type="number" step={10000} value={tarifs.droitsPlaidoirie} onChange={setT("droitsPlaidoirie")} className="bpn-input mt-1" /></label>
-          <label className="block"><span className="bpn-label">Exercice courant</span>
-            <select value={exercice} onChange={(e) => setExercice(Number(e.target.value))} className="bpn-input mt-1">
+          <FormField label="Cotisation avocat (FCFA)">
+            <input type="number" step={25000} value={tarifs.avocat} onChange={setT("avocat")} className="bpn-input" />
+          </FormField>
+          <FormField label="Cotisation stagiaire (FCFA)">
+            <input type="number" step={25000} value={tarifs.stagiaire} onChange={setT("stagiaire")} className="bpn-input" />
+          </FormField>
+          <FormField label="Droit de plaidoirie (FCFA)">
+            <input type="number" step={10000} value={tarifs.droitsPlaidoirie} onChange={setT("droitsPlaidoirie")} className="bpn-input" />
+          </FormField>
+          <FormField label="Exercice courant">
+            <select value={exercice} onChange={(e) => setExercice(Number(e.target.value))} className="bpn-input">
               {EXERCICES.map((a) => <option key={a} value={a}>{a}</option>)}
-            </select></label>
+            </select>
+          </FormField>
         </div>
         <div className="mt-3 text-xs text-gris">
           Aperçu : avocat {formatFCFA(tarifs.avocat)} · stagiaire {formatFCFA(tarifs.stagiaire)} · honoraires exonérés.
@@ -84,18 +88,24 @@ export function Parametres() {
 
       <Section titre="Identité de l'institution" description="Utilisée dans les documents officiels et l'interface.">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <label className="block"><span className="bpn-label">Dénomination</span>
-            <input value={identite.denomination} onChange={setI("denomination")} className="bpn-input mt-1" /></label>
-          <label className="block"><span className="bpn-label">Ordre</span>
-            <input value={identite.ordre} onChange={setI("ordre")} className="bpn-input mt-1" /></label>
-          <label className="block"><span className="bpn-label">Bâtonnier</span>
-            <input value={identite.batonnier} onChange={setI("batonnier")} className="bpn-input mt-1" /></label>
-          <label className="block"><span className="bpn-label">Trésorière</span>
-            <input value={identite.tresoriere} onChange={setI("tresoriere")} className="bpn-input mt-1" /></label>
-          <label className="block"><span className="bpn-label">Secrétaire Général</span>
-            <input value={identite.secretaireGeneral} onChange={setI("secretaireGeneral")} className="bpn-input mt-1" /></label>
-          <label className="block"><span className="bpn-label">Adresse</span>
-            <input value={identite.adresse} onChange={setI("adresse")} className="bpn-input mt-1" /></label>
+          <FormField label="Dénomination">
+            <input value={identite.denomination} onChange={setI("denomination")} className="bpn-input" />
+          </FormField>
+          <FormField label="Ordre">
+            <input value={identite.ordre} onChange={setI("ordre")} className="bpn-input" />
+          </FormField>
+          <FormField label="Bâtonnier">
+            <input value={identite.batonnier} onChange={setI("batonnier")} className="bpn-input" />
+          </FormField>
+          <FormField label="Trésorière">
+            <input value={identite.tresoriere} onChange={setI("tresoriere")} className="bpn-input" />
+          </FormField>
+          <FormField label="Secrétaire Général">
+            <input value={identite.secretaireGeneral} onChange={setI("secretaireGeneral")} className="bpn-input" />
+          </FormField>
+          <FormField label="Adresse">
+            <input value={identite.adresse} onChange={setI("adresse")} className="bpn-input" />
+          </FormField>
         </div>
         <div className="mt-4 flex justify-end">
           <button className="bpn-btn bpn-btn-primary" onClick={sauverIdentite}><CheckIcon className="h-4 w-4" /> Enregistrer</button>

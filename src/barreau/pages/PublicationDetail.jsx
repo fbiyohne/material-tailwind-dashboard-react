@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeftIcon, CheckIcon } from "@heroicons/react/24/outline";
-import { Badge, useToast } from "../components";
+import { Badge, useToast, FormField } from "../components";
 import { STATUT_PUBLICATION_META } from "../data/publications";
 import { getPublication, majPublication, changerStatutPublication } from "../api/resources";
 
@@ -84,12 +84,15 @@ export function PublicationDetail() {
             <button className="bpn-btn bpn-btn-primary !px-3 !py-1 text-[11px]" onClick={enregistrer}><CheckIcon className="h-3.5 w-3.5" /> Enregistrer</button>
           </div>
           <div className="space-y-3 p-4">
-            <label className="block"><span className="bpn-label">Titre</span>
-              <input value={form.titre ?? ""} onChange={set("titre")} className="bpn-input mt-1" /></label>
-            <label className="block"><span className="bpn-label">Type</span>
-              <select value={form.type ?? "Avis"} onChange={set("type")} className="bpn-input mt-1"><option>Avis</option><option>Communiqué</option></select></label>
-            <label className="block"><span className="bpn-label">Contenu</span>
-              <textarea rows={8} value={form.contenu ?? ""} onChange={set("contenu")} className="bpn-input mt-1" /></label>
+            <FormField label="Titre">
+              <input value={form.titre ?? ""} onChange={set("titre")} className="bpn-input" />
+            </FormField>
+            <FormField label="Type">
+              <select value={form.type ?? "Avis"} onChange={set("type")} className="bpn-input"><option>Avis</option><option>Communiqué</option></select>
+            </FormField>
+            <FormField label="Contenu">
+              <textarea rows={8} value={form.contenu ?? ""} onChange={set("contenu")} className="bpn-input" />
+            </FormField>
           </div>
         </div>
 

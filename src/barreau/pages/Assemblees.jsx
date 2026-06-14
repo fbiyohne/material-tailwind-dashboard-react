@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PlusIcon, ArrowRightIcon, BuildingLibraryIcon } from "@heroicons/react/24/outline";
-import { Badge, Modal, EmptyState, useToast, PageHeader } from "../components";
+import { Badge, Modal, EmptyState, useToast, PageHeader, FormField } from "../components";
 import { listerAssemblees, creerAssemblee as apiCreerAssemblee } from "../api/resources";
 
 const TYPE_LABEL = { AGO: "Assemblée Générale Ordinaire", AGE: "Assemblée Générale Extraordinaire" };
@@ -27,12 +27,13 @@ function NouvelleAssembleeModal({ open, onClose, onCreated }) {
       footer={<button className="bpn-btn bpn-btn-primary" onClick={valider}>Créer l'assemblée</button>}>
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
-          <label className="block"><span className="bpn-label">Type</span>
-            <select value={form.type} onChange={set("type")} className="bpn-input mt-1"><option value="AGO">AGO — Ordinaire</option><option value="AGE">AGE — Extraordinaire</option></select></label>
-          <label className="block"><span className="bpn-label">Date</span><input type="date" value={form.date} onChange={set("date")} className="bpn-input mt-1" /></label>
+          <FormField label="Type">
+            <select value={form.type} onChange={set("type")} className="bpn-input"><option value="AGO">AGO — Ordinaire</option><option value="AGE">AGE — Extraordinaire</option></select>
+          </FormField>
+          <FormField label="Date"><input type="date" value={form.date} onChange={set("date")} className="bpn-input" /></FormField>
         </div>
-        <label className="block"><span className="bpn-label">Lieu</span><input value={form.lieu} onChange={set("lieu")} className="bpn-input mt-1" /></label>
-        <label className="block"><span className="bpn-label">Ordre du jour (une ligne par point)</span><textarea rows={4} value={form.odj} onChange={set("odj")} className="bpn-input mt-1" /></label>
+        <FormField label="Lieu"><input value={form.lieu} onChange={set("lieu")} className="bpn-input" /></FormField>
+        <FormField label="Ordre du jour" hint="une ligne par point"><textarea rows={4} value={form.odj} onChange={set("odj")} className="bpn-input" /></FormField>
       </div>
     </Modal>
   );

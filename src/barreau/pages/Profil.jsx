@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { KeyIcon, CheckIcon, EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
-import { Badge, useToast, PageHeader } from "../components";
+import { Badge, useToast, PageHeader, FormField } from "../components";
 import { useAuth } from "../auth/AuthContext";
 import { changerMotDePasse } from "../api/resources";
 
@@ -77,12 +77,15 @@ export function Profil() {
             </button>
           </div>
           <form className="space-y-3 p-4" onSubmit={(e) => { e.preventDefault(); enregistrer(); }}>
-            <label className="block"><span className="bpn-label">Mot de passe actuel</span>
-              <input type={montrer ? "text" : "password"} value={form.currentPassword} onChange={set("currentPassword")} className="bpn-input mt-1" autoComplete="current-password" /></label>
-            <label className="block"><span className="bpn-label">Nouveau mot de passe</span>
-              <input type={montrer ? "text" : "password"} value={form.newPassword} onChange={set("newPassword")} className="bpn-input mt-1" autoComplete="new-password" /></label>
-            <label className="block"><span className="bpn-label">Confirmer le nouveau mot de passe</span>
-              <input type={montrer ? "text" : "password"} value={form.confirm} onChange={set("confirm")} className="bpn-input mt-1" autoComplete="new-password" /></label>
+            <FormField label="Mot de passe actuel">
+              <input type={montrer ? "text" : "password"} value={form.currentPassword} onChange={set("currentPassword")} className="bpn-input" autoComplete="current-password" />
+            </FormField>
+            <FormField label="Nouveau mot de passe">
+              <input type={montrer ? "text" : "password"} value={form.newPassword} onChange={set("newPassword")} className="bpn-input" autoComplete="new-password" />
+            </FormField>
+            <FormField label="Confirmer le nouveau mot de passe">
+              <input type={montrer ? "text" : "password"} value={form.confirm} onChange={set("confirm")} className="bpn-input" autoComplete="new-password" />
+            </FormField>
             {form.newPassword.length > 0 && (
               <ul className="space-y-1 pt-0.5">
                 <Critere ok={assezLong}>Au moins 8 caractères</Critere>

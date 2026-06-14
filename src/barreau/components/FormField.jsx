@@ -5,9 +5,9 @@ import PropTypes from "prop-types";
  * message d'erreur, autour d'un contrôle quelconque (input/select/textarea).
  * Pour l'état d'erreur du contrôle, ajouter la classe `is-invalid` à `bpn-input`.
  */
-export function FormField({ label, required, hint, error, full, htmlFor, children }) {
+export function FormField({ label, required, hint, error, full, htmlFor, className = "", children }) {
   return (
-    <label htmlFor={htmlFor} className={`block ${full ? "sm:col-span-2" : ""}`}>
+    <label htmlFor={htmlFor} className={`block ${full ? "sm:col-span-2" : ""} ${className}`}>
       <span className="bpn-label">
         {label}{required && <span className="text-rouge"> *</span>}
         {hint && <span className="ml-1 font-normal lowercase tracking-normal text-gris/70">· {hint}</span>}
@@ -25,6 +25,7 @@ FormField.propTypes = {
   error: PropTypes.string,
   full: PropTypes.bool,
   htmlFor: PropTypes.string,
+  className: PropTypes.string,
   children: PropTypes.node,
 };
 

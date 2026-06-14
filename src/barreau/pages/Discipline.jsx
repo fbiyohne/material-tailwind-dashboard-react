@@ -5,7 +5,7 @@ import {
   ShieldExclamationIcon,
   PlusIcon,
 } from "@heroicons/react/24/outline";
-import { Badge, Modal, SortTh, Pagination, useToast, PageHeader } from "../components";
+import { Badge, Modal, SortTh, Pagination, useToast, PageHeader, FormField, Notice } from "../components";
 import { useDataTable } from "../hooks/useDataTable";
 import { STATUT_DOSSIER_META } from "../data/institutionnel";
 import { listerMembres, listerDossiers, ouvrirDossier as apiOuvrirDossier, journalDiscipline as apiJournal } from "../api/resources";
@@ -49,18 +49,21 @@ function OuvrirDossierModal({ open, onClose, onCreated }) {
   return (
     <Modal open={open} onClose={onClose} title="Ouvrir un dossier disciplinaire"
       footer={<button className="bpn-btn bpn-btn-danger" onClick={valider}>Ouvrir le dossier</button>}>
-      <div className="mb-3 rounded border-l-[3px] border-or bg-or-L px-3 py-2 text-xs text-gris">
+      <Notice ton="or" className="mb-4">
         Référence unique attribuée automatiquement (format <span className="font-mono font-medium text-navy">AAAA-NN</span>, non réutilisable).
-      </div>
+      </Notice>
       <div className="space-y-3">
-        <label className="block"><span className="bpn-label">Avocat mis en cause</span>
-          <select value={form.avocatNom} onChange={set("avocatNom")} className="bpn-input mt-1">
+        <FormField label="Avocat mis en cause">
+          <select value={form.avocatNom} onChange={set("avocatNom")} className="bpn-input">
             {avocats.map((m) => <option key={m.id} value={m.nom}>Me {m.nom}</option>)}
-          </select></label>
-        <label className="block"><span className="bpn-label">Objet de la saisine</span>
-          <textarea rows={3} value={form.objet} onChange={set("objet")} className="bpn-input mt-1" placeholder="Nature de la plainte ou de la saisine…" /></label>
-        <label className="block"><span className="bpn-label">Date de saisine</span>
-          <input type="date" value={form.dateSaisine} onChange={set("dateSaisine")} className="bpn-input mt-1" /></label>
+          </select>
+        </FormField>
+        <FormField label="Objet de la saisine">
+          <textarea rows={3} value={form.objet} onChange={set("objet")} className="bpn-input" placeholder="Nature de la plainte ou de la saisine…" />
+        </FormField>
+        <FormField label="Date de saisine">
+          <input type="date" value={form.dateSaisine} onChange={set("dateSaisine")} className="bpn-input" />
+        </FormField>
       </div>
     </Modal>
   );

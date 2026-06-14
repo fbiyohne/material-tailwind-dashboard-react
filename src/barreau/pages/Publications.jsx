@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PlusIcon, MegaphoneIcon, TrashIcon } from "@heroicons/react/24/outline";
-import { Badge, Modal, EmptyState, useToast, useConfirm, PageHeader } from "../components";
+import { Badge, Modal, EmptyState, useToast, useConfirm, PageHeader, FormField } from "../components";
 import { STATUT_PUBLICATION_META } from "../data/publications";
 import { listerPublications, creerPublication as apiCreerPublication, changerStatutPublication as apiChangerStatut, supprimerPublication } from "../api/resources";
 
@@ -25,15 +25,18 @@ function NouvellePublicationModal({ open, onClose, onCreated }) {
       footer={<button className="bpn-btn bpn-btn-primary" onClick={valider}>Soumettre pour validation</button>}>
       <div className="space-y-3">
         <div className="grid grid-cols-3 gap-3">
-          <label className="col-span-2 block"><span className="bpn-label">Titre</span>
-            <input value={form.titre} onChange={set("titre")} className="bpn-input mt-1" /></label>
-          <label className="block"><span className="bpn-label">Type</span>
-            <select value={form.type} onChange={set("type")} className="bpn-input mt-1">
+          <FormField label="Titre" className="col-span-2">
+            <input value={form.titre} onChange={set("titre")} className="bpn-input" />
+          </FormField>
+          <FormField label="Type">
+            <select value={form.type} onChange={set("type")} className="bpn-input">
               <option>Avis</option><option>Communiqué</option>
-            </select></label>
+            </select>
+          </FormField>
         </div>
-        <label className="block"><span className="bpn-label">Contenu</span>
-          <textarea rows={5} value={form.contenu} onChange={set("contenu")} className="bpn-input mt-1" /></label>
+        <FormField label="Contenu">
+          <textarea rows={5} value={form.contenu} onChange={set("contenu")} className="bpn-input" />
+        </FormField>
       </div>
     </Modal>
   );
