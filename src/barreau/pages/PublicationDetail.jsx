@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeftIcon, CheckIcon } from "@heroicons/react/24/outline";
-import { Badge, useToast, FormField } from "../components";
+import { Badge, useToast, FormField, PageHeader } from "../components";
 import { STATUT_PUBLICATION_META } from "../data/publications";
 import { getPublication, majPublication, changerStatutPublication } from "../api/resources";
 
@@ -54,34 +54,34 @@ export function PublicationDetail() {
         <ArrowLeftIcon className="h-4 w-4" /> Retour aux publications
       </Link>
 
-      <div className="bpn-card flex flex-col justify-between gap-3 p-5 sm:flex-row sm:items-center">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
+      <PageHeader
+        eyebrow="Publication"
+        titre={publication.titre}
+        sousTitre={
+          <span className="flex flex-wrap items-center gap-2">
             <Badge ton="gris" dot={false}>{publication.type}</Badge>
-            <h2 className="font-display text-2xl text-navy">{publication.titre}</h2>
             <Badge ton={meta.ton}>{meta.label}</Badge>
-          </div>
-          <div className="mt-1 font-mono text-xs text-gris">{publication.date}</div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {publication.statut === "brouillon" && (
-            <button className="bpn-btn bpn-btn-primary" onClick={() => transition("a_valider", "Soumis pour validation.")}>Soumettre</button>
-          )}
-          {publication.statut === "a_valider" && (
-            <button className="bpn-btn bpn-btn-primary" onClick={() => transition("valide", "Validé par le Bâtonnier.")}>Valider (Bâtonnier)</button>
-          )}
-          {publication.statut === "valide" && (
-            <button className="bpn-btn bpn-btn-or" onClick={() => transition("publie", "Publication diffusée.")}>Publier</button>
-          )}
-        </div>
-      </div>
+            <span className="font-mono text-xs text-gris">{publication.date}</span>
+          </span>
+        }
+      >
+        {publication.statut === "brouillon" && (
+          <button className="bpn-btn bpn-btn-primary" onClick={() => transition("a_valider", "Soumis pour validation.")}>Soumettre</button>
+        )}
+        {publication.statut === "a_valider" && (
+          <button className="bpn-btn bpn-btn-primary" onClick={() => transition("valide", "Validé par le Bâtonnier.")}>Valider (Bâtonnier)</button>
+        )}
+        {publication.statut === "valide" && (
+          <button className="bpn-btn bpn-btn-or" onClick={() => transition("publie", "Publication diffusée.")}>Publier</button>
+        )}
+      </PageHeader>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         {/* Édition */}
         <div className="bpn-card">
           <div className="bpn-card-header">
             <span className="bpn-card-heading">Rédaction</span>
-            <button className="bpn-btn bpn-btn-primary !px-3 !py-1 text-[11px]" onClick={enregistrer}><CheckIcon className="h-3.5 w-3.5" /> Enregistrer</button>
+            <button className="bpn-btn bpn-btn-primary !px-3 !py-1 text-xs" onClick={enregistrer}><CheckIcon className="h-3.5 w-3.5" /> Enregistrer</button>
           </div>
           <div className="space-y-3 p-4">
             <FormField label="Titre">

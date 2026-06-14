@@ -62,7 +62,7 @@ export function LettreBatonnier() {
                 {c.theme}
               </p>
               <button
-                className="bpn-btn bpn-btn-ghost mt-3 w-full justify-center !py-1.5 text-[11px]"
+                className="bpn-btn bpn-btn-ghost mt-3 w-full justify-center !py-1.5 text-xs"
                 onClick={() => ouvrirGeneration(c.mois, c.theme)}
                 disabled={chargement === c.mois}
               >

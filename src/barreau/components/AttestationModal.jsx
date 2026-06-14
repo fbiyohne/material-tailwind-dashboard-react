@@ -41,7 +41,7 @@ export function AttestationModal({ membre, onClose }) {
       }
     >
       {emise && (
-        <div className="bpn-no-print mb-3 flex items-center gap-2 rounded border-l-[3px] border-vert bg-[#e6f4ee] px-3 py-2 text-sm text-vert">
+        <div className="bpn-no-print mb-3 flex items-center gap-2 rounded border-l-[3px] border-vert bg-vertL px-3 py-2 text-sm text-vert">
           <CheckCircleIcon className="h-5 w-5 shrink-0" /> Attestation générée et archivée.
         </div>
       )}

@@ -90,8 +90,8 @@ export function Discipline() {
   // ─── Écran d'accès restreint (RG-13) ───────────────────────────────────
   if (!acces) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-lg border border-rouge/30 bg-[#f4e6e6]/40 px-6 py-20 text-center">
-        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#f4e6e6] text-rouge">
+      <div className="flex flex-col items-center justify-center rounded-lg border border-rouge/30 bg-rougeL/40 px-6 py-20 text-center">
+        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-rougeL text-rouge">
           <ShieldExclamationIcon className="h-7 w-7" />
         </div>
         <h2 className="font-display text-2xl text-navy">Accès restreint</h2>
@@ -118,7 +118,7 @@ export function Discipline() {
         </button>
       </PageHeader>
 
-      <div className="flex items-center gap-2 rounded border-l-[3px] border-rouge bg-[#f4e6e6] px-4 py-2.5 text-sm text-rouge">
+      <div className="flex items-center gap-2 rounded border-l-[3px] border-rouge bg-rougeL px-4 py-2.5 text-sm text-rouge">
         <ShieldExclamationIcon className="h-5 w-5 shrink-0" />
         Données confidentielles — chaque consultation est enregistrée dans le journal d'accès.
       </div>
@@ -150,7 +150,7 @@ export function Discipline() {
                     <td className="px-3 py-2.5"><Badge ton={meta.ton}>{meta.label}</Badge></td>
                     <td className="px-3 py-2.5 text-right">
                       <button
-                        className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-[10px]"
+                        className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs"
                         onClick={() => navigate(`/discipline/${d.id}`)}
                       >
                         Ouvrir

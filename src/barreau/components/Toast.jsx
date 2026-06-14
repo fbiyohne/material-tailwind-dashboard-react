@@ -5,9 +5,9 @@ import { CheckCircleIcon, ExclamationTriangleIcon, InformationCircleIcon, XMarkI
 const ToastContext = createContext(null);
 
 const STYLES = {
-  success: { border: "border-vert", bg: "bg-[#e6f4ee]", text: "text-vert", Icon: CheckCircleIcon },
-  error: { border: "border-rouge", bg: "bg-[#f4e6e6]", text: "text-rouge", Icon: ExclamationTriangleIcon },
-  info: { border: "border-navy", bg: "bg-[#e6edf4]", text: "text-navy", Icon: InformationCircleIcon },
+  success: { border: "border-vert", bg: "bg-vertL", text: "text-vert", Icon: CheckCircleIcon },
+  error: { border: "border-rouge", bg: "bg-rougeL", text: "text-rouge", Icon: ExclamationTriangleIcon },
+  info: { border: "border-navy", bg: "bg-bleuL", text: "text-navy", Icon: InformationCircleIcon },
 };
 
 /** Fournit `useToast()` et affiche les notifications (a11y : aria-live). */

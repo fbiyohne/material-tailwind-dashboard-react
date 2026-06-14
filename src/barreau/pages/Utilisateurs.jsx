@@ -104,10 +104,10 @@ export function Utilisateurs() {
                   {d.motif && <p className="mt-1.5 max-w-prose text-sm text-encre/80">{d.motif}</p>}
                 </div>
                 <div className="flex shrink-0 gap-2">
-                  <button className="bpn-btn bpn-btn-or !py-1.5 text-[11px]" onClick={() => provisionner(d)}>
+                  <button className="bpn-btn bpn-btn-or !py-1.5 text-xs" onClick={() => provisionner(d)}>
                     <CheckIcon className="h-3.5 w-3.5" /> Créer le compte
                   </button>
-                  <button className="bpn-btn bpn-btn-ghost !py-1.5 text-[11px]" onClick={() => refuser(d)}>
+                  <button className="bpn-btn bpn-btn-ghost !py-1.5 text-xs" onClick={() => refuser(d)}>
                     <XMarkIcon className="h-3.5 w-3.5" /> Refuser
                   </button>
                 </div>
@@ -148,11 +148,11 @@ export function Utilisateurs() {
                   <td><Badge ton={u.actif ? "vert" : "gris"}>{u.actif ? "Actif" : "Désactivé"}</Badge></td>
                   <td className="text-right">
                     <div className="flex justify-end gap-2">
-                      <button className="bpn-btn bpn-btn-ghost !px-2 !py-1 text-[11px]" onClick={() => setMotDePasse({ id: u.id, nom: u.nom, password: "" })}>
+                      <button className="bpn-btn bpn-btn-ghost !px-2 !py-1 text-xs" onClick={() => setMotDePasse({ id: u.id, nom: u.nom, password: "" })}>
                         <KeyIcon className="h-3.5 w-3.5" /> Mot de passe
                       </button>
                       <button
-                        className="bpn-btn bpn-btn-ghost !px-2 !py-1 text-[11px] disabled:opacity-50"
+                        className="bpn-btn bpn-btn-ghost !px-2 !py-1 text-xs disabled:opacity-50"
                         onClick={() => basculerActif(u)}
                         disabled={moi}
                         title={moi ? "Vous ne pouvez pas désactiver votre propre compte" : ""}

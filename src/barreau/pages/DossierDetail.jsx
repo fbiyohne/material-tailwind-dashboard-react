@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeftIcon, ShieldExclamationIcon, CheckIcon, ArrowDownTrayIcon, PaperClipIcon, PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
-import { Badge, DocumentModal, useToast, FormField } from "../components";
+import { Badge, DocumentModal, useToast, FormField, PageHeader } from "../components";
 import { STATUT_DOSSIER_META } from "../data/institutionnel";
 import { getDossier, majDossier, archiverDoc, telechargerDecisionDisciplinePdf } from "../api/resources";
 
@@ -74,25 +74,25 @@ export function DossierDetail() {
         <ArrowLeftIcon className="h-4 w-4" /> Retour aux dossiers
       </Link>
 
-      <div className="flex items-center gap-2 rounded border-l-[3px] border-rouge bg-[#f4e6e6] px-4 py-2.5 text-sm text-rouge">
+      <div className="flex items-center gap-2 rounded border-l-[3px] border-rouge bg-rougeL px-4 py-2.5 text-sm text-rouge">
         <ShieldExclamationIcon className="h-5 w-5 shrink-0" /> Dossier confidentiel — consultation journalisée (RG-13).
       </div>
 
       {/* En-tête */}
-      <div className="bpn-card flex flex-col justify-between gap-3 p-5 sm:flex-row sm:items-center">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="font-display text-2xl text-navy">Dossier N° {dossier.reference}</h2>
+      <PageHeader
+        eyebrow="Conseil de discipline"
+        titre={`Dossier N° ${dossier.reference}`}
+        sousTitre={
+          <span className="flex flex-wrap items-center gap-2">
             <Badge ton={meta.ton}>{meta.label}</Badge>
-          </div>
-          <div className="mt-1 text-sm text-gris">
-            Mis en cause : <span className="font-medium text-encre">{dossier.avocatNom === "Confidentiel" ? "Confidentiel" : `Me ${dossier.avocatNom}`}</span> · saisine du {dossier.dateSaisine}
-          </div>
-        </div>
+            <span>Mis en cause : <span className="font-medium text-encre">{dossier.avocatNom === "Confidentiel" ? "Confidentiel" : `Me ${dossier.avocatNom}`}</span> · saisine du {dossier.dateSaisine}</span>
+          </span>
+        }
+      >
         <button className="bpn-btn bpn-btn-danger" onClick={() => setConvocation(true)}>
           Convocation disciplinaire
         </button>
-      </div>
+      </PageHeader>
 
       <div className="bpn-card">
         <div className="bpn-card-header"><span className="bpn-card-heading">Objet de la saisine</span></div>

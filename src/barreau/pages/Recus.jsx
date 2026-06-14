@@ -117,7 +117,7 @@ export function Recus() {
       <PageHeader className="bpn-no-print" eyebrow="Finances" titre="Reçus de paiement" sousTitre="Émission d'un reçu officiel — mise à jour automatique des cotisations à l'enregistrement." />
 
       {succes && (
-        <div className="bpn-no-print flex items-center gap-2 rounded border-l-[3px] border-vert bg-[#e6f4ee] px-4 py-2.5 text-sm text-vert">
+        <div className="bpn-no-print flex items-center gap-2 rounded border-l-[3px] border-vert bg-vertL px-4 py-2.5 text-sm text-vert">
           <CheckCircleIcon className="h-5 w-5 shrink-0" />
           Reçu N° {succes.numero} émis pour Me {membre?.nom} — cotisation {succes.annee} mise à jour et reçu archivé.
         </div>

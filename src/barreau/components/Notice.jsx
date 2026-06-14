@@ -2,9 +2,9 @@ import PropTypes from "prop-types";
 
 const TONS = {
   or: { box: "border-or bg-or-L text-gris", icon: "text-or" },
-  rouge: { box: "border-rouge bg-[#f4e6e6] text-rouge", icon: "text-rouge" },
-  vert: { box: "border-vert bg-[#e6f4ee] text-vert", icon: "text-vert" },
-  bleu: { box: "border-navy bg-[#e6edf4] text-navy", icon: "text-navy" },
+  rouge: { box: "border-rouge bg-rougeL text-rouge", icon: "text-rouge" },
+  vert: { box: "border-vert bg-vertL text-vert", icon: "text-vert" },
+  bleu: { box: "border-navy bg-bleuL text-navy", icon: "text-navy" },
   gris: { box: "border-grisM bg-grisL text-gris", icon: "text-gris" },
 };
 

@@ -40,10 +40,10 @@ export function Annuaire() {
             </button>
           ))}
         </div>
-        <button className="bpn-btn bpn-btn-ghost !py-1.5 text-[11px]" onClick={() => window.print()}>
+        <button className="bpn-btn bpn-btn-ghost !py-1.5 text-xs" onClick={() => window.print()}>
           <PrinterIcon className="h-4 w-4" /> Imprimer
         </button>
-        <button className="bpn-btn bpn-btn-or !py-1.5 text-[11px]" onClick={exporterXlsx}>
+        <button className="bpn-btn bpn-btn-or !py-1.5 text-xs" onClick={exporterXlsx}>
           <ArrowDownTrayIcon className="h-4 w-4" /> Excel
         </button>
       </PageHeader>

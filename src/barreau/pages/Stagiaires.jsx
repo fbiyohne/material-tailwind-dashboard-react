@@ -58,7 +58,7 @@ function CarteStagiaire({ membre, stage, onFiche }) {
       <button
         type="button"
         onClick={() => onFiche(membre)}
-        className="bpn-btn bpn-btn-ghost mt-3 w-full justify-center !py-1.5 text-[11px]"
+        className="bpn-btn bpn-btn-ghost mt-3 w-full justify-center !py-1.5 text-xs"
       >
         Voir la fiche
       </button>
@@ -107,7 +107,7 @@ export function Stagiaires() {
         <button
           type="button"
           onClick={() => window.print()}
-          className="bpn-btn bpn-btn-ghost !py-1.5 text-[11px]"
+          className="bpn-btn bpn-btn-ghost !py-1.5 text-xs"
         >
           <PrinterIcon className="h-4 w-4" />
           Liste

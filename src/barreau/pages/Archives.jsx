@@ -79,7 +79,7 @@ export function Archives() {
                   <td className="px-3 py-2.5 font-medium">{a.titre}</td>
                   <td className="px-3 py-2.5 font-mono text-xs text-or">{a.reference}</td>
                   <td className="px-3 py-2.5 text-right">
-                    <button className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-[10px]" onClick={() => setApercu(a)}>
+                    <button className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs" onClick={() => setApercu(a)}>
                       <DocumentArrowDownIcon className="h-3.5 w-3.5" /> Consulter
                     </button>
                   </td>

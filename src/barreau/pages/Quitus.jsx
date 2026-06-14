@@ -92,13 +92,13 @@ export function Quitus() {
     <div className="space-y-5">
       <PageHeader className="bpn-no-print" eyebrow="Finances" titre="Quitus de cotisation" sousTitre="Délivrance d'un quitus officiel — uniquement pour les avocats à jour et validés par la Trésorière." />
 
-      <div className="bpn-no-print flex items-start gap-2 rounded border-l-[3px] border-vert bg-[#e6f4ee] px-4 py-2.5 text-sm text-vert">
+      <div className="bpn-no-print flex items-start gap-2 rounded border-l-[3px] border-vert bg-vertL px-4 py-2.5 text-sm text-vert">
         <CheckCircleIcon className="mt-0.5 h-5 w-5 shrink-0" />
         <span>Seuls les avocats <strong>à jour</strong> et <strong>validés par la Trésorière</strong> apparaissent. La génération est sinon bloquée (règle BR-01).</span>
       </div>
 
       {succes && (
-        <div className="bpn-no-print flex items-center gap-2 rounded border-l-[3px] border-navy bg-[#e6edf4] px-4 py-2.5 text-sm text-navy">
+        <div className="bpn-no-print flex items-center gap-2 rounded border-l-[3px] border-navy bg-bleuL px-4 py-2.5 text-sm text-navy">
           <DocumentCheckIcon className="h-5 w-5 shrink-0" /> Quitus {succes.numero} généré et archivé (exercice {succes.annee}).
         </div>
       )}
@@ -143,7 +143,7 @@ export function Quitus() {
             <ApercuQuitus numero={numero} membre={membreActif} exercice={exercice} date={aujourdhui()} />
           ) : (
             <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-grisM bg-white px-6 py-16 text-center">
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#f4e6e6] text-rouge"><LockClosedIcon className="h-6 w-6" /></div>
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-rougeL text-rouge"><LockClosedIcon className="h-6 w-6" /></div>
               <p className="font-display text-lg text-navy">Génération bloquée</p>
               <p className="mt-2 max-w-md text-sm text-gris">Aucun avocat n'est éligible pour l'exercice {exercice} : un quitus n'est délivrable que si la cotisation est réglée <strong>et</strong> validée par la Trésorière (BR-01).</p>
             </div>

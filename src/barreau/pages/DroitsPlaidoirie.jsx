@@ -62,10 +62,10 @@ export function DroitsPlaidoirie() {
             {a}
           </button>
         ))}
-        <button className="bpn-btn bpn-btn-ghost !py-1.5 text-[11px]" onClick={() => exporterEtat("pdf")}>
+        <button className="bpn-btn bpn-btn-ghost !py-1.5 text-xs" onClick={() => exporterEtat("pdf")}>
           <PrinterIcon className="h-4 w-4" /> État PDF
         </button>
-        <button className="bpn-btn bpn-btn-or !py-1.5 text-[11px]" onClick={() => exporterEtat("xlsx")}>
+        <button className="bpn-btn bpn-btn-or !py-1.5 text-xs" onClick={() => exporterEtat("xlsx")}>
           <ArrowDownTrayIcon className="h-4 w-4" /> Excel
         </button>
       </PageHeader>
@@ -110,7 +110,7 @@ export function DroitsPlaidoirie() {
                     <td className="px-3 py-2.5"><Badge ton={meta.ton}>{meta.label}</Badge></td>
                     <td className="px-3 py-2.5 text-right">
                       {l.solde > 0 ? (
-                        <button className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-[10px]" onClick={() => setPaiement(l)}>
+                        <button className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs" onClick={() => setPaiement(l)}>
                           <BanknotesIcon className="h-3.5 w-3.5" /> Encaisser
                         </button>
                       ) : (

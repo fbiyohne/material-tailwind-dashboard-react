@@ -113,8 +113,8 @@ export function Avocats() {
                     <td className="px-3 py-2.5"><Badge ton={meta.ton}>{meta.label}</Badge></td>
                     <td className="px-3 py-2.5">
                       <div className="flex items-center justify-end gap-1.5">
-                        <button type="button" onClick={() => navigate(`/avocats/${m.id}`)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-[10px]">Fiche</button>
-                        <button type="button" onClick={() => setAttestation(m)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-[10px]">Attestation</button>
+                        <button type="button" onClick={() => navigate(`/avocats/${m.id}`)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs">Fiche</button>
+                        <button type="button" onClick={() => setAttestation(m)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs">Attestation</button>
                       </div>
                     </td>
                   </tr>

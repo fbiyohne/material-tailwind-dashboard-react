@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeftIcon, PlusIcon, CheckIcon, ArrowDownTrayIcon, TrashIcon } from "@heroicons/react/24/outline";
-import { Badge, DocumentModal, useToast, useConfirm } from "../components";
+import { Badge, DocumentModal, useToast, useConfirm, PageHeader } from "../components";
 import { EXERCICE_COURANT } from "../data/dashboard-data";
 import { getAssemblee, majAssemblee, getCorpsElectoral, archiverDoc, telechargerPvAgPdf, supprimerAssemblee } from "../api/resources";
 
@@ -113,21 +113,21 @@ export function AssembleeDetail() {
         <ArrowLeftIcon className="h-4 w-4" /> Retour aux assemblées
       </Link>
 
-      <div className="bpn-card flex flex-col justify-between gap-3 p-5 sm:flex-row sm:items-center">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
+      <PageHeader
+        eyebrow="Assemblée générale"
+        titre={<span className="capitalize">{fmt(assemblee.date)}</span>}
+        sousTitre={
+          <span className="flex flex-wrap items-center gap-2">
             <Badge ton={assemblee.type === "AGE" ? "rouge" : "bleu"} dot={false}>{assemblee.type}</Badge>
-            <h2 className="font-display text-2xl capitalize text-navy">{fmt(assemblee.date)}</h2>
-          </div>
-          <div className="mt-1 text-xs text-gris">{TYPE_LABEL[assemblee.type]} · {assemblee.lieu}</div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button className="bpn-btn bpn-btn-ghost" onClick={() => setConvocation(true)}>Convocation</button>
-          {assemblee.statut !== "tenue" && (
-            <button className="bpn-btn bpn-btn-ghost text-rouge" onClick={supprimer}><TrashIcon className="h-4 w-4" /> Supprimer</button>
-          )}
-        </div>
-      </div>
+            <span>{TYPE_LABEL[assemblee.type]} · {assemblee.lieu}</span>
+          </span>
+        }
+      >
+        <button className="bpn-btn bpn-btn-ghost" onClick={() => setConvocation(true)}>Convocation</button>
+        {assemblee.statut !== "tenue" && (
+          <button className="bpn-btn bpn-btn-ghost text-rouge" onClick={supprimer}><TrashIcon className="h-4 w-4" /> Supprimer</button>
+        )}
+      </PageHeader>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <Carte titre="Ordre du jour">
@@ -136,7 +136,7 @@ export function AssembleeDetail() {
           </ol>
         </Carte>
 
-        <Carte titre="Quorum" action={<button className="bpn-btn bpn-btn-primary !px-3 !py-1 text-[11px]" onClick={sauverQuorum}>Enregistrer</button>}>
+        <Carte titre="Quorum" action={<button className="bpn-btn bpn-btn-primary !px-3 !py-1 text-xs" onClick={sauverQuorum}>Enregistrer</button>}>
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
               <div><span className="text-gris">Corps électoral : </span><span className="font-medium">{electeurs}</span></div>
@@ -167,8 +167,8 @@ export function AssembleeDetail() {
 
       <Carte titre="Procès-verbal" action={
         <div className="flex gap-2">
-          <button className="bpn-btn bpn-btn-ghost !px-3 !py-1 text-[11px]" onClick={telechargerPv}><ArrowDownTrayIcon className="h-3.5 w-3.5" /> PDF</button>
-          <button className="bpn-btn bpn-btn-or !px-3 !py-1 text-[11px]" onClick={sauverPv}><CheckIcon className="h-3.5 w-3.5" /> Enregistrer &amp; archiver</button>
+          <button className="bpn-btn bpn-btn-ghost !px-3 !py-1 text-xs" onClick={telechargerPv}><ArrowDownTrayIcon className="h-3.5 w-3.5" /> PDF</button>
+          <button className="bpn-btn bpn-btn-or !px-3 !py-1 text-xs" onClick={sauverPv}><CheckIcon className="h-3.5 w-3.5" /> Enregistrer &amp; archiver</button>
         </div>
       }>
         <textarea rows={7} value={pv} onChange={(e) => setPv(e.target.value)} className="bpn-input" placeholder="Rédiger le procès-verbal de l'assemblée…" />

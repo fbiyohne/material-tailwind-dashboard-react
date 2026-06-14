@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeftIcon, CalendarDaysIcon, MapPinIcon, CheckIcon, ArrowDownTrayIcon, TrashIcon } from "@heroicons/react/24/outline";
-import { Badge, DocumentModal, useToast, useConfirm } from "../components";
+import { Badge, DocumentModal, useToast, useConfirm, PageHeader } from "../components";
 import { getReunion, majReunion, archiverDoc, telechargerPvReunionPdf, getConseil, supprimerReunion } from "../api/resources";
 
 const fmt = (d) => new Date(d).toLocaleDateString("fr-FR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
@@ -122,37 +122,35 @@ export function ReunionDetail() {
         <ArrowLeftIcon className="h-4 w-4" /> Retour aux réunions
       </Link>
 
-      <div className="bpn-card flex flex-col justify-between gap-3 p-5 sm:flex-row sm:items-center">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="font-display text-2xl capitalize text-navy">{fmt(reunion.date)}</h2>
+      <PageHeader
+        eyebrow="Conseil de l'Ordre"
+        titre={<span className="capitalize">{fmt(reunion.date)}</span>}
+        sousTitre={
+          <span className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <Badge ton={reunion.statut === "tenue" ? "vert" : "or"}>{reunion.statut === "tenue" ? "Tenue" : "Planifiée"}</Badge>
-          </div>
-          <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gris">
             <span className="flex items-center gap-1"><CalendarDaysIcon className="h-3.5 w-3.5" /> {reunion.heure}</span>
             <span className="flex items-center gap-1"><MapPinIcon className="h-3.5 w-3.5" /> {reunion.lieu}</span>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button className="bpn-btn bpn-btn-ghost" onClick={() => setConvocation(true)}>Convocation</button>
-          <button className="bpn-btn bpn-btn-ghost" onClick={() => setFeuille(true)}>Feuille de présence</button>
-          {reunion.statut !== "tenue" && (
-            <button className="bpn-btn bpn-btn-ghost text-rouge" onClick={supprimer}><TrashIcon className="h-4 w-4" /> Supprimer</button>
-          )}
-        </div>
-      </div>
+          </span>
+        }
+      >
+        <button className="bpn-btn bpn-btn-ghost" onClick={() => setConvocation(true)}>Convocation</button>
+        <button className="bpn-btn bpn-btn-ghost" onClick={() => setFeuille(true)}>Feuille de présence</button>
+        {reunion.statut !== "tenue" && (
+          <button className="bpn-btn bpn-btn-ghost text-rouge" onClick={supprimer}><TrashIcon className="h-4 w-4" /> Supprimer</button>
+        )}
+      </PageHeader>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <Carte titre="Ordre du jour" action={<button className="bpn-btn bpn-btn-primary !px-3 !py-1 text-[11px]" onClick={sauverOdj}>Enregistrer</button>}>
+        <Carte titre="Ordre du jour" action={<button className="bpn-btn bpn-btn-primary !px-3 !py-1 text-xs" onClick={sauverOdj}>Enregistrer</button>}>
           <textarea rows={6} value={odj} onChange={(e) => setOdj(e.target.value)} className="bpn-input" placeholder="Un point par ligne…" />
         </Carte>
 
-        <Carte titre={`Présences (${nbPresents}/${membresConseil.length})`} action={<button className="bpn-btn bpn-btn-primary !px-3 !py-1 text-[11px]" onClick={sauverPresences}>Enregistrer</button>}>
+        <Carte titre={`Présences (${nbPresents}/${membresConseil.length})`} action={<button className="bpn-btn bpn-btn-primary !px-3 !py-1 text-xs" onClick={sauverPresences}>Enregistrer</button>}>
           <ul className="space-y-2">
             {membresConseil.map((nom) => (
               <li key={nom}>
                 <label className="flex cursor-pointer items-center gap-2.5 text-sm">
-                  <input type="checkbox" checked={!!presences[nom]} onChange={(e) => setPresences({ ...presences, [nom]: e.target.checked })} className="h-4 w-4 accent-[#1A5C3A]" />
+                  <input type="checkbox" checked={!!presences[nom]} onChange={(e) => setPresences({ ...presences, [nom]: e.target.checked })} className="h-4 w-4 accent-vert" />
                   <span className={presences[nom] ? "text-encre" : "text-gris"}>{nom}</span>
                 </label>
               </li>
@@ -163,8 +161,8 @@ export function ReunionDetail() {
 
       <Carte titre="Procès-verbal" action={
         <div className="flex gap-2">
-          <button className="bpn-btn bpn-btn-ghost !px-3 !py-1 text-[11px]" onClick={telechargerPv}><ArrowDownTrayIcon className="h-3.5 w-3.5" /> PDF</button>
-          <button className="bpn-btn bpn-btn-or !px-3 !py-1 text-[11px]" onClick={sauverPv}><CheckIcon className="h-3.5 w-3.5" /> Enregistrer &amp; archiver</button>
+          <button className="bpn-btn bpn-btn-ghost !px-3 !py-1 text-xs" onClick={telechargerPv}><ArrowDownTrayIcon className="h-3.5 w-3.5" /> PDF</button>
+          <button className="bpn-btn bpn-btn-or !px-3 !py-1 text-xs" onClick={sauverPv}><CheckIcon className="h-3.5 w-3.5" /> Enregistrer &amp; archiver</button>
         </div>
       }>
         <textarea rows={8} value={pv} onChange={(e) => setPv(e.target.value)} className="bpn-input" placeholder="Rédiger le procès-verbal de la réunion…" />

@@ -148,10 +148,10 @@ export function Cotisations() {
   return (
     <div className="space-y-5">
       <PageHeader eyebrow="Finances" titre="Cotisations ordinales" sousTitre="Suivi des cotisations 2020–2026, recherche en temps réel et historique par avocat.">
-        <button className="bpn-btn bpn-btn-ghost !py-1.5 text-[11px]" onClick={() => exporterEtat("pdf")}>
+        <button className="bpn-btn bpn-btn-ghost !py-1.5 text-xs" onClick={() => exporterEtat("pdf")}>
           <PrinterIcon className="h-4 w-4" /> État PDF
         </button>
-        <button className="bpn-btn bpn-btn-or !py-1.5 text-[11px]" onClick={() => exporterEtat("xlsx")}>
+        <button className="bpn-btn bpn-btn-or !py-1.5 text-xs" onClick={() => exporterEtat("xlsx")}>
           <ArrowDownTrayIcon className="h-4 w-4" /> Excel
         </button>
         <button
@@ -226,18 +226,18 @@ export function Cotisations() {
                       <div className="flex items-center justify-end gap-1.5">
                         {(l.statut === "retard" || l.statut === "partiel") && (
                           <>
-                            <button type="button" onClick={() => setPaiement(l)} className="bpn-btn bpn-btn-or !px-2.5 !py-1 text-[10px]">Paiement</button>
-                            <button type="button" onClick={() => setEnLigne(l)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-[10px]">En ligne</button>
+                            <button type="button" onClick={() => setPaiement(l)} className="bpn-btn bpn-btn-or !px-2.5 !py-1 text-xs">Paiement</button>
+                            <button type="button" onClick={() => setEnLigne(l)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs">En ligne</button>
                           </>
                         )}
                         {l.statut === "ajour" && (l.valideTresoriere ? (
-                          <button type="button" title="Validé — cliquer pour annuler" onClick={() => validerSituation(l)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-[10px] text-vert">
+                          <button type="button" title="Validé — cliquer pour annuler" onClick={() => validerSituation(l)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs text-vert">
                             <CheckCircleIcon className="h-3.5 w-3.5" /> Validé
                           </button>
                         ) : (
-                          <button type="button" title="Valider la situation (Trésorière)" onClick={() => validerSituation(l)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-[10px]">Valider</button>
+                          <button type="button" title="Valider la situation (Trésorière)" onClick={() => validerSituation(l)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs">Valider</button>
                         ))}
-                        <button type="button" onClick={() => setHistorique(l.membre.id)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-[10px]">Historique</button>
+                        <button type="button" onClick={() => setHistorique(l.membre.id)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs">Historique</button>
                       </div>
                     </td>
                   </tr>

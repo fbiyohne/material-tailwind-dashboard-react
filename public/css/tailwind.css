@@ -98,10 +98,10 @@
     @apply h-[5px] w-[5px] rounded-full bg-current;
   }
   .bpn-badge-vert {
-    @apply bg-[#e6f4ee] text-vert;
+    @apply bg-vertL text-vert;
   }
   .bpn-badge-rouge {
-    @apply bg-[#f4e6e6] text-rouge;
+    @apply bg-rougeL text-rouge;
   }
   .bpn-badge-or {
     @apply bg-or-L text-or;
@@ -110,7 +110,7 @@
     @apply bg-grisL text-gris;
   }
   .bpn-badge-bleu {
-    @apply bg-[#e6edf4] text-navy;
+    @apply bg-bleuL text-navy;
   }
 
   /* ─── Boutons ─────────────────────────────────────────────── */

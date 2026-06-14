@@ -102,22 +102,22 @@ export function Publications() {
                 </div>
                 <div className="flex shrink-0 gap-1.5">
                   {p.statut === "a_valider" && (
-                    <button className="bpn-btn bpn-btn-primary !py-1.5 text-[11px]"
+                    <button className="bpn-btn bpn-btn-primary !py-1.5 text-xs"
                       onClick={() => changerStatutPublication(p.id, "valide")}>
                       Valider (Bâtonnier)
                     </button>
                   )}
                   {p.statut === "valide" && (
-                    <button className="bpn-btn bpn-btn-or !py-1.5 text-[11px]"
+                    <button className="bpn-btn bpn-btn-or !py-1.5 text-xs"
                       onClick={() => changerStatutPublication(p.id, "publie")}>
                       Publier
                     </button>
                   )}
-                  <button className="bpn-btn bpn-btn-ghost !py-1.5 text-[11px]" onClick={() => navigate(`/publications/${p.id}`)}>
+                  <button className="bpn-btn bpn-btn-ghost !py-1.5 text-xs" onClick={() => navigate(`/publications/${p.id}`)}>
                     Ouvrir
                   </button>
                   {p.statut !== "publie" && (
-                    <button className="bpn-btn bpn-btn-ghost !py-1.5 text-[11px] text-rouge" onClick={() => supprimer(p)} title="Supprimer">
+                    <button className="bpn-btn bpn-btn-ghost !py-1.5 text-xs text-rouge" onClick={() => supprimer(p)} title="Supprimer">
                       <TrashIcon className="h-3.5 w-3.5" />
                     </button>
                   )}

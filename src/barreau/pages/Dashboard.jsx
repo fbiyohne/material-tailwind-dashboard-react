@@ -7,6 +7,10 @@ import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { api } from "../api/client";
 import { getJournalAudit, getAgenda } from "../api/resources";
 
+/** Nombre maximal de lignes rendues dans les cartes de synthèse du tableau de
+ * bord (le reste est borné par un défilement interne). */
+const MAX_LIGNES = 50;
+
 /** Échéance institutionnelle datée, format court « 14 juin ». */
 const dateCourteFr = (v) => new Date(v).toLocaleDateString("fr-FR", { day: "2-digit", month: "long" });
 
@@ -98,7 +102,7 @@ export function Dashboard() {
       </PageHeader>
 
       {erreur && (
-        <div className="rounded border-l-[3px] border-rouge bg-[#f4e6e6] px-4 py-2.5 text-sm text-rouge">{erreur}</div>
+        <div className="rounded border-l-[3px] border-rouge bg-rougeL px-4 py-2.5 text-sm text-rouge">{erreur}</div>
       )}
 
       {/* 4 indicateurs (données réelles de la base) */}
@@ -131,14 +135,23 @@ export function Dashboard() {
           ) : echeances.length === 0 ? (
             <EmptyState icon={CalendarDaysIcon} title="Aucune échéance à venir" description="Les réunions du Conseil et assemblées générales planifiées apparaîtront ici." />
           ) : (
-            <ul className="divide-y divide-grisL">
-              {echeances.map((e) => (
-                <li key={`${e.date}-${e.libelle}`} className="flex items-center gap-3 px-4 py-3">
-                  <span className="w-24 shrink-0 font-mono text-[11px] text-or">{dateCourteFr(e.date)}</span>
-                  <span className="text-sm text-encre">{e.libelle}</span>
-                </li>
-              ))}
-            </ul>
+            <>
+              {/* Hauteur bornée + défilement interne : la carte ne rallonge jamais
+                  la page, même avec un grand nombre d'échéances. */}
+              <ul className="max-h-80 divide-y divide-grisL overflow-y-auto">
+                {echeances.slice(0, MAX_LIGNES).map((e) => (
+                  <li key={`${e.date}-${e.libelle}`} className="flex items-center gap-3 px-4 py-3">
+                    <span className="w-24 shrink-0 font-mono text-[11px] text-or">{dateCourteFr(e.date)}</span>
+                    <span className="text-sm text-encre">{e.libelle}</span>
+                  </li>
+                ))}
+              </ul>
+              {echeances.length > MAX_LIGNES && (
+                <div className="border-t border-grisL px-4 py-2 text-center text-xs text-gris">
+                  {MAX_LIGNES} prochaines affichées · {echeances.length} au total
+                </div>
+              )}
+            </>
           )}
         </div>
         <div className="bpn-card">
@@ -148,7 +161,7 @@ export function Dashboard() {
           ) : journal.length === 0 ? (
             <EmptyState icon={ClockIcon} title="Aucune activité récente" description="Les dernières actions enregistrées dans le système s'afficheront ici." />
           ) : (
-            <ul className="divide-y divide-grisL">
+            <ul className="max-h-80 divide-y divide-grisL overflow-y-auto">
               {journal.map((j, i) => (
                 <li key={j.id ?? `${j.action}-${i}`} className="px-4 py-3">
                   <div className="text-sm text-encre">{j.action}{j.cible ? ` ${j.cible}` : ""}</div>

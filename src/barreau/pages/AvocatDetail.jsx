@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeftIcon, DocumentPlusIcon, PencilSquareIcon, NoSymbolIcon } from "@heroicons/react/24/outline";
 import { ScaleIcon } from "@heroicons/react/24/outline";
-import { Badge, StatutBadge, AttestationModal, EditMembreModal, PiecesDossier, useConfirm, useToast } from "../components";
+import { Badge, StatutBadge, AttestationModal, EditMembreModal, PiecesDossier, useConfirm, useToast, PageHeader } from "../components";
 import { QUALITE_LABEL, STATUT_META, infoStage } from "../data/derivations";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { formatFCFA } from "../utils/format";
@@ -84,32 +84,30 @@ export function AvocatDetail() {
         <ArrowLeftIcon className="h-4 w-4" /> Retour au tableau du Barreau
       </Link>
 
-      <div className="bpn-card flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="font-display text-2xl text-navy">Me {membre.nom}</h2>
+      <PageHeader
+        eyebrow="Membre du Barreau"
+        titre={`Me ${membre.nom}`}
+        sousTitre={
+          <span className="flex flex-wrap items-center gap-2">
             <StatutBadge statut={membre.statut} />
             <Badge ton={membre.qualite === "honoraire" ? "or" : "bleu"} dot={false}>{QUALITE_LABEL[membre.qualite]}</Badge>
-          </div>
-          <div className="mt-1 font-mono text-xs text-gris">
-            {membre.numInscription ?? `N° ${membre.num}`} · tableau N° {membre.num} · {membre.cabinet}
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button className="bpn-btn bpn-btn-ghost" onClick={() => setEdition(true)}><PencilSquareIcon className="h-4 w-4" /> Modifier</button>
-          {membre.qualite !== "stagiaire" && (
-            <button className="bpn-btn bpn-btn-primary" onClick={() => setAttestation(membre)}><DocumentPlusIcon className="h-4 w-4" /> Attestation</button>
-          )}
-          {membre.statut !== "radie" && (
-            <button className="bpn-btn bpn-btn-danger" onClick={async () => {
-              const ok = await confirm({ title: "Radier cet avocat ?", message: `Me ${membre.nom} sera radié(e) du tableau et exclu(e) du corps électoral.`, confirmLabel: "Radier", danger: true });
-              if (ok) { try { await radierMembre(membre.id); toast.success(`Me ${membre.nom} a été radié(e).`); charger(); } catch (e) { toast.error(e.message); } }
-            }}>
-              <NoSymbolIcon className="h-4 w-4" /> Radier
-            </button>
-          )}
-        </div>
-      </div>
+            <span className="font-mono text-xs text-gris">{membre.numInscription ?? `N° ${membre.num}`} · tableau N° {membre.num} · {membre.cabinet}</span>
+          </span>
+        }
+      >
+        <button className="bpn-btn bpn-btn-ghost" onClick={() => setEdition(true)}><PencilSquareIcon className="h-4 w-4" /> Modifier</button>
+        {membre.qualite !== "stagiaire" && (
+          <button className="bpn-btn bpn-btn-primary" onClick={() => setAttestation(membre)}><DocumentPlusIcon className="h-4 w-4" /> Attestation</button>
+        )}
+        {membre.statut !== "radie" && (
+          <button className="bpn-btn bpn-btn-danger" onClick={async () => {
+            const ok = await confirm({ title: "Radier cet avocat ?", message: `Me ${membre.nom} sera radié(e) du tableau et exclu(e) du corps électoral.`, confirmLabel: "Radier", danger: true });
+            if (ok) { try { await radierMembre(membre.id); toast.success(`Me ${membre.nom} a été radié(e).`); charger(); } catch (e) { toast.error(e.message); } }
+          }}>
+            <NoSymbolIcon className="h-4 w-4" /> Radier
+          </button>
+        )}
+      </PageHeader>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <Carte titre="Identité & coordonnées">

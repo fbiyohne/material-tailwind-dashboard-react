@@ -29,6 +29,10 @@ module.exports = withMT({
         encre: "#1C1C18",
         rouge: "#8B1A1A", // sémantique — danger / retard
         vert: "#1A5C3A", // sémantique — succès / à jour
+        // Teintes pâles sémantiques (fonds de bandeaux, badges, toasts)
+        rougeL: "#f4e6e6", // fond danger
+        vertL: "#e6f4ee", // fond succès
+        bleuL: "#e6edf4", // fond information (marine pâle)
       },
       fontFamily: {
         display: ["'Playfair Display'", "serif"], // titres institutionnels
