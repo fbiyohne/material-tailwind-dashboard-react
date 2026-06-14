@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { MagnifyingGlassIcon, ArrowUpTrayIcon } from "@heroicons/react/24/outline";
-import { Badge, StatutBadge, AttestationModal, SortTh, Pagination, useToast, ImportMembresModal } from "../components";
+import { Badge, StatutBadge, AttestationModal, SortTh, Pagination, useToast, ImportMembresModal, PageHeader } from "../components";
 import { useAuth } from "../auth/AuthContext";
 import { STATUT_META, QUALITE_LABEL } from "../data/derivations";
 import { EXERCICE_COURANT } from "../data/dashboard-data";
@@ -68,18 +68,13 @@ export function Avocats() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-        <div>
-          <div className="bpn-eyebrow">Membres</div>
-          <h2 className="bpn-title mt-2">Avocats inscrits</h2>
-          <p className="mt-1 text-sm text-gris">Tableau du Barreau — recherche multicritères, fiche individuelle et attestation d'inscription.</p>
-        </div>
+      <PageHeader eyebrow="Membres" titre="Avocats inscrits" sousTitre="Tableau du Barreau — recherche multicritères, fiche individuelle et attestation d'inscription.">
         {peutImporter && (
           <button className="bpn-btn bpn-btn-ghost" onClick={() => setImportOuvert(true)}>
             <ArrowUpTrayIcon className="h-4 w-4" /> Importer (Excel/CSV)
           </button>
         )}
-      </div>
+      </PageHeader>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">

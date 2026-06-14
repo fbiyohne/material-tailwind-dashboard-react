@@ -6,6 +6,9 @@ import {
   PencilSquareIcon, SparklesIcon,
 } from "@heroicons/react/24/outline";
 import { Modal } from "./Modal";
+import { FormField } from "./FormField";
+import { FormSection } from "./FormSection";
+import { Notice } from "./Notice";
 import { useToast } from "./Toast";
 import { inscrireMembre } from "../api/resources";
 
@@ -19,37 +22,7 @@ const vide = () => ({
 // Statut dérivé de la qualité : un nouveau membre est toujours actif.
 const STATUT_PAR_QUALITE = { avocat: "inscrit", stagiaire: "stagiaire", honoraire: "honoraire" };
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-/** Bloc de section du formulaire (titre + grille). */
-function Section({ icon: Icon, titre, children }) {
-  return (
-    <section className="space-y-3">
-      <div className="flex items-center gap-2 border-b border-grisM pb-1.5">
-        <Icon className="h-4 w-4 text-or" />
-        <h4 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-navy">{titre}</h4>
-      </div>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">{children}</div>
-    </section>
-  );
-}
-Section.propTypes = { icon: PropTypes.elementType, titre: PropTypes.string, children: PropTypes.node };
-
-/** Champ labellisé avec marqueur requis, indice et message d'erreur. */
-function Champ({ label, required, error, hint, full, children }) {
-  return (
-    <label className={`block ${full ? "sm:col-span-2" : ""}`}>
-      <span className="bpn-label">
-        {label}{required && <span className="text-rouge"> *</span>}
-        {hint && <span className="ml-1 font-normal lowercase tracking-normal text-gris/70">· {hint}</span>}
-      </span>
-      <div className="mt-1">{children}</div>
-      {error && <p className="mt-1 text-[11px] text-rouge">{error}</p>}
-    </label>
-  );
-}
-Champ.propTypes = { label: PropTypes.string, required: PropTypes.bool, error: PropTypes.string, hint: PropTypes.string, full: PropTypes.bool, children: PropTypes.node };
-
-const cls = (error) => `bpn-input ${error ? "!border-rouge focus:!border-rouge focus:!shadow-[0_0_0_3px_rgba(139,26,26,0.12)]" : ""}`;
+const champ = (error) => `bpn-input ${error ? "is-invalid" : ""}`;
 
 /** Formulaire d'inscription d'un avocat au tableau (FR-AV-01). Réservé SG/Admin. */
 export function InscriptionModal({ open, onClose }) {
@@ -123,75 +96,74 @@ export function InscriptionModal({ open, onClose }) {
         </button>
       }
     >
-      <div className="mb-5 flex items-start gap-2.5 rounded-md border-l-[3px] border-or bg-or-L px-3 py-2.5 text-xs text-gris">
-        <SparklesIcon className="mt-0.5 h-4 w-4 shrink-0 text-or" />
-        <span>Le numéro d'inscription <span className="font-mono font-medium text-navy">PN-AAAA-NNN</span> et le statut sont attribués automatiquement à l'enregistrement.</span>
-      </div>
+      <Notice ton="or" icon={SparklesIcon} className="mb-5">
+        Le numéro d'inscription <span className="font-mono font-medium text-navy">PN-AAAA-NNN</span> et le statut sont attribués automatiquement à l'enregistrement.
+      </Notice>
 
       <div className="space-y-6">
-        <Section icon={UserIcon} titre="Identité">
-          <Champ label="Nom et prénom" required hint="NOM Prénom" full error={erreurs.nom}>
-            <input value={form.nom} onChange={set("nom")} className={cls(erreurs.nom)} placeholder="KOUMBA Jean" autoFocus />
-          </Champ>
-          <Champ label="Qualité">
+        <FormSection icon={UserIcon} titre="Identité">
+          <FormField label="Nom et prénom" required hint="NOM Prénom" full error={erreurs.nom}>
+            <input value={form.nom} onChange={set("nom")} className={champ(erreurs.nom)} placeholder="KOUMBA Jean" autoFocus />
+          </FormField>
+          <FormField label="Qualité">
             <select value={form.qualite} onChange={set("qualite")} className="bpn-input">
               <option value="avocat">Avocat</option>
               <option value="stagiaire">Avocat stagiaire</option>
               <option value="honoraire">Avocat honoraire</option>
             </select>
-          </Champ>
-          <Champ label="Date de naissance">
+          </FormField>
+          <FormField label="Date de naissance">
             <input type="date" value={form.dateNaissance} onChange={set("dateNaissance")} className="bpn-input" />
-          </Champ>
-        </Section>
+          </FormField>
+        </FormSection>
 
-        <Section icon={PhoneIcon} titre="Coordonnées">
-          <Champ label="Téléphone">
+        <FormSection icon={PhoneIcon} titre="Coordonnées">
+          <FormField label="Téléphone">
             <input value={form.tel} onChange={set("tel")} className="bpn-input" placeholder="+242 06 …" />
-          </Champ>
-          <Champ label="Email" error={erreurs.email}>
-            <input type="email" value={form.email} onChange={set("email")} className={cls(erreurs.email)} placeholder="prenom.nom@cabinet.cg" />
-          </Champ>
-          <Champ label="Cabinet" full>
+          </FormField>
+          <FormField label="Email" error={erreurs.email}>
+            <input type="email" value={form.email} onChange={set("email")} className={champ(erreurs.email)} placeholder="prenom.nom@cabinet.cg" />
+          </FormField>
+          <FormField label="Cabinet" full>
             <input value={form.cabinet} onChange={set("cabinet")} className="bpn-input" placeholder="SCPA …" />
-          </Champ>
-          <Champ label="Adresse professionnelle" full>
+          </FormField>
+          <FormField label="Adresse professionnelle" full>
             <input value={form.adresse} onChange={set("adresse")} className="bpn-input" />
-          </Champ>
-        </Section>
+          </FormField>
+        </FormSection>
 
         {estStagiaire && (
-          <Section icon={AcademicCapIcon} titre="Stage">
-            <Champ label="Prestation de serment">
+          <FormSection icon={AcademicCapIcon} titre="Stage">
+            <FormField label="Prestation de serment">
               <input type="date" value={form.dateServment} onChange={set("dateServment")} className="bpn-input" />
-            </Champ>
-            <Champ label="Durée du stage" hint="mois" error={erreurs.dureeMois}>
-              <input type="number" min="1" max="120" value={form.dureeMois} onChange={set("dureeMois")} className={cls(erreurs.dureeMois)} />
-            </Champ>
-            <Champ label="Maître de stage" full>
+            </FormField>
+            <FormField label="Durée du stage" hint="mois" error={erreurs.dureeMois}>
+              <input type="number" min="1" max="120" value={form.dureeMois} onChange={set("dureeMois")} className={champ(erreurs.dureeMois)} />
+            </FormField>
+            <FormField label="Maître de stage" full>
               <input value={form.maitreStage} onChange={set("maitreStage")} className="bpn-input" placeholder="Me …" />
-            </Champ>
-          </Section>
+            </FormField>
+          </FormSection>
         )}
 
-        <Section icon={IdentificationIcon} titre="Inscription & identifiants">
-          <Champ label="Date d'inscription">
+        <FormSection icon={IdentificationIcon} titre="Inscription & identifiants">
+          <FormField label="Date d'inscription">
             <input type="date" value={form.dateInscription} onChange={set("dateInscription")} className="bpn-input" />
-          </Champ>
+          </FormField>
           <span className="hidden sm:block" aria-hidden="true" />
-          <Champ label="RCCM" hint="le cas échéant">
+          <FormField label="RCCM" hint="le cas échéant">
             <input value={form.rccm} onChange={set("rccm")} className="bpn-input" />
-          </Champ>
-          <Champ label="CNSS" hint="le cas échéant">
+          </FormField>
+          <FormField label="CNSS" hint="le cas échéant">
             <input value={form.cnss} onChange={set("cnss")} className="bpn-input" />
-          </Champ>
-        </Section>
+          </FormField>
+        </FormSection>
 
-        <Section icon={PencilSquareIcon} titre="Observations">
-          <Champ label="Notes internes" full>
+        <FormSection icon={PencilSquareIcon} titre="Observations">
+          <FormField label="Notes internes" full>
             <textarea rows={2} value={form.observations} onChange={set("observations")} className="bpn-input" placeholder="Mentions particulières, antécédents…" />
-          </Champ>
-        </Section>
+          </FormField>
+        </FormSection>
       </div>
     </Modal>
   );

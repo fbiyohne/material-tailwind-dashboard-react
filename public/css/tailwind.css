@@ -165,6 +165,10 @@
   .bpn-input {
     @apply w-full rounded border border-grisM bg-white px-3 py-2 text-sm text-encre outline-none transition focus:border-or focus:shadow-[0_0_0_3px_rgba(196,153,10,0.12)];
   }
+  /* État invalide d'un champ (validation inline). */
+  .bpn-input.is-invalid {
+    @apply border-rouge focus:border-rouge focus:shadow-[0_0_0_3px_rgba(139,26,26,0.12)];
+  }
   .bpn-label {
     @apply text-[10px] font-medium uppercase tracking-wide text-gris;
   }

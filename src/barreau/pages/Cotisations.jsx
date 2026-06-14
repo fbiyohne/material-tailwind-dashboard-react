@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { MagnifyingGlassIcon, CheckCircleIcon, EnvelopeIcon, ArrowDownTrayIcon, PrinterIcon } from "@heroicons/react/24/outline";
-import { Badge, Modal, useToast, PaiementModal, SortTh, Pagination, EtatImprimable } from "../components";
+import { Badge, Modal, useToast, PaiementModal, SortTh, Pagination, EtatImprimable, PageHeader } from "../components";
 import { useDataTable } from "../hooks/useDataTable";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { STATUT_META, QUALITE_LABEL } from "../data/derivations";
@@ -144,32 +144,25 @@ export function Cotisations() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-        <div>
-          <div className="bpn-eyebrow">Finances</div>
-          <h2 className="bpn-title mt-2">Cotisations ordinales</h2>
-          <p className="mt-1 text-sm text-gris">Suivi des cotisations 2020–2026, recherche en temps réel et historique par avocat.</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button className="bpn-btn bpn-btn-ghost !py-1.5 text-[11px]" onClick={() => exporterEtat("pdf")}>
-            <PrinterIcon className="h-4 w-4" /> État PDF
-          </button>
-          <button className="bpn-btn bpn-btn-or !py-1.5 text-[11px]" onClick={() => exporterEtat("xlsx")}>
-            <ArrowDownTrayIcon className="h-4 w-4" /> Excel
-          </button>
-          <button
-            className="bpn-btn bpn-btn-ghost"
-            onClick={async () => {
-              try {
-                const r = await lancerRelances(exercice);
-                toast.success(`${r.envoyes} relance${r.envoyes > 1 ? "s" : ""} envoyée${r.envoyes > 1 ? "s" : ""}${r.simulation ? " (simulation)" : ""}.`);
-              } catch (e) { toast.error(e.message); }
-            }}
-          >
-            <EnvelopeIcon className="h-4 w-4" /> Relancer les retardataires
-          </button>
-        </div>
-      </div>
+      <PageHeader eyebrow="Finances" titre="Cotisations ordinales" sousTitre="Suivi des cotisations 2020–2026, recherche en temps réel et historique par avocat.">
+        <button className="bpn-btn bpn-btn-ghost !py-1.5 text-[11px]" onClick={() => exporterEtat("pdf")}>
+          <PrinterIcon className="h-4 w-4" /> État PDF
+        </button>
+        <button className="bpn-btn bpn-btn-or !py-1.5 text-[11px]" onClick={() => exporterEtat("xlsx")}>
+          <ArrowDownTrayIcon className="h-4 w-4" /> Excel
+        </button>
+        <button
+          className="bpn-btn bpn-btn-ghost"
+          onClick={async () => {
+            try {
+              const r = await lancerRelances(exercice);
+              toast.success(`${r.envoyes} relance${r.envoyes > 1 ? "s" : ""} envoyée${r.envoyes > 1 ? "s" : ""}${r.simulation ? " (simulation)" : ""}.`);
+            } catch (e) { toast.error(e.message); }
+          }}
+        >
+          <EnvelopeIcon className="h-4 w-4" /> Relancer les retardataires
+        </button>
+      </PageHeader>
 
       <div className="flex flex-wrap gap-1 border-b border-grisM">
         {EXERCICES.map((annee) => (

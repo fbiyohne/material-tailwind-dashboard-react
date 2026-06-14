@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { UserPlusIcon, KeyIcon, CheckIcon, XMarkIcon, InboxArrowDownIcon, IdentificationIcon, BuildingOffice2Icon } from "@heroicons/react/24/outline";
-import { Badge, Modal, useToast } from "../components";
+import { Badge, Modal, PageHeader, FormField, useToast } from "../components";
 import { useAuth } from "../auth/AuthContext";
 import {
   listerUsers, creerUser, majUser, resetPasswordUser,
@@ -74,16 +74,11 @@ export function Utilisateurs() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-        <div>
-          <div className="bpn-eyebrow">Système</div>
-          <h2 className="bpn-title mt-2">Utilisateurs</h2>
-          <p className="mt-1 text-sm text-gris">Comptes d'accès à l'application et attribution des rôles (RBAC).</p>
-        </div>
+      <PageHeader eyebrow="Système" titre="Utilisateurs" sousTitre="Comptes d'accès à l'application et attribution des rôles (RBAC).">
         <button className="bpn-btn bpn-btn-or shrink-0" onClick={() => setCreation(videCreation())}>
           <UserPlusIcon className="h-4 w-4" /> Nouveau compte
         </button>
-      </div>
+      </PageHeader>
 
       {demandes.length > 0 && (
         <div className="bpn-card">
@@ -187,16 +182,20 @@ export function Utilisateurs() {
       >
         {creation && (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="block sm:col-span-2"><span className="bpn-label">Nom</span>
-              <input value={creation.nom} onChange={setC("nom")} className="bpn-input mt-1" placeholder="Me KOUMBA Jean" /></label>
-            <label className="block"><span className="bpn-label">Email</span>
-              <input type="email" value={creation.email} onChange={setC("email")} className="bpn-input mt-1" /></label>
-            <label className="block"><span className="bpn-label">Rôle</span>
-              <select value={creation.role} onChange={setC("role")} className="bpn-input mt-1">
+            <FormField label="Nom" required full>
+              <input value={creation.nom} onChange={setC("nom")} className="bpn-input" placeholder="Me KOUMBA Jean" />
+            </FormField>
+            <FormField label="Email" required>
+              <input type="email" value={creation.email} onChange={setC("email")} className="bpn-input" />
+            </FormField>
+            <FormField label="Rôle">
+              <select value={creation.role} onChange={setC("role")} className="bpn-input">
                 {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
-              </select></label>
-            <label className="block sm:col-span-2"><span className="bpn-label">Mot de passe (min. 8 caractères)</span>
-              <input type="password" value={creation.password} onChange={setC("password")} className="bpn-input mt-1" /></label>
+              </select>
+            </FormField>
+            <FormField label="Mot de passe" hint="min. 8 caractères" required full>
+              <input type="password" value={creation.password} onChange={setC("password")} className="bpn-input" />
+            </FormField>
           </div>
         )}
       </Modal>
@@ -214,8 +213,9 @@ export function Utilisateurs() {
         }
       >
         {motDePasse && (
-          <label className="block"><span className="bpn-label">Nouveau mot de passe (min. 8 caractères)</span>
-            <input type="password" value={motDePasse.password} onChange={(e) => setMotDePasse({ ...motDePasse, password: e.target.value })} className="bpn-input mt-1" /></label>
+          <FormField label="Nouveau mot de passe" hint="min. 8 caractères" required>
+            <input type="password" value={motDePasse.password} onChange={(e) => setMotDePasse({ ...motDePasse, password: e.target.value })} className="bpn-input" />
+          </FormField>
         )}
       </Modal>
     </div>

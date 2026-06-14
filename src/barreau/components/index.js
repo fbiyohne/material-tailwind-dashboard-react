@@ -1,6 +1,10 @@
 export { Badge } from "./Badge";
 export { StatCard } from "./StatCard";
 export { Modal } from "./Modal";
+export { FormField } from "./FormField";
+export { FormSection } from "./FormSection";
+export { Notice } from "./Notice";
+export { PageHeader } from "./PageHeader";
 export { StatutBadge } from "./StatutBadge";
 export { MembreFicheModal } from "./MembreFicheModal";
 export { AttestationModal } from "./AttestationModal";

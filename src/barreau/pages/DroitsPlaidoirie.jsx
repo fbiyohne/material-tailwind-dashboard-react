@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BanknotesIcon, ArrowDownTrayIcon, PrinterIcon } from "@heroicons/react/24/outline";
-import { Badge, StatCard, SortTh, Pagination, PaiementModal, useToast, EtatImprimable } from "../components";
+import { Badge, StatCard, SortTh, Pagination, PaiementModal, useToast, EtatImprimable, PageHeader } from "../components";
 import { useDataTable } from "../hooks/useDataTable";
 import { STATUT_META } from "../data/derivations";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
@@ -54,30 +54,21 @@ export function DroitsPlaidoirie() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-        <div>
-          <div className="bpn-eyebrow">Finances</div>
-          <h2 className="bpn-title mt-2">Droits de plaidoirie</h2>
-          <p className="mt-1 text-sm text-gris">
-            Suivi des droits par avocat et par exercice — états individuels et généraux.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="bpn-label mr-1">Exercice</span>
-          {EXERCICES.map((a) => (
-            <button key={a} type="button" onClick={() => setExercice(a)}
-              className={`rounded px-3 py-1 font-mono text-xs transition ${a === exercice ? "bg-navy text-white" : "bg-grisL text-gris hover:bg-grisM"}`}>
-              {a}
-            </button>
-          ))}
-          <button className="bpn-btn bpn-btn-ghost !py-1.5 text-[11px]" onClick={() => exporterEtat("pdf")}>
-            <PrinterIcon className="h-4 w-4" /> État PDF
+      <PageHeader eyebrow="Finances" titre="Droits de plaidoirie" sousTitre="Suivi des droits par avocat et par exercice — états individuels et généraux.">
+        <span className="bpn-label mr-1">Exercice</span>
+        {EXERCICES.map((a) => (
+          <button key={a} type="button" onClick={() => setExercice(a)}
+            className={`rounded px-3 py-1 font-mono text-xs transition ${a === exercice ? "bg-navy text-white" : "bg-grisL text-gris hover:bg-grisM"}`}>
+            {a}
           </button>
-          <button className="bpn-btn bpn-btn-or !py-1.5 text-[11px]" onClick={() => exporterEtat("xlsx")}>
-            <ArrowDownTrayIcon className="h-4 w-4" /> Excel
-          </button>
-        </div>
-      </div>
+        ))}
+        <button className="bpn-btn bpn-btn-ghost !py-1.5 text-[11px]" onClick={() => exporterEtat("pdf")}>
+          <PrinterIcon className="h-4 w-4" /> État PDF
+        </button>
+        <button className="bpn-btn bpn-btn-or !py-1.5 text-[11px]" onClick={() => exporterEtat("xlsx")}>
+          <ArrowDownTrayIcon className="h-4 w-4" /> Excel
+        </button>
+      </PageHeader>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard label="Droits dus" value={formatFCFA(totaux.du)} accent="navy" />
