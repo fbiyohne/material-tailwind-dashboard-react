@@ -80,6 +80,10 @@ const inscriptionSchema = z.object({
   observations: z.string().optional(),
   dateNaissance: z.string().optional(),
   dateInscription: z.string().optional(),
+  // Champs de stage (avocats stagiaires).
+  dateServment: z.string().optional(),
+  maitreStage: z.string().optional(),
+  dureeMois: z.coerce.number().int().positive().max(120).optional(),
 });
 
 /** POST /membres — inscription d'un avocat (FR-AV-01). SG/Admin. */
@@ -105,6 +109,9 @@ membresRouter.post(
         observations: data.observations,
         dateNaissance: data.dateNaissance ? new Date(data.dateNaissance) : null,
         dateInscription: data.dateInscription ? new Date(data.dateInscription) : new Date(),
+        dateServment: data.dateServment ? new Date(data.dateServment) : undefined,
+        maitreStage: data.maitreStage,
+        dureeMois: data.dureeMois,
       },
     });
     res.status(201).json(membre);
