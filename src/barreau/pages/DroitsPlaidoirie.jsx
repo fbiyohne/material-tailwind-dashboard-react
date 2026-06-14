@@ -85,16 +85,16 @@ export function DroitsPlaidoirie() {
                     <td className="px-3 py-2.5 font-mono text-xs text-gris">{l.membre.num}</td>
                     <td className="px-3 py-2.5 font-medium">Me {l.membre.nom}</td>
                     <td className="px-3 py-2.5">{formatFCFA(l.du)}</td>
-                    <td className="px-3 py-2.5" style={{ color: l.paye ? "var(--bpn-vert)" : "var(--bpn-gris)" }}>
+                    <td className={`px-3 py-2.5 ${l.paye ? "text-vert" : "text-gris"}`}>
                       {l.paye ? formatFCFA(l.paye) : "—"}
                     </td>
-                    <td className="px-3 py-2.5 font-medium" style={{ color: l.solde ? "var(--bpn-rouge)" : "var(--bpn-vert)" }}>
+                    <td className={`px-3 py-2.5 font-medium ${l.solde ? "text-rouge" : "text-vert"}`}>
                       {l.solde ? formatFCFA(l.solde) : "✓ Soldé"}
                     </td>
                     <td className="px-3 py-2.5"><Badge ton={meta.ton}>{meta.label}</Badge></td>
                     <td className="px-3 py-2.5 text-right">
                       {l.solde > 0 ? (
-                        <button className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-[11px]" onClick={() => setPaiement(l)}>
+                        <button className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-[10px]" onClick={() => setPaiement(l)}>
                           <BanknotesIcon className="h-3.5 w-3.5" /> Encaisser
                         </button>
                       ) : (

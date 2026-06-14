@@ -182,7 +182,7 @@ export function Cotisations() {
                     <td className="px-3 py-2.5 font-medium">Me {l.membre.nom}</td>
                     <td className="px-3 py-2.5"><Badge ton={l.membre.qualite === "honoraire" ? "or" : "bleu"} dot={false}>{QUALITE_LABEL[l.membre.qualite]}</Badge></td>
                     <td className="px-3 py-2.5">{formatFCFA(l.montantDu)}</td>
-                    <td className="px-3 py-2.5 font-medium" style={{ color: l.statut === "ajour" ? "var(--bpn-vert)" : l.statut === "partiel" ? "var(--bpn-or)" : l.statut === "retard" ? "var(--bpn-rouge)" : "var(--bpn-gris)" }}>
+                    <td className={`px-3 py-2.5 font-medium ${l.statut === "ajour" ? "text-vert" : l.statut === "partiel" ? "text-or" : l.statut === "retard" ? "text-rouge" : "text-gris"}`}>
                       {l.montantPaye ? formatFCFA(l.montantPaye) : "—"}
                     </td>
                     <td className="px-3 py-2.5">
