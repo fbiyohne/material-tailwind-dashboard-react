@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeftIcon, DocumentPlusIcon, PencilSquareIcon, NoSymbolIcon } from "@heroicons/react/24/outline";
 import { ScaleIcon } from "@heroicons/react/24/outline";
-import { Badge, StatutBadge, AttestationModal, EditMembreModal, useConfirm, useToast } from "../components";
+import { Badge, StatutBadge, AttestationModal, EditMembreModal, PiecesDossier, useConfirm, useToast } from "../components";
 import { QUALITE_LABEL, STATUT_META, infoStage } from "../data/derivations";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { formatFCFA } from "../utils/format";
@@ -188,6 +188,8 @@ export function AvocatDetail() {
           </tbody>
         </table>
       </Carte>
+
+      <PiecesDossier membreId={membre.id} qualite={membre.qualite} peutGerer={["SECRETAIRE_GENERAL", "ADMIN"].includes(user?.role)} />
 
       <Carte titre="Documents émis">
         {documents.length === 0 ? (

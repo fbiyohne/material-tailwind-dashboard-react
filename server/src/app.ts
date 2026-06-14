@@ -12,6 +12,7 @@ import { authRouter } from "./routes/auth.js";
 import { membresRouter } from "./routes/membres.js";
 import { usersRouter } from "./routes/users.js";
 import { demandesAccesRouter } from "./routes/demandesAcces.js";
+import { piecesRouter } from "./routes/pieces.js";
 import { cotisationsRouter } from "./routes/cotisations.js";
 import { recusRouter } from "./routes/recus.js";
 import { quitusRouter } from "./routes/quitus.js";
@@ -47,7 +48,8 @@ export function creerApp() {
       autoLogging: { ignore: (req) => req.url === "/api/health" },
     })
   );
-  app.use(express.json());
+  // Limite relevée pour accepter les pièces téléversées en base64 (max 5 Mo décodé).
+  app.use(express.json({ limit: "8mb" }));
   // Journal d'audit transverse des mutations (RG-16 / NFR-09).
   app.use("/api", audit);
   // Limiteur global (protection DoS basique).
@@ -59,6 +61,7 @@ export function creerApp() {
   app.use("/api/membres", membresRouter);
   app.use("/api/users", usersRouter);
   app.use("/api/demandes-acces", demandesAccesRouter);
+  app.use("/api/pieces", piecesRouter);
   app.use("/api/cotisations", cotisationsRouter);
   app.use("/api/recus", recusRouter);
   app.use("/api/quitus", quitusRouter);

@@ -99,7 +99,34 @@ model Membre {
   quitus      Quitus[]
   droitsPlaidoirie DroitPlaidoirie[]
   dossiers    DossierDisciplinaire[]
+  pieces      PieceDossier[]
   createdAt   DateTime               @default(now())
+}
+
+enum StatutPiece {
+  A_VERIFIER
+  VERIFIEE
+  REJETEE
+}
+
+/// Pièce du dossier d'inscription (vérification documentaire — KYC proportionné).
+/// Accès cloisonné (données personnelles) ; vérification par le SG/Admin.
+model PieceDossier {
+  id          Int         @id @default(autoincrement())
+  membre      Membre      @relation(fields: [membreId], references: [id], onDelete: Cascade)
+  membreId    Int
+  type        String // IDENTITE, DIPLOME, SERMENT, PHOTO, CASIER, AUTRE
+  nomFichier  String
+  fichier     String // chemin de stockage relatif (StorageProvider)
+  mimeType    String
+  taille      Int
+  statut      StatutPiece @default(A_VERIFIER)
+  note        String?
+  verifieePar String?
+  verifieeAt  DateTime?
+  createdAt   DateTime    @default(now())
+
+  @@index([membreId])
 }
 
 model DroitPlaidoirie {

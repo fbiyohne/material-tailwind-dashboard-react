@@ -1,4 +1,4 @@
-import { api, telechargerPdf } from "./client";
+import { api, telechargerPdf, ouvrirFichierAuth } from "./client";
 
 export const telechargerRecuPdf = (id, numero) => telechargerPdf(`/recus/${id}/pdf`, `Recu-${numero}.pdf`);
 export const telechargerQuitusPdf = (id, numero) => telechargerPdf(`/quitus/${id}/pdf`, `Quitus-${numero}.pdf`);
@@ -66,6 +66,14 @@ export function modifierMembre(id, patch) {
 export const radierMembre = (id) => api(`/membres/${id}/radier`, { method: "POST" }).then(normaliserMembre);
 export const importerMembres = (membres) => api("/membres/import", { method: "POST", body: { membres } });
 export const genererAttestation = (id) => api(`/membres/${id}/attestation`, { method: "POST" });
+
+// ─── Pièces du dossier (vérification documentaire) ───────────────────────────
+export const listerPieces = (membreId) => api(`/membres/${membreId}/pieces`);
+export const televerserPiece = (membreId, body) => api(`/membres/${membreId}/pieces`, { method: "POST", body });
+export const verifierPiece = (id) => api(`/pieces/${id}/verifier`, { method: "POST" });
+export const rejeterPiece = (id, note) => api(`/pieces/${id}/rejeter`, { method: "POST", body: { note } });
+export const supprimerPiece = (id) => api(`/pieces/${id}`, { method: "DELETE" });
+export const voirPiece = (id) => ouvrirFichierAuth(`/pieces/${id}/fichier`);
 
 // ─── Demandes d'accès (page publique « Demander un accès ») ──────────────────
 export const soumettreDemandeAcces = (body) => api("/auth/demande-acces", { method: "POST", auth: false, body });

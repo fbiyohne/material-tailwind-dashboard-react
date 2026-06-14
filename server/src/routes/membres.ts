@@ -1,10 +1,12 @@
+import path from "node:path";
 import { Router } from "express";
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
-import { requireAuth, requireRole } from "../middleware/auth.js";
+import { requireAuth, requireRole, type AuthRequest } from "../middleware/auth.js";
 import { prochainNumInscription, prochainNumeroAttestation, archiver } from "../lib/business.js";
+import { enregistrerFichier } from "../lib/storage.js";
 import { htmlVersPdf } from "../lib/pdf.js";
 import { attestationHtml } from "../lib/templates.js";
 
@@ -64,6 +66,46 @@ membresRouter.get(
     });
     if (!membre) throw new HttpError(404, "Avocat introuvable");
     res.json(membre);
+  })
+);
+
+// ─── Pièces du dossier (vérification documentaire — KYC proportionné) ─────────
+const TYPES_PIECE = ["IDENTITE", "DIPLOME", "SERMENT", "PHOTO", "CASIER", "AUTRE"] as const;
+const MAX_TAILLE = 5 * 1024 * 1024; // 5 Mo
+
+const uploadPieceSchema = z.object({
+  type: z.enum(TYPES_PIECE),
+  nomFichier: z.string().min(1).max(200),
+  mimeType: z.string().min(1).max(120),
+  donnees: z.string().min(1), // base64 sans préfixe data:
+});
+
+/** GET /membres/:id/pieces — pièces du dossier (SG / Bâtonnier). */
+membresRouter.get(
+  "/:id/pieces",
+  requireRole("SECRETAIRE_GENERAL", "BATONNIER"),
+  asyncH(async (req, res) => {
+    res.json(await prisma.pieceDossier.findMany({ where: { membreId: Number(req.params.id) }, orderBy: { createdAt: "desc" } }));
+  })
+);
+
+/** POST /membres/:id/pieces — téléversement d'une pièce (SG / Admin). */
+membresRouter.post(
+  "/:id/pieces",
+  requireRole("SECRETAIRE_GENERAL"),
+  asyncH(async (req: AuthRequest, res) => {
+    const membreId = Number(req.params.id);
+    const membre = await prisma.membre.findUnique({ where: { id: membreId } });
+    if (!membre) throw new HttpError(404, "Avocat introuvable");
+    const data = uploadPieceSchema.parse(req.body);
+    const tailleEstimee = Math.floor((data.donnees.length * 3) / 4);
+    if (tailleEstimee > MAX_TAILLE) throw new HttpError(413, "Fichier trop volumineux (max 5 Mo).");
+    const ext = path.extname(data.nomFichier).slice(0, 12);
+    const { chemin, taille } = enregistrerFichier(`pieces/${membreId}`, data.donnees, ext);
+    const piece = await prisma.pieceDossier.create({
+      data: { membreId, type: data.type, nomFichier: data.nomFichier, fichier: chemin, mimeType: data.mimeType, taille },
+    });
+    res.status(201).json(piece);
   })
 );
 

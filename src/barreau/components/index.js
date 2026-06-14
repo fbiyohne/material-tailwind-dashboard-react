@@ -23,3 +23,4 @@ export { Sceau } from "./Sceau";
 export { DocumentChrome } from "./DocumentChrome";
 export { EtatImprimable } from "./EtatImprimable";
 export { ImportMembresModal } from "./ImportMembresModal";
+export { PiecesDossier } from "./PiecesDossier";

@@ -98,3 +98,27 @@ export async function telechargerPdf(path, filename) {
   a.click();
   URL.revokeObjectURL(url);
 }
+
+/** Ouvre un fichier protégé (auth) dans un nouvel onglet (consultation de pièce). */
+export async function ouvrirFichierAuth(path) {
+  const charger = () => {
+    const headers = {};
+    const token = getToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return fetch(`${BASE}${path}`, { headers });
+  };
+  let res = await charger();
+  if (res.status === 401) {
+    refreshing = refreshing ?? rafraichir();
+    const ok = await refreshing;
+    refreshing = null;
+    if (ok) res = await charger();
+  }
+  if (!res.ok) {
+    if (res.status === 401) { clearSession(); onUnauthorized?.(); }
+    throw new Error("Échec de l'ouverture du fichier");
+  }
+  const url = URL.createObjectURL(await res.blob());
+  window.open(url, "_blank", "noopener");
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
