@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DocumentCheckIcon, CheckCircleIcon, LockClosedIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
-import { DocumentChrome, SortTh, Pagination, useToast, PageHeader, EmptyState } from "../components";
+import { QuitusDocument, SortTh, Pagination, useToast, PageHeader, EmptyState } from "../components";
 import { useDataTable } from "../hooks/useDataTable";
 import { exporterPdf } from "../utils/exports";
-import { quitusEligibles, listerQuitus, genererQuitus, getCotisations } from "../api/resources";
+import { quitusEligibles, listerQuitus, genererQuitus, getCotisations, getMembre } from "../api/resources";
 
 const REGISTRE_ACCESSORS = {
   numero: (q) => q.numero,
@@ -15,19 +15,6 @@ const REGISTRE_ACCESSORS = {
 
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
 const pad3 = (n) => String(n).padStart(3, "0");
-
-function ApercuQuitus({ numero, membre, exercice, date }) {
-  return (
-    <DocumentChrome org="Conseil de l'Ordre" title="Quitus de cotisation" reference={`N° ${numero}`} date={date} signataires={[{ role: "La Trésorière", nom: "Me ONDZE BOYA" }]}>
-      <p className="text-[13px] leading-7 text-encre">
-        Le Conseil de l'Ordre des Avocats du Barreau de Pointe-Noire certifie que{" "}
-        <strong>Me {membre?.nom}</strong>, avocat inscrit au tableau, est <strong>entièrement à jour</strong> de ses
-        cotisations ordinales au titre de l'exercice <strong>{exercice}</strong>.
-      </p>
-      <p className="mt-3 text-[13px] leading-7 text-encre">En foi de quoi le présent quitus lui est délivré pour servir et valoir ce que de droit.</p>
-    </DocumentChrome>
-  );
-}
 
 function PuceSynthese({ valeur, label, accent }) {
   return (
@@ -46,6 +33,7 @@ export function Quitus() {
   const [lignes, setLignes] = useState([]);
   const [membreId, setMembreId] = useState(null);
   const [succes, setSucces] = useState(null);
+  const [details, setDetails] = useState(null); // fiche complète de l'avocat sélectionné (n° d'inscription, adresse…)
 
   const charger = useCallback(() => {
     quitusEligibles(exercice).then((d) => setEligibles(d.eligibles)).catch((e) => toast.error(e.message));
@@ -70,6 +58,14 @@ export function Quitus() {
   });
 
   const membreActif = eligibles.find((m) => m.id === membreId) ?? eligibles[0] ?? null;
+
+  // Charge la fiche complète (n° d'inscription, date, adresse) pour renseigner le quitus.
+  useEffect(() => {
+    if (!membreActif?.id) { setDetails(null); return; }
+    let actif = true;
+    getMembre(membreActif.id).then((m) => actif && setDetails(m)).catch(() => actif && setDetails(null));
+    return () => { actif = false; };
+  }, [membreActif?.id]);
 
   const numero = useMemo(() => {
     if (succes?.numero) return succes.numero;
@@ -141,7 +137,7 @@ export function Quitus() {
 
         <div className="space-y-5">
           {membreActif ? (
-            <ApercuQuitus numero={numero} membre={membreActif} exercice={exercice} date={aujourdhui()} />
+            <QuitusDocument numero={numero} membre={(details && details.id === membreActif.id) ? details : membreActif} exercice={exercice} date={aujourdhui()} />
           ) : (
             <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-grisM bg-white px-6 py-16 text-center">
               <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-rougeL text-rouge"><LockClosedIcon className="h-6 w-6" /></div>

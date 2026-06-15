@@ -7,6 +7,7 @@ export { Notice } from "./Notice";
 export { PageHeader } from "./PageHeader";
 export { Tabs } from "./Tabs";
 export { SelecteurExercice } from "./SelecteurExercice";
+export { QuitusDocument } from "./QuitusDocument";
 export { StatutBadge } from "./StatutBadge";
 export { MembreFicheModal } from "./MembreFicheModal";
 export { AttestationModal } from "./AttestationModal";
