@@ -1,7 +1,8 @@
 # Professionnalisation — Phase 0 : socle transverse
 
 **Date :** 2026-06-15
-**Statut :** Spec validée (design) — prêt pour le plan d'implémentation
+**Statut :** ✅ Phase 0 implémentée — socle livré et validé sur Cotisations + Reçus
+(tests 21 ✓, build ✓, typecheck serveur ✓, audit contraste ✓, a11y focus/reduced-motion/Échap ✓).
 **Périmètre de CE document :** Phase 0 uniquement (le socle). Les phases 1‑4
 (déploiement par module) feront chacune leur propre cycle spec → plan.
 
