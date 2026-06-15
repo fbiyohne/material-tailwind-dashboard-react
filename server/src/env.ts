@@ -6,10 +6,26 @@ function requis(nom: string, defaut?: string): string {
   return v;
 }
 
+const nodeEnv = process.env.NODE_ENV ?? "development";
+
+/**
+ * Secret de signature JWT. Aucun repli en production : un secret par défaut
+ * permettrait la forge de jetons (élévation ADMIN). Le repli « dev-secret »
+ * n'est toléré qu'en développement/test.
+ */
+function secretJwt(): string {
+  const s = process.env.JWT_SECRET;
+  if (s) return s;
+  if (nodeEnv === "production") {
+    throw new Error("Variable d'environnement obligatoire en production : JWT_SECRET");
+  }
+  return "dev-secret";
+}
+
 export const env = {
-  nodeEnv: process.env.NODE_ENV ?? "development",
+  nodeEnv,
   databaseUrl: requis("DATABASE_URL"),
-  jwtSecret: requis("JWT_SECRET", "dev-secret"),
+  jwtSecret: secretJwt(),
   port: Number(requis("PORT", "4000")),
   clientOrigin: requis("CLIENT_ORIGIN", "http://localhost:5173"),
   accessTtl: requis("ACCESS_TTL", "15m"),

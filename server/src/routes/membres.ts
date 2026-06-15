@@ -39,8 +39,18 @@ membresRouter.get(
 
     const orderBy = { [TRI_AUTORISE.has(sort) ? sort : "num"]: order } as Prisma.MembreOrderByWithRelationInput;
 
+    // Projection « annuaire » : la liste est largement accessible (requireAuth),
+    // on n'y expose donc pas les données personnelles sensibles (adresse, date de
+    // naissance, RCCM, CNSS, observations) — celles-ci ne sont servies que par la
+    // fiche GET /:id, réservée à SG/Bâtonnier (RG-15).
+    const selectAnnuaire = {
+      id: true, num: true, numInscription: true, nom: true, qualite: true,
+      statut: true, cabinet: true, tel: true, email: true, dateInscription: true,
+      dateServment: true, dureeMois: true, maitreStage: true,
+    } satisfies Prisma.MembreSelect;
+
     const [items, total] = await Promise.all([
-      prisma.membre.findMany({ where, orderBy, skip: (page - 1) * pageSize, take: pageSize }),
+      prisma.membre.findMany({ where, orderBy, skip: (page - 1) * pageSize, take: pageSize, select: selectAnnuaire }),
       prisma.membre.count({ where }),
     ]);
     res.json({ items, total, page, pageSize, totalPages: Math.max(1, Math.ceil(total / pageSize)) });
