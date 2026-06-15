@@ -70,7 +70,7 @@ export const navSections = [
   {
     label: "Finances",
     items: [
-      { name: "Cotisations", path: "/cotisations", icon: BanknotesIcon, roles: FINANCES, badge: 3, element: <Cotisations /> },
+      { name: "Cotisations", path: "/cotisations", icon: BanknotesIcon, roles: FINANCES, element: <Cotisations /> },
       { name: "Quitus", path: "/quitus", icon: DocumentCheckIcon, roles: FINANCES, element: <Quitus /> },
       { name: "Reçus de paiement", path: "/recus", icon: ReceiptPercentIcon, roles: FINANCES, element: <Recus /> },
       { name: "Droits de plaidoirie", path: "/droits-plaidoirie", icon: CurrencyDollarIcon, roles: FINANCES, element: <DroitsPlaidoirie /> },
@@ -81,7 +81,7 @@ export const navSections = [
     items: [
       { name: "Réunions", path: "/reunions", icon: CalendarDaysIcon, roles: INSTITUTIONNEL, element: <Reunions /> },
       { name: "Assemblées générales", path: "/assemblees", icon: BuildingLibraryIcon, roles: INSTITUTIONNEL, element: <Assemblees /> },
-      { name: "Discipline", path: "/discipline", icon: ScaleIcon, roles: INSTITUTIONNEL, badge: 2, element: <Discipline /> },
+      { name: "Discipline", path: "/discipline", icon: ScaleIcon, roles: INSTITUTIONNEL, element: <Discipline /> },
     ],
   },
   {

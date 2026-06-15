@@ -33,7 +33,7 @@ function PuceSynthese({ valeur, label, accent }) {
   return (
     <div className="flex items-center gap-2 rounded border border-grisM bg-white px-3 py-2">
       <span className="font-display text-xl font-bold" style={{ color: `var(--bpn-${accent})` }}>{valeur}</span>
-      <span className="text-[11px] leading-tight text-gris">{label}</span>
+      <span className="text-xs leading-tight text-gris">{label}</span>
     </div>
   );
 }
@@ -112,22 +112,22 @@ export function Quitus() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[320px_1fr]">
         <div className="bpn-no-print rounded-lg bg-navy-3 p-5">
-          <div className="mb-4 text-[11px] uppercase tracking-[0.2em] text-white/40">Générer un quitus</div>
+          <div className="mb-4 text-xs uppercase tracking-[0.2em] text-white/40">Générer un quitus</div>
           <div className="space-y-3.5">
             <label className="block">
-              <span className="mb-1 block text-[11px] uppercase tracking-wide text-white/55">Exercice</span>
+              <span className="mb-1 block text-xs uppercase tracking-wide text-white/55">Exercice</span>
               <select value={exercice} onChange={(e) => { setExercice(Number(e.target.value)); setMembreId(null); setSucces(null); }} className="bpn-input-dark">
                 {EXERCICES.map((a) => <option key={a} value={a}>{a}</option>)}
               </select>
             </label>
             <label className="block">
-              <span className="mb-1 block text-[11px] uppercase tracking-wide text-white/55">Avocat bénéficiaire</span>
+              <span className="mb-1 block text-xs uppercase tracking-wide text-white/55">Avocat bénéficiaire</span>
               <select value={membreActif?.id ?? ""} onChange={(e) => setMembreId(Number(e.target.value))} disabled={eligibles.length === 0} className="bpn-input-dark disabled:opacity-50">
                 {eligibles.length === 0 ? <option>Aucun avocat éligible</option> : eligibles.map((m) => <option key={m.id} value={m.id}>{m.num}. Me {m.nom} — à jour ✓</option>)}
               </select>
             </label>
             <label className="block">
-              <span className="mb-1 block text-[11px] uppercase tracking-wide text-white/55">N° automatique</span>
+              <span className="mb-1 block text-xs uppercase tracking-wide text-white/55">N° automatique</span>
               <input value={numero} readOnly className="bpn-input-dark opacity-70" />
             </label>
             <button type="button" onClick={generer} disabled={!membreActif} className="bpn-btn bpn-btn-or w-full justify-center !py-2.5">

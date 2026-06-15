@@ -1,8 +1,11 @@
+import { useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import { NavLink } from "react-router-dom";
 import { XMarkIcon, ScaleIcon, ArrowRightOnRectangleIcon } from "@heroicons/react/24/outline";
 import { sectionsPourRole } from "../routes";
 import { useAuth } from "../auth/AuthContext";
+import { getCotisations, listerDossiers } from "../api/resources";
+import { EXERCICE_COURANT } from "../data/dashboard-data";
 
 const initiales = (nom) => {
   const parts = (nom ?? "").replace(/^Me\s+/i, "").trim().split(/\s+/);
@@ -25,6 +28,28 @@ const ROLE_LABEL = {
 export function Sidebar({ open, onClose }) {
   const { user, logout } = useAuth();
   const sections = sectionsPourRole(user?.role); // RBAC : menu filtré par rôle.
+
+  // Pastilles de notification calculées sur des données réelles (et non codées
+  // en dur) : cotisations impayées de l'exercice courant et dossiers
+  // disciplinaires actifs, selon les droits du rôle.
+  const [badges, setBadges] = useState({});
+  useEffect(() => {
+    const role = user?.role;
+    if (!role) return undefined;
+    let actif = true;
+    if (["SECRETAIRE_GENERAL", "TRESORIERE"].includes(role)) {
+      getCotisations(EXERCICE_COURANT)
+        .then((lignes) => actif && setBadges((b) => ({ ...b, "/cotisations": lignes.filter((l) => l.statut === "retard" || l.statut === "partiel").length })))
+        .catch(() => {});
+    }
+    if (["SECRETAIRE_GENERAL", "BATONNIER"].includes(role)) {
+      listerDossiers()
+        .then((ds) => actif && setBadges((b) => ({ ...b, "/discipline": ds.filter((d) => d.statut !== "classe").length })))
+        .catch(() => {});
+    }
+    return () => { actif = false; };
+  }, [user?.role]);
+
   return (
     <>
       {open && (
@@ -109,9 +134,9 @@ export function Sidebar({ open, onClose }) {
                           }`}
                         />
                         <span className="truncate">{item.name}</span>
-                        {item.badge && (
+                        {badges[item.path] > 0 && (
                           <span className="ml-auto flex h-[19px] min-w-[19px] items-center justify-center rounded-full bg-rouge px-1 text-[10px] font-semibold text-white">
-                            {item.badge}
+                            {badges[item.path]}
                           </span>
                         )}
                       </>

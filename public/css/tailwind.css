@@ -149,7 +149,7 @@
     @apply w-full text-sm;
   }
   .bpn-table thead tr {
-    @apply bg-navy text-left text-[11px] uppercase tracking-[0.1em] text-white/90;
+    @apply bg-navy text-left text-xs uppercase tracking-[0.08em] text-white/90;
   }
   .bpn-table thead th {
     @apply px-3 py-2.5 font-medium;
