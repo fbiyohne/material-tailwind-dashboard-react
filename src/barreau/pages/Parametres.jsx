@@ -10,7 +10,7 @@ import {
   ShieldCheckIcon,
   BellIcon,
 } from "@heroicons/react/24/outline";
-import { Badge, useToast, PageHeader, FormField, Tabs } from "../components";
+import { Badge, useToast, PageHeader, FormField, Tabs, DataTable } from "../components";
 import { EXERCICES } from "../data/dashboard-data";
 import { formatFCFA } from "../utils/format";
 import { getParametres, majParametres, getNotifications } from "../api/resources";
@@ -174,34 +174,55 @@ export function Parametres() {
             <Badge ton={notif?.smsSimulation === false ? "vert" : "or"} dot={false}>{notif?.smsSimulation === false ? "Configuré" : "Simulation"}</Badge>
           </div>
         </div>
-        {notif?.journal?.length ? (
-          <div className="overflow-x-auto">
-            <table className="bpn-table">
-              <thead>
-                <tr>
-                  <th scope="col" className="px-3 py-2.5 font-medium">Canal</th>
-                  <th scope="col" className="px-3 py-2.5 font-medium">Destinataire</th>
-                  <th scope="col" className="px-3 py-2.5 font-medium">Événement</th>
-                  <th scope="col" className="px-3 py-2.5 font-medium">Statut</th>
-                  <th scope="col" className="px-3 py-2.5 font-medium">Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {notif.journal.slice(0, 12).map((n) => (
-                  <tr key={n.id} className="border-b border-grisL">
-                    <td className="px-3 py-2"><Badge ton={n.canal === "EMAIL" ? "bleu" : "gris"} dot={false}>{n.canal}</Badge></td>
-                    <td className="px-3 py-2 text-gris">{n.destinataire}</td>
-                    <td className="px-3 py-2 text-gris">{EVT_LABEL[n.evenement] ?? n.evenement}</td>
-                    <td className="px-3 py-2"><Badge ton={n.statut === "ENVOYE" ? (n.simulation ? "or" : "vert") : "rouge"} dot={false}>{n.statut === "ENVOYE" ? (n.simulation ? "Simulé" : "Envoyé") : "Échec"}</Badge></td>
-                    <td className="px-3 py-2 font-mono text-[11px] text-gris">{new Date(n.createdAt).toLocaleString("fr-FR")}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <p className="text-sm text-gris">Aucune notification émise pour l'instant. Les envois apparaîtront ici (mode simulation tant que SMTP/SMS ne sont pas configurés).</p>
-        )}
+        <DataTable
+          columns={[
+            {
+              key: "canal",
+              label: "Canal",
+              sortable: true,
+              sortValue: (n) => n.canal,
+              cell: (n) => <Badge ton={n.canal === "EMAIL" ? "bleu" : "gris"} dot={false}>{n.canal}</Badge>,
+            },
+            {
+              key: "destinataire",
+              label: "Destinataire",
+              sortable: true,
+              sortValue: (n) => n.destinataire,
+              cell: (n) => <span className="text-gris">{n.destinataire}</span>,
+            },
+            {
+              key: "evenement",
+              label: "Événement",
+              sortable: true,
+              sortValue: (n) => EVT_LABEL[n.evenement] ?? n.evenement,
+              cell: (n) => <span className="text-gris">{EVT_LABEL[n.evenement] ?? n.evenement}</span>,
+            },
+            {
+              key: "statut",
+              label: "Statut",
+              sortable: true,
+              sortValue: (n) => (n.statut === "ENVOYE" ? (n.simulation ? 1 : 0) : 2),
+              cell: (n) => (
+                <Badge ton={n.statut === "ENVOYE" ? (n.simulation ? "or" : "vert") : "rouge"} dot={false}>
+                  {n.statut === "ENVOYE" ? (n.simulation ? "Simulé" : "Envoyé") : "Échec"}
+                </Badge>
+              ),
+            },
+            {
+              key: "date",
+              label: "Date",
+              sortable: true,
+              sortValue: (n) => new Date(n.createdAt).getTime(),
+              cell: (n) => <span className="font-mono text-[11px] text-gris">{new Date(n.createdAt).toLocaleString("fr-FR")}</span>,
+            },
+          ]}
+          rows={notif?.journal ?? []}
+          density="compact"
+          libelle="envois"
+          emptyTitle="Aucune notification"
+          emptyDescription="Aucune notification émise pour l'instant. Les envois apparaîtront ici (mode simulation tant que SMTP/SMS ne sont pas configurés)."
+          initialSort={{ key: "date", dir: "desc" }}
+        />
       </Section>
   );
 
