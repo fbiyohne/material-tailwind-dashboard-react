@@ -7,11 +7,8 @@ import {
 } from "@heroicons/react/24/outline";
 import { Badge, Modal, useToast, PageHeader, FormField, Notice, DataTable } from "../components";
 import { STATUT_DOSSIER_META } from "../data/institutionnel";
-import { formatDate } from "../utils/format";
+import { formatDate, formatDateTime } from "../utils/format";
 import { listerMembres, listerDossiers, ouvrirDossier as apiOuvrirDossier, journalDiscipline as apiJournal } from "../api/resources";
-
-const fmtDateTime = (iso) =>
-  new Date(iso).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 
 function OuvrirDossierModal({ open, onClose, onCreated }) {
   const toast = useToast();
@@ -160,7 +157,7 @@ export function Discipline() {
           {journalDiscipline.map((j, i) => (
             <li key={i} className="flex items-center justify-between gap-3 px-4 py-2 text-xs">
               <span className="text-encre">{j.action}</span>
-              <span className="font-mono text-gris">{fmtDateTime(j.quand)}</span>
+              <span className="font-mono text-gris">{formatDateTime(j.quand)}</span>
             </li>
           ))}
           {journalDiscipline.length === 0 && (

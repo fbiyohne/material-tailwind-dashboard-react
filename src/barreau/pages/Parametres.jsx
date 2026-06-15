@@ -12,7 +12,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { Badge, useToast, PageHeader, FormField, Tabs, DataTable } from "../components";
 import { EXERCICES } from "../data/dashboard-data";
-import { formatFCFA } from "../utils/format";
+import { formatFCFA, formatDateTime } from "../utils/format";
 import { getParametres, majParametres, getNotifications } from "../api/resources";
 
 const EVT_LABEL = {
@@ -213,7 +213,7 @@ export function Parametres() {
               label: "Date",
               sortable: true,
               sortValue: (n) => new Date(n.createdAt).getTime(),
-              cell: (n) => <span className="font-mono text-[11px] text-gris">{new Date(n.createdAt).toLocaleString("fr-FR")}</span>,
+              cell: (n) => <span className="font-mono text-[11px] text-gris">{formatDateTime(n.createdAt)}</span>,
             },
           ]}
           rows={notif?.journal ?? []}

@@ -43,3 +43,17 @@ export function formatDate(valeur) {
   if (Number.isNaN(d.getTime())) return "—";
   return d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 }
+
+/**
+ * Date + heure en français long, ex. « 15 juin 2026 à 18:55 ».
+ * Source unique pour les journaux horodatés (audit, notifications) — pendant
+ * de `formatDate`.
+ */
+export function formatDateTime(valeur) {
+  if (valeur === null || valeur === undefined || valeur === "") return "—";
+  const d = valeur instanceof Date ? valeur : new Date(valeur);
+  if (Number.isNaN(d.getTime())) return "—";
+  const date = d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+  const heure = d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  return `${date} à ${heure}`;
+}
