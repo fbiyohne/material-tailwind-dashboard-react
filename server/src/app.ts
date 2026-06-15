@@ -55,7 +55,17 @@ export function creerApp() {
     })
   );
   // Limite relevée pour accepter les pièces téléversées en base64 (max 5 Mo décodé).
-  app.use(express.json({ limit: "8mb" }));
+  // `verify` conserve le corps brut (octets exacts) pour la vérification de
+  // signature HMAC des webhooks de paiement, qui doit porter sur la charge utile
+  // d'origine et non sur une re-sérialisation.
+  app.use(
+    express.json({
+      limit: "8mb",
+      verify: (req, _res, buf) => {
+        (req as unknown as { rawBody?: Buffer }).rawBody = buf;
+      },
+    })
+  );
   // Journal d'audit transverse des mutations (RG-16 / NFR-09).
   app.use("/api", audit);
   // Limiteur global (protection DoS basique).

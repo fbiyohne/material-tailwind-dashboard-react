@@ -27,7 +27,13 @@ async function finaliser(paiementId: number) {
 paiementsRouter.post(
   "/webhook",
   asyncH(async (req, res) => {
-    if (!verifierSignatureWebhook(JSON.stringify(req.body ?? {}), req.header("x-signature"))) {
+    // La signature porte sur le corps brut (octets exacts reçus de la passerelle),
+    // capturé par `express.json({ verify })` ; une re-sérialisation via
+    // JSON.stringify changerait l'ordre des clés/les espaces et invaliderait toute
+    // signature légitime.
+    const brut = (req as unknown as { rawBody?: Buffer }).rawBody;
+    const corps = brut ? brut.toString("utf8") : JSON.stringify(req.body ?? {});
+    if (!verifierSignatureWebhook(corps, req.header("x-signature"))) {
       throw new HttpError(401, "Signature de webhook invalide");
     }
     const ref = String(req.body?.ref ?? "");
