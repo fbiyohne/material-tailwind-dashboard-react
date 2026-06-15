@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { PlusIcon, CalendarDaysIcon, MapPinIcon, ArrowRightIcon } from "@heroicons/react/24/outline";
-import { Badge, Modal, EmptyState, ErrorState, Skeleton, useToast, PageHeader, FormField } from "../components";
+import { PlusIcon, CalendarDaysIcon, MapPinIcon, ArrowRightIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { Badge, Modal, EmptyState, ErrorState, Skeleton, useToast, useConfirm, PageHeader, FormField } from "../components";
 import { formatDate } from "../utils/format";
-import { listerReunions, creerReunion as apiCreerReunion } from "../api/resources";
+import { listerReunions, creerReunion as apiCreerReunion, supprimerReunion } from "../api/resources";
 
 function NouvelleReunionModal({ open, onClose, onCreated }) {
   const toast = useToast();
@@ -38,6 +38,7 @@ function NouvelleReunionModal({ open, onClose, onCreated }) {
 export function Reunions() {
   const navigate = useNavigate();
   const toast = useToast();
+  const confirm = useConfirm();
   const [reunions, setReunions] = useState([]);
   const [creer, setCreer] = useState(false);
   const [chargement, setChargement] = useState(true);
@@ -49,6 +50,18 @@ export function Reunions() {
     listerReunions().then(setReunions).catch(() => setErreur(true)).finally(() => setChargement(false));
   };
   useEffect(() => { charger(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const supprimer = async (r) => {
+    const ok = await confirm({
+      title: "Supprimer la réunion",
+      message: `La réunion du ${formatDate(r.date)} et sa convocation seront supprimées. Cette action est irréversible.`,
+      confirmLabel: "Supprimer",
+      danger: true,
+    });
+    if (!ok) return;
+    try { await supprimerReunion(r.id); toast.success("Réunion supprimée."); charger(); }
+    catch (e) { toast.error(e.message); }
+  };
 
   return (
     <div className="space-y-5">
@@ -81,27 +94,46 @@ export function Reunions() {
       ) : (
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
         {reunions.map((r) => (
-          <button key={r.id} onClick={() => navigate(`/reunions/${r.id}`)} className="block h-full w-full text-left">
-            <div className="bpn-card h-full p-5 transition hover:border-or hover:shadow-card">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-display text-lg capitalize text-navy">{formatDate(r.date)}</span>
-                    <Badge ton={r.statut === "tenue" ? "vert" : "or"}>{r.statut === "tenue" ? "Tenue" : "Planifiée"}</Badge>
-                  </div>
-                  <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gris">
-                    <span className="flex items-center gap-1"><CalendarDaysIcon className="h-3.5 w-3.5" /> {r.heure}</span>
-                    <span className="flex items-center gap-1"><MapPinIcon className="h-3.5 w-3.5" /> {r.lieu}</span>
-                  </div>
+          <div
+            key={r.id}
+            role="button"
+            tabIndex={0}
+            onClick={() => navigate(`/reunions/${r.id}`)}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate(`/reunions/${r.id}`); } }}
+            className="bpn-card h-full cursor-pointer p-5 text-left transition hover:border-or hover:shadow-card focus:outline-none focus-visible:ring-2 focus-visible:ring-or"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-display text-lg capitalize text-navy">{formatDate(r.date)}</span>
+                  <Badge ton={r.statut === "tenue" ? "vert" : "or"}>{r.statut === "tenue" ? "Tenue" : "Planifiée"}</Badge>
                 </div>
-                <ArrowRightIcon className="h-5 w-5 shrink-0 text-gris" />
+                <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gris">
+                  <span className="flex items-center gap-1"><CalendarDaysIcon className="h-3.5 w-3.5" /> {r.heure}</span>
+                  <span className="flex items-center gap-1"><MapPinIcon className="h-3.5 w-3.5" /> {r.lieu}</span>
+                </div>
               </div>
-              <ul className="mt-3 list-inside list-decimal space-y-0.5 text-sm text-encre">
-                {r.ordreDuJour.slice(0, 3).map((pt, i) => <li key={i}>{pt}</li>)}
-                {r.ordreDuJour.length > 3 && <li className="list-none text-xs text-gris">+ {r.ordreDuJour.length - 3} autres points</li>}
-              </ul>
+              <div className="flex shrink-0 items-center gap-1">
+                {/* Une réunion « tenue » (avec PV) n'est pas supprimable — pas de bouton. */}
+                {r.statut !== "tenue" && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); supprimer(r); }}
+                    title="Supprimer la réunion"
+                    aria-label="Supprimer la réunion"
+                    className="rounded p-1.5 text-gris transition hover:bg-rougeL hover:text-rouge"
+                  >
+                    <TrashIcon className="h-4 w-4" />
+                  </button>
+                )}
+                <ArrowRightIcon className="h-5 w-5 text-gris" />
+              </div>
             </div>
-          </button>
+            <ul className="mt-3 list-inside list-decimal space-y-0.5 text-sm text-encre">
+              {r.ordreDuJour.slice(0, 3).map((pt, i) => <li key={i}>{pt}</li>)}
+              {r.ordreDuJour.length > 3 && <li className="list-none text-xs text-gris">+ {r.ordreDuJour.length - 3} autres points</li>}
+            </ul>
+          </div>
         ))}
         </div>
       )}
