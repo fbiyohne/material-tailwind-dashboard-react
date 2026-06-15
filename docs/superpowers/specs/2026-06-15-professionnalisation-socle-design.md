@@ -1,10 +1,13 @@
 # Professionnalisation — Phase 0 : socle transverse
 
 **Date :** 2026-06-15
-**Statut :** ✅ Phase 0 implémentée — socle livré et validé sur Cotisations + Reçus
-(tests 21 ✓, build ✓, typecheck serveur ✓, audit contraste ✓, a11y focus/reduced-motion/Échap ✓).
-**Périmètre de CE document :** Phase 0 uniquement (le socle). Les phases 1‑4
-(déploiement par module) feront chacune leur propre cycle spec → plan.
+**Statut :** ✅ **Professionnalisation livrée (Phases 0–4).** Socle livré et validé,
+puis propagé à tous les modules (finances, membres, institutionnel, documents, système).
+Vérifs finales vertes : tests ✓, build front ✓, typecheck serveur ✓ ; audit responsive
+(nav mobile, tables, stacking) ✓ ; format date/montant à source unique ✓. Reliquats
+consignés en § 9 (Suivi).
+**Périmètre de CE document :** Phase 0 (le socle) ; § 9 « Suivi » récapitule la clôture
+des phases 1‑4 et les reliquats arbitrables.
 
 ---
 
@@ -231,3 +234,50 @@ Chaque phase = son propre spec → plan → implémentation, livrable indépenda
 - **Risque :** périmètre qui enfle.
   *Atténuation :* Phase 0 = socle + Cotisations uniquement ; le reste = phases
   séparées.
+
+---
+
+## 9. Suivi — clôture Phases 0–4 & reliquats
+
+**Phases livrées (0→4).** Le socle (DataTable, états, PageHeader/Breadcrumb, `formatDate`/
+`formatFCFA`, Tabs, FormField, EmptyState/ErrorState) est en place et propagé :
+
+- **Finances** — Cotisations, Reçus, Quitus, Droits de plaidoirie sur `DataTable` (états,
+  exports, formats unifiés ; zones print intactes).
+- **Membres** — Avocats (DataTable + sélection/actions groupées + export/import), Corps
+  électoral, Stagiaires (grille de cartes conservée à dessein), fiches de détail avec fil
+  d'Ariane.
+- **Institutionnel & Documents** — Discipline & Archives sur `DataTable` ; Réunions,
+  Assemblées, Publications, Lettre = cartes conservées + états + dates `formatDate` ; pages
+  de détail (Dossier, Réunion, Assemblée, Publication) avec fil d'Ariane remplaçant l'eyebrow.
+- **Système** — Paramètres (journal des notifications sur `DataTable`, **matrice des rôles
+  laissée en table de référence statique** — pas de tri/pagination sur une légende de 4 lignes),
+  Utilisateurs (comptes sur `DataTable`, file des demandes d'accès en liste riche conservée).
+
+**Cohérence des dates affichées (Phase 4).** Les afficheurs de date locaux qui dupliquaient
+l'utilitaire ont été ramenés à la **source unique** `formatDate` : `Stagiaires` (serment / fin
+prévue / liste imprimée), `Utilisateurs` (date de demande d'accès), `VerificationPublique`
+(date de délivrance). Les `slice(0,10)` restants sont **techniques** (payloads d'archivage,
+valeurs par défaut d'input `type=date`, noms de fichiers PDF) — non affichés, laissés tels quels.
+
+**Responsive (Phase 4 — audité, sans redesign).** Vérifié à 375 px et 768 px : la barre
+latérale se replie en **tiroir hamburger** (overlay + fond grisé + bouton « Fermer »), les
+barres d'action et filtres passent en pleine largeur, et les `DataTable` denses **défilent
+horizontalement dans leur carte** (`overflow-x-auto`) sans provoquer de scroll de page. Pattern
+suffisant — pas de masquage de colonnes ni d'agrandissement des boutons de ligne (resterait un
+redesign des tables, hors périmètre — YAGNI).
+
+**Reliquats consignés (arbitrage commanditaire — non corrigés pour préserver le design) :**
+
+1. **Contraste `text-or` (#C4990A) sur blanc ≈ 2,7:1** — sous le seuil AA. Usage limité aux
+   **références/montants en mono** (accent de marque). Assombrir l'or altérerait l'identité →
+   à arbitrer (alternative possible : réserver l'or aux fonds/badges et passer ces accents
+   texte en `encre`/`navy`, sans toucher au jeton de marque).
+2. **Contraste `text-gris` (#7A756A) sur fonds `grisL`/`grisM` ≈ 4,0:1** — sous AA pour le
+   texte normal (OK ≥ 3:1 pour texte large/UI). Cantonné à du **secondaire** ; sur blanc/crème
+   le gris passe (≈ 4,6:1). Correctif éventuel : foncer légèrement `gris` (impact transverse,
+   à valider visuellement).
+3. **Horodatages date+heure** des journaux (notifications dans Paramètres, journal d'accès
+   Discipline) et **formats compacts** du Tableau de bord (jour + mois, sans année) : laissés
+   tels quels — formats **spécialisés** légitimes (un timestamp d'audit a besoin de l'heure ;
+   les widgets du dashboard sont volontairement compacts), distincts de `formatDate` à dessein.

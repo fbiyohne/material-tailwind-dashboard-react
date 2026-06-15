@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { UserPlusIcon, KeyIcon, CheckIcon, XMarkIcon, InboxArrowDownIcon, IdentificationIcon, BuildingOffice2Icon } from "@heroicons/react/24/outline";
 import { Badge, Modal, PageHeader, FormField, useToast, DataTable } from "../components";
+import { formatDate } from "../utils/format";
 import { useAuth } from "../auth/AuthContext";
 import {
   listerUsers, creerUser, majUser, resetPasswordUser,
@@ -16,8 +17,6 @@ const ROLE_LABEL = {
 const ROLES = Object.keys(ROLE_LABEL);
 
 const videCreation = (prefill = {}) => ({ nom: "", email: "", role: "SECRETAIRE_GENERAL", password: "", demandeId: null, ...prefill });
-
-const formatDate = (iso) => new Date(iso).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" });
 
 /** Gestion des comptes utilisateurs et des rôles (CDC §5.1). Réservé SG/Admin. */
 export function Utilisateurs() {

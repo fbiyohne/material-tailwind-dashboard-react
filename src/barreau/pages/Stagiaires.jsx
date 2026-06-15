@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PrinterIcon } from "@heroicons/react/24/outline";
 import { Badge, useToast, PageHeader } from "../components";
+import { formatDate } from "../utils/format";
 import { infoStage } from "../data/derivations";
 import { listerMembres } from "../api/resources";
 
@@ -27,7 +28,7 @@ function CarteStagiaire({ membre, stage, onFiche }) {
       <div className="mt-3 space-y-1 text-xs text-gris">
         <div className="flex justify-between">
           <span>Serment</span>
-          <span className="text-encre">{stage.debut.toLocaleDateString("fr-FR")}</span>
+          <span className="text-encre">{formatDate(stage.debut)}</span>
         </div>
         <div className="flex justify-between">
           <span>Maître de stage</span>
@@ -35,7 +36,7 @@ function CarteStagiaire({ membre, stage, onFiche }) {
         </div>
         <div className="flex justify-between">
           <span>Fin prévue</span>
-          <span className="text-encre">{stage.fin.toLocaleDateString("fr-FR")}</span>
+          <span className="text-encre">{formatDate(stage.fin)}</span>
         </div>
       </div>
 
@@ -147,7 +148,7 @@ export function Stagiaires() {
                 <td className="py-1 font-mono text-xs">{membre.num}</td>
                 <td className="py-1">Me {membre.nom}</td>
                 <td className="py-1">{membre.cabinet}</td>
-                <td className="py-1">{stage.debut.toLocaleDateString("fr-FR")}</td>
+                <td className="py-1">{formatDate(stage.debut)}</td>
                 <td className="py-1">{stage.maitreStage}</td>
                 <td className="py-1">{stage.termine ? "Terminé" : "En cours"}</td>
               </tr>

@@ -2,10 +2,9 @@ import { useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import { CheckBadgeIcon, XCircleIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
 import { Sceau } from "../components/Sceau";
-import { formatFCFA } from "../utils/format";
+import { formatFCFA, formatDate } from "../utils/format";
 
 const TYPE_LABEL = { quitus: "Quitus de cotisation", recu: "Reçu de paiement" };
-const fmtDateFr = (d) => (d ? new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" }) : "—");
 
 /**
  * Page publique de vérification d'authenticité d'un document officiel
@@ -56,7 +55,7 @@ export function VerificationPublique({ type, numero }) {
               {d.montant != null && <Ligne label="Montant" valeur={formatFCFA(d.montant)} />}
               {d.objet && <Ligne label="Objet" valeur={d.objet} />}
               {d.exercice && <Ligne label="Exercice" valeur={d.exercice} />}
-              <Ligne label="Date de délivrance" valeur={fmtDateFr(d.date)} />
+              <Ligne label="Date de délivrance" valeur={formatDate(d.date)} />
               {d.empreinteCle && <Ligne label="Empreinte du signataire" valeur={d.empreinteCle} mono />}
             </dl>
             <p className="border-t border-grisL px-6 py-3 text-center text-[11px] text-gris">
