@@ -80,5 +80,17 @@ if [ -f "$PROJECT_DIR/server/scripts/setup-dev.sh" ]; then
   bash "$PROJECT_DIR/server/scripts/setup-dev.sh" || true
 fi
 
+# --- 5. Garde anti-régression : typecheck TypeScript du serveur -------------
+# Signale toute régression de types au démarrage de session (non bloquant). La
+# même vérification tourne en CI (.github/workflows/ci.yml) sur push/PR.
+if [ -d "$PROJECT_DIR/server/node_modules" ]; then
+  LOG "Vérification des types du serveur (tsc --noEmit)…"
+  if (cd "$PROJECT_DIR/server" && npm run -s typecheck); then
+    LOG "Types du serveur OK."
+  else
+    LOG "⚠️  ERREURS DE TYPES dans le serveur (voir ci-dessus) — à corriger."
+  fi
+fi
+
 LOG "Terminé."
 exit 0

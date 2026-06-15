@@ -162,7 +162,7 @@ export function Quitus() {
                       <SortTh label="Avocat" sortKey="nom" current={registreTable.sortKey} dir={registreTable.sortDir} onSort={registreTable.toggleSort} />
                       <SortTh label="Exercice" sortKey="annee" current={registreTable.sortKey} dir={registreTable.sortDir} onSort={registreTable.toggleSort} />
                       <SortTh label="Date" sortKey="date" current={registreTable.sortKey} dir={registreTable.sortDir} onSort={registreTable.toggleSort} />
-                      <th className="text-right text-[11px] font-semibold uppercase tracking-wide text-gris">Authenticité</th>
+                      <th className="text-right">Authenticité</th>
                     </tr>
                   </thead>
                   <tbody>
