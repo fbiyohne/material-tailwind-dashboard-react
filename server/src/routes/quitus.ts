@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../prisma.js";
+import { anneeDeRequete } from "../lib/requete.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { eligibleQuitus, prochainNumeroQuitus } from "../lib/business.js";
@@ -31,7 +32,7 @@ quitusRouter.get(
 quitusRouter.get(
   "/eligibles",
   asyncH(async (req, res) => {
-    const annee = Number(req.query.annee ?? new Date().getFullYear());
+    const annee = anneeDeRequete(req);
     const cotisations = await prisma.cotisation.findMany({ where: { annee }, include: { membre: true } });
     const eligibles = cotisations
       .filter((c) => eligibleQuitus(c))

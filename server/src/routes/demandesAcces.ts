@@ -25,6 +25,11 @@ demandesAccesRouter.get(
 async function trancher(id: number, statut: "APPROUVEE" | "REFUSEE") {
   const demande = await prisma.demandeAcces.findUnique({ where: { id } });
   if (!demande) throw new HttpError(404, "Demande introuvable");
+  // Seule une demande en attente peut être tranchée : empêche de ré-approuver
+  // une demande déjà refusée (et de renvoyer un email de décision contradictoire).
+  if (demande.statut !== "EN_ATTENTE") {
+    throw new HttpError(409, "Cette demande a déjà été traitée.");
+  }
   const maj = await prisma.demandeAcces.update({ where: { id }, data: { statut, traiteeAt: new Date() } });
   // Notification de la décision au demandeur.
   const texte = statut === "APPROUVEE"

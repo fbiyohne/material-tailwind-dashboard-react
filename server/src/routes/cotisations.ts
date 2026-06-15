@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
+import { anneeDeRequete } from "../lib/requete.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { montantDuAvec, statutCotisation, tarifsActuels } from "../lib/business.js";
@@ -16,7 +17,7 @@ cotisationsRouter.post(
   "/relances",
   requireRole("SECRETAIRE_GENERAL", "TRESORIERE"),
   asyncH(async (req, res) => {
-    const annee = Number(req.query.annee ?? new Date().getFullYear());
+    const annee = anneeDeRequete(req);
     const tarifs = await tarifsActuels();
     const membres = await prisma.membre.findMany({ include: { cotisations: { where: { annee } } } });
     const cibles = membres.filter((m) => {
@@ -55,7 +56,7 @@ cotisationsRouter.post(
 cotisationsRouter.get(
   "/",
   asyncH(async (req, res) => {
-    const annee = Number(req.query.annee ?? new Date().getFullYear());
+    const annee = anneeDeRequete(req);
     const tarifs = await tarifsActuels();
     const membres = await prisma.membre.findMany({
       orderBy: { num: "asc" },
@@ -89,7 +90,7 @@ cotisationsRouter.post(
   "/generer",
   requireRole("SECRETAIRE_GENERAL", "TRESORIERE"),
   asyncH(async (req, res) => {
-    const annee = Number(req.query.annee ?? new Date().getFullYear());
+    const annee = anneeDeRequete(req);
     const tarifs = await tarifsActuels();
     const membres = await prisma.membre.findMany({
       where: { statut: { not: "RADIE" } },

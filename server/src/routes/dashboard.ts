@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { prisma } from "../prisma.js";
+import { anneeDeRequete } from "../lib/requete.js";
 import { asyncH } from "../middleware/error.js";
 import { requireAuth } from "../middleware/auth.js";
 import { montantDuAvec, statutCotisation, tarifsActuels } from "../lib/business.js";
@@ -11,7 +12,7 @@ dashboardRouter.use(requireAuth);
 dashboardRouter.get(
   "/",
   asyncH(async (req, res) => {
-    const annee = Number(req.query.annee ?? new Date().getFullYear());
+    const annee = anneeDeRequete(req);
     const tarifs = await tarifsActuels();
     const membres = await prisma.membre.findMany({ include: { cotisations: { where: { annee } } } });
 
@@ -70,7 +71,8 @@ dashboardRouter.get(
 dashboardRouter.get(
   "/journal",
   asyncH(async (req, res) => {
-    const take = Math.min(50, Math.max(1, Number(req.query.limit ?? 12)));
+    const limitBrut = Number(req.query.limit ?? 12);
+    const take = Number.isFinite(limitBrut) ? Math.min(50, Math.max(1, Math.trunc(limitBrut))) : 12;
     const entries = await prisma.journalAudit.findMany({ orderBy: { id: "desc" }, take });
     const userIds = [...new Set(entries.map((e) => e.userId).filter((v): v is number => v != null))];
     const users = userIds.length ? await prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, nom: true } }) : [];
