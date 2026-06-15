@@ -26,7 +26,7 @@ export async function requireAuth(req: AuthRequest, _res: Response, next: NextFu
   }
   let payload: { sub: number; role: Role };
   try {
-    payload = jwt.verify(header.slice(7), env.jwtSecret) as { sub: number; role: Role };
+    payload = jwt.verify(header.slice(7), env.jwtSecret) as unknown as { sub: number; role: Role };
   } catch {
     return next(new HttpError(401, "Jeton invalide ou expiré"));
   }

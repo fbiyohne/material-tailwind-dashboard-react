@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "../src/prisma.js";
 import { montantDu, DROIT_PLAIDOIRIE } from "../src/lib/business.js";
 // Réutilise les données d'échantillon du front (source unique pour le prototype).
+// @ts-ignore — module JavaScript du front, sans déclarations de types.
 import { membres as membresFront } from "../../src/barreau/data/membres.js";
 
 const QUALITE: Record<string, "AVOCAT" | "STAGIAIRE" | "HONORAIRE"> = {

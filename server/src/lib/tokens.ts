@@ -8,7 +8,7 @@ const hash = (t: string) => crypto.createHash("sha256").update(t).digest("hex");
 
 /** Jeton d'accès court (JWT). */
 export function signerAccessToken(user: { id: number; role: Role }) {
-  return jwt.sign({ sub: user.id, role: user.role }, env.jwtSecret, { expiresIn: env.accessTtl });
+  return jwt.sign({ sub: user.id, role: user.role }, env.jwtSecret, { expiresIn: env.accessTtl } as jwt.SignOptions);
 }
 
 /** Crée et stocke (haché) un refresh token opaque ; renvoie le jeton en clair. */

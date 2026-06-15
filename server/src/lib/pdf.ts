@@ -32,7 +32,10 @@ async function getNavigateur(): Promise<Browser> {
 export async function htmlVersPdf(html: string): Promise<Buffer> {
   const page = await (await getNavigateur()).newPage();
   try {
-    await page.setContent(html, { waitUntil: "networkidle0" });
+    // « networkidle0 » est accepté à l'exécution par setContent (attente du
+    // chargement complet des ressources) ; les typings de cette version le
+    // restreignent à tort à load/domcontentloaded, d'où le cast.
+    await page.setContent(html, { waitUntil: "networkidle0" } as unknown as Parameters<typeof page.setContent>[1]);
     return (await page.pdf({
       format: "A4",
       printBackground: true,

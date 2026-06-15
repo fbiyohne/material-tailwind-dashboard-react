@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { PrinterIcon, CheckCircleIcon, ArrowDownTrayIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { PrinterIcon, CheckCircleIcon, ArrowDownTrayIcon, TrashIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
 import { QUALITE_LABEL } from "../data/derivations";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { formatFCFA } from "../utils/format";
@@ -164,6 +164,9 @@ export function Recus() {
                       <span className="flex-1 px-3 text-encre">Me {r.membre?.nom}</span>
                       <span className="text-gris">{formatFCFA(r.montant)}</span>
                       <span className="ml-3 font-mono text-xs text-gris">{r.annee}</span>
+                      <a href={`/verifier/recu/${encodeURIComponent(r.numero)}`} target="_blank" rel="noreferrer" title="Ouvrir la page de vérification publique" className="ml-3 inline-flex items-center gap-1 text-xs font-medium text-navy transition hover:text-or">
+                        <ShieldCheckIcon className="h-4 w-4" /> Vérifier
+                      </a>
                       <button type="button" onClick={() => annuler(r)} title="Annuler le reçu" className="ml-3 text-gris transition hover:text-rouge">
                         <TrashIcon className="h-4 w-4" />
                       </button>

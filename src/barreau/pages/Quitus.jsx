@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { DocumentCheckIcon, CheckCircleIcon, LockClosedIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
+import { DocumentCheckIcon, CheckCircleIcon, LockClosedIcon, ArrowDownTrayIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { QuitusDocument, SortTh, Pagination, useToast, PageHeader, EmptyState } from "../components";
 import { useDataTable } from "../hooks/useDataTable";
@@ -162,6 +162,7 @@ export function Quitus() {
                       <SortTh label="Avocat" sortKey="nom" current={registreTable.sortKey} dir={registreTable.sortDir} onSort={registreTable.toggleSort} />
                       <SortTh label="Exercice" sortKey="annee" current={registreTable.sortKey} dir={registreTable.sortDir} onSort={registreTable.toggleSort} />
                       <SortTh label="Date" sortKey="date" current={registreTable.sortKey} dir={registreTable.sortDir} onSort={registreTable.toggleSort} />
+                      <th className="text-right text-[11px] font-semibold uppercase tracking-wide text-gris">Authenticité</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -171,6 +172,11 @@ export function Quitus() {
                         <td className="font-medium">Me {q.membre?.nom}</td>
                         <td className="font-mono text-xs text-gris">{q.annee}</td>
                         <td className="text-xs text-gris">{String(q.dateEmission).slice(0, 10)}</td>
+                        <td className="text-right">
+                          <a href={`/verifier/quitus/${encodeURIComponent(q.numero)}`} target="_blank" rel="noreferrer" title="Ouvrir la page de vérification publique" className="inline-flex items-center gap-1 text-xs font-medium text-navy transition hover:text-or">
+                            <ShieldCheckIcon className="h-4 w-4" /> Vérifier
+                          </a>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
