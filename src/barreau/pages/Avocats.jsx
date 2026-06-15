@@ -69,12 +69,14 @@ export function Avocats() {
   }, [recherche, filtre]);
   useEffect(() => { charger(); }, [charger, refresh]);
 
-  // Statut de cotisation de l'exercice courant (jointure côté client)
+  // Statut de cotisation de l'exercice courant (jointure côté client).
+  // Indépendant des filtres/recherche : on le charge une fois (et à chaque
+  // rafraîchissement explicite), pas à chaque rechargement de la liste.
   useEffect(() => {
     getCotisations(EXERCICE_COURANT)
       .then((lignes) => setStatutCot(Object.fromEntries(lignes.map((l) => [l.membre.id, l.statut]))))
-      .catch(() => {});
-  }, [membres]);
+      .catch(() => toast.error("Statuts de cotisation indisponibles."));
+  }, [toast, refresh]);
 
   const colonnes = [
     { key: "num", label: "N°", sortable: true, sortValue: (m) => m.num,
@@ -88,7 +90,14 @@ export function Avocats() {
     { key: "statut", label: "Statut", sortable: true, sortValue: (m) => m.statut,
       cell: (m) => <StatutBadge statut={m.statut} /> },
     { key: "cotis", label: `Cotisation ${EXERCICE_COURANT}`,
-      cell: (m) => { const meta = STATUT_META[statutCot[m.id] ?? "retard"]; return <Badge ton={meta.ton}>{meta.label}</Badge>; } },
+      cell: (m) => {
+        const st = statutCot[m.id];
+        // Pas de statut connu (chargement ou échec de la jointure) → neutre,
+        // surtout pas « En retard » par défaut (faux positif sur honoraires/inconnus).
+        if (!st) return <span className="text-xs text-gris">—</span>;
+        const meta = STATUT_META[st];
+        return <Badge ton={meta.ton}>{meta.label}</Badge>;
+      } },
     { key: "actions", label: "Actions", align: "right",
       cell: (m) => (
         <div className="flex items-center justify-end gap-1.5">
