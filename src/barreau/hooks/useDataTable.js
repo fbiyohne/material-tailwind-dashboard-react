@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 /**
  * Tri + pagination pour un tableau de données.
@@ -34,6 +34,11 @@ export function useDataTable(rows, { accessors = {}, pageSize = 10, initialSort,
     });
   }, [rows, sortKey, sortDir, accessors]);
 
+  // La pagination revient à la 1re page quand la TAILLE du jeu de données change
+  // (filtre/recherche/onglet, ajout/suppression) — on se cale sur la longueur,
+  // pas sur l'identité du tableau, pour ne pas réinitialiser à chaque rendu.
+  useEffect(() => { setPage(1); }, [sorted.length]);
+
   // pageSize ≤ 0 ou non fini ⇒ pas de pagination : toutes les lignes triées sont
   // rendues (listes imprimées en intégralité — annuaire, liste électorale…).
   const paginate = Number.isFinite(pageSize) && pageSize > 0;
@@ -42,7 +47,11 @@ export function useDataTable(rows, { accessors = {}, pageSize = 10, initialSort,
   const pageRows = paginate ? sorted.slice((current - 1) * pageSize, current * pageSize) : sorted;
 
   const rowId = getRowId ?? ((r) => r.id);
-  const selectedIds = [...selected];
+  // La sélection est bornée aux lignes réellement présentes dans le jeu courant :
+  // après un filtre, les actions groupées (export…) n'agissent jamais sur des IDs
+  // devenus invisibles.
+  const idsPresents = useMemo(() => new Set(sorted.map(rowId)), [sorted, rowId]);
+  const selectedIds = [...selected].filter((id) => idsPresents.has(id));
   const toggleRow = (id) =>
     setSelected((s) => {
       const next = new Set(s);
