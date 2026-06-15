@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { UserPlusIcon, KeyIcon, CheckIcon, XMarkIcon, InboxArrowDownIcon, IdentificationIcon, BuildingOffice2Icon } from "@heroicons/react/24/outline";
-import { Badge, Modal, PageHeader, FormField, useToast, DataTable } from "../components";
+import { Badge, Modal, PageHeader, FormField, useToast, useConfirm, DataTable } from "../components";
 import { formatDate } from "../utils/format";
 import { useAuth } from "../auth/AuthContext";
 import {
@@ -21,6 +21,7 @@ const videCreation = (prefill = {}) => ({ nom: "", email: "", role: "SECRETAIRE_
 /** Gestion des comptes utilisateurs et des rôles (CDC §5.1). Réservé SG/Admin. */
 export function Utilisateurs() {
   const toast = useToast();
+  const confirm = useConfirm();
   const { user: courant } = useAuth();
   const [users, setUsers] = useState([]);
   const [demandes, setDemandes] = useState([]);
@@ -49,7 +50,17 @@ export function Utilisateurs() {
     catch (e) { toast.error(e.message); }
   };
   const basculerActif = async (u) => {
-    try { await majUser(u.id, { actif: !u.actif }); await charger(); toast.success(u.actif ? "Compte désactivé." : "Compte réactivé."); }
+    const desactiver = u.actif;
+    const ok = await confirm({
+      title: desactiver ? "Désactiver le compte" : "Réactiver le compte",
+      message: desactiver
+        ? `${u.nom} ne pourra plus se connecter à l'application jusqu'à réactivation.`
+        : `${u.nom} pourra de nouveau se connecter à l'application.`,
+      confirmLabel: desactiver ? "Désactiver" : "Réactiver",
+      danger: desactiver,
+    });
+    if (!ok) return;
+    try { await majUser(u.id, { actif: !u.actif }); await charger(); toast.success(desactiver ? "Compte désactivé." : "Compte réactivé."); }
     catch (e) { toast.error(e.message); }
   };
 
