@@ -17,6 +17,23 @@ describe("useDataTable — tri (existant)", () => {
   });
 });
 
+describe("useDataTable — pagination", () => {
+  const dix = Array.from({ length: 25 }, (_, i) => ({ id: i + 1 }));
+
+  it("pagine par défaut selon pageSize", () => {
+    const { result } = renderHook(() => useDataTable(dix, { pageSize: 10 }));
+    expect(result.current.rows).toHaveLength(10);
+    expect(result.current.totalPages).toBe(3);
+  });
+
+  it("pageSize ≤ 0 rend toutes les lignes sur une seule page", () => {
+    const { result } = renderHook(() => useDataTable(dix, { pageSize: 0 }));
+    expect(result.current.rows).toHaveLength(25);
+    expect(result.current.totalPages).toBe(1);
+    expect(result.current.total).toBe(25);
+  });
+});
+
 describe("useDataTable — sélection (nouveau)", () => {
   it("sélectionne et désélectionne une ligne", () => {
     const { result } = renderHook(() => useDataTable(rows, { getRowId: (r) => r.id }));

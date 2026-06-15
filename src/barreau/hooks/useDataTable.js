@@ -34,9 +34,12 @@ export function useDataTable(rows, { accessors = {}, pageSize = 10, initialSort,
     });
   }, [rows, sortKey, sortDir, accessors]);
 
-  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+  // pageSize ≤ 0 ou non fini ⇒ pas de pagination : toutes les lignes triées sont
+  // rendues (listes imprimées en intégralité — annuaire, liste électorale…).
+  const paginate = Number.isFinite(pageSize) && pageSize > 0;
+  const totalPages = paginate ? Math.max(1, Math.ceil(sorted.length / pageSize)) : 1;
   const current = Math.min(page, totalPages);
-  const pageRows = sorted.slice((current - 1) * pageSize, current * pageSize);
+  const pageRows = paginate ? sorted.slice((current - 1) * pageSize, current * pageSize) : sorted;
 
   const rowId = getRowId ?? ((r) => r.id);
   const selectedIds = [...selected];

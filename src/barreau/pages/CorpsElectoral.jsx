@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { PrinterIcon, ArrowDownTrayIcon, CheckBadgeIcon, NoSymbolIcon } from "@heroicons/react/24/outline";
-import { StatCard, Badge, EmptyState, useToast, PageHeader, Tabs, SelecteurExercice } from "../components";
+import { StatCard, Badge, useToast, PageHeader, Tabs, SelecteurExercice, DataTable } from "../components";
 import { exporterExcel } from "../utils/exports";
+import { formatDate } from "../utils/format";
 import { EXERCICE_COURANT } from "../data/dashboard-data";
 import { getCorpsElectoral } from "../api/resources";
 
@@ -68,36 +69,19 @@ export function CorpsElectoral() {
                     </span>
                     <span className="font-mono text-xs text-gris">{electeurs.length} électeurs</span>
                   </div>
-                  {electeurs.length === 0 ? (
-                    <EmptyState
-                      icon={CheckBadgeIcon}
-                      title="Aucun électeur qualifié"
-                      description={`Aucun avocat ne remplit les conditions pour voter à l'exercice ${exercice} (inscrit, à jour de cotisations, non suspendu).`}
-                    />
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="bpn-table">
-                        <thead>
-                          <tr>
-                            <th className="px-3 py-2.5 font-medium">N°</th>
-                            <th className="px-3 py-2.5 font-medium">Avocat électeur</th>
-                            <th className="px-3 py-2.5 font-medium">Cabinet</th>
-                            <th className="px-3 py-2.5 font-medium">Inscrit depuis</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {electeurs.map((m, i) => (
-                            <tr key={m.id} className="border-b border-grisL hover:bg-grisL/60">
-                              <td className="px-3 py-2.5 font-mono text-xs text-gris">{i + 1}</td>
-                              <td className="px-3 py-2.5 font-medium">Me {m.nom}</td>
-                              <td className="px-3 py-2.5 text-gris">{m.cabinet}</td>
-                              <td className="px-3 py-2.5 text-xs text-gris">{m.dateInscription ?? "—"}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
+                  <DataTable
+                    columns={[
+                      { key: "num", label: "N°", sortable: true, sortValue: (m) => m._num, cell: (m) => <span className="font-mono text-xs text-gris">{m._num}</span> },
+                      { key: "nom", label: "Avocat électeur", sortable: true, sortValue: (m) => m.nom, cell: (m) => <span className="font-medium">Me {m.nom}</span> },
+                      { key: "cabinet", label: "Cabinet", sortable: true, sortValue: (m) => m.cabinet, cell: (m) => <span className="text-gris">{m.cabinet}</span> },
+                      { key: "inscrit", label: "Inscrit depuis", sortable: true, sortValue: (m) => m.dateInscription ?? "", cell: (m) => <span className="text-xs text-gris">{formatDate(m.dateInscription)}</span> },
+                    ]}
+                    rows={electeurs.map((m, i) => ({ ...m, _num: i + 1 }))}
+                    paginate={false}
+                    emptyIcon={CheckBadgeIcon}
+                    emptyTitle="Aucun électeur qualifié"
+                    emptyDescription={`Aucun avocat ne remplit les conditions pour voter à l'exercice ${exercice} (inscrit, à jour de cotisations, non suspendu).`}
+                  />
                 </div>
               </>
             ),

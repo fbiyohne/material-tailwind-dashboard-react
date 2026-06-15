@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { MagnifyingGlassIcon, ArrowDownTrayIcon, PrinterIcon, BookOpenIcon } from "@heroicons/react/24/outline";
-import { StatutBadge, EmptyState, useToast, PageHeader } from "../components";
+import { StatutBadge, useToast, PageHeader, DataTable } from "../components";
 import { exporterExcel } from "../utils/exports";
 import { listerMembres } from "../api/resources";
 
@@ -61,38 +61,23 @@ export function Annuaire() {
           </span>
           <span className="font-mono text-xs text-gris">{lignes.length} avocats</span>
         </div>
-        {lignes.length === 0 ? (
-          <EmptyState
-            icon={BookOpenIcon}
-            title={recherche ? "Aucun avocat trouvé" : "Annuaire vide"}
-            description={recherche ? "Aucun résultat pour cette recherche. Essayez un autre nom ou cabinet." : "Aucun avocat inscrit à afficher pour le moment."}
-          />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="bpn-table">
-              <thead>
-                <tr>
-                  <th className="px-3 py-2.5 font-medium">Avocat</th>
-                  <th className="px-3 py-2.5 font-medium">Cabinet</th>
-                  {interne && <th className="px-3 py-2.5 font-medium">Téléphone</th>}
-                  {interne && <th className="px-3 py-2.5 font-medium">Email</th>}
-                  <th className="px-3 py-2.5 font-medium">Statut</th>
-                </tr>
-              </thead>
-              <tbody>
-                {lignes.map((m) => (
-                  <tr key={m.id} className="border-b border-grisL hover:bg-grisL/60">
-                    <td className="px-3 py-2.5 font-medium">Me {m.nom}</td>
-                    <td className="px-3 py-2.5 text-gris">{m.cabinet}</td>
-                    {interne && <td className="px-3 py-2.5 font-mono text-xs text-gris">{m.tel}</td>}
-                    {interne && <td className="px-3 py-2.5 text-xs text-gris">{m.email}</td>}
-                    <td className="px-3 py-2.5"><StatutBadge statut={m.statut} /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <DataTable
+          columns={[
+            { key: "nom", label: "Avocat", sortable: true, sortValue: (m) => m.nom, cell: (m) => <span className="font-medium">Me {m.nom}</span> },
+            { key: "cabinet", label: "Cabinet", sortable: true, sortValue: (m) => m.cabinet, cell: (m) => <span className="text-gris">{m.cabinet}</span> },
+            ...(interne ? [
+              { key: "tel", label: "Téléphone", cell: (m) => <span className="font-mono text-xs text-gris">{m.tel}</span> },
+              { key: "email", label: "Email", cell: (m) => <span className="text-xs text-gris">{m.email}</span> },
+            ] : []),
+            { key: "statut", label: "Statut", sortable: true, sortValue: (m) => m.statut, cell: (m) => <StatutBadge statut={m.statut} /> },
+          ]}
+          rows={lignes}
+          paginate={false}
+          emptyIcon={BookOpenIcon}
+          emptyTitle={recherche ? "Aucun avocat trouvé" : "Annuaire vide"}
+          emptyDescription={recherche ? "Aucun résultat pour cette recherche. Essayez un autre nom ou cabinet." : "Aucun avocat inscrit à afficher pour le moment."}
+          initialSort={{ key: "nom", dir: "asc" }}
+        />
       </div>
     </div>
   );

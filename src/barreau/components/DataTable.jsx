@@ -10,18 +10,19 @@ const alignCls = { right: "text-right", center: "text-center", left: "text-left"
 
 export function DataTable({
   columns, rows, getRowId = (r) => r.id, pageSize = 10, initialSort,
-  loading = false, error = false, onRetry, emptyTitle = "Aucun élément", emptyDescription,
+  loading = false, error = false, onRetry, emptyTitle = "Aucun élément", emptyDescription, emptyIcon,
   selectable = false, renderBulkActions, density = "confort", libelle = "éléments",
+  paginate = true,
 }) {
   const accessors = Object.fromEntries(
     columns.filter((c) => c.sortable && c.sortValue).map((c) => [c.key, c.sortValue])
   );
-  const t = useDataTable(rows, { accessors, pageSize, initialSort, getRowId });
+  const t = useDataTable(rows, { accessors, pageSize: paginate ? pageSize : 0, initialSort, getRowId });
   const pad = density === "compact" ? "px-3 py-1.5" : "px-3 py-2.5";
 
   if (loading) return <TableSkeleton cols={columns.length + (selectable ? 1 : 0)} />;
   if (error) return <ErrorState onRetry={onRetry} />;
-  if (rows.length === 0) return <EmptyState title={emptyTitle} description={emptyDescription} />;
+  if (rows.length === 0) return <EmptyState icon={emptyIcon} title={emptyTitle} description={emptyDescription} />;
 
   return (
     <>
@@ -48,11 +49,11 @@ export function DataTable({
                 <th key={c.key} className={`${pad} ${alignCls[c.align] ?? "text-left"}`}>
                   {c.sortable ? (
                     <button type="button" onClick={() => t.toggleSort(c.key)}
-                      className="inline-flex items-center gap-1 font-medium uppercase hover:text-white">
+                      className="inline-flex items-center gap-1 font-medium uppercase hover:text-white print:cursor-default">
                       {c.label}
                       {t.sortKey === c.key
-                        ? (t.sortDir === "asc" ? <ChevronUpIcon className="h-3 w-3" /> : <ChevronDownIcon className="h-3 w-3" />)
-                        : <ChevronUpDownIcon className="h-3 w-3 opacity-60" />}
+                        ? (t.sortDir === "asc" ? <ChevronUpIcon className="h-3 w-3 print:hidden" /> : <ChevronDownIcon className="h-3 w-3 print:hidden" />)
+                        : <ChevronUpDownIcon className="h-3 w-3 opacity-60 print:hidden" />}
                     </button>
                   ) : c.label}
                 </th>
@@ -80,7 +81,9 @@ export function DataTable({
           </tbody>
         </table>
       </div>
-      <Pagination page={t.page} totalPages={t.totalPages} total={t.total} onPage={t.setPage} libelle={libelle} />
+      {paginate && (
+        <Pagination page={t.page} totalPages={t.totalPages} total={t.total} onPage={t.setPage} libelle={libelle} />
+      )}
     </>
   );
 }
@@ -96,10 +99,12 @@ DataTable.propTypes = {
   onRetry: PropTypes.func,
   emptyTitle: PropTypes.string,
   emptyDescription: PropTypes.string,
+  emptyIcon: PropTypes.elementType,
   selectable: PropTypes.bool,
   renderBulkActions: PropTypes.func,
   density: PropTypes.oneOf(["confort", "compact"]),
   libelle: PropTypes.string,
+  paginate: PropTypes.bool,
 };
 
 export default DataTable;
