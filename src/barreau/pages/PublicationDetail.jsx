@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { ArrowLeftIcon, CheckIcon } from "@heroicons/react/24/outline";
-import { Badge, useToast, FormField, PageHeader } from "../components";
+import { Badge, useToast, FormField, PageHeader, ErrorState, TableSkeleton } from "../components";
+import { formatDate } from "../utils/format";
 import { STATUT_PUBLICATION_META } from "../data/publications";
 import { getPublication, majPublication, changerStatutPublication } from "../api/resources";
 
 export function PublicationDetail() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const toast = useToast();
   const [publication, setPublication] = useState(null);
   const [form, setForm] = useState({});
@@ -18,13 +18,17 @@ export function PublicationDetail() {
 
   if (publication === false) {
     return (
-      <div className="py-20 text-center">
-        <p className="text-gris">Publication introuvable.</p>
-        <button className="bpn-btn bpn-btn-ghost mt-4" onClick={() => navigate("/publications")}>Retour</button>
+      <div className="space-y-4">
+        <Link to="/publications" className="inline-flex items-center gap-1.5 text-sm text-gris hover:text-navy">
+          <ArrowLeftIcon className="h-4 w-4" /> Retour aux publications
+        </Link>
+        <div className="bpn-card p-6">
+          <ErrorState title="Publication introuvable" description="Cette publication n'existe pas ou a été supprimée." onRetry={charger} />
+        </div>
       </div>
     );
   }
-  if (!publication) return <div className="py-20 text-center text-sm text-gris">Chargement…</div>;
+  if (!publication) return <div className="bpn-card p-6"><TableSkeleton rows={5} cols={2} /></div>;
 
   const meta = STATUT_PUBLICATION_META[publication.statut];
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
@@ -50,18 +54,14 @@ export function PublicationDetail() {
 
   return (
     <div className="space-y-5">
-      <Link to="/publications" className="inline-flex items-center gap-1.5 text-sm text-gris hover:text-navy">
-        <ArrowLeftIcon className="h-4 w-4" /> Retour aux publications
-      </Link>
-
       <PageHeader
-        eyebrow="Publication"
+        breadcrumb={[{ label: "Publications", to: "/publications" }, { label: publication.titre }]}
         titre={publication.titre}
         sousTitre={
           <span className="flex flex-wrap items-center gap-2">
             <Badge ton="gris" dot={false}>{publication.type}</Badge>
             <Badge ton={meta.ton}>{meta.label}</Badge>
-            <span className="font-mono text-xs text-gris">{publication.date}</span>
+            <span className="font-mono text-xs text-gris">{formatDate(publication.date)}</span>
           </span>
         }
       >

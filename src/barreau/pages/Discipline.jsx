@@ -5,17 +5,10 @@ import {
   ShieldExclamationIcon,
   PlusIcon,
 } from "@heroicons/react/24/outline";
-import { Badge, Modal, SortTh, Pagination, useToast, PageHeader, FormField, Notice, EmptyState } from "../components";
-import { useDataTable } from "../hooks/useDataTable";
+import { Badge, Modal, useToast, PageHeader, FormField, Notice, DataTable } from "../components";
 import { STATUT_DOSSIER_META } from "../data/institutionnel";
+import { formatDate } from "../utils/format";
 import { listerMembres, listerDossiers, ouvrirDossier as apiOuvrirDossier, journalDiscipline as apiJournal } from "../api/resources";
-
-const ACCESSORS = {
-  reference: (d) => d.reference,
-  avocat: (d) => (d.avocatNom ?? "").toLowerCase(),
-  saisine: (d) => d.dateSaisine,
-  statut: (d) => d.statut,
-};
 
 const fmtDateTime = (iso) =>
   new Date(iso).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
@@ -76,16 +69,34 @@ export function Discipline() {
   const [ouvrir, setOuvrir] = useState(false);
   const [dossiers, setDossiers] = useState([]);
   const [journalDiscipline, setJournalDiscipline] = useState([]);
-
-  // Hook appelé inconditionnellement (avant la barrière d'accès RG-13).
-  const { rows, total, page, setPage, totalPages, sortKey, sortDir, toggleSort } = useDataTable(dossiers, {
-    accessors: ACCESSORS, pageSize: 10, initialSort: { key: "reference", dir: "desc" },
-  });
+  const [chargement, setChargement] = useState(true);
+  const [erreur, setErreur] = useState(false);
 
   const charger = () => {
-    listerDossiers().then(setDossiers).catch((e) => toast.error(e.message));
+    setChargement(true);
+    setErreur(false);
+    listerDossiers().then(setDossiers).catch(() => setErreur(true)).finally(() => setChargement(false));
     apiJournal().then(setJournalDiscipline).catch(() => {});
   };
+
+  const colonnes = [
+    { key: "reference", label: "Référence", sortable: true, sortValue: (d) => d.reference,
+      cell: (d) => <span className="font-mono text-xs font-medium text-rouge">{d.reference}</span> },
+    { key: "avocat", label: "Avocat mis en cause", sortable: true, sortValue: (d) => (d.avocatNom ?? "").toLowerCase(),
+      cell: (d) => d.avocatNom === "Confidentiel" ? <span className="italic text-gris">Confidentiel</span> : <span className="font-medium">Me {d.avocatNom}</span> },
+    { key: "objet", label: "Objet", cell: (d) => <span className="text-gris">{d.objet}</span> },
+    { key: "saisine", label: "Saisine", sortable: true, sortValue: (d) => d.dateSaisine,
+      cell: (d) => <span className="text-xs text-gris">{formatDate(d.dateSaisine)}</span> },
+    { key: "audience", label: "Audience", cell: (d) => <span className="text-xs text-gris">{formatDate(d.dateAudience)}</span> },
+    { key: "statut", label: "Statut", sortable: true, sortValue: (d) => d.statut,
+      cell: (d) => { const meta = STATUT_DOSSIER_META[d.statut]; return <Badge ton={meta.ton}>{meta.label}</Badge>; } },
+    { key: "actions", label: "Actions", align: "right",
+      cell: (d) => (
+        <button className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs" onClick={() => navigate(`/discipline/${d.id}`)}>
+          Ouvrir
+        </button>
+      ) },
+  ];
 
   // ─── Écran d'accès restreint (RG-13) ───────────────────────────────────
   if (!acces) {
@@ -124,48 +135,19 @@ export function Discipline() {
       </div>
 
       <div className="bpn-card">
-        <div className="overflow-x-auto">
-          <table className="bpn-table">
-            <thead>
-              <tr>
-                <SortTh label="Référence" sortKey="reference" current={sortKey} dir={sortDir} onSort={toggleSort} />
-                <SortTh label="Avocat mis en cause" sortKey="avocat" current={sortKey} dir={sortDir} onSort={toggleSort} />
-                <th className="px-3 py-2.5 font-medium">Objet</th>
-                <SortTh label="Saisine" sortKey="saisine" current={sortKey} dir={sortDir} onSort={toggleSort} />
-                <th className="px-3 py-2.5 font-medium">Audience</th>
-                <SortTh label="Statut" sortKey="statut" current={sortKey} dir={sortDir} onSort={toggleSort} />
-                <th className="px-3 py-2.5 text-right font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((d) => {
-                const meta = STATUT_DOSSIER_META[d.statut];
-                return (
-                  <tr key={d.id} className="border-b border-grisL hover:bg-grisL/60">
-                    <td className="px-3 py-2.5 font-mono text-xs font-medium text-rouge">{d.reference}</td>
-                    <td className="px-3 py-2.5 font-medium">{d.avocatNom === "Confidentiel" ? <span className="italic text-gris">Confidentiel</span> : `Me ${d.avocatNom}`}</td>
-                    <td className="px-3 py-2.5 text-gris">{d.objet}</td>
-                    <td className="px-3 py-2.5 text-xs text-gris">{d.dateSaisine}</td>
-                    <td className="px-3 py-2.5 text-xs text-gris">{d.dateAudience ?? "—"}</td>
-                    <td className="px-3 py-2.5"><Badge ton={meta.ton}>{meta.label}</Badge></td>
-                    <td className="px-3 py-2.5 text-right">
-                      <button
-                        className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs"
-                        onClick={() => navigate(`/discipline/${d.id}`)}
-                      >
-                        Ouvrir
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-              {rows.length === 0 && (
-                <tr><td colSpan={7} className="p-0"><EmptyState title="Aucun dossier" description="Aucun dossier disciplinaire enregistré." /></td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-        <Pagination page={page} totalPages={totalPages} total={total} onPage={setPage} libelle="dossiers" />
+        <DataTable
+          columns={colonnes}
+          rows={dossiers}
+          getRowId={(d) => d.id}
+          loading={chargement}
+          error={erreur}
+          onRetry={charger}
+          libelle="dossiers"
+          initialSort={{ key: "saisine", dir: "desc" }}
+          emptyIcon={ShieldExclamationIcon}
+          emptyTitle="Aucun dossier"
+          emptyDescription="Aucun dossier disciplinaire enregistré."
+        />
       </div>
 
       {/* Journal d'accès (RG-13) */}

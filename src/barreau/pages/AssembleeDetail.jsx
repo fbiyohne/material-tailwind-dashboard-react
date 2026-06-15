@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeftIcon, PlusIcon, CheckIcon, ArrowDownTrayIcon, TrashIcon, ListBulletIcon, UserGroupIcon, ClipboardDocumentCheckIcon, DocumentTextIcon } from "@heroicons/react/24/outline";
-import { Badge, DocumentModal, useToast, useConfirm, PageHeader, Tabs } from "../components";
+import { Badge, DocumentModal, useToast, useConfirm, PageHeader, Tabs, ErrorState, TableSkeleton } from "../components";
+import { formatDate } from "../utils/format";
 import { EXERCICE_COURANT } from "../data/dashboard-data";
 import { getAssemblee, majAssemblee, getCorpsElectoral, archiverDoc, telechargerPvAgPdf, supprimerAssemblee } from "../api/resources";
 
 const TYPE_LABEL = { AGO: "Assemblée Générale Ordinaire", AGE: "Assemblée Générale Extraordinaire" };
-const fmt = (d) => new Date(d).toLocaleDateString("fr-FR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
 
 function Carte({ titre, action, children }) {
   return (
@@ -41,13 +41,17 @@ export function AssembleeDetail() {
 
   if (assemblee === false) {
     return (
-      <div className="py-20 text-center">
-        <p className="text-gris">Assemblée introuvable.</p>
-        <button className="bpn-btn bpn-btn-ghost mt-4" onClick={() => navigate("/assemblees")}>Retour</button>
+      <div className="space-y-4">
+        <Link to="/assemblees" className="inline-flex items-center gap-1.5 text-sm text-gris hover:text-navy">
+          <ArrowLeftIcon className="h-4 w-4" /> Retour aux assemblées
+        </Link>
+        <div className="bpn-card p-6">
+          <ErrorState title="Assemblée introuvable" description="Cette assemblée n'existe pas ou a été supprimée." onRetry={charger} />
+        </div>
       </div>
     );
   }
-  if (!assemblee) return <div className="py-20 text-center text-sm text-gris">Chargement…</div>;
+  if (!assemblee) return <div className="bpn-card p-6"><TableSkeleton rows={5} cols={2} /></div>;
 
   const dateCourte = String(assemblee.date).slice(0, 10);
   const requis = Math.floor(electeurs / 2) + 1;
@@ -109,13 +113,9 @@ export function AssembleeDetail() {
 
   return (
     <div className="space-y-5">
-      <Link to="/assemblees" className="inline-flex items-center gap-1.5 text-sm text-gris hover:text-navy">
-        <ArrowLeftIcon className="h-4 w-4" /> Retour aux assemblées
-      </Link>
-
       <PageHeader
-        eyebrow="Assemblée générale"
-        titre={<span className="capitalize">{fmt(assemblee.date)}</span>}
+        breadcrumb={[{ label: "Assemblées générales", to: "/assemblees" }, { label: assemblee.titre || formatDate(assemblee.date) }]}
+        titre={<span className="capitalize">{formatDate(assemblee.date)}</span>}
         sousTitre={
           <span className="flex flex-wrap items-center gap-2">
             <Badge ton={assemblee.type === "AGE" ? "rouge" : "bleu"} dot={false}>{assemblee.type}</Badge>
@@ -204,12 +204,12 @@ export function AssembleeDetail() {
 
       <DocumentModal
         open={convocation} onClose={() => setConvocation(false)} title="Convocation à l'Assemblée Générale"
-        reference={`${assemblee.type} du ${new Date(assemblee.date).toLocaleDateString("fr-FR")}`} date={dateCourte}
+        reference={`${assemblee.type} du ${formatDate(assemblee.date)}`} date={dateCourte}
         pdfPath={`/assemblees/${assemblee.id}/convocation/pdf`} pdfFilename={`Convocation-${assemblee.type}-${dateCourte}.pdf`}
         onArchive={() => archiverDoc({ categorie: "Convocation (AG)", titre: `Convocation ${assemblee.type} du ${dateCourte}`, reference: dateCourte, date: dateCourte })}
       >
         <p>Le Bâtonnier convoque les membres du corps électoral à l'<strong>{TYPE_LABEL[assemblee.type]}</strong> du{" "}
-          <strong>{new Date(assemblee.date).toLocaleDateString("fr-FR")}</strong>, au <strong>{assemblee.lieu}</strong>.</p>
+          <strong>{formatDate(assemblee.date)}</strong>, au <strong>{assemblee.lieu}</strong>.</p>
         <p className="mt-3 font-medium">Ordre du jour :</p>
         <ol className="mt-1 list-inside list-decimal">{assemblee.ordreDuJour.map((pt, i) => <li key={i}>{pt}</li>)}</ol>
       </DocumentModal>

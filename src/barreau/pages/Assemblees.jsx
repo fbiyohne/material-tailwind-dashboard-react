@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PlusIcon, ArrowRightIcon, BuildingLibraryIcon } from "@heroicons/react/24/outline";
-import { Badge, Modal, EmptyState, useToast, PageHeader, FormField } from "../components";
+import { Badge, Modal, EmptyState, ErrorState, Skeleton, useToast, PageHeader, FormField } from "../components";
+import { formatDate } from "../utils/format";
 import { listerAssemblees, creerAssemblee as apiCreerAssemblee } from "../api/resources";
 
 const TYPE_LABEL = { AGO: "Assemblée Générale Ordinaire", AGE: "Assemblée Générale Extraordinaire" };
-const fmt = (d) => new Date(d).toLocaleDateString("fr-FR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
 
 function NouvelleAssembleeModal({ open, onClose, onCreated }) {
   const toast = useToast();
@@ -44,8 +44,14 @@ export function Assemblees() {
   const toast = useToast();
   const [assemblees, setAssemblees] = useState([]);
   const [creer, setCreer] = useState(false);
+  const [chargement, setChargement] = useState(true);
+  const [erreur, setErreur] = useState(false);
 
-  const charger = () => listerAssemblees().then(setAssemblees).catch((e) => toast.error(e.message));
+  const charger = () => {
+    setChargement(true);
+    setErreur(false);
+    listerAssemblees().then(setAssemblees).catch(() => setErreur(true)).finally(() => setChargement(false));
+  };
   useEffect(() => { charger(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
@@ -54,7 +60,20 @@ export function Assemblees() {
         <button className="bpn-btn bpn-btn-or" onClick={() => setCreer(true)}><PlusIcon className="h-4 w-4" /> Nouvelle assemblée</button>
       </PageHeader>
 
-      {assemblees.length === 0 ? (
+      {chargement ? (
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="bpn-card h-full space-y-3 p-5">
+              <Skeleton className="h-5 w-2/3" />
+              <Skeleton className="h-3 w-1/2" />
+              <Skeleton className="h-3 w-5/6" />
+              <Skeleton className="h-3 w-3/4" />
+            </div>
+          ))}
+        </div>
+      ) : erreur ? (
+        <div className="bpn-card p-6"><ErrorState onRetry={charger} /></div>
+      ) : assemblees.length === 0 ? (
         <div className="bpn-card">
           <EmptyState
             icon={BuildingLibraryIcon}
@@ -72,7 +91,7 @@ export function Assemblees() {
                 <div>
                   <div className="flex items-center gap-2">
                     <Badge ton={a.type === "AGE" ? "rouge" : "bleu"} dot={false}>{a.type}</Badge>
-                    <span className="font-display text-lg capitalize text-navy">{fmt(a.date)}</span>
+                    <span className="font-display text-lg capitalize text-navy">{formatDate(a.date)}</span>
                   </div>
                   <div className="mt-1 text-xs text-gris">{TYPE_LABEL[a.type]} · {a.lieu}</div>
                 </div>

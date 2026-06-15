@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PlusIcon, CalendarDaysIcon, MapPinIcon, ArrowRightIcon } from "@heroicons/react/24/outline";
-import { Badge, Modal, EmptyState, useToast, PageHeader, FormField } from "../components";
+import { Badge, Modal, EmptyState, ErrorState, Skeleton, useToast, PageHeader, FormField } from "../components";
+import { formatDate } from "../utils/format";
 import { listerReunions, creerReunion as apiCreerReunion } from "../api/resources";
-
-const fmt = (d) => new Date(d).toLocaleDateString("fr-FR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
 
 function NouvelleReunionModal({ open, onClose, onCreated }) {
   const toast = useToast();
@@ -41,8 +40,14 @@ export function Reunions() {
   const toast = useToast();
   const [reunions, setReunions] = useState([]);
   const [creer, setCreer] = useState(false);
+  const [chargement, setChargement] = useState(true);
+  const [erreur, setErreur] = useState(false);
 
-  const charger = () => listerReunions().then(setReunions).catch((e) => toast.error(e.message));
+  const charger = () => {
+    setChargement(true);
+    setErreur(false);
+    listerReunions().then(setReunions).catch(() => setErreur(true)).finally(() => setChargement(false));
+  };
   useEffect(() => { charger(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
@@ -51,7 +56,20 @@ export function Reunions() {
         <button className="bpn-btn bpn-btn-or" onClick={() => setCreer(true)}><PlusIcon className="h-4 w-4" /> Nouvelle réunion</button>
       </PageHeader>
 
-      {reunions.length === 0 ? (
+      {chargement ? (
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="bpn-card h-full space-y-3 p-5">
+              <Skeleton className="h-5 w-2/3" />
+              <Skeleton className="h-3 w-1/2" />
+              <Skeleton className="h-3 w-5/6" />
+              <Skeleton className="h-3 w-3/4" />
+            </div>
+          ))}
+        </div>
+      ) : erreur ? (
+        <div className="bpn-card p-6"><ErrorState onRetry={charger} /></div>
+      ) : reunions.length === 0 ? (
         <div className="bpn-card">
           <EmptyState
             icon={CalendarDaysIcon}
@@ -68,7 +86,7 @@ export function Reunions() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-display text-lg capitalize text-navy">{fmt(r.date)}</span>
+                    <span className="font-display text-lg capitalize text-navy">{formatDate(r.date)}</span>
                     <Badge ton={r.statut === "tenue" ? "vert" : "or"}>{r.statut === "tenue" ? "Tenue" : "Planifiée"}</Badge>
                   </div>
                   <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gris">

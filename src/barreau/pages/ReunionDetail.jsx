@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeftIcon, CalendarDaysIcon, MapPinIcon, CheckIcon, ArrowDownTrayIcon, TrashIcon, ListBulletIcon, UserGroupIcon, DocumentTextIcon } from "@heroicons/react/24/outline";
-import { Badge, DocumentModal, useToast, useConfirm, PageHeader, Tabs } from "../components";
+import { Badge, DocumentModal, useToast, useConfirm, PageHeader, Tabs, ErrorState, TableSkeleton } from "../components";
+import { formatDate } from "../utils/format";
 import { getReunion, majReunion, archiverDoc, telechargerPvReunionPdf, getConseil, supprimerReunion } from "../api/resources";
 
-const fmt = (d) => new Date(d).toLocaleDateString("fr-FR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
 /** Libellé d'émargement d'un membre du Conseil — sert aussi de clé de présence. */
 const labelConseil = (c) => `${c.nom} — ${c.fonction}`;
 
@@ -33,16 +33,15 @@ export function ReunionDetail() {
   const [convocation, setConvocation] = useState(false);
   const [feuille, setFeuille] = useState(false);
 
-  useEffect(() => {
-    getReunion(Number(id))
-      .then((r) => {
-        setReunion(r);
-        setOdj((r.ordreDuJour ?? []).join("\n"));
-        setPresences(r.presences ?? {});
-        setPv(r.pv ?? "");
-      })
-      .catch(() => setReunion(false));
-  }, [id]);
+  const charger = () => getReunion(Number(id))
+    .then((r) => {
+      setReunion(r);
+      setOdj((r.ordreDuJour ?? []).join("\n"));
+      setPresences(r.presences ?? {});
+      setPv(r.pv ?? "");
+    })
+    .catch(() => setReunion(false));
+  useEffect(() => { charger(); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     getConseil().then(setConseil).catch(() => setConseil([]));
@@ -52,13 +51,17 @@ export function ReunionDetail() {
 
   if (reunion === false) {
     return (
-      <div className="py-20 text-center">
-        <p className="text-gris">Réunion introuvable.</p>
-        <button className="bpn-btn bpn-btn-ghost mt-4" onClick={() => navigate("/reunions")}>Retour</button>
+      <div className="space-y-4">
+        <Link to="/reunions" className="inline-flex items-center gap-1.5 text-sm text-gris hover:text-navy">
+          <ArrowLeftIcon className="h-4 w-4" /> Retour aux réunions
+        </Link>
+        <div className="bpn-card p-6">
+          <ErrorState title="Réunion introuvable" description="Cette réunion n'existe pas ou a été supprimée." onRetry={charger} />
+        </div>
       </div>
     );
   }
-  if (!reunion) return <div className="py-20 text-center text-sm text-gris">Chargement…</div>;
+  if (!reunion) return <div className="bpn-card p-6"><TableSkeleton rows={5} cols={2} /></div>;
 
   const dateCourte = String(reunion.date).slice(0, 10);
   const nbPresents = Object.values(presences).filter(Boolean).length;
@@ -118,13 +121,9 @@ export function ReunionDetail() {
 
   return (
     <div className="space-y-5">
-      <Link to="/reunions" className="inline-flex items-center gap-1.5 text-sm text-gris hover:text-navy">
-        <ArrowLeftIcon className="h-4 w-4" /> Retour aux réunions
-      </Link>
-
       <PageHeader
-        eyebrow="Conseil de l'Ordre"
-        titre={<span className="capitalize">{fmt(reunion.date)}</span>}
+        breadcrumb={[{ label: "Réunions du Conseil", to: "/reunions" }, { label: formatDate(reunion.date) }]}
+        titre={<span className="capitalize">{formatDate(reunion.date)}</span>}
         sousTitre={
           <span className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <Badge ton={reunion.statut === "tenue" ? "vert" : "or"}>{reunion.statut === "tenue" ? "Tenue" : "Planifiée"}</Badge>
@@ -192,19 +191,19 @@ export function ReunionDetail() {
 
       <DocumentModal
         open={convocation} onClose={() => setConvocation(false)} title="Convocation"
-        reference={`Réunion du ${new Date(reunion.date).toLocaleDateString("fr-FR")}`} date={dateCourte}
+        reference={`Réunion du ${formatDate(reunion.date)}`} date={dateCourte}
         pdfPath={`/reunions/${reunion.id}/convocation/pdf`} pdfFilename={`Convocation-reunion-${dateCourte}.pdf`}
         onArchive={() => archiverDoc({ categorie: "Convocation (Conseil)", titre: `Convocation réunion du ${dateCourte}`, reference: dateCourte, date: dateCourte })}
       >
         <p>Le Bâtonnier a l'honneur de convier les membres du Conseil de l'Ordre à la réunion du{" "}
-          <strong>{new Date(reunion.date).toLocaleDateString("fr-FR")}</strong> à <strong>{reunion.heure}</strong>, au <strong>{reunion.lieu}</strong>.</p>
+          <strong>{formatDate(reunion.date)}</strong> à <strong>{reunion.heure}</strong>, au <strong>{reunion.lieu}</strong>.</p>
         <p className="mt-3 font-medium">Ordre du jour :</p>
         <ol className="mt-1 list-inside list-decimal">{reunion.ordreDuJour.map((pt, i) => <li key={i}>{pt}</li>)}</ol>
       </DocumentModal>
 
       <DocumentModal
         open={feuille} onClose={() => setFeuille(false)} title="Feuille de présence"
-        reference={`Réunion du ${new Date(reunion.date).toLocaleDateString("fr-FR")}`} date={dateCourte}
+        reference={`Réunion du ${formatDate(reunion.date)}`} date={dateCourte}
         pdfPath={`/reunions/${reunion.id}/feuille-presence/pdf`} pdfFilename={`Feuille-presence-${dateCourte}.pdf`}
         signataire={{ role: "Le Secrétaire Général", nom: "Me KALINA-MENGA Lionel" }}
         onArchive={() => archiverDoc({ categorie: "Feuille de présence", titre: `Feuille de présence du ${dateCourte}`, reference: dateCourte, date: dateCourte })}

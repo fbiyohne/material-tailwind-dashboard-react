@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { ArrowLeftIcon, ShieldExclamationIcon, CheckIcon, ArrowDownTrayIcon, PaperClipIcon, PlusIcon, XMarkIcon, DocumentTextIcon, ScaleIcon } from "@heroicons/react/24/outline";
-import { Badge, DocumentModal, useToast, FormField, PageHeader, Tabs } from "../components";
+import { Badge, DocumentModal, useToast, FormField, PageHeader, Tabs, ErrorState, TableSkeleton } from "../components";
 import { STATUT_DOSSIER_META } from "../data/institutionnel";
+import { formatDate } from "../utils/format";
 import { getDossier, majDossier, archiverDoc, telechargerDecisionDisciplinePdf } from "../api/resources";
 
 const STATUTS = ["ouvert", "instruction", "audience", "decision", "classe"];
 
 export function DossierDetail() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const toast = useToast();
   const [dossier, setDossier] = useState(null);
   const [form, setForm] = useState(null);
@@ -18,19 +18,22 @@ export function DossierDetail() {
   const [nouvellePiece, setNouvellePiece] = useState("");
 
   // getDossier journalise la consultation côté serveur (RG-13).
-  useEffect(() => {
-    getDossier(Number(id)).then((d) => { setDossier(d); setForm(d); }).catch(() => setDossier(false));
-  }, [id]);
+  const charger = () => getDossier(Number(id)).then((d) => { setDossier(d); setForm(d); }).catch(() => setDossier(false));
+  useEffect(() => { charger(); }, [id]);
 
   if (dossier === false) {
     return (
-      <div className="py-20 text-center">
-        <p className="text-gris">Dossier introuvable.</p>
-        <button className="bpn-btn bpn-btn-ghost mt-4" onClick={() => navigate("/discipline")}>Retour</button>
+      <div className="space-y-4">
+        <Link to="/discipline" className="inline-flex items-center gap-1.5 text-sm text-gris hover:text-navy">
+          <ArrowLeftIcon className="h-4 w-4" /> Retour aux dossiers
+        </Link>
+        <div className="bpn-card p-6">
+          <ErrorState title="Dossier introuvable" description="Ce dossier n'existe pas ou n'est plus accessible." onRetry={charger} />
+        </div>
       </div>
     );
   }
-  if (!dossier || !form) return <div className="py-20 text-center text-sm text-gris">Chargement…</div>;
+  if (!dossier || !form) return <div className="bpn-card p-6"><TableSkeleton rows={5} cols={2} /></div>;
 
   const set = (k) => (e) => { setForm({ ...form, [k]: e.target.value }); setEnregistre(false); };
   const meta = STATUT_DOSSIER_META[form.statut];
@@ -70,22 +73,14 @@ export function DossierDetail() {
 
   return (
     <div className="space-y-5">
-      <Link to="/discipline" className="inline-flex items-center gap-1.5 text-sm text-gris hover:text-navy">
-        <ArrowLeftIcon className="h-4 w-4" /> Retour aux dossiers
-      </Link>
-
-      <div className="flex items-center gap-2 rounded border-l-[3px] border-rouge bg-rougeL px-4 py-2.5 text-sm text-rouge">
-        <ShieldExclamationIcon className="h-5 w-5 shrink-0" /> Dossier confidentiel — consultation journalisée (RG-13).
-      </div>
-
       {/* En-tête */}
       <PageHeader
-        eyebrow="Conseil de discipline"
+        breadcrumb={[{ label: "Conseil de discipline", to: "/discipline" }, { label: dossier.reference }]}
         titre={`Dossier N° ${dossier.reference}`}
         sousTitre={
           <span className="flex flex-wrap items-center gap-2">
             <Badge ton={meta.ton}>{meta.label}</Badge>
-            <span>Mis en cause : <span className="font-medium text-encre">{dossier.avocatNom === "Confidentiel" ? "Confidentiel" : `Me ${dossier.avocatNom}`}</span> · saisine du {dossier.dateSaisine}</span>
+            <span>Mis en cause : <span className="font-medium text-encre">{dossier.avocatNom === "Confidentiel" ? "Confidentiel" : `Me ${dossier.avocatNom}`}</span> · saisine du {formatDate(dossier.dateSaisine)}</span>
           </span>
         }
       >
@@ -93,6 +88,10 @@ export function DossierDetail() {
           Convocation disciplinaire
         </button>
       </PageHeader>
+
+      <div className="flex items-center gap-2 rounded border-l-[3px] border-rouge bg-rougeL px-4 py-2.5 text-sm text-rouge">
+        <ShieldExclamationIcon className="h-5 w-5 shrink-0" /> Dossier confidentiel — consultation journalisée (RG-13).
+      </div>
 
       <Tabs
         tabs={[
@@ -192,7 +191,7 @@ export function DossierDetail() {
           Dans le cadre du dossier disciplinaire <strong>N° {dossier.reference}</strong>,{" "}
           <strong>{dossier.avocatNom === "Confidentiel" ? "l'avocat concerné" : `Me ${dossier.avocatNom}`}</strong>{" "}
           est invité(e) à comparaître devant le Conseil de discipline de l'Ordre des Avocats du
-          Barreau de Pointe-Noire{form.dateAudience ? <>, le <strong>{new Date(form.dateAudience).toLocaleDateString("fr-FR")}</strong></> : null}.
+          Barreau de Pointe-Noire{form.dateAudience ? <>, le <strong>{formatDate(form.dateAudience)}</strong></> : null}.
         </p>
         <p className="mt-3">Objet : {dossier.objet}.</p>
         <p className="mt-3 text-[12px] text-gris">L'intéressé(e) pourra se faire assister du conseil de son choix.</p>

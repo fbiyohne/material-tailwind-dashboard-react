@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { SparklesIcon, DocumentTextIcon, CheckIcon, ArrowDownTrayIcon, PaperAirplaneIcon } from "@heroicons/react/24/outline";
-import { Badge, Modal, PageHeader, useToast } from "../components";
+import { SparklesIcon, DocumentTextIcon, CheckIcon, ArrowDownTrayIcon, PaperAirplaneIcon, CalendarDaysIcon } from "@heroicons/react/24/outline";
+import { Badge, Modal, PageHeader, EmptyState, ErrorState, Skeleton, useToast } from "../components";
 import { genererBrouillonArticle } from "../data/publications";
 import { archiverDoc, genererArticleLettre, getCalendrierEditorial } from "../api/resources";
 
@@ -17,10 +17,15 @@ export function LettreBatonnier() {
   const [apercu, setApercu] = useState(null); // { mois, simule, statut }
   const [brouillon, setBrouillon] = useState(""); // texte en cours d'édition
   const [chargement, setChargement] = useState(null); // mois en cours de génération
+  const [chargementCal, setChargementCal] = useState(true);
+  const [erreur, setErreur] = useState(false);
 
-  useEffect(() => {
-    getCalendrierEditorial().then(setCalendrier).catch(() => setCalendrier([]));
-  }, []);
+  const charger = () => {
+    setChargementCal(true);
+    setErreur(false);
+    getCalendrierEditorial().then(setCalendrier).catch(() => setErreur(true)).finally(() => setChargementCal(false));
+  };
+  useEffect(() => { charger(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /** Ouvre l'éditeur sur un article (charge son texte dans le brouillon). */
   const ouvrirEditeur = (mois, article) => {
@@ -82,6 +87,31 @@ export function LettreBatonnier() {
     <div className="space-y-5">
       <PageHeader eyebrow="Documents" titre="Lettre du Bâtonnier" sousTitre="Calendrier éditorial mensuel — génération d'un projet d'article par assistance IA, puis édition par le Bâtonnier." />
 
+      {chargementCal ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="bpn-card space-y-3 p-4">
+              <div className="flex items-center justify-between">
+                <Skeleton className="h-5 w-1/3" />
+                <Skeleton className="h-5 w-16" />
+              </div>
+              <Skeleton className="h-3 w-1/4" />
+              <Skeleton className="h-3 w-3/4" />
+              <Skeleton className="h-8 w-full" />
+            </div>
+          ))}
+        </div>
+      ) : erreur ? (
+        <div className="bpn-card p-6"><ErrorState onRetry={charger} /></div>
+      ) : calendrier.length === 0 ? (
+        <div className="bpn-card">
+          <EmptyState
+            icon={CalendarDaysIcon}
+            title="Aucun calendrier éditorial"
+            description="Le calendrier éditorial de la Lettre du Bâtonnier n'est pas encore disponible."
+          />
+        </div>
+      ) : (
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {calendrier.map((c) => {
           const article = articlesLettre[c.mois];
@@ -114,6 +144,7 @@ export function LettreBatonnier() {
           );
         })}
       </div>
+      )}
 
       <Modal
         open={!!apercu}
