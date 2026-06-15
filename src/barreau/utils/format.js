@@ -32,3 +32,14 @@ export function ratioPct(part, total) {
   if (!total) return 0;
   return Math.min(100, Math.max(0, Math.round((part / total) * 100)));
 }
+
+/**
+ * Formate une date en français long, ex. « 15 juin 2026 ».
+ * Source unique pour l'affichage des dates — remplace les `slice(0,10)` ISO.
+ */
+export function formatDate(valeur) {
+  if (valeur === null || valeur === undefined || valeur === "") return "—";
+  const d = valeur instanceof Date ? valeur : new Date(valeur);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+}
