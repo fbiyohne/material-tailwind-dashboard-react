@@ -27,7 +27,12 @@ export type Tarifs = { AVOCAT: number; STAGIAIRE: number; HONORAIRE: number; dro
 export async function tarifsActuels(): Promise<Tarifs> {
   const row = await prisma.parametres.findUnique({ where: { id: 1 } });
   const t = ((row?.data as any)?.tarifs ?? {}) as Record<string, unknown>;
-  const n = (v: unknown, defaut: number) => (Number(v) > 0 ? Number(v) : defaut);
+  // Un tarif configuré à 0 est légitime (exonération) : on ne retombe sur le
+  // barème par défaut que pour une valeur absente ou invalide, pas pour 0.
+  const n = (v: unknown, defaut: number) => {
+    const x = Number(v);
+    return v !== undefined && v !== null && v !== "" && Number.isFinite(x) && x >= 0 ? x : defaut;
+  };
   return {
     AVOCAT: n(t.avocat, TARIFS.AVOCAT),
     STAGIAIRE: n(t.stagiaire, TARIFS.STAGIAIRE),

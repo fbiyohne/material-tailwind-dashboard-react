@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { asyncH } from "../middleware/error.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
@@ -28,14 +29,32 @@ parametresRouter.get(
   })
 );
 
+const tarifsSchema = z.object({
+  avocat: z.number().int().nonnegative(),
+  stagiaire: z.number().int().nonnegative(),
+  droitsPlaidoirie: z.number().int().nonnegative(),
+}).partial();
+const identiteSchema = z.object({
+  denomination: z.string(), ordre: z.string(), batonnier: z.string(),
+  tresoriere: z.string(), secretaireGeneral: z.string(), adresse: z.string(),
+}).partial();
+const majSchema = z.object({
+  tarifs: tarifsSchema.optional(),
+  exerciceCourant: z.number().int().optional(),
+  identite: identiteSchema.optional(),
+}).strict();
+
 /** Mise à jour des paramètres — SG / Admin. */
 parametresRouter.put(
   "/",
   requireRole("SECRETAIRE_GENERAL"),
   asyncH(async (req, res) => {
+    // Validation stricte : interdit les clés arbitraires et les tarifs négatifs
+    // qui corrompraient les calculs financiers (cotisations, droits, dashboard).
+    const patch = majSchema.parse(req.body);
     const row = await prisma.parametres.findUnique({ where: { id: 1 } });
     const base = (row?.data as object) ?? DEFAUT;
-    const data = { ...base, ...req.body };
+    const data = { ...base, ...patch };
     const saved = await prisma.parametres.upsert({
       where: { id: 1 },
       create: { id: 1, data },
