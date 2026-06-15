@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { UserPlusIcon, KeyIcon, CheckIcon, XMarkIcon, InboxArrowDownIcon, IdentificationIcon, BuildingOffice2Icon } from "@heroicons/react/24/outline";
-import { Badge, Modal, PageHeader, FormField, useToast, EmptyState } from "../components";
+import { Badge, Modal, PageHeader, FormField, useToast, DataTable } from "../components";
 import { useAuth } from "../auth/AuthContext";
 import {
   listerUsers, creerUser, majUser, resetPasswordUser,
@@ -28,8 +28,14 @@ export function Utilisateurs() {
   const [creation, setCreation] = useState(null); // form objet ou null
   const [motDePasse, setMotDePasse] = useState(null); // { id, nom, password }
   const [loading, setLoading] = useState(false);
+  const [chargement, setChargement] = useState(true);
+  const [erreur, setErreur] = useState(false);
 
-  const charger = () => listerUsers().then(setUsers).catch((e) => toast.error(e.message));
+  const charger = () =>
+    listerUsers()
+      .then((d) => { setUsers(d); setErreur(false); })
+      .catch((e) => { setErreur(true); toast.error(e.message); })
+      .finally(() => setChargement(false));
   const chargerDemandes = () => listerDemandesAcces("EN_ATTENTE").then(setDemandes).catch((e) => toast.error(e.message));
   useEffect(() => { charger(); chargerDemandes(); /* eslint-disable-line */ }, []);
 
@@ -117,55 +123,79 @@ export function Utilisateurs() {
         </div>
       )}
 
-      <div className="bpn-card overflow-x-auto">
-        <table className="bpn-table">
-          <thead>
-            <tr>
-              <th>Nom</th><th>Email</th><th>Rôle</th><th>Statut</th><th className="text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.length === 0 && (
-              <tr><td colSpan={5} className="p-0"><EmptyState title="Aucun compte" description="Aucun compte utilisateur n'a encore été créé." /></td></tr>
-            )}
-            {users.map((u) => {
-              const moi = u.id === courant?.id;
-              return (
-                <tr key={u.id}>
-                  <td className="font-medium text-encre">{u.nom}{moi && <span className="ml-1 text-[11px] text-gris">(vous)</span>}</td>
-                  <td className="text-gris">{u.email}</td>
-                  <td>
-                    <select
-                      value={u.role}
-                      onChange={(e) => changerRole(u, e.target.value)}
-                      disabled={moi}
-                      className="bpn-input !w-auto !py-1 text-xs disabled:opacity-60"
-                      title={moi ? "Vous ne pouvez pas changer votre propre rôle" : ""}
-                    >
-                      {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
-                    </select>
-                  </td>
-                  <td><Badge ton={u.actif ? "vert" : "gris"}>{u.actif ? "Actif" : "Désactivé"}</Badge></td>
-                  <td className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <button className="bpn-btn bpn-btn-ghost !px-2 !py-1 text-xs" onClick={() => setMotDePasse({ id: u.id, nom: u.nom, password: "" })}>
-                        <KeyIcon className="h-3.5 w-3.5" /> Mot de passe
-                      </button>
-                      <button
-                        className="bpn-btn bpn-btn-ghost !px-2 !py-1 text-xs disabled:opacity-50"
-                        onClick={() => basculerActif(u)}
-                        disabled={moi}
-                        title={moi ? "Vous ne pouvez pas désactiver votre propre compte" : ""}
-                      >
-                        {u.actif ? "Désactiver" : "Réactiver"}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      <div className="bpn-card">
+        <DataTable
+          columns={[
+            {
+              key: "nom",
+              label: "Nom",
+              sortable: true,
+              sortValue: (u) => u.nom,
+              cell: (u) => (
+                <span className="font-medium text-encre">
+                  {u.nom}{u.id === courant?.id && <span className="ml-1 text-[11px] text-gris">(vous)</span>}
+                </span>
+              ),
+            },
+            {
+              key: "email",
+              label: "Email",
+              sortable: true,
+              sortValue: (u) => u.email,
+              cell: (u) => <span className="text-gris">{u.email}</span>,
+            },
+            {
+              key: "role",
+              label: "Rôle",
+              cell: (u) => (
+                <select
+                  value={u.role}
+                  onChange={(e) => changerRole(u, e.target.value)}
+                  disabled={u.id === courant?.id}
+                  className="bpn-input !w-auto !py-1 text-xs disabled:opacity-60"
+                  title={u.id === courant?.id ? "Vous ne pouvez pas changer votre propre rôle" : ""}
+                >
+                  {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
+                </select>
+              ),
+            },
+            {
+              key: "statut",
+              label: "Statut",
+              sortable: true,
+              sortValue: (u) => (u.actif ? 0 : 1),
+              cell: (u) => <Badge ton={u.actif ? "vert" : "gris"}>{u.actif ? "Actif" : "Désactivé"}</Badge>,
+            },
+            {
+              key: "actions",
+              label: "Actions",
+              align: "right",
+              cell: (u) => (
+                <div className="flex justify-end gap-2">
+                  <button className="bpn-btn bpn-btn-ghost !px-2 !py-1 text-xs" onClick={() => setMotDePasse({ id: u.id, nom: u.nom, password: "" })}>
+                    <KeyIcon className="h-3.5 w-3.5" /> Mot de passe
+                  </button>
+                  <button
+                    className="bpn-btn bpn-btn-ghost !px-2 !py-1 text-xs disabled:opacity-50"
+                    onClick={() => basculerActif(u)}
+                    disabled={u.id === courant?.id}
+                    title={u.id === courant?.id ? "Vous ne pouvez pas désactiver votre propre compte" : ""}
+                  >
+                    {u.actif ? "Désactiver" : "Réactiver"}
+                  </button>
+                </div>
+              ),
+            },
+          ]}
+          rows={users}
+          loading={chargement}
+          error={erreur}
+          onRetry={charger}
+          emptyTitle="Aucun compte"
+          emptyDescription="Aucun compte utilisateur n'a encore été créé."
+          libelle="comptes"
+          initialSort={{ key: "nom", dir: "asc" }}
+        />
       </div>
 
       {/* Création de compte */}
