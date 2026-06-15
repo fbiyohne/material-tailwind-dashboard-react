@@ -12,7 +12,6 @@ export { QuitusDocument } from "./QuitusDocument";
 export { RecuDocument } from "./RecuDocument";
 export { QRCode } from "./QRCode";
 export { StatutBadge } from "./StatutBadge";
-export { MembreFicheModal } from "./MembreFicheModal";
 export { AttestationModal } from "./AttestationModal";
 export { DocumentModal } from "./DocumentModal";
 export { InscriptionModal } from "./InscriptionModal";
