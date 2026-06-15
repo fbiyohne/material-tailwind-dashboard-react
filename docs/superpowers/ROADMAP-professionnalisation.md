@@ -22,9 +22,9 @@ Les phases sont **séquentielles** : 1–4 dépendent des primitives du socle (P
 | **1** | [finances](plans/2026-06-15-professionnalisation-phase1-finances.md) | Quitus, Reçus, Droits de plaidoirie. | ✅ **Terminée** — Quitus, Reçus & Droits de plaidoirie sur le composant `DataTable`, états chargement/erreur/vide branchés, dates `formatDate`, export CSV sur les trois (Droits conserve aussi Excel/PDF). |
 | **2** | [membres](plans/2026-06-15-professionnalisation-phase2-membres.md) | Avocats (+ sélection/actions groupées), Stagiaires, Corps électoral, AvocatDetail (fil d'Ariane). | ✅ **Terminée** — Avocats sur `DataTable` (rendu intégral client, **sélection inter-pages + export de la sélection** + export global), états ; Corps électoral + états/CSV/exclusions en `DataTable` ; AvocatDetail : **fil d'Ariane**, skeleton/erreur, dates `formatDate`, montants alignés. Stagiaires = grille de cartes (conservée à dessein, non aplatie). |
 | **3** | [institutionnel & documents](plans/2026-06-15-professionnalisation-phase3-institutionnel-documents.md) | Discipline, Archives, Annuaire (tables→DataTable) ; Réunions, Assemblées, Publications, Lettre (cartes conservées) ; 4 pages de détail (fils d'Ariane). | ✅ **Terminée** — Discipline & Archives migrés sur `DataTable` (états ; Archives + export CSV ; Discipline sans export, donnée sensible) ; Réunions/Assemblées/Publications/Lettre = cartes conservées + états chargement/erreur/vide + dates `formatDate` ; fils d'Ariane sur DossierDetail, ReunionDetail, AssembleeDetail, PublicationDetail (l'eyebrow y est remplacé). |
-| **4** | [système & polish](plans/2026-06-15-professionnalisation-phase4-systeme-polish.md) | Paramètres, Utilisateurs ; passes responsive, balayage de cohérence (grep), audit contraste, revue taste finale. | 🟡 Partiel — Utilisateurs ✓ et journal de notifications (Paramètres) ✓ ; **reste** : matrice des rôles (réf. statique, à laisser), passes responsive / cohérence / contraste / revue taste finale. |
+| **4** | [système & polish](plans/2026-06-15-professionnalisation-phase4-systeme-polish.md) | Paramètres, Utilisateurs ; passes responsive, balayage de cohérence (grep), audit contraste, revue taste finale. | ✅ **Terminée** — Paramètres (notifications `DataTable`, matrice des rôles laissée en table de référence statique) & Utilisateurs (comptes `DataTable`, file des demandes en liste riche conservée) ✓ ; **cohérence dates** : afficheurs locaux ramenés à `formatDate` (Stagiaires, Utilisateurs, VerificationPublique) ✓ ; **responsive** audité 375/768 px (nav hamburger, filtres pleine largeur, tables `overflow-x-auto`) sans redesign ✓ ; **contraste** audité, reliquats `text-or`/`text-gris` consignés au Suivi (préservation de l'identité) ✓. |
 
-> **Note d'avancement (2026-06-15) :** **Phases 0 à 3 terminées.** *Toutes* les listes de
+> **Note d'avancement (2026-06-15) :** **Professionnalisation livrée — Phases 0 à 4 terminées.** *Toutes* les listes de
 > données sont sur le composant `DataTable` (Cotisations, Reçus, Quitus, Droits de plaidoirie,
 > Avocats, Corps électoral, Utilisateurs, journal de notifications, Annuaire, **Discipline,
 > Archives**) — le hook `useDataTable` n'est plus utilisé directement par une page. Le
@@ -35,8 +35,13 @@ Les phases sont **séquentielles** : 1–4 dépendent des primitives du socle (P
 > Assemblées, Publications, Lettre, Stagiaires) gardent leurs **cartes** à dessein, désormais
 > dotées des états chargement/erreur/vide et du format de date unifié.
 >
-> **Reste (Phase 4) :** matrice des rôles (réf. statique, à conserver), passes responsive,
-> balayage de cohérence (grep), audit contraste AA et revue *taste* finale.
+> **Phase 4 (clôture) :** Paramètres & Utilisateurs confirmés sur le socle (matrice des rôles
+> laissée en table de référence statique, file des demandes en liste riche conservée) ; afficheurs
+> de date locaux ramenés à la source unique `formatDate` (Stagiaires, Utilisateurs,
+> VerificationPublique) ; responsive audité à 375/768 px (nav hamburger, filtres pleine largeur,
+> `DataTable` en `overflow-x-auto`) sans redesign ; contraste audité — reliquats `text-or` sur
+> blanc (~2,7:1) et `text-gris` sur `grisL` (~4,0:1) **consignés au Suivi du spec** et réservés à
+> l'arbitrage du commanditaire (préservation de l'identité navy/or).
 
 ## Définition de « professionnel » (rappel, §5 du spec)
 
