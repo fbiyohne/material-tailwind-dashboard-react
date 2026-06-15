@@ -20,17 +20,19 @@ Les phases sont **séquentielles** : 1–4 dépendent des primitives du socle (P
 |------|------|---------|--------|
 | **0** | [socle](plans/2026-06-15-professionnalisation-socle.md) | Tests front, formatage, export CSV, sélection, **DataTable** (style `.bpn-table` conservé), états, Breadcrumb (pour pages de détail), a11y. Validé sur **Cotisations** (+ registre Reçus). *Design inchangé.* | ✅ **Terminée** |
 | **1** | [finances](plans/2026-06-15-professionnalisation-phase1-finances.md) | Quitus, Reçus, Droits de plaidoirie. | ✅ **Terminée** — Quitus, Reçus & Droits de plaidoirie sur le composant `DataTable`, états chargement/erreur/vide branchés, dates `formatDate`, export CSV sur les trois (Droits conserve aussi Excel/PDF). |
-| **2** | [membres](plans/2026-06-15-professionnalisation-phase2-membres.md) | Avocats (+ sélection/actions groupées), Stagiaires, Corps électoral, AvocatDetail (fil d'Ariane). | 🟡 Partiel — Corps électoral ✓ ; Stagiaires = grille de cartes (conservée) ; **reste** : Avocats (sélection + actions groupées, pagination serveur), fil d'Ariane sur AvocatDetail. |
+| **2** | [membres](plans/2026-06-15-professionnalisation-phase2-membres.md) | Avocats (+ sélection/actions groupées), Stagiaires, Corps électoral, AvocatDetail (fil d'Ariane). | ✅ **Terminée** — Avocats sur `DataTable` (rendu intégral client, **sélection inter-pages + export de la sélection** + export global), états ; Corps électoral + états/CSV/exclusions en `DataTable` ; AvocatDetail : **fil d'Ariane**, skeleton/erreur, dates `formatDate`, montants alignés. Stagiaires = grille de cartes (conservée à dessein, non aplatie). |
 | **3** | [institutionnel & documents](plans/2026-06-15-professionnalisation-phase3-institutionnel-documents.md) | Discipline, Archives, Annuaire (tables→DataTable) ; Réunions, Assemblées, Publications, Lettre (cartes conservées) ; 4 pages de détail (fils d'Ariane). | 🟡 Partiel — Annuaire sur le composant ✓ ; **reste** : migrer Discipline & Archives (hook → composant), fils d'Ariane sur les 4 pages de détail. |
 | **4** | [système & polish](plans/2026-06-15-professionnalisation-phase4-systeme-polish.md) | Paramètres, Utilisateurs ; passes responsive, balayage de cohérence (grep), audit contraste, revue taste finale. | 🟡 Partiel — Utilisateurs ✓ et journal de notifications (Paramètres) ✓ ; **reste** : matrice des rôles (réf. statique, à laisser), passes responsive / cohérence / contraste / revue taste finale. |
 
-> **Note d'avancement (2026-06-15) :** **Phases 0 et 1 terminées**. La *conversion des
+> **Note d'avancement (2026-06-15) :** **Phases 0, 1 et 2 terminées**. La *conversion des
 > listes* sur le composant `DataTable` est faite pour Cotisations, Reçus, Quitus, Droits
-> de plaidoirie, Utilisateurs, journal de notifications, Annuaire et Corps électoral.
+> de plaidoirie, Avocats, Corps électoral, Utilisateurs, journal de notifications et Annuaire.
 > **Reste sur le hook** `useDataTable` (avec `<table>` bespoke) : **Discipline et Archives**
-> (Phase 3). Le `DataTable` supporte aussi un mode `paginate={false}` (rendu intégral, pour
-> les documents imprimés) et une prop `emptyIcon`. Le composant `Breadcrumb` est construit
-> mais **encore inutilisé** — les fils d'Ariane des pages de détail restent à poser (Phases 2–3).
+> (Phase 3). Le `DataTable` supporte aussi `paginate={false}` (rendu intégral, documents
+> imprimés), `emptyIcon`, la **sélection + actions groupées** (utilisées sur Avocats). Le
+> composant `Breadcrumb` est **désormais posé sur AvocatDetail** ; restent les fils d'Ariane
+> des autres pages de détail (Phase 3 : Discipline/Réunion/Assemblée/Publication). Stagiaires
+> reste une **grille de cartes** (conservée à dessein, non convertie en table).
 
 ## Définition de « professionnel » (rappel, §5 du spec)
 

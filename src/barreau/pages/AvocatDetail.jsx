@@ -1,16 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { ArrowLeftIcon, DocumentPlusIcon, PencilSquareIcon, NoSymbolIcon, IdentificationIcon, BanknotesIcon, FolderIcon } from "@heroicons/react/24/outline";
 import { ScaleIcon } from "@heroicons/react/24/outline";
-import { Badge, StatutBadge, AttestationModal, EditMembreModal, PiecesDossier, useConfirm, useToast, PageHeader, Tabs, EmptyState } from "../components";
+import { Badge, StatutBadge, AttestationModal, EditMembreModal, PiecesDossier, useConfirm, useToast, PageHeader, Tabs, EmptyState, TableSkeleton, ErrorState } from "../components";
 import { QUALITE_LABEL, STATUT_META, infoStage } from "../data/derivations";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
-import { formatFCFA } from "../utils/format";
+import { formatFCFA, formatDate } from "../utils/format";
 import { getMembre, radierMembre, getDroits } from "../api/resources";
 import { useAuth } from "../auth/AuthContext";
 
 const FINANCES = ["SECRETAIRE_GENERAL", "TRESORIERE", "ADMIN"];
-const dateFr = (v) => (v ? new Date(v).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" }) : null);
 const statutLigne = (du, paye) => (du === 0 ? "exonere" : paye <= 0 ? "retard" : paye >= du ? "ajour" : "partiel");
 
 function Carte({ titre, children }) {
@@ -32,7 +31,6 @@ function Ligne({ label, value }) {
 
 export function AvocatDetail() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const confirm = useConfirm();
   const toast = useToast();
   const { user } = useAuth();
@@ -59,13 +57,17 @@ export function AvocatDetail() {
 
   if (membre === false) {
     return (
-      <div className="py-20 text-center">
-        <p className="text-gris">Avocat introuvable.</p>
-        <button className="bpn-btn bpn-btn-ghost mt-4" onClick={() => navigate("/avocats")}>Retour</button>
+      <div className="space-y-4">
+        <Link to="/avocats" className="inline-flex items-center gap-1.5 text-sm text-gris hover:text-navy">
+          <ArrowLeftIcon className="h-4 w-4" /> Retour au tableau du Barreau
+        </Link>
+        <div className="bpn-card p-6">
+          <ErrorState title="Avocat introuvable" description="Cette fiche n'existe pas ou n'est plus accessible." onRetry={charger} />
+        </div>
       </div>
     );
   }
-  if (!membre) return <div className="py-20 text-center text-sm text-gris">Chargement…</div>;
+  if (!membre) return <div className="bpn-card p-6"><TableSkeleton rows={5} cols={3} /></div>;
 
   const stage = infoStage(membre);
   const cot = cotParAnnee[EXERCICE_COURANT];
@@ -80,12 +82,8 @@ export function AvocatDetail() {
 
   return (
     <div className="space-y-5">
-      <Link to="/avocats" className="inline-flex items-center gap-1.5 text-sm text-gris hover:text-navy">
-        <ArrowLeftIcon className="h-4 w-4" /> Retour au tableau du Barreau
-      </Link>
-
       <PageHeader
-        eyebrow="Membre du Barreau"
+        breadcrumb={[{ label: "Avocats inscrits", to: "/avocats" }, { label: `Me ${membre.nom}` }]}
         titre={`Me ${membre.nom}`}
         sousTitre={
           <span className="flex flex-wrap items-center gap-2">
@@ -119,8 +117,8 @@ export function AvocatDetail() {
               <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
                 <Carte titre="Identité & coordonnées">
                   <Ligne label="Cabinet" value={membre.cabinet} />
-                  <Ligne label="Date d'inscription" value={dateFr(membre.dateInscription)} />
-                  <Ligne label="Date de naissance" value={dateFr(membre.dateNaissance)} />
+                  <Ligne label="Date d'inscription" value={formatDate(membre.dateInscription)} />
+                  <Ligne label="Date de naissance" value={formatDate(membre.dateNaissance)} />
                   <Ligne label="Adresse" value={membre.adresse} />
                   <Ligne label="Téléphone" value={membre.tel} />
                   <Ligne label="Email" value={membre.email} />
@@ -129,7 +127,7 @@ export function AvocatDetail() {
                   {membre.observations && <Ligne label="Observations" value={membre.observations} />}
                   {stage && (
                     <>
-                      <Ligne label="Prestation de serment" value={stage.debut.toLocaleDateString("fr-FR")} />
+                      <Ligne label="Prestation de serment" value={formatDate(stage.debut)} />
                       <Ligne label="Maître de stage" value={stage.maitreStage} />
                       <div className="pt-3">
                         <div className="mb-1 flex justify-between text-xs"><span className="text-gris">Progression du stage</span><span className="font-mono text-or">{stage.progression}%</span></div>
@@ -178,7 +176,7 @@ export function AvocatDetail() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-left text-[11px] uppercase tracking-wide text-gris">
-                        <th className="pb-2">Exercice</th><th className="pb-2">Dû</th><th className="pb-2">Payé</th><th className="pb-2">Solde</th><th className="pb-2">Statut</th>
+                        <th className="pb-2">Exercice</th><th className="pb-2 text-right">Dû</th><th className="pb-2 text-right">Payé</th><th className="pb-2 text-right">Solde</th><th className="pb-2 pl-4">Statut</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -190,10 +188,10 @@ export function AvocatDetail() {
                         return (
                           <tr key={annee} className="border-t border-grisL">
                             <td className="py-2 font-mono text-xs text-gris">{annee}</td>
-                            <td className="py-2">{formatFCFA(d)}</td>
-                            <td className="py-2">{p ? formatFCFA(p) : "—"}</td>
-                            <td className="py-2">{d - p > 0 ? formatFCFA(d - p) : "✓"}</td>
-                            <td className="py-2"><Badge ton={m.ton}>{m.label}</Badge></td>
+                            <td className="py-2 text-right">{formatFCFA(d)}</td>
+                            <td className="py-2 text-right">{p ? formatFCFA(p) : "—"}</td>
+                            <td className="py-2 text-right">{d - p > 0 ? formatFCFA(d - p) : "✓"}</td>
+                            <td className="py-2 pl-4"><Badge ton={m.ton}>{m.label}</Badge></td>
                           </tr>
                         );
                       })}
@@ -219,7 +217,7 @@ export function AvocatDetail() {
                       {documents.map((d, i) => (
                         <li key={i} className="flex items-center justify-between py-2 text-sm">
                           <span className="flex items-center gap-2"><Badge ton="bleu" dot={false}>{d.type}</Badge><span className="font-mono text-xs text-or">{d.ref}</span></span>
-                          <span className="text-xs text-gris">{d.date}</span>
+                          <span className="text-xs text-gris">{formatDate(d.date)}</span>
                         </li>
                       ))}
                     </ul>

@@ -1,13 +1,13 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { MagnifyingGlassIcon, ArrowUpTrayIcon } from "@heroicons/react/24/outline";
-import { Badge, StatutBadge, AttestationModal, SortTh, Pagination, useToast, ImportMembresModal, PageHeader, EmptyState } from "../components";
+import { MagnifyingGlassIcon, ArrowUpTrayIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
+import { Badge, StatutBadge, AttestationModal, useToast, ImportMembresModal, PageHeader, DataTable } from "../components";
 import { useAuth } from "../auth/AuthContext";
 import { STATUT_META, QUALITE_LABEL } from "../data/derivations";
 import { EXERCICE_COURANT } from "../data/dashboard-data";
+import { telechargerCsv } from "../utils/exportCsv";
 import { listerMembres, getCotisations } from "../api/resources";
 
-const PAGE_SIZE = 10;
 const FILTRES = [
   { value: "tous", label: "Tous les statuts" },
   { value: "inscrit", label: "Inscrit" },
@@ -15,6 +15,17 @@ const FILTRES = [
   { value: "omis", label: "Omis" },
   { value: "radie", label: "Radié" },
   { value: "honoraire", label: "Honoraire" },
+];
+
+// Le tableau du Barreau (≈ 139 inscrits) tient sous le plafond serveur (pageSize 200) :
+// un seul appel ramène toute la liste filtrée, puis le DataTable trie/pagine/sélectionne
+// côté client (sélection inter-pages + export de la sélection).
+const COLONNES_CSV = [
+  { label: "N°", valeur: (m) => m.num },
+  { label: "Avocat", valeur: (m) => `Me ${m.nom}` },
+  { label: "Cabinet", valeur: (m) => m.cabinet },
+  { label: "Qualité", valeur: (m) => QUALITE_LABEL[m.qualite] },
+  { label: "Statut", valeur: (m) => m.statut },
 ];
 
 export function Avocats() {
@@ -26,10 +37,10 @@ export function Avocats() {
   const [attestation, setAttestation] = useState(null);
   const [importOuvert, setImportOuvert] = useState(false);
   const [refresh, setRefresh] = useState(0);
-  const [data, setData] = useState({ items: [], total: 0, totalPages: 1, page: 1 });
+  const [membres, setMembres] = useState([]);
   const [statutCot, setStatutCot] = useState({});
-  const [page, setPage] = useState(1);
-  const [sort, setSort] = useState({ key: "num", dir: "asc" });
+  const [chargement, setChargement] = useState(true);
+  const [erreur, setErreur] = useState(false);
 
   const filtre = params.get("statut") || "tous";
   const recherche = params.get("q") || "";
@@ -40,35 +51,60 @@ export function Avocats() {
       else p.delete(k);
       return p;
     }, { replace: true });
-    setPage(1);
-  };
-  const toggleSort = (key) => {
-    setSort((s) => (s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }));
-    setPage(1);
   };
 
-  // Liste paginée/triée côté serveur
-  useEffect(() => {
+  // Liste filtrée côté serveur (recherche + statut), rendue intégralement côté client.
+  const charger = useCallback(() => {
+    setChargement(true);
+    setErreur(false);
     listerMembres({
       qualiteNot: "STAGIAIRE",
       ...(recherche ? { q: recherche } : {}),
       ...(filtre !== "tous" ? { statut: filtre.toUpperCase() } : {}),
-      page, pageSize: PAGE_SIZE, sort: sort.key, order: sort.dir,
+      pageSize: 200,
     })
-      .then(setData)
-      .catch((e) => toast.error(e.message));
-  }, [recherche, filtre, page, sort, toast, refresh]);
+      .then((d) => setMembres(d.items))
+      .catch(() => setErreur(true))
+      .finally(() => setChargement(false));
+  }, [recherche, filtre]);
+  useEffect(() => { charger(); }, [charger, refresh]);
 
   // Statut de cotisation de l'exercice courant (jointure côté client)
   useEffect(() => {
     getCotisations(EXERCICE_COURANT)
       .then((lignes) => setStatutCot(Object.fromEntries(lignes.map((l) => [l.membre.id, l.statut]))))
       .catch(() => {});
-  }, [data]);
+  }, [membres]);
+
+  const colonnes = [
+    { key: "num", label: "N°", sortable: true, sortValue: (m) => m.num,
+      cell: (m) => <span className="font-mono text-xs text-gris">{m.num}</span> },
+    { key: "nom", label: "Avocat", sortable: true, sortValue: (m) => m.nom,
+      cell: (m) => <span className="font-medium">Me {m.nom}</span> },
+    { key: "cabinet", label: "Cabinet", sortable: true, sortValue: (m) => m.cabinet,
+      cell: (m) => <span className="text-gris">{m.cabinet || "—"}</span> },
+    { key: "qualite", label: "Qualité",
+      cell: (m) => <Badge ton={m.qualite === "honoraire" ? "or" : "bleu"} dot={false}>{QUALITE_LABEL[m.qualite]}</Badge> },
+    { key: "statut", label: "Statut", sortable: true, sortValue: (m) => m.statut,
+      cell: (m) => <StatutBadge statut={m.statut} /> },
+    { key: "cotis", label: `Cotisation ${EXERCICE_COURANT}`,
+      cell: (m) => { const meta = STATUT_META[statutCot[m.id] ?? "retard"]; return <Badge ton={meta.ton}>{meta.label}</Badge>; } },
+    { key: "actions", label: "Actions", align: "right",
+      cell: (m) => (
+        <div className="flex items-center justify-end gap-1.5">
+          <button type="button" onClick={() => navigate(`/avocats/${m.id}`)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs">Fiche</button>
+          <button type="button" onClick={() => setAttestation(m)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs">Attestation</button>
+        </div>
+      ) },
+  ];
 
   return (
     <div className="space-y-5">
       <PageHeader eyebrow="Membres" titre="Avocats inscrits" sousTitre="Tableau du Barreau — recherche multicritères, fiche individuelle et attestation d'inscription.">
+        <button className="bpn-btn bpn-btn-ghost" disabled={membres.length === 0}
+          onClick={() => telechargerCsv("Avocats", COLONNES_CSV, membres)}>
+          <ArrowDownTrayIcon className="h-4 w-4" /> Export CSV
+        </button>
         {peutImporter && (
           <button className="bpn-btn bpn-btn-ghost" onClick={() => setImportOuvert(true)}>
             <ArrowUpTrayIcon className="h-4 w-4" /> Importer (Excel/CSV)
@@ -87,46 +123,25 @@ export function Avocats() {
       </div>
 
       <div className="bpn-card">
-        <div className="overflow-x-auto">
-          <table className="bpn-table">
-            <thead>
-              <tr>
-                <SortTh label="N°" sortKey="num" current={sort.key} dir={sort.dir} onSort={toggleSort} />
-                <SortTh label="Avocat" sortKey="nom" current={sort.key} dir={sort.dir} onSort={toggleSort} />
-                <SortTh label="Cabinet" sortKey="cabinet" current={sort.key} dir={sort.dir} onSort={toggleSort} />
-                <th className="px-3 py-2.5 font-medium">Qualité</th>
-                <SortTh label="Statut" sortKey="statut" current={sort.key} dir={sort.dir} onSort={toggleSort} />
-                <th className="px-3 py-2.5 font-medium">Cotisation {EXERCICE_COURANT}</th>
-                <th className="px-3 py-2.5 text-right font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.items.map((m) => {
-                const meta = STATUT_META[statutCot[m.id] ?? "retard"];
-                return (
-                  <tr key={m.id} className="border-b border-grisL hover:bg-grisL/60">
-                    <td className="px-3 py-2.5 font-mono text-xs text-gris">{m.num}</td>
-                    <td className="px-3 py-2.5 font-medium">Me {m.nom}</td>
-                    <td className="px-3 py-2.5 text-gris">{m.cabinet}</td>
-                    <td className="px-3 py-2.5"><Badge ton={m.qualite === "honoraire" ? "or" : "bleu"} dot={false}>{QUALITE_LABEL[m.qualite]}</Badge></td>
-                    <td className="px-3 py-2.5"><StatutBadge statut={m.statut} /></td>
-                    <td className="px-3 py-2.5"><Badge ton={meta.ton}>{meta.label}</Badge></td>
-                    <td className="px-3 py-2.5">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button type="button" onClick={() => navigate(`/avocats/${m.id}`)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs">Fiche</button>
-                        <button type="button" onClick={() => setAttestation(m)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs">Attestation</button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-              {data.items.length === 0 && (
-                <tr><td colSpan={7} className="p-0"><EmptyState title="Aucun avocat" description="Aucun avocat ne correspond à votre recherche." /></td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-        <Pagination page={data.page} totalPages={data.totalPages} total={data.total} onPage={setPage} libelle="avocats" />
+        <DataTable
+          columns={colonnes}
+          rows={membres}
+          getRowId={(m) => m.id}
+          loading={chargement}
+          error={erreur}
+          onRetry={charger}
+          emptyTitle="Aucun avocat"
+          emptyDescription="Aucun avocat ne correspond à votre recherche."
+          selectable
+          libelle="avocats"
+          initialSort={{ key: "num", dir: "asc" }}
+          renderBulkActions={(ids) => (
+            <button type="button" className="bpn-btn bpn-btn-ghost !py-1 text-xs"
+              onClick={() => telechargerCsv("Avocats-selection", COLONNES_CSV, membres.filter((m) => ids.includes(m.id)))}>
+              <ArrowDownTrayIcon className="h-3.5 w-3.5" /> Exporter la sélection (CSV)
+            </button>
+          )}
+        />
       </div>
 
       <AttestationModal membre={attestation} onClose={() => setAttestation(null)} />

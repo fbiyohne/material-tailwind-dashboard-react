@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { PrinterIcon, ArrowDownTrayIcon, CheckBadgeIcon, NoSymbolIcon } from "@heroicons/react/24/outline";
-import { StatCard, Badge, useToast, PageHeader, Tabs, SelecteurExercice, DataTable } from "../components";
+import { StatCard, Badge, PageHeader, Tabs, SelecteurExercice, DataTable } from "../components";
 import { exporterExcel } from "../utils/exports";
 import { formatDate } from "../utils/format";
+import { telechargerCsv } from "../utils/exportCsv";
 import { EXERCICE_COURANT } from "../data/dashboard-data";
 import { getCorpsElectoral } from "../api/resources";
 
@@ -11,16 +12,48 @@ const MOTIF_LABEL = {
   statut: { label: "Suspension / radiation / omission", ton: "gris" },
 };
 
+const COLONNES_ELECTEURS = [
+  { key: "num", label: "N°", sortable: true, sortValue: (m) => m._num, cell: (m) => <span className="font-mono text-xs text-gris">{m._num}</span> },
+  { key: "nom", label: "Avocat électeur", sortable: true, sortValue: (m) => m.nom, cell: (m) => <span className="font-medium">Me {m.nom}</span> },
+  { key: "cabinet", label: "Cabinet", sortable: true, sortValue: (m) => m.cabinet, cell: (m) => <span className="text-gris">{m.cabinet}</span> },
+  { key: "inscrit", label: "Inscrit depuis", sortable: true, sortValue: (m) => m.dateInscription ?? "", cell: (m) => <span className="text-xs text-gris">{formatDate(m.dateInscription)}</span> },
+];
+
+const COLONNES_EXCLUSIONS = [
+  { key: "nom", label: "Avocat", sortable: true, sortValue: (m) => m.nom, cell: (m) => <span className="font-medium text-encre">Me {m.nom}</span> },
+  { key: "cabinet", label: "Cabinet", sortable: true, sortValue: (m) => m.cabinet, cell: (m) => <span className="text-gris">{m.cabinet || "—"}</span> },
+  { key: "motif", label: "Motif d'exclusion", align: "right", cell: (m) => <Badge ton={MOTIF_LABEL[m.motif].ton}>{MOTIF_LABEL[m.motif].label}</Badge> },
+];
+
+const COLONNES_CSV = [
+  { label: "N°", valeur: (m) => m._num },
+  { label: "Avocat électeur", valeur: (m) => `Me ${m.nom}` },
+  { label: "Cabinet", valeur: (m) => m.cabinet },
+  { label: "Inscrit depuis", valeur: (m) => formatDate(m.dateInscription) },
+];
+
 export function CorpsElectoral() {
-  const toast = useToast();
   const [exercice, setExercice] = useState(EXERCICE_COURANT);
   const [data, setData] = useState({ electeurs: [], exclusCotisation: [], exclusStatut: [] });
+  const [chargement, setChargement] = useState(true);
+  const [erreur, setErreur] = useState(false);
 
-  useEffect(() => {
-    getCorpsElectoral(exercice).then(setData).catch((e) => toast.error(e.message));
-  }, [exercice, toast]);
+  const charger = useCallback(() => {
+    setChargement(true);
+    setErreur(false);
+    getCorpsElectoral(exercice)
+      .then(setData)
+      .catch(() => setErreur(true))
+      .finally(() => setChargement(false));
+  }, [exercice]);
+  useEffect(() => { charger(); }, [charger]);
 
   const { electeurs, exclusCotisation, exclusStatut } = data;
+  const electeursNum = electeurs.map((m, i) => ({ ...m, _num: i + 1 }));
+  const exclusions = [
+    ...exclusCotisation.map((m) => ({ ...m, _key: `c-${m.id}`, motif: "cotisation" })),
+    ...exclusStatut.map((m) => ({ ...m, _key: `s-${m.id}`, motif: "statut" })),
+  ];
 
   const exporterXlsx = () => {
     const lignes = [
@@ -56,6 +89,11 @@ export function CorpsElectoral() {
                   <button type="button" onClick={() => window.print()} className="bpn-btn bpn-btn-ghost">
                     <PrinterIcon className="h-4 w-4" /> Imprimer
                   </button>
+                  <button type="button" disabled={electeurs.length === 0}
+                    onClick={() => telechargerCsv(`corps-electoral-${exercice}`, COLONNES_CSV, electeursNum)}
+                    className="bpn-btn bpn-btn-ghost disabled:opacity-40">
+                    <ArrowDownTrayIcon className="h-4 w-4" /> Export CSV
+                  </button>
                   <button type="button" onClick={exporterXlsx} className="bpn-btn bpn-btn-or">
                     <ArrowDownTrayIcon className="h-4 w-4" /> Export Excel
                   </button>
@@ -70,13 +108,11 @@ export function CorpsElectoral() {
                     <span className="font-mono text-xs text-gris">{electeurs.length} électeurs</span>
                   </div>
                   <DataTable
-                    columns={[
-                      { key: "num", label: "N°", sortable: true, sortValue: (m) => m._num, cell: (m) => <span className="font-mono text-xs text-gris">{m._num}</span> },
-                      { key: "nom", label: "Avocat électeur", sortable: true, sortValue: (m) => m.nom, cell: (m) => <span className="font-medium">Me {m.nom}</span> },
-                      { key: "cabinet", label: "Cabinet", sortable: true, sortValue: (m) => m.cabinet, cell: (m) => <span className="text-gris">{m.cabinet}</span> },
-                      { key: "inscrit", label: "Inscrit depuis", sortable: true, sortValue: (m) => m.dateInscription ?? "", cell: (m) => <span className="text-xs text-gris">{formatDate(m.dateInscription)}</span> },
-                    ]}
-                    rows={electeurs.map((m, i) => ({ ...m, _num: i + 1 }))}
+                    columns={COLONNES_ELECTEURS}
+                    rows={electeursNum}
+                    loading={chargement}
+                    error={erreur}
+                    onRetry={charger}
                     paginate={false}
                     emptyIcon={CheckBadgeIcon}
                     emptyTitle="Aucun électeur qualifié"
@@ -95,19 +131,20 @@ export function CorpsElectoral() {
               <div className="bpn-card">
                 <div className="bpn-card-header">
                   <span className="bpn-card-heading">Exclusions justifiées</span>
+                  <span className="font-mono text-xs text-gris">{exclusions.length}</span>
                 </div>
-                <ul className="divide-y divide-grisL">
-                  {[...exclusCotisation.map((m) => ({ m, motif: "cotisation" })),
-                    ...exclusStatut.map((m) => ({ m, motif: "statut" }))].map(({ m, motif }) => (
-                    <li key={m.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
-                      <span className="font-medium text-encre">Me {m.nom}</span>
-                      <Badge ton={MOTIF_LABEL[motif].ton}>{MOTIF_LABEL[motif].label}</Badge>
-                    </li>
-                  ))}
-                  {exclusCotisation.length + exclusStatut.length === 0 && (
-                    <li className="px-4 py-6 text-center text-sm text-gris">Aucune exclusion.</li>
-                  )}
-                </ul>
+                <DataTable
+                  columns={COLONNES_EXCLUSIONS}
+                  rows={exclusions}
+                  getRowId={(m) => m._key}
+                  loading={chargement}
+                  error={erreur}
+                  onRetry={charger}
+                  paginate={false}
+                  emptyIcon={NoSymbolIcon}
+                  emptyTitle="Aucune exclusion"
+                  emptyDescription="Tous les avocats inscrits remplissent les conditions pour voter."
+                />
               </div>
             ),
           },
