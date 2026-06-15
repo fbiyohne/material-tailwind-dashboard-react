@@ -4,8 +4,9 @@ import { QUALITE_LABEL } from "../data/derivations";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { formatFCFA } from "../utils/format";
 import { montantEnLettresFCFA } from "../utils/nombreEnLettres";
+import { exporterPdf } from "../utils/exports";
 import { DocumentChrome, Pagination, useToast, useConfirm, PageHeader, EmptyState } from "../components";
-import { listerMembres, listerRecus, enregistrerPaiement, telechargerRecuPdf, annulerRecu } from "../api/resources";
+import { listerMembres, listerRecus, enregistrerPaiement, annulerRecu } from "../api/resources";
 
 const MODES = ["Espèces", "Virement", "Chèque", "Mobile Money"];
 const PAR_PAGE = 12;
@@ -160,8 +161,8 @@ export function Recus() {
             <button type="button" onClick={emettre} disabled={!membre || montant <= 0} className="bpn-btn bpn-btn-or w-full justify-center !py-2.5">
               <PrinterIcon className="h-4 w-4" /> Imprimer &amp; archiver
             </button>
-            <button type="button" onClick={() => succes && telechargerRecuPdf(succes.id, succes.numero)} disabled={!succes} title={succes ? "" : "Émettez d'abord le reçu"} className="bpn-btn bpn-btn-ghost w-full justify-center border-white/20 text-white/70 hover:bg-white/10 hover:text-white disabled:opacity-40">
-              <ArrowDownTrayIcon className="h-4 w-4" /> Télécharger PDF (serveur)
+            <button type="button" onClick={() => succes && exporterPdf(`Recu-${succes.numero}`, ".bpn-print-zone")} disabled={!succes} title={succes ? "" : "Émettez d'abord le reçu"} className="bpn-btn bpn-btn-ghost w-full justify-center border-white/20 text-white/70 hover:bg-white/10 hover:text-white disabled:opacity-40">
+              <ArrowDownTrayIcon className="h-4 w-4" /> Télécharger PDF
             </button>
           </div>
         </div>

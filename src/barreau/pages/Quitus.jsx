@@ -3,7 +3,8 @@ import { DocumentCheckIcon, CheckCircleIcon, LockClosedIcon, ArrowDownTrayIcon }
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { DocumentChrome, SortTh, Pagination, useToast, PageHeader, EmptyState } from "../components";
 import { useDataTable } from "../hooks/useDataTable";
-import { quitusEligibles, listerQuitus, genererQuitus, getCotisations, telechargerQuitusPdf } from "../api/resources";
+import { exporterPdf } from "../utils/exports";
+import { quitusEligibles, listerQuitus, genererQuitus, getCotisations } from "../api/resources";
 
 const REGISTRE_ACCESSORS = {
   numero: (q) => q.numero,
@@ -132,8 +133,8 @@ export function Quitus() {
             <button type="button" onClick={generer} disabled={!membreActif} className="bpn-btn bpn-btn-or w-full justify-center !py-2.5">
               <DocumentCheckIcon className="h-4 w-4" /> Générer &amp; archiver
             </button>
-            <button type="button" onClick={() => succes && telechargerQuitusPdf(succes.id, succes.numero)} disabled={!succes} title={succes ? "" : "Générez d'abord le quitus"} className="bpn-btn bpn-btn-ghost w-full justify-center border-white/20 text-white/70 hover:bg-white/10 hover:text-white disabled:opacity-40">
-              <ArrowDownTrayIcon className="h-4 w-4" /> Télécharger PDF (serveur)
+            <button type="button" onClick={() => succes && exporterPdf(`Quitus-${succes.numero}`, ".bpn-print-zone")} disabled={!succes} title={succes ? "" : "Générez d'abord le quitus"} className="bpn-btn bpn-btn-ghost w-full justify-center border-white/20 text-white/70 hover:bg-white/10 hover:text-white disabled:opacity-40">
+              <ArrowDownTrayIcon className="h-4 w-4" /> Télécharger PDF
             </button>
           </div>
         </div>

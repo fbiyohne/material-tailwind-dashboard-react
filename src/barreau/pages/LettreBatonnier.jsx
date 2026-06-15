@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { SparklesIcon, DocumentTextIcon } from "@heroicons/react/24/outline";
-import { Badge, Modal, PageHeader } from "../components";
+import { SparklesIcon, DocumentTextIcon, CheckIcon, ArrowDownTrayIcon, PaperAirplaneIcon } from "@heroicons/react/24/outline";
+import { Badge, Modal, PageHeader, useToast } from "../components";
 import { genererBrouillonArticle } from "../data/publications";
 import { archiverDoc, genererArticleLettre, getCalendrierEditorial } from "../api/resources";
 
@@ -11,19 +11,27 @@ const STATUT_META = {
 };
 
 export function LettreBatonnier() {
+  const toast = useToast();
   const [calendrier, setCalendrier] = useState([]);
-  const [articlesLettre, setArticlesLettre] = useState({});
-  const [apercu, setApercu] = useState(null); // { mois, texte, simule }
+  const [articlesLettre, setArticlesLettre] = useState({}); // mois -> { texte, simule, statut }
+  const [apercu, setApercu] = useState(null); // { mois, simule, statut }
+  const [brouillon, setBrouillon] = useState(""); // texte en cours d'édition
   const [chargement, setChargement] = useState(null); // mois en cours de génération
 
   useEffect(() => {
     getCalendrierEditorial().then(setCalendrier).catch(() => setCalendrier([]));
   }, []);
 
+  /** Ouvre l'éditeur sur un article (charge son texte dans le brouillon). */
+  const ouvrirEditeur = (mois, article) => {
+    setBrouillon(article.texte);
+    setApercu({ mois, simule: article.simule, statut: article.statut ?? "redige" });
+  };
+
   const ouvrirGeneration = async (mois, theme) => {
     const existant = articlesLettre[mois];
     if (existant) {
-      setApercu({ mois, ...existant });
+      ouvrirEditeur(mois, existant);
       return;
     }
     setChargement(mois);
@@ -31,25 +39,53 @@ export function LettreBatonnier() {
     try {
       // Génération serveur (IA Claude si configurée, sinon gabarit côté serveur).
       const r = await genererArticleLettre(mois, theme);
-      resultat = { texte: r.texte, simule: r.simule };
+      resultat = { texte: r.texte, simule: r.simule, statut: "redige" };
     } catch {
       // Repli ultime côté client si l'API est injoignable.
-      resultat = { texte: genererBrouillonArticle(mois, theme), simule: true };
+      resultat = { texte: genererBrouillonArticle(mois, theme), simule: true, statut: "redige" };
     }
     setArticlesLettre((prev) => ({ ...prev, [mois]: resultat }));
     archiverDoc({ categorie: "Lettre du Bâtonnier", titre: `Projet d'article — ${mois}`, reference: mois, date: new Date().toISOString().slice(0, 10) }).catch(() => {});
     setChargement(null);
-    setApercu({ mois, ...resultat });
+    ouvrirEditeur(mois, resultat);
+  };
+
+  /** Enregistre les modifications du Bâtonnier ; `publier` marque l'article publié. */
+  const enregistrer = (publier = false) => {
+    if (!apercu) return;
+    const statut = publier ? "publie" : apercu.statut ?? "redige";
+    setArticlesLettre((prev) => ({ ...prev, [apercu.mois]: { texte: brouillon, simule: apercu.simule, statut } }));
+    setApercu((a) => (a ? { ...a, statut } : a));
+    archiverDoc({
+      categorie: "Lettre du Bâtonnier",
+      titre: `${publier ? "Article publié" : "Projet d'article"} — ${apercu.mois}`,
+      reference: apercu.mois,
+      date: new Date().toISOString().slice(0, 10),
+    }).catch(() => {});
+    toast.success(publier ? `Article de ${apercu.mois} enregistré et publié.` : "Modifications enregistrées.");
+    if (publier) setApercu(null);
+  };
+
+  /** Export texte (.txt) — disponible partout, sans dépendance serveur. */
+  const telechargerTxt = () => {
+    if (!apercu) return;
+    const blob = new Blob([brouillon], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Lettre-Batonnier-${apercu.mois}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
     <div className="space-y-5">
-      <PageHeader eyebrow="Documents" titre="Lettre du Bâtonnier" sousTitre="Calendrier éditorial mensuel — génération d'un projet d'article par assistance IA." />
+      <PageHeader eyebrow="Documents" titre="Lettre du Bâtonnier" sousTitre="Calendrier éditorial mensuel — génération d'un projet d'article par assistance IA, puis édition par le Bâtonnier." />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {calendrier.map((c) => {
-          const genere = !!articlesLettre[c.mois];
-          const meta = STATUT_META[genere ? "redige" : c.statut];
+          const article = articlesLettre[c.mois];
+          const meta = article ? STATUT_META[article.statut] : STATUT_META[c.statut];
           return (
             <div key={c.mois} className="bpn-card p-4">
               <div className="flex items-center justify-between">
@@ -68,8 +104,8 @@ export function LettreBatonnier() {
               >
                 {chargement === c.mois ? (
                   <><SparklesIcon className="h-4 w-4 animate-pulse" /> Génération…</>
-                ) : genere ? (
-                  <><DocumentTextIcon className="h-4 w-4" /> Voir le projet</>
+                ) : article ? (
+                  <><DocumentTextIcon className="h-4 w-4" /> Ouvrir l'éditeur</>
                 ) : (
                   <><SparklesIcon className="h-4 w-4" /> Générer un projet</>
                 )}
@@ -82,17 +118,37 @@ export function LettreBatonnier() {
       <Modal
         open={!!apercu}
         onClose={() => setApercu(null)}
-        title={apercu ? `Projet d'article — ${apercu.mois}` : ""}
+        title={apercu ? `Lettre du Bâtonnier — ${apercu.mois}` : ""}
+        footer={
+          apercu ? (
+            <>
+              <button className="bpn-btn bpn-btn-ghost" onClick={telechargerTxt}>
+                <ArrowDownTrayIcon className="h-4 w-4" /> Télécharger .txt
+              </button>
+              <button className="bpn-btn bpn-btn-primary" onClick={() => enregistrer(false)}>
+                <CheckIcon className="h-4 w-4" /> Enregistrer
+              </button>
+              <button className="bpn-btn bpn-btn-or" onClick={() => enregistrer(true)}>
+                <PaperAirplaneIcon className="h-4 w-4" /> Enregistrer &amp; publier
+              </button>
+            </>
+          ) : null
+        }
       >
         <div className="mb-3 flex items-center gap-2 rounded border-l-[3px] border-or bg-or-L px-3 py-2 text-xs text-gris">
           <SparklesIcon className="h-4 w-4 shrink-0 text-or" />
           {apercu?.simule
-            ? "Brouillon généré à partir d'un gabarit (IA non configurée). À relire par le Bâtonnier."
-            : "Projet rédigé par l'assistance IA (Claude). À relire et valider par le Bâtonnier."}
+            ? "Brouillon généré à partir d'un gabarit (IA non configurée). Le Bâtonnier peut le modifier ci-dessous avant de l'enregistrer ou de le publier."
+            : "Projet rédigé par l'assistance IA (Claude). Le Bâtonnier peut le modifier ci-dessous avant publication."}
         </div>
-        <pre className="whitespace-pre-wrap font-sans text-sm leading-7 text-encre">
-          {apercu?.texte}
-        </pre>
+        <textarea
+          value={brouillon}
+          onChange={(e) => setBrouillon(e.target.value)}
+          rows={18}
+          className="bpn-input w-full resize-y font-sans text-sm leading-7"
+          aria-label={`Contenu de la lettre — ${apercu?.mois ?? ""}`}
+        />
+        <div className="mt-1 text-right text-[11px] text-gris">{brouillon.length} caractères</div>
       </Modal>
     </div>
   );
