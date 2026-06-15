@@ -1,22 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BanknotesIcon, ArrowDownTrayIcon, PrinterIcon } from "@heroicons/react/24/outline";
-import { Badge, StatCard, SortTh, Pagination, PaiementModal, useToast, EtatImprimable, PageHeader, EmptyState, SelecteurExercice } from "../components";
-import { useDataTable } from "../hooks/useDataTable";
+import { Badge, StatCard, PaiementModal, useToast, EtatImprimable, PageHeader, DataTable, SelecteurExercice } from "../components";
 import { STATUT_META } from "../data/derivations";
 import { EXERCICE_COURANT } from "../data/dashboard-data";
 import { formatFCFA } from "../utils/format";
+import { telechargerCsv } from "../utils/exportCsv";
 import { exporterExcel, exporterPdf } from "../utils/exports";
 import { getDroits } from "../api/resources";
 
 const ENTETE_ETAT = ["N°", "Avocat", "Dû", "Perçu", "Solde", "Statut"];
 
-const ACCESSORS = {
-  num: (l) => l.membre.num,
-  nom: (l) => l.membre.nom.toLowerCase(),
-  paye: (l) => l.paye,
-  solde: (l) => l.solde,
-  statut: (l) => l.statut,
-};
+const COLONNES_CSV = [
+  { label: "N°", valeur: (l) => l.membre.num },
+  { label: "Avocat", valeur: (l) => `Me ${l.membre.nom}` },
+  { label: "Dû", valeur: (l) => l.du },
+  { label: "Perçu", valeur: (l) => l.paye },
+  { label: "Solde", valeur: (l) => l.solde },
+];
 
 export function DroitsPlaidoirie() {
   const toast = useToast();
@@ -24,17 +24,37 @@ export function DroitsPlaidoirie() {
   const [lignes, setLignes] = useState([]);
   const [totaux, setTotaux] = useState({ du: 0, paye: 0, solde: 0 });
   const [paiement, setPaiement] = useState(null);
+  const [chargement, setChargement] = useState(true);
+  const [erreur, setErreur] = useState(false);
 
   const charger = useCallback(() => {
+    setChargement(true); setErreur(false);
     getDroits(exercice)
       .then((d) => { setLignes(d.lignes); setTotaux(d.totaux); })
-      .catch((e) => toast.error(e.message));
-  }, [exercice, toast]);
+      .catch(() => setErreur(true))
+      .finally(() => setChargement(false));
+  }, [exercice]);
   useEffect(() => { charger(); }, [charger]);
 
-  const { rows, total, page, setPage, totalPages, sortKey, sortDir, toggleSort } = useDataTable(lignes, {
-    accessors: ACCESSORS, pageSize: 10, initialSort: { key: "num", dir: "asc" },
-  });
+  const colonnes = [
+    { key: "num", label: "N°", sortable: true, sortValue: (l) => l.membre.num,
+      cell: (l) => <span className="font-mono text-xs text-gris">{l.membre.num}</span> },
+    { key: "nom", label: "Avocat", sortable: true, sortValue: (l) => l.membre.nom.toLowerCase(),
+      cell: (l) => <span className="font-medium">Me {l.membre.nom}</span> },
+    { key: "du", label: "Droit dû", align: "right", cell: (l) => formatFCFA(l.du) },
+    { key: "paye", label: "Perçu", align: "right", sortable: true, sortValue: (l) => l.paye,
+      cell: (l) => <span className={l.paye ? "text-vert" : "text-gris"}>{l.paye ? formatFCFA(l.paye) : "—"}</span> },
+    { key: "solde", label: "Solde", align: "right", sortable: true, sortValue: (l) => l.solde,
+      cell: (l) => <span className={`font-medium ${l.solde ? "text-rouge" : "text-vert"}`}>{l.solde ? formatFCFA(l.solde) : "✓ Soldé"}</span> },
+    { key: "statut", label: "Statut", sortable: true, sortValue: (l) => l.statut,
+      cell: (l) => { const meta = STATUT_META[l.statut]; return <Badge ton={meta.ton}>{meta.label}</Badge>; } },
+    { key: "action", label: "Action", align: "right",
+      cell: (l) => l.solde > 0 ? (
+        <button className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs" onClick={() => setPaiement(l)}>
+          <BanknotesIcon className="h-3.5 w-3.5" /> Encaisser
+        </button>
+      ) : <span className="text-[11px] text-vert">✓ Soldé</span> },
+  ];
 
   const lignesEtat = useMemo(
     () => lignes.map((l) => [
@@ -59,6 +79,10 @@ export function DroitsPlaidoirie() {
         <button className="bpn-btn bpn-btn-ghost !py-1.5 text-xs" onClick={() => exporterEtat("pdf")}>
           <PrinterIcon className="h-4 w-4" /> État PDF
         </button>
+        <button className="bpn-btn bpn-btn-ghost !py-1.5 text-xs disabled:opacity-40" disabled={lignes.length === 0}
+          onClick={() => telechargerCsv(`Droits-plaidoirie-${exercice}`, COLONNES_CSV, lignes)}>
+          <ArrowDownTrayIcon className="h-4 w-4" /> CSV
+        </button>
         <button className="bpn-btn bpn-btn-or !py-1.5 text-xs" onClick={() => exporterEtat("xlsx")}>
           <ArrowDownTrayIcon className="h-4 w-4" /> Excel
         </button>
@@ -71,53 +95,18 @@ export function DroitsPlaidoirie() {
       </div>
 
       <div className="bpn-card">
-        <div className="overflow-x-auto">
-          <table className="bpn-table">
-            <thead>
-              <tr>
-                <SortTh label="N°" sortKey="num" current={sortKey} dir={sortDir} onSort={toggleSort} />
-                <SortTh label="Avocat" sortKey="nom" current={sortKey} dir={sortDir} onSort={toggleSort} />
-                <th className="px-3 py-2.5 font-medium">Droit dû</th>
-                <SortTh label="Perçu" sortKey="paye" current={sortKey} dir={sortDir} onSort={toggleSort} />
-                <SortTh label="Solde" sortKey="solde" current={sortKey} dir={sortDir} onSort={toggleSort} />
-                <SortTh label="Statut" sortKey="statut" current={sortKey} dir={sortDir} onSort={toggleSort} />
-                <th className="px-3 py-2.5 text-right font-medium">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.length === 0 && (
-                <tr><td colSpan={7} className="p-0"><EmptyState title="Aucun avocat" description="Aucun avocat à afficher pour cet exercice." /></td></tr>
-              )}
-              {rows.map((l) => {
-                const meta = STATUT_META[l.statut];
-                return (
-                  <tr key={l.membre.id} className="border-b border-grisL hover:bg-grisL/60">
-                    <td className="px-3 py-2.5 font-mono text-xs text-gris">{l.membre.num}</td>
-                    <td className="px-3 py-2.5 font-medium">Me {l.membre.nom}</td>
-                    <td className="px-3 py-2.5">{formatFCFA(l.du)}</td>
-                    <td className={`px-3 py-2.5 ${l.paye ? "text-vert" : "text-gris"}`}>
-                      {l.paye ? formatFCFA(l.paye) : "—"}
-                    </td>
-                    <td className={`px-3 py-2.5 font-medium ${l.solde ? "text-rouge" : "text-vert"}`}>
-                      {l.solde ? formatFCFA(l.solde) : "✓ Soldé"}
-                    </td>
-                    <td className="px-3 py-2.5"><Badge ton={meta.ton}>{meta.label}</Badge></td>
-                    <td className="px-3 py-2.5 text-right">
-                      {l.solde > 0 ? (
-                        <button className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs" onClick={() => setPaiement(l)}>
-                          <BanknotesIcon className="h-3.5 w-3.5" /> Encaisser
-                        </button>
-                      ) : (
-                        <span className="text-[11px] text-vert">✓ Soldé</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        <Pagination page={page} totalPages={totalPages} total={total} onPage={setPage} libelle="avocats" />
+        <DataTable
+          columns={colonnes}
+          rows={lignes}
+          getRowId={(l) => l.membre.id}
+          loading={chargement}
+          error={erreur}
+          onRetry={charger}
+          emptyTitle="Aucun avocat"
+          emptyDescription="Aucun avocat à afficher pour cet exercice."
+          libelle="avocats"
+          initialSort={{ key: "num", dir: "asc" }}
+        />
       </div>
 
       <EtatImprimable id="etat-droits" titre="État des droits de plaidoirie" sousTitre={`Exercice ${exercice}`} entete={ENTETE_ETAT} lignes={lignesEtat} totaux={totauxEtat} />

@@ -1,20 +1,40 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DocumentCheckIcon, CheckCircleIcon, LockClosedIcon, ArrowDownTrayIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
-import { QuitusDocument, SortTh, Pagination, useToast, PageHeader, EmptyState } from "../components";
-import { useDataTable } from "../hooks/useDataTable";
+import { QuitusDocument, useToast, PageHeader, DataTable } from "../components";
+import { formatDate } from "../utils/format";
+import { telechargerCsv } from "../utils/exportCsv";
 import { exporterPdf } from "../utils/exports";
 import { quitusEligibles, listerQuitus, genererQuitus, getCotisations, getMembre } from "../api/resources";
 
-const REGISTRE_ACCESSORS = {
-  numero: (q) => q.numero,
-  nom: (q) => (q.membre?.nom ?? "").toLowerCase(),
-  annee: (q) => q.annee,
-  date: (q) => q.dateEmission,
-};
-
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
 const pad3 = (n) => String(n).padStart(3, "0");
+
+const COLONNES_REGISTRE = [
+  { key: "numero", label: "N°", sortable: true, sortValue: (q) => q.numero,
+    cell: (q) => <span className="font-mono text-xs text-or">{q.numero}</span> },
+  { key: "nom", label: "Avocat", sortable: true, sortValue: (q) => q.membre?.nom,
+    cell: (q) => <span className="font-medium">Me {q.membre?.nom}</span> },
+  { key: "annee", label: "Exercice", sortable: true, sortValue: (q) => q.annee,
+    cell: (q) => <span className="font-mono text-xs text-gris">{q.annee}</span> },
+  { key: "date", label: "Date", sortable: true, sortValue: (q) => q.dateEmission,
+    cell: (q) => formatDate(q.dateEmission) },
+  { key: "verif", label: "Authenticité", align: "right",
+    cell: (q) => (
+      <a href={`/verifier/quitus/${encodeURIComponent(q.numero)}`} target="_blank" rel="noreferrer"
+        title="Ouvrir la page de vérification publique"
+        className="inline-flex items-center gap-1 text-xs font-medium text-navy transition hover:text-or">
+        <ShieldCheckIcon className="h-4 w-4" /> Vérifier
+      </a>
+    ) },
+];
+
+const COLONNES_CSV = [
+  { label: "N°", valeur: (q) => q.numero },
+  { label: "Avocat", valeur: (q) => `Me ${q.membre?.nom}` },
+  { label: "Exercice", valeur: (q) => q.annee },
+  { label: "Date", valeur: (q) => formatDate(q.dateEmission) },
+];
 
 function PuceSynthese({ valeur, label, accent }) {
   return (
@@ -34,10 +54,16 @@ export function Quitus() {
   const [membreId, setMembreId] = useState(null);
   const [succes, setSucces] = useState(null);
   const [details, setDetails] = useState(null); // fiche complète de l'avocat sélectionné (n° d'inscription, adresse…)
+  const [chargement, setChargement] = useState(true);
+  const [erreur, setErreur] = useState(false);
 
   const charger = useCallback(() => {
     quitusEligibles(exercice).then((d) => setEligibles(d.eligibles)).catch((e) => toast.error(e.message));
-    listerQuitus().then(setRegistre).catch(() => {});
+    setChargement(true); setErreur(false);
+    listerQuitus()
+      .then(setRegistre)
+      .catch(() => setErreur(true))
+      .finally(() => setChargement(false));
     getCotisations(exercice).then(setLignes).catch(() => {});
   }, [exercice, toast]);
 
@@ -52,10 +78,6 @@ export function Quitus() {
     });
     return { eligibles: eligibles.length, aValider, bloques };
   }, [lignes, eligibles.length]);
-
-  const registreTable = useDataTable(registre, {
-    accessors: REGISTRE_ACCESSORS, pageSize: 8, initialSort: { key: "numero", dir: "desc" },
-  });
 
   const membreActif = eligibles.find((m) => m.id === membreId) ?? eligibles[0] ?? null;
 
@@ -149,41 +171,28 @@ export function Quitus() {
           <div className="bpn-no-print bpn-card">
             <div className="bpn-card-header">
               <span className="bpn-card-heading">Registre des quitus émis</span>
-              <span className="font-mono text-xs text-gris">{registre.length}</span>
+              <div className="flex items-center gap-3">
+                <button type="button" disabled={registre.length === 0}
+                  onClick={() => telechargerCsv(`Quitus-${new Date().getFullYear()}`, COLONNES_CSV, registre)}
+                  className="bpn-btn bpn-btn-ghost !py-1 text-xs disabled:opacity-40">
+                  <ArrowDownTrayIcon className="h-3.5 w-3.5" /> Export CSV
+                </button>
+                <span className="font-mono text-xs text-gris">{registre.length}</span>
+              </div>
             </div>
-            {registre.length === 0 ? (
-              <EmptyState title="Aucun quitus émis" description="Les quitus délivrés apparaîtront dans ce registre." />
-            ) : (
-              <>
-                <table className="bpn-table">
-                  <thead>
-                    <tr>
-                      <SortTh label="N°" sortKey="numero" current={registreTable.sortKey} dir={registreTable.sortDir} onSort={registreTable.toggleSort} />
-                      <SortTh label="Avocat" sortKey="nom" current={registreTable.sortKey} dir={registreTable.sortDir} onSort={registreTable.toggleSort} />
-                      <SortTh label="Exercice" sortKey="annee" current={registreTable.sortKey} dir={registreTable.sortDir} onSort={registreTable.toggleSort} />
-                      <SortTh label="Date" sortKey="date" current={registreTable.sortKey} dir={registreTable.sortDir} onSort={registreTable.toggleSort} />
-                      <th className="text-right">Authenticité</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {registreTable.rows.map((q) => (
-                      <tr key={q.numero}>
-                        <td className="font-mono text-xs text-or">{q.numero}</td>
-                        <td className="font-medium">Me {q.membre?.nom}</td>
-                        <td className="font-mono text-xs text-gris">{q.annee}</td>
-                        <td className="text-xs text-gris">{String(q.dateEmission).slice(0, 10)}</td>
-                        <td className="text-right">
-                          <a href={`/verifier/quitus/${encodeURIComponent(q.numero)}`} target="_blank" rel="noreferrer" title="Ouvrir la page de vérification publique" className="inline-flex items-center gap-1 text-xs font-medium text-navy transition hover:text-or">
-                            <ShieldCheckIcon className="h-4 w-4" /> Vérifier
-                          </a>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                <Pagination page={registreTable.page} totalPages={registreTable.totalPages} total={registreTable.total} onPage={registreTable.setPage} libelle="quitus" />
-              </>
-            )}
+            <DataTable
+              columns={COLONNES_REGISTRE}
+              rows={registre}
+              getRowId={(q) => q.numero}
+              loading={chargement}
+              error={erreur}
+              onRetry={charger}
+              emptyTitle="Aucun quitus émis"
+              emptyDescription="Les quitus délivrés apparaîtront dans ce registre."
+              libelle="quitus"
+              pageSize={8}
+              initialSort={{ key: "numero", dir: "desc" }}
+            />
           </div>
         </div>
       </div>

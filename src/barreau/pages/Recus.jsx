@@ -1,12 +1,21 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { PrinterIcon, CheckCircleIcon, ArrowDownTrayIcon, TrashIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
 import { QUALITE_LABEL } from "../data/derivations";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { formatFCFA, formatDate } from "../utils/format";
+import { telechargerCsv } from "../utils/exportCsv";
 import { montantEnLettresFCFA } from "../utils/nombreEnLettres";
 import { exporterPdf } from "../utils/exports";
 import { RecuDocument, useToast, useConfirm, PageHeader, DataTable } from "../components";
 import { listerMembres, listerRecus, enregistrerPaiement, annulerRecu } from "../api/resources";
+
+const COLONNES_CSV = [
+  { label: "N°", valeur: (r) => r.numero },
+  { label: "Avocat", valeur: (r) => `Me ${r.membre?.nom}` },
+  { label: "Montant", valeur: (r) => r.montant },
+  { label: "Exercice", valeur: (r) => r.annee },
+  { label: "Date", valeur: (r) => formatDate(r.date) },
+];
 
 const MODES = ["Espèces", "Virement", "Chèque", "Mobile Money"];
 const TARIF = { avocat: 150000, stagiaire: 75000, honoraire: 0 };
@@ -33,8 +42,16 @@ export function Recus() {
   const [reference, setReference] = useState("");
   const [date, setDate] = useState(aujourdhui());
   const [succes, setSucces] = useState(null);
+  const [chargementRecus, setChargementRecus] = useState(true);
+  const [erreurRecus, setErreurRecus] = useState(false);
 
-  const chargerRecus = () => listerRecus().then(setRecus).catch(() => {});
+  const chargerRecus = useCallback(() => {
+    setChargementRecus(true); setErreurRecus(false);
+    return listerRecus()
+      .then(setRecus)
+      .catch(() => setErreurRecus(true))
+      .finally(() => setChargementRecus(false));
+  }, []);
 
   useEffect(() => {
     listerMembres().then((d) => {
@@ -42,7 +59,7 @@ export function Recus() {
       if (d.items[0]) { setMembreId(d.items[0].id); setMontant(TARIF[d.items[0].qualite] ?? 150000); }
     }).catch((e) => toast.error(e.message));
     chargerRecus();
-  }, [toast]);
+  }, [toast, chargerRecus]);
 
   const membre = useMemo(() => membres.find((m) => m.id === membreId), [membres, membreId]);
 
@@ -145,7 +162,14 @@ export function Recus() {
           <div className="bpn-no-print bpn-card">
             <div className="bpn-card-header">
               <span className="bpn-card-heading">Reçus émis</span>
-              <span className="font-mono text-xs text-gris">{recus.length}</span>
+              <div className="flex items-center gap-3">
+                <button type="button" disabled={recus.length === 0}
+                  onClick={() => telechargerCsv(`Recus-${new Date().getFullYear()}`, COLONNES_CSV, recus)}
+                  className="bpn-btn bpn-btn-ghost !py-1 text-xs disabled:opacity-40">
+                  <ArrowDownTrayIcon className="h-3.5 w-3.5" /> Export CSV
+                </button>
+                <span className="font-mono text-xs text-gris">{recus.length}</span>
+              </div>
             </div>
             <DataTable
               columns={[
@@ -205,6 +229,9 @@ export function Recus() {
               ]}
               rows={recus}
               getRowId={(r) => r.numero}
+              loading={chargementRecus}
+              error={erreurRecus}
+              onRetry={chargerRecus}
               emptyTitle="Aucun reçu émis"
               emptyDescription="Les reçus de paiement émis apparaîtront ici."
               libelle="reçus"
