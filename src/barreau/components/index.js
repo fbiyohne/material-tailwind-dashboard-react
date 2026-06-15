@@ -8,6 +8,8 @@ export { PageHeader } from "./PageHeader";
 export { Tabs } from "./Tabs";
 export { SelecteurExercice } from "./SelecteurExercice";
 export { QuitusDocument } from "./QuitusDocument";
+export { RecuDocument } from "./RecuDocument";
+export { QRCode } from "./QRCode";
 export { StatutBadge } from "./StatutBadge";
 export { MembreFicheModal } from "./MembreFicheModal";
 export { AttestationModal } from "./AttestationModal";

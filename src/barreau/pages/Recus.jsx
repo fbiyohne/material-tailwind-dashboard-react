@@ -5,35 +5,13 @@ import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { formatFCFA } from "../utils/format";
 import { montantEnLettresFCFA } from "../utils/nombreEnLettres";
 import { exporterPdf } from "../utils/exports";
-import { DocumentChrome, Pagination, useToast, useConfirm, PageHeader, EmptyState } from "../components";
+import { RecuDocument, Pagination, useToast, useConfirm, PageHeader, EmptyState } from "../components";
 import { listerMembres, listerRecus, enregistrerPaiement, annulerRecu } from "../api/resources";
 
 const MODES = ["Espèces", "Virement", "Chèque", "Mobile Money"];
 const PAR_PAGE = 12;
 const TARIF = { avocat: 150000, stagiaire: 75000, honoraire: 0 };
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
-
-/** Aperçu du reçu officiel — gabarit unifié. */
-function ApercuRecu({ numero, membre, montant, exercice, mode, date }) {
-  return (
-    <DocumentChrome org="Trésorerie Générale" title={`Reçu N° ${numero}`} date={date} signataires={[{ role: "La Trésorière", nom: "Me ONDZE BOYA" }]}>
-      <div className="flex justify-between border-b border-dashed border-grisM py-1.5 text-sm">
-        <span className="text-gris">Reçu de Me</span>
-        <span className="font-semibold text-encre">{membre?.nom ?? "—"}</span>
-      </div>
-      <div className="my-3 rounded-r border-l-[3px] border-or bg-or-L px-4 py-2.5">
-        <div className="font-display text-lg font-bold text-navy">{formatFCFA(montant)}</div>
-        <div className="mt-0.5 text-[11px] italic text-gris first-letter:uppercase">{montantEnLettresFCFA(montant)}</div>
-      </div>
-      <div className="flex justify-between border-b border-dashed border-grisM py-1.5 text-sm">
-        <span className="text-gris">Pour</span><span className="text-encre">Cotisation ordinale {exercice}</span>
-      </div>
-      <div className="flex justify-between border-b border-dashed border-grisM py-1.5 text-xs text-gris">
-        <span>Mode de paiement</span><span>{mode}</span>
-      </div>
-    </DocumentChrome>
-  );
-}
 
 function Champ({ label, children }) {
   return (
@@ -168,7 +146,7 @@ export function Recus() {
         </div>
 
         <div className="space-y-5">
-          <ApercuRecu numero={numeroAffiche} membre={membre} montant={Number(montant) || 0} exercice={exercice} mode={mode} date={date} />
+          <RecuDocument numero={numeroAffiche} membre={membre} montant={Number(montant) || 0} exercice={exercice} mode={mode} date={date} />
 
           <div className="bpn-no-print bpn-card">
             <div className="bpn-card-header">

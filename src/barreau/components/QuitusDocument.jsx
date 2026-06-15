@@ -1,6 +1,7 @@
 import PropTypes from "prop-types";
 import { CalendarDaysIcon } from "@heroicons/react/24/outline";
 import { Sceau } from "./Sceau";
+import { QRCode } from "./QRCode";
 
 const fmtDateFr = (d) =>
   d ? new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" }) : "—";
@@ -58,6 +59,9 @@ function CachetBatonnier({ size = 132 }) {
  * C'est la zone imprimable / exportable (.bpn-print-zone).
  */
 export function QuitusDocument({ numero, membre, exercice, date }) {
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const verifUrl = `${origin}/verifier/quitus/${encodeURIComponent(numero)}`;
+  const verifHost = origin.replace(/^https?:\/\//, "");
   return (
     <div className="bpn-print-zone relative mx-auto w-full max-w-[820px] overflow-hidden border-2 border-or bg-white font-serif text-[13px] text-encre">
       {/* Double bordure intérieure */}
@@ -150,8 +154,18 @@ export function QuitusDocument({ numero, membre, exercice, date }) {
           </div>
         </div>
 
+        {/* Vérification d'authenticité (QR) */}
+        <div className="mt-8 flex items-center gap-4 border-t border-grisM pt-4">
+          <QRCode value={verifUrl} size={78} />
+          <div className="text-[11px] leading-relaxed text-gris">
+            <div className="text-[12px] font-semibold uppercase tracking-wide text-navy">Vérification d'authenticité</div>
+            Scannez ce code, ou rendez-vous sur :<br />
+            <span className="font-mono text-navy">{verifHost}/verifier/quitus/{numero}</span>
+          </div>
+        </div>
+
         {/* Mention */}
-        <p className="mt-8 text-center text-[11px] italic text-gris">
+        <p className="mt-5 text-center text-[11px] italic text-gris">
           Ce document est strictement personnel et ne peut être utilisé à d'autres fins que celles pour lesquelles il est délivré.
         </p>
       </div>

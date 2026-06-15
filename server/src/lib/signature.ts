@@ -62,3 +62,6 @@ export function verifierDocument(payload: string, signatureB64: string): boolean
 
 export const quitusPayload = (q: { numero: string; membreId: number; annee: number; dateEmission: Date | string }) =>
   `QUITUS|${q.numero}|${q.membreId}|${q.annee}|${new Date(q.dateEmission).toISOString().slice(0, 10)}`;
+
+export const recuPayload = (r: { numero: string; membreId: number; annee: number; montant: number; date: Date | string }) =>
+  `RECU|${r.numero}|${r.membreId}|${r.annee}|${r.montant}|${new Date(r.date).toISOString().slice(0, 10)}`;

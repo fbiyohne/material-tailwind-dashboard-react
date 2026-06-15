@@ -1,7 +1,9 @@
+import { useLocation } from "react-router-dom";
 import BarreauLayout from "@/barreau/layout/BarreauLayout";
 import { ErrorBoundary, ToastProvider, ConfirmProvider } from "@/barreau/components";
 import { AuthProvider, useAuth } from "@/barreau/auth/AuthContext";
 import { AuthShell } from "@/barreau/auth/AuthShell";
+import { VerificationPublique } from "@/barreau/pages/VerificationPublique";
 
 function Splash() {
   return (
@@ -24,6 +26,18 @@ function AuthGate() {
 }
 
 /**
+ * Aiguillage : les pages publiques de vérification (/verifier/:type/:numero,
+ * atteintes via QR code) court-circuitent l'authentification ; tout le reste
+ * passe par la connexion puis le layout applicatif.
+ */
+function PublicOrApp() {
+  const location = useLocation();
+  const m = location.pathname.match(/^\/verifier\/([^/]+)\/(.+?)\/?$/);
+  if (m) return <VerificationPublique type={decodeURIComponent(m[1])} numero={decodeURIComponent(m[2])} />;
+  return <AuthGate />;
+}
+
+/**
  * Application de gestion du Secrétariat Général du Barreau de Pointe-Noire.
  * Authentification (JWT) puis layout institutionnel et store applicatif.
  */
@@ -32,7 +46,7 @@ function App() {
     <ErrorBoundary>
       <ToastProvider>
         <AuthProvider>
-          <AuthGate />
+          <PublicOrApp />
         </AuthProvider>
       </ToastProvider>
     </ErrorBoundary>
