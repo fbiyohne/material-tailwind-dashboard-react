@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { MagnifyingGlassIcon, CheckCircleIcon, EnvelopeIcon, ArrowDownTrayIcon, PrinterIcon, RectangleStackIcon } from "@heroicons/react/24/outline";
-import { Badge, Modal, useToast, useConfirm, PaiementModal, PaiementEnLigneModal, SortTh, Pagination, EtatImprimable, PageHeader, EmptyState } from "../components";
-import { useDataTable } from "../hooks/useDataTable";
+import { Badge, Modal, useToast, useConfirm, PaiementModal, PaiementEnLigneModal, EtatImprimable, PageHeader, EmptyState, DataTable } from "../components";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { STATUT_META, QUALITE_LABEL } from "../data/derivations";
-import { formatFCFA } from "../utils/format";
+import { formatFCFA, formatDate } from "../utils/format";
+import { telechargerCsv } from "../utils/exportCsv";
 import { exporterExcel, exporterPdf } from "../utils/exports";
 import { PERIODES, moisDePeriode, libellePeriode } from "../utils/periode";
 import { getCotisations, getMembre, validerCotisation, lancerRelances, genererCotisations } from "../api/resources";
@@ -17,14 +17,6 @@ const FILTRES = [
   { value: "retard", label: "En retard" },
   { value: "exonere", label: "Exonéré" },
 ];
-
-const ACCESSORS = {
-  num: (l) => l.membre.num,
-  nom: (l) => l.membre.nom.toLowerCase(),
-  paye: (l) => l.montantPaye,
-  solde: (l) => l.solde,
-  statut: (l) => l.statut,
-};
 
 const statutLigne = (du, paye) => (du === 0 ? "exonere" : paye <= 0 ? "retard" : paye >= du ? "ajour" : "partiel");
 
@@ -59,7 +51,7 @@ function HistoriqueModal({ membreId, onClose }) {
                   <td className="py-2 font-mono text-xs text-gris">{annee}</td>
                   <td className="py-2">{formatFCFA(du)}</td>
                   <td className="py-2">{paye ? formatFCFA(paye) : "—"}</td>
-                  <td className="py-2 text-xs text-gris">{c?.datePaiement ? String(c.datePaiement).slice(0, 10) : "—"}</td>
+                  <td className="py-2 text-xs text-gris">{formatDate(c?.datePaiement)}</td>
                   <td className="py-2"><Badge ton={meta.ton}>{meta.label}</Badge></td>
                 </tr>
               );
@@ -82,13 +74,20 @@ export function Cotisations() {
   const periode = params.get("periode") || "annee";
 
   const [lignes, setLignes] = useState([]);
+  const [chargement, setChargement] = useState(true);
+  const [erreur, setErreur] = useState(false);
   const [historique, setHistorique] = useState(null);
   const [paiement, setPaiement] = useState(null);
   const [enLigne, setEnLigne] = useState(null);
 
   const charger = useCallback(() => {
-    getCotisations(exercice).then(setLignes).catch((e) => toast.error(e.message));
-  }, [exercice, toast]);
+    setChargement(true);
+    setErreur(false);
+    getCotisations(exercice)
+      .then(setLignes)
+      .catch(() => setErreur(true))
+      .finally(() => setChargement(false));
+  }, [exercice]);
 
   useEffect(() => { charger(); }, [charger]);
 
@@ -129,7 +128,7 @@ export function Cotisations() {
     () => filtrees.map((l) => [
       l.membre.num, `Me ${l.membre.nom}`, QUALITE_LABEL[l.membre.qualite],
       formatFCFA(l.montantDu), l.montantPaye ? formatFCFA(l.montantPaye) : "—",
-      l.solde ? formatFCFA(l.solde) : "Soldé", l.datePaiement ?? "—", STATUT_META[l.statut].label,
+      l.solde ? formatFCFA(l.solde) : "Soldé", formatDate(l.datePaiement), STATUT_META[l.statut].label,
     ]),
     [filtrees]
   );
@@ -142,9 +141,104 @@ export function Cotisations() {
     else exporterPdf(nom, "#etat-cotisations");
   };
 
-  const { rows, total, page, setPage, totalPages, sortKey, sortDir, toggleSort } = useDataTable(filtrees, {
-    accessors: ACCESSORS, pageSize: 10, initialSort: { key: "num", dir: "asc" },
-  });
+  /** Colonnes de la DataTable — champs réels : l.membre.num, l.membre.nom, l.statut, l.montantDu, l.montantPaye, l.solde, l.datePaiement */
+  const colonnes = useMemo(() => [
+    {
+      key: "num",
+      label: "N°",
+      sortable: true,
+      sortValue: (l) => l.membre.num,
+      cell: (l) => <span className="font-mono text-xs text-gris">{l.membre.num}</span>,
+    },
+    {
+      key: "nom",
+      label: "Avocat",
+      sortable: true,
+      sortValue: (l) => l.membre.nom.toLowerCase(),
+      cell: (l) => <span className="font-medium">Me {l.membre.nom}</span>,
+    },
+    {
+      key: "qualite",
+      label: "Qualité",
+      cell: (l) => <Badge ton={l.membre.qualite === "honoraire" ? "or" : "bleu"} dot={false}>{QUALITE_LABEL[l.membre.qualite]}</Badge>,
+    },
+    {
+      key: "du",
+      label: "Montant dû",
+      sortable: true,
+      sortValue: (l) => l.montantDu,
+      cell: (l) => formatFCFA(l.montantDu),
+    },
+    {
+      key: "paye",
+      label: "Montant payé",
+      sortable: true,
+      sortValue: (l) => l.montantPaye,
+      cell: (l) => (
+        <span className={l.statut === "ajour" ? "font-medium text-vert" : l.statut === "partiel" ? "font-medium text-or" : l.statut === "retard" ? "font-medium text-rouge" : "text-gris"}>
+          {l.montantPaye ? formatFCFA(l.montantPaye) : "—"}
+        </span>
+      ),
+    },
+    {
+      key: "solde",
+      label: "Solde",
+      sortable: true,
+      sortValue: (l) => l.solde,
+      cell: (l) =>
+        l.statut === "ajour" || l.statut === "exonere"
+          ? <span className="font-medium text-vert">✓ Soldé</span>
+          : <span className="font-medium text-rouge">{formatFCFA(l.solde)}</span>,
+    },
+    {
+      key: "date",
+      label: "Date paiement",
+      cell: (l) => <span className="text-xs text-gris">{formatDate(l.datePaiement)}</span>,
+    },
+    {
+      key: "statut",
+      label: "Statut",
+      sortable: true,
+      sortValue: (l) => l.statut,
+      cell: (l) => { const meta = STATUT_META[l.statut]; return <Badge ton={meta.ton}>{meta.label}</Badge>; },
+    },
+    {
+      key: "actions",
+      label: "",
+      align: "right",
+      cell: (l) => (
+        <div className="flex items-center justify-end gap-1.5">
+          {(l.statut === "retard" || l.statut === "partiel") && (
+            <>
+              <button type="button" onClick={() => setPaiement(l)} className="bpn-btn bpn-btn-or !px-2.5 !py-1 text-xs">Paiement</button>
+              <button type="button" onClick={() => setEnLigne(l)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs">En ligne</button>
+            </>
+          )}
+          {l.statut === "ajour" && (l.valideTresoriere ? (
+            <button type="button" title="Validé — cliquer pour annuler" onClick={() => validerSituation(l)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs text-vert">
+              <CheckCircleIcon className="h-3.5 w-3.5" /> Validé
+            </button>
+          ) : (
+            <button type="button" title="Valider la situation (Trésorière)" onClick={() => validerSituation(l)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs">Valider</button>
+          ))}
+          <button type="button" onClick={() => setHistorique(l.membre.id)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs">Historique</button>
+        </div>
+      ),
+    },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], []);
+
+  /** Colonnes CSV pour l'export sélection */
+  const colonnesCsv = [
+    { label: "N°", valeur: (l) => l.membre.num },
+    { label: "Avocat", valeur: (l) => `Me ${l.membre.nom}` },
+    { label: "Qualité", valeur: (l) => QUALITE_LABEL[l.membre.qualite] },
+    { label: "Statut", valeur: (l) => STATUT_META[l.statut].label },
+    { label: "Dû", valeur: (l) => l.montantDu },
+    { label: "Payé", valeur: (l) => l.montantPaye ?? "" },
+    { label: "Solde", valeur: (l) => l.solde ?? "" },
+    { label: "Date paiement", valeur: (l) => formatDate(l.datePaiement) },
+  ];
 
   return (
     <div className="space-y-5">
@@ -154,6 +248,15 @@ export function Cotisations() {
         </button>
         <button className="bpn-btn bpn-btn-or !py-1.5 text-xs" onClick={() => exporterEtat("xlsx")}>
           <ArrowDownTrayIcon className="h-4 w-4" /> Excel
+        </button>
+        <button
+          className="bpn-btn bpn-btn-ghost !py-1.5 text-xs"
+          onClick={() => {
+            if (filtrees.length === 0) { toast.error("Aucune ligne à exporter pour cette sélection."); return; }
+            telechargerCsv(`cotisations-${exercice}`, colonnesCsv, filtrees);
+          }}
+        >
+          <ArrowDownTrayIcon className="h-4 w-4" /> Export CSV
         </button>
         <button
           className="bpn-btn bpn-btn-ghost"
@@ -174,7 +277,8 @@ export function Cotisations() {
           <RectangleStackIcon className="h-4 w-4" /> Générer l'exercice
         </button>
         <button
-          className="bpn-btn bpn-btn-ghost"
+          type="button"
+          className="bpn-btn bpn-btn-primary"
           onClick={async () => {
             try {
               const r = await lancerRelances(exercice);
@@ -209,66 +313,32 @@ export function Cotisations() {
       </div>
 
       <div className="bpn-card">
-        <div className="overflow-x-auto">
-          <table className="bpn-table">
-            <thead>
-              <tr>
-                <SortTh label="N°" sortKey="num" current={sortKey} dir={sortDir} onSort={toggleSort} />
-                <SortTh label="Avocat" sortKey="nom" current={sortKey} dir={sortDir} onSort={toggleSort} />
-                <th className="px-3 py-2.5 font-medium">Qualité</th>
-                <th className="px-3 py-2.5 font-medium">Montant dû</th>
-                <SortTh label="Montant payé" sortKey="paye" current={sortKey} dir={sortDir} onSort={toggleSort} />
-                <SortTh label="Solde" sortKey="solde" current={sortKey} dir={sortDir} onSort={toggleSort} />
-                <th className="px-3 py-2.5 font-medium">Date paiement</th>
-                <SortTh label="Statut" sortKey="statut" current={sortKey} dir={sortDir} onSort={toggleSort} />
-                <th className="px-3 py-2.5 text-right font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((l) => {
-                const meta = STATUT_META[l.statut];
-                return (
-                  <tr key={l.membre.id} className="border-b border-grisL hover:bg-grisL/60">
-                    <td className="px-3 py-2.5 font-mono text-xs text-gris">{l.membre.num}</td>
-                    <td className="px-3 py-2.5 font-medium">Me {l.membre.nom}</td>
-                    <td className="px-3 py-2.5"><Badge ton={l.membre.qualite === "honoraire" ? "or" : "bleu"} dot={false}>{QUALITE_LABEL[l.membre.qualite]}</Badge></td>
-                    <td className="px-3 py-2.5">{formatFCFA(l.montantDu)}</td>
-                    <td className={`px-3 py-2.5 font-medium ${l.statut === "ajour" ? "text-vert" : l.statut === "partiel" ? "text-or" : l.statut === "retard" ? "text-rouge" : "text-gris"}`}>
-                      {l.montantPaye ? formatFCFA(l.montantPaye) : "—"}
-                    </td>
-                    <td className="px-3 py-2.5">
-                      {l.statut === "ajour" || l.statut === "exonere" ? <span className="font-medium text-vert">✓ Soldé</span> : <span className="font-medium text-rouge">{formatFCFA(l.solde)}</span>}
-                    </td>
-                    <td className="px-3 py-2.5 text-xs text-gris">{l.datePaiement ?? "—"}</td>
-                    <td className="px-3 py-2.5"><Badge ton={meta.ton}>{meta.label}</Badge></td>
-                    <td className="px-3 py-2.5">
-                      <div className="flex items-center justify-end gap-1.5">
-                        {(l.statut === "retard" || l.statut === "partiel") && (
-                          <>
-                            <button type="button" onClick={() => setPaiement(l)} className="bpn-btn bpn-btn-or !px-2.5 !py-1 text-xs">Paiement</button>
-                            <button type="button" onClick={() => setEnLigne(l)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs">En ligne</button>
-                          </>
-                        )}
-                        {l.statut === "ajour" && (l.valideTresoriere ? (
-                          <button type="button" title="Validé — cliquer pour annuler" onClick={() => validerSituation(l)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs text-vert">
-                            <CheckCircleIcon className="h-3.5 w-3.5" /> Validé
-                          </button>
-                        ) : (
-                          <button type="button" title="Valider la situation (Trésorière)" onClick={() => validerSituation(l)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs">Valider</button>
-                        ))}
-                        <button type="button" onClick={() => setHistorique(l.membre.id)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs">Historique</button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-              {rows.length === 0 && (
-                <tr><td colSpan={9} className="p-0"><EmptyState title="Aucun membre" description="Aucun membre ne correspond à votre recherche." /></td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-        <Pagination page={page} totalPages={totalPages} total={total} onPage={setPage} libelle="membres" />
+        <DataTable
+          columns={colonnes}
+          rows={filtrees}
+          getRowId={(l) => l.membre.id}
+          loading={chargement}
+          error={erreur}
+          onRetry={charger}
+          emptyTitle="Aucune cotisation"
+          emptyDescription="Aucune cotisation ne correspond à votre recherche pour cet exercice."
+          selectable
+          libelle="cotisations"
+          initialSort={{ key: "num", dir: "asc" }}
+          renderBulkActions={(ids, clearSelection) => (
+            <button
+              type="button"
+              className="bpn-btn bpn-btn-ghost !py-1 text-xs"
+              onClick={() => {
+                const sel = filtrees.filter((l) => ids.includes(l.membre.id));
+                telechargerCsv(`cotisations-selection-${exercice}`, colonnesCsv, sel);
+                clearSelection();
+              }}
+            >
+              Exporter la sélection (CSV)
+            </button>
+          )}
+        />
       </div>
 
       <EtatImprimable id="etat-cotisations" titre="État des cotisations ordinales" sousTitre={sousTitreEtat} entete={ENTETE_ETAT} lignes={lignesEtat} />
