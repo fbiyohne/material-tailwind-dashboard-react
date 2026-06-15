@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { MagnifyingGlassIcon, DocumentArrowDownIcon, ArrowDownTrayIcon, ArchiveBoxIcon } from "@heroicons/react/24/outline";
-import { Badge, Modal, useToast, PageHeader, DataTable } from "../components";
+import { MagnifyingGlassIcon, DocumentArrowDownIcon, ArrowDownTrayIcon, ArchiveBoxIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { Badge, Modal, useToast, useConfirm, PageHeader, DataTable } from "../components";
 import { formatDate } from "../utils/format";
 import { telechargerCsv } from "../utils/exportCsv";
-import { listerArchives } from "../api/resources";
+import { listerArchives, supprimerArchive } from "../api/resources";
 
 const COLONNES_CSV = [
   { label: "Date", valeur: (a) => formatDate(a.date) },
@@ -14,6 +14,7 @@ const COLONNES_CSV = [
 
 export function Archives() {
   const toast = useToast();
+  const confirm = useConfirm();
   const [archives, setArchives] = useState([]);
   const [categories, setCategories] = useState(["toutes"]);
   const [recherche, setRecherche] = useState("");
@@ -35,6 +36,18 @@ export function Archives() {
   }, []);
   useEffect(() => { charger(); }, [charger]);
 
+  const supprimer = async (a) => {
+    const ok = await confirm({
+      title: "Supprimer l'archive",
+      message: `« ${a.titre} » (réf. ${a.reference}) sera retirée du registre documentaire. L'action est tracée dans le journal d'audit. Continuer ?`,
+      confirmLabel: "Supprimer",
+      danger: true,
+    });
+    if (!ok) return;
+    try { await supprimerArchive(a.id); toast.success("Archive supprimée."); charger(); }
+    catch (e) { toast.error(e.message); }
+  };
+
   const lignes = useMemo(() => {
     const q = recherche.trim().toLowerCase();
     return archives.filter((a) => {
@@ -54,9 +67,20 @@ export function Archives() {
     { key: "reference", label: "Référence", cell: (a) => <span className="font-mono text-xs text-or">{a.reference}</span> },
     { key: "actions", label: "Action", align: "right",
       cell: (a) => (
-        <button className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs" onClick={() => setApercu(a)}>
-          <DocumentArrowDownIcon className="h-3.5 w-3.5" /> Consulter
-        </button>
+        <div className="flex items-center justify-end gap-1.5">
+          <button className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs" onClick={() => setApercu(a)}>
+            <DocumentArrowDownIcon className="h-3.5 w-3.5" /> Consulter
+          </button>
+          <button
+            type="button"
+            onClick={() => supprimer(a)}
+            title="Supprimer l'archive"
+            aria-label="Supprimer l'archive"
+            className="rounded p-1.5 text-gris transition hover:bg-rougeL hover:text-rouge"
+          >
+            <TrashIcon className="h-3.5 w-3.5" />
+          </button>
+        </div>
       ) },
   ];
 

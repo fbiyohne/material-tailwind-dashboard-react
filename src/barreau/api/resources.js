@@ -161,6 +161,7 @@ export const getCalendrierEditorial = () => api("/calendrier-editorial");
 // ─── Archives / Paramètres ───────────────────────────────────────────────
 export const listerArchives = (params = {}) => api(`/archives?${new URLSearchParams(params).toString()}`);
 export const archiverDoc = (entry) => api("/archives", { method: "POST", body: entry });
+export const supprimerArchive = (id) => api(`/archives/${id}`, { method: "DELETE" });
 export const getNotifications = () => api("/notifications");
 
 // ─── Paiements en ligne (passerelle) ─────────────────────────────────────────
