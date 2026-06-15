@@ -5,10 +5,11 @@ import { useMemo, useState } from "react";
  * `accessors` : map clé → fonction d'extraction de la valeur triable.
  * Pensé pour des volumes type 139 membres.
  */
-export function useDataTable(rows, { accessors = {}, pageSize = 10, initialSort } = {}) {
+export function useDataTable(rows, { accessors = {}, pageSize = 10, initialSort, getRowId } = {}) {
   const [sortKey, setSortKey] = useState(initialSort?.key ?? null);
   const [sortDir, setSortDir] = useState(initialSort?.dir ?? "asc");
   const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState(() => new Set());
 
   const toggleSort = (key) => {
     if (sortKey === key) {
@@ -37,7 +38,30 @@ export function useDataTable(rows, { accessors = {}, pageSize = 10, initialSort 
   const current = Math.min(page, totalPages);
   const pageRows = sorted.slice((current - 1) * pageSize, current * pageSize);
 
-  return { rows: pageRows, total: sorted.length, page: current, setPage, totalPages, sortKey, sortDir, toggleSort };
+  const rowId = getRowId ?? ((r) => r.id);
+  const selectedIds = [...selected];
+  const toggleRow = (id) =>
+    setSelected((s) => {
+      const next = new Set(s);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  const visibleIds = pageRows.map(rowId);
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selected.has(id));
+  const toggleAllVisible = () =>
+    setSelected((s) => {
+      const next = new Set(s);
+      if (visibleIds.every((id) => next.has(id))) visibleIds.forEach((id) => next.delete(id));
+      else visibleIds.forEach((id) => next.add(id));
+      return next;
+    });
+  const clearSelection = () => setSelected(new Set());
+
+  return {
+    rows: pageRows, total: sorted.length, page: current, setPage, totalPages,
+    sortKey, sortDir, toggleSort,
+    selectedIds, toggleRow, toggleAllVisible, allVisibleSelected, clearSelection,
+  };
 }
 
 export default useDataTable;
