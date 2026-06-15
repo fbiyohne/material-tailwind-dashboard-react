@@ -10,6 +10,14 @@
 
 **Prérequis :** **Phase 0 livrée** (socle + Cotisations). Spec : `docs/superpowers/specs/2026-06-15-professionnalisation-socle-design.md`.
 
+> **⚠️ PÉRIMÈTRE DESIGN — autoritaire :** **aucun changement de design** sur ces
+> pages (couleurs, en-têtes, styles conservés). On ajoute seulement **fonctions**
+> (états, tri, export) et **présentation des données** (formats unifiés, tableaux
+> cohérents). Toute mention ci-dessous de « retirer eyebrow » / « en-tête v2 » /
+> « bouton navy » est **annulée** : les en-têtes restent **tels quels** et les
+> nouveaux boutons fonctionnels réutilisent les **classes existantes** (`bpn-btn-ghost`
+> pour Export, etc.). Le design n'évolue que dans les **pages de détail**.
+
 ---
 
 ## Recette de conversion d'une liste en `DataTable` (référence)
@@ -37,10 +45,12 @@ useEffect(() => { charger(); }, [charger]);
   emptyTitle="…" emptyDescription="…" libelle="…" initialSort={{ key: "…", dir: "asc" }} />
 ```
 
-**C. Export CSV** : bouton (navy) dans la zone d'actions du `PageHeader` appelant
-`telechargerCsv(nom, colonnesCsv, donnees)` où `colonnesCsv = [{ label, valeur:(r)=>… }]`.
+**C. Export CSV** : bouton **fonctionnel** (classe existante `bpn-btn-ghost`) dans la
+zone d'actions du `PageHeader` appelant `telechargerCsv(nom, colonnesCsv, donnees)`
+où `colonnesCsv = [{ label, valeur:(r)=>… }]`.
 
-**D. En-tête** : retirer `eyebrow`, garder `titre`/`sousTitre` (PageHeader v2 = titre compact).
+**D. En-tête** : **inchangé** (eyebrow, titre, styles conservés à l'identique). On
+n'ajoute que les boutons fonctionnels dans la zone d'actions.
 
 ---
 
@@ -90,7 +100,7 @@ onClick={() => telechargerCsv(`Quitus-${new Date().getFullYear()}`, [
 ```
 (Importer `telechargerCsv` depuis `../utils/exportCsv`.)
 
-- [ ] **Step 6: Conserver l'or** sur le bouton « Générer & archiver » (génération de document). Retirer `eyebrow`.
+- [ ] **Step 6: En-tête inchangé** — ne rien modifier (eyebrow/titre/styles conservés ; le bouton « Générer & archiver » garde sa couleur actuelle).
 
 - [ ] **Step 7: Vérifier** — `npm run build && npm test` (verts). Visuel `/quitus` : skeleton au chargement, tri, « Vérifier » OK, export CSV correct, dates « 15 juin 2026 ».
 
@@ -119,7 +129,7 @@ onClick={() => telechargerCsv(`Recus-${new Date().getFullYear()}`, [
 ], recus)}
 ```
 
-- [ ] **Step 4: En-tête v2** — retirer `eyebrow`. Garder l'or sur « Imprimer & archiver ».
+- [ ] **Step 4: En-tête inchangé** — ne rien modifier au design de l'en-tête (eyebrow/titre/styles et le bouton « Imprimer & archiver » conservés).
 
 - [ ] **Step 5: Vérifier** — `npm run build && npm test`. Visuel `/recus` : états OK, export OK.
 
@@ -157,7 +167,7 @@ Réinjecter dans `actions` le déclencheur de `PaiementModal` déjà présent.
 
 - [ ] **Step 5: Export CSV** (recette C) — N°, Avocat, Dû, Perçu, Solde.
 
-- [ ] **Step 6: En-tête v2** — retirer `eyebrow`. Conserver `EtatImprimable` (état général imprimable).
+- [ ] **Step 6: En-tête inchangé** — conserver `EtatImprimable` (état général imprimable) ; ne pas modifier le design de l'en-tête.
 
 - [ ] **Step 7: Vérifier** — `npm run build && npm test`. Visuel `/droits-plaidoirie` : StatCards + table socle, états, tri, paiement, export.
 

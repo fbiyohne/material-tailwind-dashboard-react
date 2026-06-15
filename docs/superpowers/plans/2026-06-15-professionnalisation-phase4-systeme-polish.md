@@ -4,11 +4,19 @@
 
 **Goal:** Convertir les derniers modules (Paramètres, Utilisateurs) sur le socle, puis passes transverses : responsive, balayage de cohérence, audit contraste, et revue taste finale de toute l'application.
 
-**Architecture:** Mêmes primitives Phase 0. La valeur de cette phase est surtout le **balayage de cohérence piloté par `grep`** (chasse aux dernières dates ISO brutes, `<ul>` de registre, `<table>` hors `DataTable`, `eyebrow` résiduels, `bpn-btn-or` mal placés) et les **passes responsive/contraste** sur l'ensemble.
+**Architecture:** Mêmes primitives Phase 0. La valeur de cette phase est surtout le **balayage de cohérence piloté par `grep`** (chasse aux dernières dates ISO brutes affichées, `<ul>` de données, `<table>` hors `DataTable`) et les **passes responsive/contraste** — **sans changement de design** (eyebrows et couleurs de boutons conservés).
 
 **Tech Stack:** React + Vite + Tailwind, Vitest.
 
 **Prérequis :** **Phases 0–3 livrées.** Recette « liste → DataTable » : plan Phase 1 (§ Recette).
+
+> **⚠️ PÉRIMÈTRE DESIGN — autoritaire :** **aucun changement de design** sur les
+> pages de liste. Le balayage de cohérence porte **uniquement** sur les
+> **fonctions** et la **présentation des données** (dates ISO résiduelles, `<ul>`
+> de données → tableaux, listes non converties). Il **ne touche pas** aux eyebrows,
+> ni aux couleurs de boutons (conservés). La passe responsive vise l'utilisabilité
+> sans redesign. L'audit contraste est une **vérification a11y** : ne corriger que
+> si le correctif **n'altère pas** le design (sinon consigner sans appliquer).
 
 ---
 
@@ -22,7 +30,7 @@
 
 - [ ] **Step 3:** Convertir les `bpn-table` en `DataTable` (recette B du plan Phase 1) avec des colonnes adaptées au contenu réel (ex. journal des notifications : Date `formatDate`, Type, Destinataire, Canal, Statut). Conserver `Tabs`, `FormField` et les grilles de réglages.
 
-- [ ] **Step 4: En-tête v2** — retirer `eyebrow`. Dates via `formatDate`.
+- [ ] **Step 4: En-tête inchangé** — ne pas modifier le design. Dates via `formatDate`.
 
 - [ ] **Step 5: Vérifier** — `npm run build`. Visuel `/parametres` : onglets, tables socle, états.
 
@@ -52,7 +60,7 @@ Réinjecter le sélecteur de rôle et les actions (reset/désactiver) déjà pr�
 
 - [ ] **Step 4: Demandes d'accès** — le `<ul>` peut rester (file d'attente courte, actions approuver/refuser) **ou** devenir un `DataTable` léger (cohérence). Recommandé : `DataTable` avec colonnes Nom/Email/Date/Actions pour aligner sur le reste. Ajouter états + `EmptyState` « Aucune demande en attente ».
 
-- [ ] **Step 5: En-tête v2** — retirer `eyebrow`.
+- [ ] **Step 5: En-tête inchangé** — ne pas modifier le design de l'en-tête.
 
 - [ ] **Step 6: Vérifier** — `npm run build`. Visuel `/utilisateurs` : demandes + comptes cohérents, états, changement de rôle, reset.
 
@@ -94,17 +102,12 @@ Pour chaque **liste de données tabulaires** restante (hors listes de contenu/ca
 Run: `grep -rln "<table" src/barreau/pages`
 Pour chaque page listée non encore convertie (hors mini-tables de détail à faible volume) : migrer vers `DataTable`.
 
-- [ ] **Step 4: Eyebrows dorés résiduels**
-Run: `grep -rn "eyebrow=" src/barreau/pages`
-Confirmer que les pages principales sont passées en titre compact (sans eyebrow). Laisser l'eyebrow uniquement si un choix éditorial le justifie (à arbitrer page par page).
+- [ ] **Step 4: (design inchangé — pas de chasse aux eyebrows ni aux couleurs)**
+Les eyebrows et les couleurs de boutons sont **conservés** (hors périmètre). Ne rien modifier ici. Le balayage se limite aux fonctions et à la présentation des données (Steps 1–3).
 
-- [ ] **Step 5: Or hors génération de documents**
-Run: `grep -rn "bpn-btn-or\|variant=\"or\"" src/barreau`
-Confirmer que seules les actions de **génération de quitus/reçu** utilisent l'or.
+- [ ] **Step 5: Vérifier** — `npm run build && npm test` → vert.
 
-- [ ] **Step 6: Vérifier** — `npm run build && npm test` → vert.
-
-- [ ] **Step 7: Commit** — `git commit -am "refactor: balayage de cohérence (dates, listes, or, eyebrows)"`
+- [ ] **Step 6: Commit** — `git commit -am "refactor: balayage de cohérence (dates affichées, listes de données)"`
 
 ---
 
@@ -112,11 +115,11 @@ Confirmer que seules les actions de **génération de quitus/reçu** utilisent l
 
 **Files:** corrections ciblées CSS/pages si besoin ; aucune nouvelle dépendance
 
-- [ ] **Step 1: Contraste** — passer un audit (DevTools « Contrast » ou extension axe) sur Dashboard, Cotisations, Avocats, un détail, Paramètres. Corriger tout couple texte/fond < 4.5:1 (normal) / 3:1 (grand). Suspects : `text-white/90` sur navy, `text-gris` sur grisL, or pâle sur blanc.
+- [ ] **Step 1: Contraste (vérification a11y, sans redesign)** — audit (DevTools « Contrast » / axe) sur Dashboard, Cotisations, Avocats, un détail, Paramètres. **Consigner** les couples texte/fond < 4.5:1 (normal) / 3:1 (grand). Ne **corriger** que si le correctif n'altère pas le design (sinon noter dans « Suivi » pour décision du commanditaire). Suspects : `text-white/90` sur navy, `text-gris` sur grisL, or pâle sur blanc.
 
-- [ ] **Step 2: Revue taste transverse** — relire l'app avec la grille Design (hiérarchie, typo, espacement, couleur, cohérence) + Product (états, actions groupées, export). Lister les écarts résiduels.
+- [ ] **Step 2: Revue taste transverse (fonctions & données)** — relire l'app sous l'angle Product (états, actions groupées, export, présentation des données) ; côté Design, se limiter à la **cohérence** sans modifier le style. Lister les écarts résiduels.
 
-- [ ] **Step 3:** Corriger les écarts rapides ; consigner les éventuels reliquats non bloquants en bas du spec (« Suivi »).
+- [ ] **Step 3:** Appliquer les corrections **fonctionnelles/données** rapides ; consigner tout écart de design (réservé aux pages de détail / à arbitrer) en bas du spec (« Suivi »).
 
 - [ ] **Step 4: Commit** — `git commit -am "polish: contraste AA + corrections taste finales"`
 

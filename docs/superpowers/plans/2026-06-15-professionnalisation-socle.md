@@ -2,9 +2,20 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Construire le socle transverse (formatage, états, table unique, discipline couleur, a11y, export) et le valider sur le module Cotisations, sans renier l'identité navy/or.
+> **⚠️ PÉRIMÈTRE DESIGN (2026-06-15) — autoritaire :** on **ne change PAS le design
+> visuel** des pages de liste (couleurs, typo, en-têtes, allure des composants restent
+> **tels quels**). On professionnalise **uniquement les fonctionnalités** (tri, sélection,
+> actions groupées, export, états) **et la présentation des données** (formats unifiés,
+> listes en tableaux cohérents). Améliorations de **design réservées aux pages de
+> détail**. → **Task 5 (couleurs) est SUPPRIMÉE** ; les éléments « titre compact » /
+> « retrait d'eyebrow » sont **annulés** ; le `PageHeader` ne gagne qu'un **fil
+> d'Ariane** (utilisé sur les pages de détail). Le `DataTable` **reproduit le style
+> `.bpn-table` existant**. Les nouveaux boutons fonctionnels (export/relances) réutilisent
+> les classes existantes (`bpn-btn-primary`/`bpn-btn-ghost`) — usage, pas restylage.
 
-**Architecture:** On ajoute d'abord des utilitaires/primitives *testables* (formatage dates, export CSV, sélection de lignes), puis des composants UI partagés (Breadcrumb, Skeleton, ErrorState, DataTable), puis on convertit Cotisations (module-phare) et le registre Reçus (2ᵉ usage pour durcir la table). La discipline couleur est un **audit d'usage** : `bpn-btn-primary` est déjà navy ; on remplace les `bpn-btn-or` d'actions courantes par `bpn-btn-primary`, l'or restant réservé aux actions « officielles » (génération de quitus/reçu).
+**Goal:** Construire le socle transverse (formatage, états, table unique, a11y, export) et le valider sur le module Cotisations, **sans toucher au design**.
+
+**Architecture:** On ajoute d'abord des utilitaires/primitives *testables* (formatage dates, export CSV, sélection de lignes), puis des composants UI partagés (Breadcrumb, Skeleton, ErrorState, DataTable au style `.bpn-table` inchangé), puis on convertit Cotisations (module-phare) et le registre Reçus (2ᵉ usage pour durcir la table). **Aucun changement de couleur ni d'en-tête** sur les pages de liste.
 
 **Tech Stack:** React 18 + Vite, Tailwind (classes `bpn-*` dans `public/css/tailwind.css`), heroicons, PropTypes. Tests front : **Vitest + @testing-library/react + jsdom** (ajoutés en Task 1). API via le client `src/barreau/api/client.js` (`api()`), base `/api`.
 
@@ -31,11 +42,10 @@
 - `package.json` — devDeps de test + script `test`.
 - `src/barreau/utils/format.js` — ajout `formatDate`.
 - `src/barreau/hooks/useDataTable.js` — ajout sélection de lignes.
-- `src/barreau/components/PageHeader.jsx` — support `breadcrumb` + titre compact.
+- `src/barreau/components/PageHeader.jsx` — ajout d'un support `breadcrumb` optionnel (pour les pages de détail) ; **aucun changement visuel** des en-têtes de liste.
 - `src/barreau/components/index.js` — exports des nouveaux composants.
-- `src/barreau/pages/Cotisations.jsx` — conversion socle (lighthouse).
-- `src/barreau/pages/Recus.jsx` — registre `<ul>` → `DataTable`.
-- Pages avec `bpn-btn-or` d'action courante — swap vers `bpn-btn-primary`.
+- `src/barreau/pages/Cotisations.jsx` — conversion socle (lighthouse), design inchangé.
+- `src/barreau/pages/Recus.jsx` — registre `<ul>` → `DataTable` (présentation des données).
 
 ---
 
@@ -406,43 +416,12 @@ git commit -m "feat: sélection de lignes dans useDataTable"
 
 ---
 
-## Task 5: Discipline des couleurs (audit d'usage du bouton primaire)
+## Task 5: ~~Discipline des couleurs~~ — SUPPRIMÉE (hors périmètre)
 
-**Files:**
-- Modify: pages listées par le grep ci-dessous (remplacement ciblé `bpn-btn-or` → `bpn-btn-primary`)
-
-**Règle :** `bpn-btn-or` (or) est réservé aux actions **« officielles »** : génération/impression d'un **quitus** ou d'un **reçu**. Toute autre action primaire courante (Enregistrer, Créer, + Avocat, Ajouter, Lancer relances, Importer…) utilise `bpn-btn-primary` (navy).
-
-- [ ] **Step 1: Lister les usages**
-
-Run: `grep -rn "bpn-btn-or" src/barreau/pages src/barreau/components src/barreau/layout`
-Expected: liste des occurrences à arbitrer.
-
-- [ ] **Step 2: Conserver l'or UNIQUEMENT sur génération de documents**
-
-Garder `bpn-btn-or` sur :
-- `src/barreau/pages/Quitus.jsx` — bouton « Générer & archiver ».
-- `src/barreau/pages/Recus.jsx` — bouton « Imprimer & archiver ».
-
-Pour **toutes les autres** occurrences trouvées au Step 1 (ex. `Cotisations.jsx`, `DroitsPlaidoirie.jsx`, `Annuaire.jsx`, `Reunions.jsx`, `Assemblees.jsx`, `Publications.jsx`, `CorpsElectoral.jsx`, `Utilisateurs.jsx`, `AssembleeDetail.jsx`, `ReunionDetail.jsx`, et le bouton « + Avocat » de la barre supérieure dans `src/barreau/layout/`), remplacer la classe `bpn-btn-or` par `bpn-btn-primary`. Idem pour `<Button variant="or">` d'action courante → `variant="primary"`.
-
-> Ne PAS modifier la définition CSS de `.bpn-btn-or` / `.bpn-btn-primary` : seul l'**usage** change.
-
-- [ ] **Step 3: Vérifier le build**
-
-Run: `npm run build`
-Expected: BUILD OK.
-
-- [ ] **Step 4: Vérification visuelle**
-
-Lancer l'app, ouvrir 3 pages (Cotisations, Annuaire, une page de réunion) : l'action primaire est navy ; l'or n'apparaît plus que sur Quitus/Reçus (génération). Confirmer qu'aucune action courante n'est dorée.
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add -A
-git commit -m "refactor: action primaire en navy, or réservé à la génération de documents (60-30-10)"
-```
+> **Annulée par la note de périmètre.** Changer la couleur des boutons (or→navy)
+> est un **changement de design**, exclu. **Ne rien faire.** Les boutons existants
+> gardent leurs couleurs actuelles (l'or reste où il est). On passe directement à
+> la Task 6.
 
 ---
 
@@ -516,9 +495,9 @@ Breadcrumb.propTypes = {
 export default Breadcrumb;
 ```
 
-- [ ] **Step 4: Étendre `PageHeader` (breadcrumb + titre compact)**
+- [ ] **Step 4: Étendre `PageHeader` (ajout du `breadcrumb`, SANS changer le visuel)**
 
-Modifier `src/barreau/components/PageHeader.jsx` — ajouter la prop `breadcrumb` et réduire le titre :
+Modifier `src/barreau/components/PageHeader.jsx` — ajouter **seulement** la prop `breadcrumb` (rendue avant l'eyebrow). **Le titre et l'eyebrow restent identiques** (mêmes classes `bpn-eyebrow` / `bpn-title`) : aucun changement de design des en-têtes de liste. Le breadcrumb ne sera passé que par les pages de détail.
 ```jsx
 import PropTypes from "prop-types";
 import { Breadcrumb } from "./Breadcrumb";
@@ -528,8 +507,8 @@ export function PageHeader({ eyebrow, breadcrumb, titre, sousTitre, className = 
     <div className={`flex flex-col justify-between gap-3 sm:flex-row sm:items-end ${className}`}>
       <div>
         {breadcrumb && <div className="mb-1.5"><Breadcrumb items={breadcrumb} /></div>}
-        {eyebrow && !breadcrumb && <div className="bpn-eyebrow">{eyebrow}</div>}
-        <h2 className="bpn-title-compact mt-1.5">{titre}</h2>
+        {eyebrow && <div className="bpn-eyebrow">{eyebrow}</div>}
+        <h2 className="bpn-title mt-2">{titre}</h2>
         {sousTitre && <p className="mt-1 text-sm text-gris">{sousTitre}</p>}
       </div>
       {children && <div className="flex flex-wrap items-center gap-2 sm:shrink-0">{children}</div>}
@@ -548,34 +527,25 @@ PageHeader.propTypes = {
 
 export default PageHeader;
 ```
+> Diff minimal vs l'existant : **uniquement** l'import `Breadcrumb`, la prop `breadcrumb` et son rendu conditionnel. Tout le reste est inchangé. **Pas** de classe `bpn-title-compact`.
 
-- [ ] **Step 5: Ajouter la classe titre compacte**
-
-Dans `public/css/tailwind.css`, sous la définition de `.bpn-title`, ajouter :
-```css
-  .bpn-title-compact {
-    @apply font-display text-2xl font-bold leading-tight text-navy;
-  }
-```
-> Plus compact que `.bpn-title` (qui reste pour les écrans non encore convertis).
-
-- [ ] **Step 6: Exporter le Breadcrumb**
+- [ ] **Step 5: Exporter le Breadcrumb**
 
 Dans `src/barreau/components/index.js`, ajouter :
 ```js
 export { Breadcrumb } from "./Breadcrumb";
 ```
 
-- [ ] **Step 7: Vérifier tests + build**
+- [ ] **Step 6: Vérifier tests + build**
 
 Run: `npx vitest run src/barreau/components/__tests__/Breadcrumb.test.jsx && npm run build`
-Expected: tests PASS, BUILD OK. (Les pages existantes passant `eyebrow` restent inchangées.)
+Expected: tests PASS, BUILD OK. **Vérifier visuellement qu'aucun en-tête de page existant n'a changé** (le titre et l'eyebrow sont identiques ; seul le `breadcrumb`, non encore utilisé, est disponible).
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add -A
-git commit -m "feat: Breadcrumb + PageHeader v2 (titre compact, fil d'Ariane)"
+git commit -m "feat: composant Breadcrumb + support breadcrumb dans PageHeader (sans changement de design)"
 ```
 
 ---
@@ -984,7 +954,7 @@ const colonnes = [
 
 - [ ] **Step 5: Bouton « Relancer les retardataires » dans l'en-tête**
 
-Dans la zone d'actions du `PageHeader`, ajouter (navy) :
+Nouveau bouton **fonctionnel** (fonctionnalité de relance) utilisant la classe primaire **existante** `bpn-btn-primary` — usage d'un style en place, pas un changement de design. Dans la zone d'actions du `PageHeader`, ajouter :
 ```jsx
 <button
   type="button"
@@ -1003,9 +973,9 @@ Dans la zone d'actions du `PageHeader`, ajouter (navy) :
 ```
 > Adapter `r?.envoyees` à la forme réelle de la réponse de `/cotisations/relances`. Utiliser le `useToast()` déjà présent.
 
-- [ ] **Step 6: Convertir l'en-tête en PageHeader v2**
+- [ ] **Step 6: En-tête — INCHANGÉ**
 
-Remplacer l'eyebrow doré par un titre compact (laisser `eyebrow` retiré ; le `PageHeader` v2 gère la taille). Conserver le `SelecteurExercice` dans la zone d'actions.
+**Ne pas toucher** à l'en-tête de la page Cotisations : l'`eyebrow`, le titre et leur style restent exactement comme aujourd'hui. Conserver le `SelecteurExercice` dans la zone d'actions (où sont aussi ajoutés les boutons fonctionnels Export/Relancer).
 
 - [ ] **Step 7: Vérifier build + tests**
 
@@ -1162,7 +1132,7 @@ Expected: tout vert.
 
 - [ ] **Step 2: Checklist « professionnel » sur Cotisations**
 
-Confirmer les 9 critères du §5 du spec : états ✓, DataTable ✓, formats uniques ✓, fil d'Ariane (sur détails — n/a ici, c'est une liste) ✓, or non-CTA ✓, contraste AA ✓, clavier ✓, export ✓, actions groupées ✓.
+Confirmer les critères du §5 du spec : états ✓, DataTable (style `.bpn-table` inchangé) ✓, formats uniques ✓, fil d'Ariane (sur détails — n/a ici, c'est une liste) ✓, **design de la page inchangé** ✓, contraste AA vérifié ✓, clavier ✓, export ✓, actions groupées ✓.
 
 - [ ] **Step 3: Audit contraste**
 
@@ -1190,14 +1160,16 @@ git push -u origin claude/file-context-analysis-ixq8w3
 
 ## Self-Review (couverture spec)
 
-- §4.1 Tokens/couleur 60-30-10 → Task 5 (swap or→navy) + Task 6 Step 5 (échelle titre). Contraste → Task 12 Step 3.
-- §4.2 PageHeader v2 + fil d'Ariane → Task 6.
-- §4.3 DataTable unique → Tasks 4 + 8 ; usages → Tasks 9, 10.
+- §4.1 Couleurs/tokens → **INCHANGÉS** (Task 5 supprimée). Contraste : vérification seule → Task 12 Step 3.
+- §4.2 Support `breadcrumb` (sans changement d'en-tête) → Task 6.
+- §4.3 DataTable unique (style `.bpn-table` conservé) → Tasks 4 + 8 ; usages → Tasks 9, 10.
 - §4.4 États chargement/vide/erreur → Task 7 + intégration Task 8/9.
 - §4.5 Formatage unique → Task 2 (date) ; FCFA existant ; application Tasks 9, 10.
 - §4.6 A11y → Task 11.
 - §4.7 Export CSV → Task 3 ; usage Task 9.
-- §4.8 Cotisations lighthouse → Task 9 (+ Reçus Task 10 = 2ᵉ usage du DataTable).
+- §4.8 Cotisations lighthouse (design inchangé) → Task 9 (+ Reçus Task 10 = 2ᵉ usage du DataTable).
 - §5 Définition « professionnel » → vérifiée Task 12.
 
-**Note d'échelle typo (1.25) :** la mise en place complète de l'échelle reste légère en Phase 0 (titre compact `bpn-title-compact` introduit ; corps déjà ≥ 14px). L'application systématique de l'échelle se poursuivra par module dans les phases suivantes.
+**Rappel périmètre :** aucun changement de design sur les pages de liste (couleurs,
+en-têtes, styles conservés). Le design n'évolue que dans les pages de détail
+(phases 2–3). Le `DataTable` réutilise le style `.bpn-table` existant.

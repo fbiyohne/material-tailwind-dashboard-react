@@ -54,7 +54,20 @@ Forces réelles : palette cohérente, composants unifiés, hiérarchie lisible.
 
 ## 3. Non-objectifs & garde-fous
 
-- **Non-objectif :** refonte du langage visuel (couleurs/typo de marque conservées).
+> **⚠️ Périmètre design (mise à jour 2026-06-15) :** on **ne change PAS le design
+> visuel** des pages de liste/gestion (couleurs, typographie, espacements, allure
+> des composants, en-têtes restent **tels quels**). On professionnalise **uniquement
+> (a) les fonctionnalités** (tri, filtres, sélection, actions groupées, export,
+> états chargement/vide/erreur) **et (b) la présentation des données** (formatage
+> unique des dates/montants, présenter les vraies listes comme des tableaux
+> cohérents). **Les améliorations de design visuel sont autorisées uniquement dans
+> les pages de détail.** Toute instruction de ce document modifiant le design d'une
+> page de liste (changement de couleur de bouton, titre compact, retrait d'eyebrow)
+> est **annulée** par cette note.
+
+- **Non-objectif :** refonte ou retouche du **design visuel des pages de liste**
+  (couleurs, typo, en-têtes, allure des composants — conservés à l'identique).
+- **Non-objectif :** changement de la couleur des boutons (l'or reste où il est).
 - **Non-objectif :** nouvelles fonctionnalités métier hors « professionnalisation »
   (pas de nouveau module).
 - **Garde-fous :**
@@ -68,46 +81,36 @@ Forces réelles : palette cohérente, composants unifiés, hiérarchie lisible.
 
 ## 4. Spec détaillée — Phase 0
 
-### 4.1 Discipline des tokens & rôles de couleur
+### 4.1 Couleurs & tokens — INCHANGÉS (hors périmètre)
 
-**Échelles.** Formaliser dans `tailwind.config` / CSS :
-- Échelle typographique de ratio **1.25** (ex. 12 · 14 · 16 · 20 · 25 · 31 px),
-  exposée en classes/usages cohérents ; corps ≥ 14px, interlignage 1.4‑1.6.
-- Échelle d'espacement **8px** (4, 8, 12, 16, 24, 32, 48, 64) ; bannir les
-  valeurs hors grille.
+> **Annulé par la note de périmètre (§3).** Aucun changement de design : pas de
+> nouvelle échelle typo/espacement, **pas de changement de couleur de bouton**
+> (l'or reste exactement où il est aujourd'hui). On **vérifie** seulement le
+> contraste WCAG AA (≥ 4.5:1 texte normal, ≥ 3:1 grand texte) à titre
+> d'accessibilité ; tout correctif éventuel doit rester invisible pour le design
+> (sinon, consigner sans appliquer). Les nouveaux **boutons fonctionnels** ajoutés
+> (export, relances) réutilisent les **classes existantes** (`bpn-btn-primary` /
+> `bpn-btn-ghost`) telles quelles — c'est un usage des styles en place, pas un
+> restylage.
 
-**Rôles de couleur (60‑30‑10).**
-- **60 % neutre** : fonds grisL/blanc/encre (inchangé).
-- **30 % secondaire** : **navy** = couleur *interactive / action primaire*.
-- **10 % accent** : **or** = *accent de marque & emphase rare* — **plus jamais**
-  comme couleur de bouton d'action primaire générique.
-- **Décision clé :** le **bouton d'action primaire passe au navy** (`bpn-btn-primary`).
-  L'or (`bpn-btn-or`) est conservé mais réservé aux moments « cérémonie » (générer
-  un quitus/reçu officiel), pas aux actions courantes (Enregistrer, Filtrer…).
-- Statuts sémantiques (vert/rouge) inchangés ; vérifier **contraste WCAG AA**
-  (≥ 4.5:1 texte normal, ≥ 3:1 grand texte) sur tous les couples texte/fond.
+### 4.2 `PageHeader` — fil d'Ariane pour les pages de détail uniquement
 
-**Critères d'acceptation :**
-- Une page de référence documente l'échelle typo, l'échelle d'espacement et les
-  rôles de couleur.
-- Aucune action courante n'utilise l'or comme fond de bouton primaire.
-- Audit de contraste : 0 couple sous le seuil AA sur les écrans convertis.
+L'en-tête des **pages de liste reste tel quel** (eyebrow, titre, taille inchangés).
+On ajoute seulement au composant `PageHeader` un **support optionnel de fil
+d'Ariane** (`breadcrumb`), utilisé **uniquement sur les pages de détail** (où les
+améliorations de design sont autorisées) pour le wayfinding.
 
-### 4.2 Chrome de page unifié (`PageHeader` v2)
-
-Un seul composant d'en-tête de page :
-- **Fil d'Ariane** (wayfinding) sur les pages de détail.
-- **Titre compact** (taille réduite vs actuel, poids structurel) ; eyebrow
-  décoratif **réduit** (supprimé ou transformé en libellé de section discret).
-- **Zone d'actions** alignée à droite, hiérarchisée (1 action primaire navy max).
-
-**Critères :** les 22 pages utilisent le même `PageHeader` ; les détails affichent
-un fil d'Ariane ; une seule action primaire visuelle par en-tête.
+**Critères :** les pages de détail affichent un fil d'Ariane ; les en-têtes des
+pages de liste sont visuellement **identiques** à l'existant.
 
 ### 4.3 Composant `DataTable` unique
 
 Un primitif de table réutilisable remplaçant **toutes** les tables ad hoc **et**
 les registres en `<ul>` (Reçus, etc.).
+
+> **Design conservé :** le `DataTable` **reproduit exactement** le style visuel
+> actuel (`.bpn-table` : en-tête navy, lignes, hover). Il apporte de la *fonction*
+> (tri partout, sélection, états, densité), **pas un nouveau style**.
 
 Capacités :
 - Tri par colonne (réutilise/absorbe `SortTh`), pagination (absorbe `Pagination`).
@@ -164,9 +167,10 @@ reflétant le filtre courant.
 
 ### 4.8 Module-phare de validation : Cotisations
 
-Convertir **Cotisations** de bout en bout avec le socle (PageHeader v2, DataTable,
-états, formatage, a11y, export, **relances groupées** des retardataires). Sert de
-preuve que le socle tient avant propagation.
+Convertir **Cotisations** de bout en bout avec le socle (DataTable, états,
+formatage, a11y, export, **relances groupées** des retardataires) — **sans toucher
+au design de la page** (en-tête, couleurs, styles conservés). Sert de preuve que le
+socle tient avant propagation.
 
 **Critères :** Cotisations coche tous les « critères de professionnel » (§5) ;
 aucun pattern du socle inventé hors d'un usage réel.
@@ -177,11 +181,12 @@ aucun pattern du socle inventé hors d'un usage réel.
 
 Une vue/module est « professionnel » quand :
 1. elle gère **chargement / vide / erreur** ;
-2. elle utilise le **`DataTable` unique** (si liste) ;
+2. elle utilise le **`DataTable` unique** (si liste), au **style visuel inchangé** ;
 3. **un seul** format de date et de montant ;
 4. **fil d'Ariane** sur les pages de détail ;
-5. l'**or n'est plus** le CTA primaire ;
-6. **contraste AA** respecté ;
+5. le **design visuel des pages de liste est inchangé** (couleurs, en-têtes,
+   styles conservés ; améliorations de design réservées aux pages de détail) ;
+6. **contraste AA** vérifié (correctifs uniquement s'ils n'altèrent pas le design) ;
 7. **opérable au clavier**, focus visibles ;
 8. **export** disponible sur les registres ;
 9. **actions groupées** là où l'ops en a besoin.

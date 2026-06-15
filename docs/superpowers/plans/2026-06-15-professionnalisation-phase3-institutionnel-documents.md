@@ -12,6 +12,13 @@
 
 **Prérequis :** **Phases 0–2 livrées.** Recette « liste → DataTable » : voir plan Phase 1 (§ Recette).
 
+> **⚠️ PÉRIMÈTRE DESIGN — autoritaire :** **aucun changement de design** sur les
+> pages de liste/contenu (en-têtes, couleurs, cartes, styles **conservés**). On
+> n'ajoute que fonctions + présentation des données. Toute mention « retirer
+> eyebrow » / « en-tête v2 » / « bouton navy » est **annulée**. Le design ne peut
+> évoluer que dans les **pages de détail** (DossierDetail, ReunionDetail,
+> AssembleeDetail, PublicationDetail), où le fil d'Ariane remplace l'eyebrow.
+
 ---
 
 ## Recette « page contenu » (référence, pour Réunions/Assemblées/Publications/Lettre)
@@ -23,7 +30,7 @@
 
 **B. Formats** : toutes les dates via `formatDate`, tous les montants via `formatFCFA`.
 
-**C. Détail** : `PageHeader` avec `breadcrumb={[{ label: "<Liste>", to: "<route>" }, { label: <titre> }]}`, sans `eyebrow`. États `undefined`/`false` de l'entité (skeleton / ErrorState « introuvable »).
+**C. Détail** (page de détail = design améliorable) : `PageHeader` avec `breadcrumb={[{ label: "<Liste>", to: "<route>" }, { label: <titre> }]}` — le fil d'Ariane remplace l'`eyebrow` **sur les pages de détail uniquement**. États `undefined`/`false` de l'entité (skeleton / ErrorState « introuvable »).
 
 **D. A11y** : boutons-icônes avec `aria-label`, focus visibles (hérités du socle).
 
@@ -55,7 +62,7 @@ const colonnes = [
 
 - [ ] **Step 5: DossierDetail** — appliquer recette C (fil d'Ariane `[{ label:"Conseil de discipline", to:"/discipline" }, { label: dossier.reference }]`, états, `formatDate`).
 
-- [ ] **Step 6: En-tête v2** — retirer `eyebrow` (garder la mention « Confidentiel » en sous-titre).
+- [ ] **Step 6: En-tête inchangé** — ne pas modifier le design (eyebrow « Confidentiel » et styles conservés).
 
 - [ ] **Step 7: Vérifier** — `npm run build`. Visuel `/discipline` (états, tri) et `/discipline/:id` (fil d'Ariane, états).
 
@@ -86,7 +93,7 @@ const colonnes = [
 
 - [ ] **Step 5: Export CSV** (recette C) — Date, Catégorie, Document, Référence.
 
-- [ ] **Step 6: En-tête v2** — retirer `eyebrow`.
+- [ ] **Step 6: En-tête inchangé** — ne pas modifier le design de l'en-tête.
 
 - [ ] **Step 7: Vérifier** — `npm run build`. Visuel `/archives` : filtre, tri, états, export.
 
@@ -119,7 +126,7 @@ const colonnes = [
 
 - [ ] **Step 5: Export CSV** (recette C) reflétant le mode courant (colonnes coordonnées seulement si interne).
 
-- [ ] **Step 6: En-tête v2** — retirer `eyebrow`.
+- [ ] **Step 6: En-tête inchangé** — ne pas modifier le design de l'en-tête.
 
 - [ ] **Step 7: Vérifier** — `npm run build`. Visuel `/annuaire` : bascule interne/public, tri, export, impression intacte.
 
@@ -133,7 +140,7 @@ const colonnes = [
 
 - [ ] **Step 1: Lire** — `grep -n "listerReunions\|grid\|<ul\|formatDate\|String(\|creerReunion\|PageHeader" src/barreau/pages/Reunions.jsx src/barreau/pages/ReunionDetail.jsx`.
 
-- [ ] **Step 2: Réunions (liste cartes)** — recette « page contenu » A+B+D : états autour de `listerReunions()`, dates via `formatDate`, `aria-label` sur boutons-icônes. **Garder** la grille de cartes (planification/PV — contenu, pas tableau). En-tête v2 (retirer `eyebrow`).
+- [ ] **Step 2: Réunions (liste cartes)** — recette « page contenu » A+B+D : états autour de `listerReunions()`, dates via `formatDate`, `aria-label` sur boutons-icônes. **Garder** la grille de cartes (planification/PV — contenu, pas tableau). **En-tête et design inchangés.**
 
 - [ ] **Step 3: ReunionDetail** — recette C : fil d'Ariane `[{ label:"Réunions du Conseil", to:"/reunions" }, { label: reunion.titre ?? formatDate(reunion.date) }]`, états `undefined`/`false`, `formatDate` partout, tableau de présence interne homogénéisé.
 
@@ -149,7 +156,7 @@ const colonnes = [
 
 - [ ] **Step 1: Lire** — `grep -n "listerAssemblees\|getAssemblee\|grid\|<ul\|quorum\|formatDate\|PageHeader" src/barreau/pages/Assemblees.jsx src/barreau/pages/AssembleeDetail.jsx`.
 
-- [ ] **Step 2: Assemblées (liste cartes)** — recette « page contenu » A+B+D. Garder les cartes (AGO/AGE, quorum). En-tête v2.
+- [ ] **Step 2: Assemblées (liste cartes)** — recette « page contenu » A+B+D. Garder les cartes (AGO/AGE, quorum). **En-tête et design inchangés.**
 
 - [ ] **Step 3: AssembleeDetail** — recette C : fil d'Ariane `[{ label:"Assemblées générales", to:"/assemblees" }, { label: assemblee.titre }]`, états, `formatDate`. Suivi du quorum et décisions inchangés mais formats unifiés.
 
@@ -165,7 +172,7 @@ const colonnes = [
 
 - [ ] **Step 1: Lire** — `grep -n "listerPublications\|getPublication\|grid\|statut\|changerStatut\|formatDate\|PageHeader" src/barreau/pages/Publications.jsx src/barreau/pages/PublicationDetail.jsx`.
 
-- [ ] **Step 2: Publications (liste cartes)** — recette « page contenu » A+B+D. Garder les cartes (avis/communiqués, statut de validation). Bouton de création en **navy** (déjà fait Phase 0 Task 5, vérifier). En-tête v2.
+- [ ] **Step 2: Publications (liste cartes)** — recette « page contenu » A+B+D. Garder les cartes (avis/communiqués, statut de validation). **En-tête, boutons et design inchangés** (le bouton de création garde sa couleur actuelle).
 
 - [ ] **Step 3: PublicationDetail** — recette C : fil d'Ariane `[{ label:"Publications", to:"/publications" }, { label: publication.titre }]`, états, `formatDate`. Workflow de validation par le Bâtonnier inchangé.
 
@@ -181,7 +188,7 @@ const colonnes = [
 
 - [ ] **Step 1: Lire** — `grep -n "getCalendrierEditorial\|grid\|formatDate\|generer\|IA\|PageHeader" src/barreau/pages/LettreBatonnier.jsx`.
 
-- [ ] **Step 2:** Recette « page contenu » A+B+D : états autour de `getCalendrierEditorial()`, dates via `formatDate`, `aria-label` sur les actions, focus visibles. Garder la grille éditoriale (calendrier mensuel + génération IA d'un projet d'article). En-tête v2.
+- [ ] **Step 2:** Recette « page contenu » A+B+D : états autour de `getCalendrierEditorial()`, dates via `formatDate`, `aria-label` sur les actions, focus visibles. Garder la grille éditoriale (calendrier mensuel + génération IA d'un projet d'article). **En-tête et design inchangés.**
 
 - [ ] **Step 3: Vérifier** — `npm run build`. Visuel `/lettre-batonnier`.
 

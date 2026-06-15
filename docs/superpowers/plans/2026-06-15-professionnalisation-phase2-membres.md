@@ -10,6 +10,14 @@
 
 **Prérequis :** **Phases 0 et 1 livrées.** Recette de conversion : voir le plan Phase 1 (§ Recette). Spec : `…/2026-06-15-professionnalisation-socle-design.md`.
 
+> **⚠️ PÉRIMÈTRE DESIGN — autoritaire :** **aucun changement de design** sur les
+> pages de liste (Avocats, Stagiaires, Corps électoral) : en-têtes, couleurs et
+> styles **conservés** ; on n'ajoute que fonctions + présentation des données.
+> Toute mention « retirer eyebrow » / « bouton navy » est **annulée** (en-têtes
+> inchangés ; nouveaux boutons fonctionnels en classes existantes). En revanche,
+> la **page de détail AvocatDetail** peut recevoir des améliorations de design
+> (en plus du fil d'Ariane).
+
 ---
 
 ## Task 1: Avocats — `DataTable` + sélection + actions groupées
@@ -58,9 +66,9 @@ Réinjecter la logique « à jour/en retard » de la colonne cotisation (map `co
   )} />
 ```
 
-- [ ] **Step 5: Export global** (recette C, tout le tableau filtré) dans l'en-tête, à côté de « Importer » (qui garde `ImportMembresModal`). Bouton « + Avocat » / Import en **navy**.
+- [ ] **Step 5: Export global** (recette C, tout le tableau filtré) dans l'en-tête, à côté de « Importer » (qui garde `ImportMembresModal`). Les boutons « + Avocat » / « Importer » **gardent leur style actuel** (pas de changement de couleur). Le bouton Export est un nouveau bouton fonctionnel en `bpn-btn-ghost`.
 
-- [ ] **Step 6: En-tête v2** — retirer `eyebrow`. Conserver la recherche multicritères et les filtres existants (ils alimentent `membresFiltres`).
+- [ ] **Step 6: En-tête inchangé** — ne pas modifier le design de l'en-tête. Conserver la recherche multicritères et les filtres existants (ils alimentent `membresFiltres`).
 
 - [ ] **Step 7: Vérifier** — `npm run build && npm test`. Visuel `/avocats` : états, tri, filtres, sélection → export sélection, export global, lien vers fiche, focus clavier.
 
@@ -93,7 +101,7 @@ const colonnes = [
 
 - [ ] **Step 4: `DataTable`** (recette B), `libelle="stagiaires"`. Export CSV (recette C) optionnel.
 
-- [ ] **Step 5: En-tête v2** — retirer `eyebrow`.
+- [ ] **Step 5: En-tête inchangé** — ne pas modifier le design de l'en-tête (eyebrow/titre/styles conservés).
 
 - [ ] **Step 6: Vérifier** — `npm run build`. Visuel `/stagiaires` : table cohérente (en-tête navy comme les autres), états, dates formatées.
 
@@ -124,7 +132,7 @@ const colExclus = [...colElecteurs, { key: "motif", label: "Motif d'exclusion", 
 
 - [ ] **Step 4:** Remplacer chaque `bpn-table` d'onglet par un `DataTable` (recette B) avec les colonnes adaptées (`colElecteurs` / `colExclus`). Conserver `StatCard` et `Tabs`. `loading`/`error` partagés. Export CSV de la liste des électeurs (recette C) dans l'en-tête.
 
-- [ ] **Step 5: En-tête v2** — retirer `eyebrow`.
+- [ ] **Step 5: En-tête inchangé** — ne pas modifier le design de l'en-tête (eyebrow/titre/styles conservés).
 
 - [ ] **Step 6: Vérifier** — `npm run build`. Visuel `/corps-electoral` : onglets, états, tri, export électeurs, dates formatées.
 
@@ -151,7 +159,8 @@ if (membre === false) return <div className="p-6"><ErrorState title="Avocat intr
 <PageHeader breadcrumb={[{ label: "Avocats inscrits", to: "/avocats" }, { label: `Me ${membre.nom}` }]}
   titre={`Me ${membre.nom}`} sousTitre={…} >…</PageHeader>
 ```
-Retirer l'`eyebrow`.
+Sur cette **page de détail** (améliorations de design autorisées), le fil d'Ariane
+remplace l'`eyebrow`.
 
 - [ ] **Step 4: Dates** — remplacer tout `String(x).slice(0,10)` / format ISO par `formatDate(x)` (inscription, serment, paiements…).
 
