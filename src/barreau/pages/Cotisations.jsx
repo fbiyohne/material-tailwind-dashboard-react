@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { MagnifyingGlassIcon, CheckCircleIcon, EnvelopeIcon, ArrowDownTrayIcon, PrinterIcon, RectangleStackIcon } from "@heroicons/react/24/outline";
+import { MagnifyingGlassIcon, CheckCircleIcon, EnvelopeIcon, ArrowDownTrayIcon, PrinterIcon, RectangleStackIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { Badge, Modal, useToast, useConfirm, PaiementModal, PaiementEnLigneModal, EtatImprimable, PageHeader, EmptyState, DataTable } from "../components";
+import { useAuth } from "../auth/AuthContext";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { STATUT_META, QUALITE_LABEL } from "../data/derivations";
 import { formatFCFA, formatDate } from "../utils/format";
 import { telechargerCsv } from "../utils/exportCsv";
 import { exporterExcel, exporterPdf } from "../utils/exports";
 import { PERIODES, moisDePeriode, libellePeriode } from "../utils/periode";
-import { getCotisations, getMembre, validerCotisation, lancerRelances, genererCotisations } from "../api/resources";
+import { getCotisations, getMembre, validerCotisation, lancerRelances, genererCotisations, supprimerCotisation } from "../api/resources";
 
 const FILTRES = [
   { value: "tous", label: "Tous les statuts" },
@@ -67,6 +68,8 @@ function HistoriqueModal({ membreId, onClose }) {
 export function Cotisations() {
   const toast = useToast();
   const confirm = useConfirm();
+  const { user } = useAuth();
+  const estAdmin = user?.role === "ADMIN";
   const [params, setParams] = useSearchParams();
   const exercice = Number(params.get("exercice")) || EXERCICE_COURANT;
   const filtre = params.get("statut") || "tous";
@@ -107,6 +110,19 @@ export function Cotisations() {
     } catch (e) {
       toast.error(e.message);
     }
+  };
+
+  // Suppression de la ligne de cotisation (réinitialise l'exercice) — ADMIN.
+  const supprimer = async (l) => {
+    const ok = await confirm({
+      title: "Supprimer la cotisation",
+      message: `La ligne de cotisation ${exercice} de Me ${l.membre.nom} sera supprimée (situation réinitialisée). Cette action est irréversible.`,
+      confirmLabel: "Supprimer",
+      danger: true,
+    });
+    if (!ok) return;
+    try { await supprimerCotisation(l.membre.id, exercice); toast.success(`Cotisation ${exercice} supprimée — Me ${l.membre.nom}.`); charger(); }
+    catch (e) { toast.error(e.message); }
   };
 
   const filtrees = useMemo(() => {
@@ -222,11 +238,16 @@ export function Cotisations() {
             <button type="button" title="Valider la situation (Trésorière)" onClick={() => validerSituation(l)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs">Valider</button>
           ))}
           <button type="button" onClick={() => setHistorique(l.membre.id)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs">Historique</button>
+          {estAdmin && l.aLigne && (
+            <button type="button" onClick={() => supprimer(l)} className="bpn-btn bpn-btn-ghost !px-2 !py-1 text-xs text-rouge" title="Supprimer la ligne de cotisation">
+              <TrashIcon className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
       ),
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  ], []);
+  ], [exercice, estAdmin]);
 
   /** Colonnes CSV pour l'export sélection */
   const colonnesCsv = [

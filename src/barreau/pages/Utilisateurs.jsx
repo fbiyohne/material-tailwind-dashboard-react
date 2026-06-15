@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { UserPlusIcon, KeyIcon, CheckIcon, XMarkIcon, InboxArrowDownIcon, IdentificationIcon, BuildingOffice2Icon } from "@heroicons/react/24/outline";
+import { UserPlusIcon, KeyIcon, CheckIcon, XMarkIcon, TrashIcon, InboxArrowDownIcon, IdentificationIcon, BuildingOffice2Icon } from "@heroicons/react/24/outline";
 import { Badge, Modal, PageHeader, FormField, useToast, useConfirm, DataTable } from "../components";
 import { formatDate } from "../utils/format";
 import { useAuth } from "../auth/AuthContext";
 import {
-  listerUsers, creerUser, majUser, resetPasswordUser,
+  listerUsers, creerUser, majUser, resetPasswordUser, supprimerUser,
   listerDemandesAcces, approuverDemandeAcces, refuserDemandeAcces,
 } from "../api/resources";
 
@@ -61,6 +61,19 @@ export function Utilisateurs() {
     });
     if (!ok) return;
     try { await majUser(u.id, { actif: !u.actif }); await charger(); toast.success(desactiver ? "Compte désactivé." : "Compte réactivé."); }
+    catch (e) { toast.error(e.message); }
+  };
+  // Suppression définitive d'un compte — réservée au super-administrateur (ADMIN).
+  const estAdmin = courant?.role === "ADMIN";
+  const supprimer = async (u) => {
+    const ok = await confirm({
+      title: "Supprimer le compte",
+      message: `Le compte de ${u.nom} sera définitivement supprimé. Cette action est irréversible.`,
+      confirmLabel: "Supprimer",
+      danger: true,
+    });
+    if (!ok) return;
+    try { await supprimerUser(u.id); await charger(); toast.success(`Compte supprimé — ${u.nom}.`); }
     catch (e) { toast.error(e.message); }
   };
 
@@ -193,6 +206,16 @@ export function Utilisateurs() {
                   >
                     {u.actif ? "Désactiver" : "Réactiver"}
                   </button>
+                  {estAdmin && (
+                    <button
+                      className="bpn-btn bpn-btn-ghost !px-2 !py-1 text-xs text-rouge disabled:opacity-50"
+                      onClick={() => supprimer(u)}
+                      disabled={u.id === courant?.id}
+                      title={u.id === courant?.id ? "Vous ne pouvez pas supprimer votre propre compte" : "Supprimer définitivement"}
+                    >
+                      <TrashIcon className="h-3.5 w-3.5" /> Supprimer
+                    </button>
+                  )}
                 </div>
               ),
             },

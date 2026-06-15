@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { MagnifyingGlassIcon, ArrowUpTrayIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
-import { Badge, StatutBadge, AttestationModal, useToast, ImportMembresModal, PageHeader, DataTable } from "../components";
+import { MagnifyingGlassIcon, ArrowUpTrayIcon, ArrowDownTrayIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { Badge, StatutBadge, AttestationModal, useToast, useConfirm, ImportMembresModal, PageHeader, DataTable } from "../components";
 import { useAuth } from "../auth/AuthContext";
 import { STATUT_META, QUALITE_LABEL } from "../data/derivations";
 import { EXERCICE_COURANT } from "../data/dashboard-data";
 import { telechargerCsv } from "../utils/exportCsv";
-import { listerMembres, getCotisations } from "../api/resources";
+import { listerMembres, getCotisations, supprimerMembre } from "../api/resources";
 
 const FILTRES = [
   { value: "tous", label: "Tous les statuts" },
@@ -31,8 +31,10 @@ const COLONNES_CSV = [
 export function Avocats() {
   const navigate = useNavigate();
   const toast = useToast();
+  const confirm = useConfirm();
   const { user } = useAuth();
   const peutImporter = user?.role === "SECRETAIRE_GENERAL" || user?.role === "ADMIN";
+  const estAdmin = user?.role === "ADMIN";
   const [params, setParams] = useSearchParams();
   const [attestation, setAttestation] = useState(null);
   const [importOuvert, setImportOuvert] = useState(false);
@@ -78,6 +80,19 @@ export function Avocats() {
       .catch(() => toast.error("Statuts de cotisation indisponibles."));
   }, [toast, refresh]);
 
+  // Suppression définitive d'un membre (cascade) — réservée au super-administrateur (ADMIN).
+  const supprimer = async (m) => {
+    const ok = await confirm({
+      title: "Supprimer l'avocat",
+      message: `Me ${m.nom} sera définitivement supprimé, ainsi que tout son historique financier (cotisations, droits, reçus, quitus, paiements). Cette action est irréversible.`,
+      confirmLabel: "Supprimer",
+      danger: true,
+    });
+    if (!ok) return;
+    try { await supprimerMembre(m.id); toast.success(`Me ${m.nom} supprimé.`); setRefresh((n) => n + 1); }
+    catch (e) { toast.error(e.message); }
+  };
+
   const colonnes = [
     { key: "num", label: "N°", sortable: true, sortValue: (m) => m.num,
       cell: (m) => <span className="font-mono text-xs text-gris">{m.num}</span> },
@@ -103,6 +118,11 @@ export function Avocats() {
         <div className="flex items-center justify-end gap-1.5">
           <button type="button" onClick={() => navigate(`/avocats/${m.id}`)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs">Fiche</button>
           <button type="button" onClick={() => setAttestation(m)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs">Attestation</button>
+          {estAdmin && (
+            <button type="button" onClick={() => supprimer(m)} className="bpn-btn bpn-btn-ghost !px-2 !py-1 text-xs text-rouge" title="Supprimer définitivement">
+              <TrashIcon className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
       ) },
   ];

@@ -95,6 +95,23 @@ disciplineRouter.patch(
   })
 );
 
+/**
+ * DELETE /discipline/:id — suppression définitive d'un dossier disciplinaire.
+ * Action sensible réservée au super-administrateur (ADMIN), journalisée.
+ */
+disciplineRouter.delete(
+  "/:id",
+  requireRole("ADMIN"),
+  asyncH(async (req: AuthRequest, res) => {
+    const id = Number(req.params.id);
+    const d = await prisma.dossierDisciplinaire.findUnique({ where: { id } });
+    if (!d) throw new HttpError(404, "Dossier introuvable");
+    await prisma.dossierDisciplinaire.delete({ where: { id } });
+    await journaliser(`Suppression du dossier ${d.reference}`, req.user!.id);
+    res.json({ ok: true, reference: d.reference });
+  })
+);
+
 /** GET /discipline/:id/convocation/pdf — convocation disciplinaire (PDF), journalisée + archivée (RG-14). */
 disciplineRouter.get(
   "/:id/convocation/pdf",

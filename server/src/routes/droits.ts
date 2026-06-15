@@ -41,6 +41,8 @@ droitsRouter.get(
         montantDu: du,
         montantPaye: paye,
         datePaiement: d?.datePaiement ?? null,
+        // Ligne réellement persistée (donc supprimable par l'ADMIN) vs calculée.
+        aLigne: !!d,
         statut: statutCotisation(du, paye),
       };
     });
@@ -71,5 +73,23 @@ droitsRouter.post(
     if (membre.qualite !== "AVOCAT") throw new HttpError(400, "Seuls les avocats sont redevables du droit de plaidoirie");
     const resultat = await encaisser({ membre, annee, montant, type: "droit", mode, ref, date: date ? new Date(date) : undefined });
     res.status(201).json(resultat);
+  })
+);
+
+/**
+ * DELETE /droits/:membreId/:annee — efface la ligne de droit de plaidoirie d'un
+ * avocat pour un exercice (réinitialise sa situation). Réservé au
+ * super-administrateur (ADMIN) ; outil de correction des données.
+ */
+droitsRouter.delete(
+  "/:membreId/:annee",
+  requireRole("ADMIN"),
+  asyncH(async (req, res) => {
+    const membreId = Number(req.params.membreId);
+    const annee = Number(req.params.annee);
+    const d = await prisma.droitPlaidoirie.findUnique({ where: { membreId_annee: { membreId, annee } } });
+    if (!d) throw new HttpError(404, "Droit de plaidoirie introuvable");
+    await prisma.droitPlaidoirie.delete({ where: { membreId_annee: { membreId, annee } } });
+    res.json({ ok: true });
   })
 );

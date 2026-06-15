@@ -64,6 +64,7 @@ export function modifierMembre(id, patch) {
 }
 
 export const radierMembre = (id) => api(`/membres/${id}/radier`, { method: "POST" }).then(normaliserMembre);
+export const supprimerMembre = (id) => api(`/membres/${id}`, { method: "DELETE" });
 export const importerMembres = (membres) => api("/membres/import", { method: "POST", body: { membres } });
 export const genererAttestation = (id) => api(`/membres/${id}/attestation`, { method: "POST" });
 
@@ -92,6 +93,7 @@ export const lancerRelances = (annee) => api(`/cotisations/relances?annee=${anne
 export const genererCotisations = (annee) => api(`/cotisations/generer?annee=${annee}`, { method: "POST" });
 export const validerCotisation = (membreId, annee, valide = true) =>
   api(`/cotisations/${membreId}/valider`, { method: "POST", body: { annee, valide } });
+export const supprimerCotisation = (membreId, annee) => api(`/cotisations/${membreId}/${annee}`, { method: "DELETE" });
 
 // ─── Reçus / Quitus ──────────────────────────────────────────────────────
 export const listerRecus = (annee) => api(`/recus${annee ? `?annee=${annee}` : ""}`);
@@ -99,10 +101,12 @@ export const annulerRecu = (id) => api(`/recus/${id}`, { method: "DELETE" });
 export const quitusEligibles = (annee) => api(`/quitus/eligibles?annee=${annee}`);
 export const listerQuitus = () => api("/quitus");
 export const genererQuitus = (membreId, annee) => api("/quitus", { method: "POST", body: { membreId, annee } });
+export const supprimerQuitus = (id) => api(`/quitus/${id}`, { method: "DELETE" });
 
 // ─── Droits / Corps électoral / Dashboard ────────────────────────────────
 export const getDroits = (annee) => api(`/droits?annee=${annee}`);
 export const enregistrerPaiementDroit = (payload) => api("/droits/paiement", { method: "POST", body: payload });
+export const supprimerDroit = (membreId, annee) => api(`/droits/${membreId}/${annee}`, { method: "DELETE" });
 export const getAgenda = () => api("/dashboard/agenda");
 
 // ─── Compte courant (libre-service) ───────────────────────────────────────
@@ -141,6 +145,7 @@ export const getDossier = (id) => api(`/discipline/${id}`).then(normDossier);
 export const ouvrirDossier = (data) => api("/discipline", { method: "POST", body: data }).then(normDossier);
 export const majDossier = (id, patch) =>
   api(`/discipline/${id}`, { method: "PATCH", body: { ...patch, statut: patch.statut ? patch.statut.toUpperCase() : undefined } }).then(normDossier);
+export const supprimerDossier = (id) => api(`/discipline/${id}`, { method: "DELETE" });
 export const journalDiscipline = () => api("/discipline/journal");
 
 // ─── Publications (statut enum → minuscule) ──────────────────────────────
@@ -176,3 +181,4 @@ export const listerUsers = () => api("/users");
 export const creerUser = (data) => api("/users", { method: "POST", body: data });
 export const majUser = (id, patch) => api(`/users/${id}`, { method: "PATCH", body: patch });
 export const resetPasswordUser = (id, password) => api(`/users/${id}/password`, { method: "POST", body: { password } });
+export const supprimerUser = (id) => api(`/users/${id}`, { method: "DELETE" });

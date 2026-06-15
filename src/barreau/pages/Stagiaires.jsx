@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { PrinterIcon } from "@heroicons/react/24/outline";
-import { Badge, useToast, PageHeader } from "../components";
+import { PrinterIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { Badge, useToast, useConfirm, PageHeader } from "../components";
+import { useAuth } from "../auth/AuthContext";
 import { formatDate } from "../utils/format";
 import { infoStage } from "../data/derivations";
-import { listerMembres } from "../api/resources";
+import { listerMembres, supprimerMembre } from "../api/resources";
 
 const FILTRES = [
   { value: "tous", label: "Tous" },
@@ -12,7 +13,7 @@ const FILTRES = [
   { value: "termine", label: "Terminés" },
 ];
 
-function CarteStagiaire({ membre, stage, onFiche }) {
+function CarteStagiaire({ membre, stage, onFiche, onSupprimer }) {
   return (
     <div className="bpn-card p-4">
       <div className="flex items-start justify-between gap-2">
@@ -20,9 +21,16 @@ function CarteStagiaire({ membre, stage, onFiche }) {
           <div className="font-display text-base text-navy">Me {membre.nom}</div>
           <div className="text-xs text-gris">{membre.cabinet}</div>
         </div>
-        <Badge ton={stage.termine ? "vert" : "bleu"}>
-          {stage.termine ? "Stage terminé" : "En cours"}
-        </Badge>
+        <div className="flex items-center gap-1.5">
+          <Badge ton={stage.termine ? "vert" : "bleu"}>
+            {stage.termine ? "Stage terminé" : "En cours"}
+          </Badge>
+          {onSupprimer && (
+            <button type="button" onClick={() => onSupprimer(membre)} className="bpn-btn bpn-btn-ghost !px-1.5 !py-1 text-xs text-rouge" title="Supprimer définitivement">
+              <TrashIcon className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="mt-3 space-y-1 text-xs text-gris">
@@ -70,14 +78,31 @@ function CarteStagiaire({ membre, stage, onFiche }) {
 export function Stagiaires() {
   const navigate = useNavigate();
   const toast = useToast();
+  const confirm = useConfirm();
+  const { user } = useAuth();
+  const estAdmin = user?.role === "ADMIN";
   const [membres, setMembres] = useState([]);
   const [filtre, setFiltre] = useState("tous");
 
-  useEffect(() => {
+  const charger = useCallback(() => {
     listerMembres({ qualite: "STAGIAIRE" })
       .then((d) => setMembres(d.items))
       .catch((e) => toast.error(e.message));
   }, [toast]);
+  useEffect(() => { charger(); }, [charger]);
+
+  // Suppression définitive d'un stagiaire (cascade) — super-administrateur (ADMIN).
+  const supprimer = async (m) => {
+    const ok = await confirm({
+      title: "Supprimer le stagiaire",
+      message: `Me ${m.nom} sera définitivement supprimé, ainsi que tout son historique rattaché. Cette action est irréversible.`,
+      confirmLabel: "Supprimer",
+      danger: true,
+    });
+    if (!ok) return;
+    try { await supprimerMembre(m.id); toast.success(`Me ${m.nom} supprimé.`); charger(); }
+    catch (e) { toast.error(e.message); }
+  };
 
   const stagiaires = useMemo(
     () =>
@@ -117,7 +142,7 @@ export function Stagiaires() {
 
       <div className="bpn-no-print grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {stagiaires.map(({ membre, stage }) => (
-          <CarteStagiaire key={membre.id} membre={membre} stage={stage} onFiche={(m) => navigate(`/avocats/${m.id}`)} />
+          <CarteStagiaire key={membre.id} membre={membre} stage={stage} onFiche={(m) => navigate(`/avocats/${m.id}`)} onSupprimer={estAdmin ? supprimer : undefined} />
         ))}
         {stagiaires.length === 0 && (
           <p className="col-span-full py-10 text-center text-sm text-gris">

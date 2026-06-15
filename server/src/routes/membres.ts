@@ -270,6 +270,32 @@ membresRouter.post(
   })
 );
 
+/**
+ * DELETE /membres/:id — suppression définitive d'un membre (avocat/stagiaire).
+ * Réservé au super-administrateur (ADMIN). Efface en cascade tout l'historique
+ * rattaché, en une transaction. Les relations à cascade déclarée (cotisations,
+ * droits de plaidoirie, pièces du dossier) et la mise à NULL des dossiers
+ * disciplinaires (qui gardent leur valeur probante propre) sont assurées au
+ * niveau base par les contraintes FK ; on retire ici manuellement les seules
+ * relations en RESTRICT (reçus, quitus, paiements) avant de supprimer la fiche.
+ */
+membresRouter.delete(
+  "/:id",
+  requireRole("ADMIN"),
+  asyncH(async (req, res) => {
+    const id = Number(req.params.id);
+    const membre = await prisma.membre.findUnique({ where: { id } });
+    if (!membre) throw new HttpError(404, "Avocat introuvable");
+    await prisma.$transaction([
+      prisma.recu.deleteMany({ where: { membreId: id } }),
+      prisma.quitus.deleteMany({ where: { membreId: id } }),
+      prisma.paiement.deleteMany({ where: { membreId: id } }),
+      prisma.membre.delete({ where: { id } }),
+    ]);
+    res.json({ ok: true, nom: membre.nom });
+  })
+);
+
 /** POST /membres/:id/attestation — génère + archive l'attestation (FR-AV-05). */
 membresRouter.post(
   "/:id/attestation",

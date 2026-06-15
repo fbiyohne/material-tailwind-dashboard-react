@@ -83,6 +83,29 @@ usersRouter.patch(
   })
 );
 
+/**
+ * DELETE /users/:id — suppression définitive d'un compte (super-administrateur).
+ * Réservé à l'ADMIN. Garde-fous : on ne supprime ni son propre compte, ni le
+ * dernier administrateur du système (sinon plus aucun super-admin ne pourrait
+ * agir). Les jetons de rafraîchissement sont effacés en cascade (schéma).
+ */
+usersRouter.delete(
+  "/:id",
+  requireRole("ADMIN"),
+  asyncH(async (req: AuthRequest, res) => {
+    const id = Number(req.params.id);
+    if (id === req.user!.id) throw new HttpError(400, "Vous ne pouvez pas supprimer votre propre compte");
+    const cible = await prisma.user.findUnique({ where: { id } });
+    if (!cible) throw new HttpError(404, "Compte introuvable");
+    if (cible.role === "ADMIN") {
+      const admins = await prisma.user.count({ where: { role: "ADMIN" } });
+      if (admins <= 1) throw new HttpError(400, "Impossible de supprimer le dernier administrateur");
+    }
+    await prisma.user.delete({ where: { id } });
+    res.json({ ok: true, nom: cible.nom });
+  })
+);
+
 const passwordSchema = z.object({ password: z.string().min(8) });
 
 usersRouter.post(

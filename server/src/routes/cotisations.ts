@@ -77,6 +77,9 @@ cotisationsRouter.get(
         solde: Math.max(0, du - paye),
         datePaiement: c?.datePaiement ?? null,
         valideTresoriere: c?.valideTresoriere ?? false,
+        // Indique qu'une ligne réelle existe en base (donc supprimable par l'ADMIN),
+        // par opposition à une situation seulement calculée à la volée.
+        aLigne: !!c,
         statut: statutCotisation(du, paye),
       };
     });
@@ -132,6 +135,24 @@ cotisationsRouter.post(
     if (!membre) throw new HttpError(404, "Avocat introuvable");
     const resultat = await encaisser({ membre, annee, montant, type: "cotisation", mode, ref, date: date ? new Date(date) : undefined });
     res.status(201).json(resultat);
+  })
+);
+
+/**
+ * DELETE /cotisations/:membreId/:annee — efface la ligne de cotisation d'un
+ * membre pour un exercice (réinitialise sa situation). Réservé au
+ * super-administrateur (ADMIN) ; outil de correction des données.
+ */
+cotisationsRouter.delete(
+  "/:membreId/:annee",
+  requireRole("ADMIN"),
+  asyncH(async (req, res) => {
+    const membreId = Number(req.params.membreId);
+    const annee = Number(req.params.annee);
+    const c = await prisma.cotisation.findUnique({ where: { membreId_annee: { membreId, annee } } });
+    if (!c) throw new HttpError(404, "Cotisation introuvable");
+    await prisma.cotisation.delete({ where: { membreId_annee: { membreId, annee } } });
+    res.json({ ok: true });
   })
 );
 

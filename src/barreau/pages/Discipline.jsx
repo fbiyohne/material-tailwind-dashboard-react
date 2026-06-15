@@ -4,11 +4,13 @@ import {
   LockClosedIcon,
   ShieldExclamationIcon,
   PlusIcon,
+  TrashIcon,
 } from "@heroicons/react/24/outline";
-import { Badge, Modal, useToast, PageHeader, FormField, Notice, DataTable } from "../components";
+import { Badge, Modal, useToast, useConfirm, PageHeader, FormField, Notice, DataTable } from "../components";
+import { useAuth } from "../auth/AuthContext";
 import { STATUT_DOSSIER_META } from "../data/institutionnel";
 import { formatDate, formatDateTime } from "../utils/format";
-import { listerMembres, listerDossiers, ouvrirDossier as apiOuvrirDossier, journalDiscipline as apiJournal } from "../api/resources";
+import { listerMembres, listerDossiers, ouvrirDossier as apiOuvrirDossier, supprimerDossier, journalDiscipline as apiJournal } from "../api/resources";
 
 function OuvrirDossierModal({ open, onClose, onCreated }) {
   const toast = useToast();
@@ -62,6 +64,9 @@ function OuvrirDossierModal({ open, onClose, onCreated }) {
 export function Discipline() {
   const navigate = useNavigate();
   const toast = useToast();
+  const confirm = useConfirm();
+  const { user } = useAuth();
+  const estAdmin = user?.role === "ADMIN";
   const [acces, setAcces] = useState(false);
   const [ouvrir, setOuvrir] = useState(false);
   const [dossiers, setDossiers] = useState([]);
@@ -74,6 +79,19 @@ export function Discipline() {
     setErreur(false);
     listerDossiers().then(setDossiers).catch(() => setErreur(true)).finally(() => setChargement(false));
     apiJournal().then(setJournalDiscipline).catch(() => {});
+  };
+
+  // Suppression d'un dossier disciplinaire — réservée au super-administrateur (ADMIN).
+  const supprimer = async (d) => {
+    const ok = await confirm({
+      title: "Supprimer le dossier",
+      message: `Le dossier disciplinaire ${d.reference} sera définitivement supprimé. Cette action est irréversible.`,
+      confirmLabel: "Supprimer",
+      danger: true,
+    });
+    if (!ok) return;
+    try { await supprimerDossier(d.id); charger(); toast.success(`Dossier ${d.reference} supprimé.`); }
+    catch (e) { toast.error(e.message); }
   };
 
   const colonnes = [
@@ -89,9 +107,16 @@ export function Discipline() {
       cell: (d) => { const meta = STATUT_DOSSIER_META[d.statut]; return <Badge ton={meta.ton}>{meta.label}</Badge>; } },
     { key: "actions", label: "Actions", align: "right",
       cell: (d) => (
-        <button className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs" onClick={() => navigate(`/discipline/${d.id}`)}>
-          Ouvrir
-        </button>
+        <div className="flex justify-end gap-2">
+          <button className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs" onClick={() => navigate(`/discipline/${d.id}`)}>
+            Ouvrir
+          </button>
+          {estAdmin && (
+            <button className="bpn-btn bpn-btn-ghost !px-2 !py-1 text-xs text-rouge" onClick={() => supprimer(d)} title="Supprimer définitivement">
+              <TrashIcon className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
       ) },
   ];
 

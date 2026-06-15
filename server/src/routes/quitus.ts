@@ -104,3 +104,19 @@ quitusRouter.post(
     res.status(201).json(quitus);
   })
 );
+
+/**
+ * DELETE /quitus/:id — retire un quitus du registre. Action sensible réservée au
+ * super-administrateur (ADMIN) ; la suppression est tracée par le journal d'audit.
+ */
+quitusRouter.delete(
+  "/:id",
+  requireRole("ADMIN"),
+  asyncH(async (req, res) => {
+    const id = Number(req.params.id);
+    const quitus = await prisma.quitus.findUnique({ where: { id } });
+    if (!quitus) throw new HttpError(404, "Quitus introuvable");
+    await prisma.quitus.delete({ where: { id } });
+    res.json({ ok: true, numero: quitus.numero });
+  })
+);

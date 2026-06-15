@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { DocumentCheckIcon, CheckCircleIcon, LockClosedIcon, ArrowDownTrayIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
+import { DocumentCheckIcon, CheckCircleIcon, LockClosedIcon, ArrowDownTrayIcon, ShieldCheckIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
-import { QuitusDocument, useToast, PageHeader, DataTable } from "../components";
+import { QuitusDocument, useToast, useConfirm, PageHeader, DataTable } from "../components";
+import { useAuth } from "../auth/AuthContext";
 import { formatDate } from "../utils/format";
 import { telechargerCsv } from "../utils/exportCsv";
 import { exporterPdf } from "../utils/exports";
-import { quitusEligibles, listerQuitus, genererQuitus, getCotisations, getMembre } from "../api/resources";
+import { quitusEligibles, listerQuitus, genererQuitus, supprimerQuitus, getCotisations, getMembre } from "../api/resources";
 
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
 const pad3 = (n) => String(n).padStart(3, "0");
@@ -47,6 +48,9 @@ function PuceSynthese({ valeur, label, accent }) {
 
 export function Quitus() {
   const toast = useToast();
+  const confirm = useConfirm();
+  const { user } = useAuth();
+  const estAdmin = user?.role === "ADMIN";
   const [exercice, setExercice] = useState(EXERCICE_COURANT);
   const [eligibles, setEligibles] = useState([]);
   const [registre, setRegistre] = useState([]);
@@ -106,6 +110,30 @@ export function Quitus() {
       toast.error(e.message);
     }
   };
+
+  // Suppression d'un quitus du registre — réservée au super-administrateur (ADMIN).
+  const supprimer = async (q) => {
+    const ok = await confirm({
+      title: "Supprimer le quitus",
+      message: `Le quitus ${q.numero} (Me ${q.membre?.nom}) sera définitivement retiré du registre. Cette action est irréversible.`,
+      confirmLabel: "Supprimer",
+      danger: true,
+    });
+    if (!ok) return;
+    try { await supprimerQuitus(q.id); charger(); toast.success(`Quitus ${q.numero} supprimé.`); }
+    catch (e) { toast.error(e.message); }
+  };
+
+  const colonnes = estAdmin
+    ? [...COLONNES_REGISTRE, {
+        key: "actions", label: "", align: "right",
+        cell: (q) => (
+          <button className="bpn-btn bpn-btn-ghost !px-2 !py-1 text-xs text-rouge" onClick={() => supprimer(q)} title="Supprimer définitivement">
+            <TrashIcon className="h-3.5 w-3.5" />
+          </button>
+        ),
+      }]
+    : COLONNES_REGISTRE;
 
   return (
     <div className="space-y-5">
@@ -181,7 +209,7 @@ export function Quitus() {
               </div>
             </div>
             <DataTable
-              columns={COLONNES_REGISTRE}
+              columns={colonnes}
               rows={registre}
               getRowId={(q) => q.numero}
               loading={chargement}

@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useParams, Link } from "react-router-dom";
-import { ArrowLeftIcon, DocumentPlusIcon, PencilSquareIcon, NoSymbolIcon, IdentificationIcon, BanknotesIcon, FolderIcon } from "@heroicons/react/24/outline";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { ArrowLeftIcon, DocumentPlusIcon, PencilSquareIcon, NoSymbolIcon, TrashIcon, IdentificationIcon, BanknotesIcon, FolderIcon } from "@heroicons/react/24/outline";
 import { ScaleIcon } from "@heroicons/react/24/outline";
 import { Badge, StatutBadge, AttestationModal, EditMembreModal, PiecesDossier, useConfirm, useToast, PageHeader, Tabs, EmptyState, TableSkeleton, ErrorState } from "../components";
 import { QUALITE_LABEL, STATUT_META, infoStage } from "../data/derivations";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { formatFCFA, formatDate } from "../utils/format";
-import { getMembre, radierMembre, getDroits } from "../api/resources";
+import { getMembre, radierMembre, supprimerMembre, getDroits } from "../api/resources";
 import { useAuth } from "../auth/AuthContext";
 
 const FINANCES = ["SECRETAIRE_GENERAL", "TRESORIERE", "ADMIN"];
@@ -31,10 +31,12 @@ function Ligne({ label, value }) {
 
 export function AvocatDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const confirm = useConfirm();
   const toast = useToast();
   const { user } = useAuth();
   const peutVoirFinances = FINANCES.includes(user?.role);
+  const estAdmin = user?.role === "ADMIN";
   const [membre, setMembre] = useState(null);
   const [droit, setDroit] = useState(null); // ligne de droits réelle (rôles finances)
   const [attestation, setAttestation] = useState(null);
@@ -103,6 +105,22 @@ export function AvocatDetail() {
             if (ok) { try { await radierMembre(membre.id); toast.success(`Me ${membre.nom} a été radié(e).`); charger(); } catch (e) { toast.error(e.message); } }
           }}>
             <NoSymbolIcon className="h-4 w-4" /> Radier
+          </button>
+        )}
+        {estAdmin && (
+          <button className="bpn-btn bpn-btn-ghost text-rouge" onClick={async () => {
+            const ok = await confirm({
+              title: "Supprimer définitivement",
+              message: `Me ${membre.nom} sera définitivement supprimé(e), ainsi que tout son historique financier (cotisations, droits, reçus, quitus, paiements). Cette action est irréversible.`,
+              confirmLabel: "Supprimer",
+              danger: true,
+            });
+            if (ok) {
+              try { await supprimerMembre(membre.id); toast.success(`Me ${membre.nom} supprimé(e).`); navigate(membre.qualite === "stagiaire" ? "/stagiaires" : "/avocats"); }
+              catch (e) { toast.error(e.message); }
+            }
+          }}>
+            <TrashIcon className="h-4 w-4" /> Supprimer
           </button>
         )}
       </PageHeader>

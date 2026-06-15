@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { BanknotesIcon, ArrowDownTrayIcon, PrinterIcon } from "@heroicons/react/24/outline";
-import { Badge, StatCard, PaiementModal, useToast, EtatImprimable, PageHeader, DataTable, SelecteurExercice } from "../components";
+import { BanknotesIcon, ArrowDownTrayIcon, PrinterIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { Badge, StatCard, PaiementModal, useToast, useConfirm, EtatImprimable, PageHeader, DataTable, SelecteurExercice } from "../components";
+import { useAuth } from "../auth/AuthContext";
 import { STATUT_META } from "../data/derivations";
 import { EXERCICE_COURANT } from "../data/dashboard-data";
 import { formatFCFA } from "../utils/format";
 import { telechargerCsv } from "../utils/exportCsv";
 import { exporterExcel, exporterPdf } from "../utils/exports";
-import { getDroits } from "../api/resources";
+import { getDroits, supprimerDroit } from "../api/resources";
 
 const ENTETE_ETAT = ["N°", "Avocat", "Dû", "Perçu", "Solde", "Statut"];
 
@@ -20,6 +21,9 @@ const COLONNES_CSV = [
 
 export function DroitsPlaidoirie() {
   const toast = useToast();
+  const confirm = useConfirm();
+  const { user } = useAuth();
+  const estAdmin = user?.role === "ADMIN";
   const [exercice, setExercice] = useState(EXERCICE_COURANT);
   const [lignes, setLignes] = useState([]);
   const [totaux, setTotaux] = useState({ du: 0, paye: 0, solde: 0 });
@@ -36,6 +40,19 @@ export function DroitsPlaidoirie() {
   }, [exercice]);
   useEffect(() => { charger(); }, [charger]);
 
+  // Suppression de la ligne de droit de plaidoirie (réinitialise l'exercice) — ADMIN.
+  const supprimer = async (l) => {
+    const ok = await confirm({
+      title: "Supprimer le droit de plaidoirie",
+      message: `La ligne de droit de plaidoirie ${exercice} de Me ${l.membre.nom} sera supprimée (situation réinitialisée). Cette action est irréversible.`,
+      confirmLabel: "Supprimer",
+      danger: true,
+    });
+    if (!ok) return;
+    try { await supprimerDroit(l.membre.id, exercice); toast.success(`Droit ${exercice} supprimé — Me ${l.membre.nom}.`); charger(); }
+    catch (e) { toast.error(e.message); }
+  };
+
   const colonnes = [
     { key: "num", label: "N°", sortable: true, sortValue: (l) => l.membre.num,
       cell: (l) => <span className="font-mono text-xs text-gris">{l.membre.num}</span> },
@@ -49,11 +66,20 @@ export function DroitsPlaidoirie() {
     { key: "statut", label: "Statut", sortable: true, sortValue: (l) => l.statut,
       cell: (l) => { const meta = STATUT_META[l.statut]; return <Badge ton={meta.ton}>{meta.label}</Badge>; } },
     { key: "action", label: "Action", align: "right",
-      cell: (l) => l.solde > 0 ? (
-        <button className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs" onClick={() => setPaiement(l)}>
-          <BanknotesIcon className="h-3.5 w-3.5" /> Encaisser
-        </button>
-      ) : <span className="text-[11px] text-vert">✓ Soldé</span> },
+      cell: (l) => (
+        <div className="flex items-center justify-end gap-1.5">
+          {l.solde > 0 ? (
+            <button className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs" onClick={() => setPaiement(l)}>
+              <BanknotesIcon className="h-3.5 w-3.5" /> Encaisser
+            </button>
+          ) : <span className="text-[11px] text-vert">✓ Soldé</span>}
+          {estAdmin && l.aLigne && (
+            <button className="bpn-btn bpn-btn-ghost !px-2 !py-1 text-xs text-rouge" onClick={() => supprimer(l)} title="Supprimer la ligne de droit">
+              <TrashIcon className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      ) },
   ];
 
   const lignesEtat = useMemo(
