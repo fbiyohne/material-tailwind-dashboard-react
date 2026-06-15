@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CalendarDaysIcon, ClockIcon } from "@heroicons/react/24/outline";
-import { StatCard, EmptyState, PageHeader } from "../components";
+import { StatCard, EmptyState, PageHeader, SelecteurExercice } from "../components";
 import { formatFCFA, ratioPct } from "../utils/format";
-import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
+import { EXERCICE_COURANT } from "../data/dashboard-data";
 import { api } from "../api/client";
 import { getJournalAudit, getAgenda } from "../api/resources";
 
@@ -20,21 +20,6 @@ function formatQuand(v) {
   const d = new Date(v);
   if (Number.isNaN(d.getTime())) return v;
   return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
-}
-
-/** Sélecteur d'exercice (FR-DB-08). */
-function SelecteurExercice({ valeur, onChange }) {
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      <span className="bpn-label mr-1">Exercice</span>
-      {EXERCICES.map((annee) => (
-        <button key={annee} type="button" onClick={() => onChange(annee)}
-          className={`rounded px-3 py-1 font-mono text-xs transition ${annee === valeur ? "bg-navy text-white" : "bg-grisL text-gris hover:bg-grisM hover:text-encre"}`}>
-          {annee}
-        </button>
-      ))}
-    </div>
-  );
 }
 
 function ColonneFinance({ label, montant, total, accent }) {

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BanknotesIcon, ArrowDownTrayIcon, PrinterIcon } from "@heroicons/react/24/outline";
-import { Badge, StatCard, SortTh, Pagination, PaiementModal, useToast, EtatImprimable, PageHeader, EmptyState } from "../components";
+import { Badge, StatCard, SortTh, Pagination, PaiementModal, useToast, EtatImprimable, PageHeader, EmptyState, SelecteurExercice } from "../components";
 import { useDataTable } from "../hooks/useDataTable";
 import { STATUT_META } from "../data/derivations";
-import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
+import { EXERCICE_COURANT } from "../data/dashboard-data";
 import { formatFCFA } from "../utils/format";
 import { exporterExcel, exporterPdf } from "../utils/exports";
 import { getDroits } from "../api/resources";
@@ -55,13 +55,7 @@ export function DroitsPlaidoirie() {
   return (
     <div className="space-y-5">
       <PageHeader eyebrow="Finances" titre="Droits de plaidoirie" sousTitre="Suivi des droits par avocat et par exercice — états individuels et généraux.">
-        <span className="bpn-label mr-1">Exercice</span>
-        {EXERCICES.map((a) => (
-          <button key={a} type="button" onClick={() => setExercice(a)}
-            className={`rounded px-3 py-1 font-mono text-xs transition ${a === exercice ? "bg-navy text-white" : "bg-grisL text-gris hover:bg-grisM"}`}>
-            {a}
-          </button>
-        ))}
+        <SelecteurExercice valeur={exercice} onChange={setExercice} />
         <button className="bpn-btn bpn-btn-ghost !py-1.5 text-xs" onClick={() => exporterEtat("pdf")}>
           <PrinterIcon className="h-4 w-4" /> État PDF
         </button>

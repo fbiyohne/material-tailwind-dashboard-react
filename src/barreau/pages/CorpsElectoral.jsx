@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { PrinterIcon, ArrowDownTrayIcon, CheckBadgeIcon, NoSymbolIcon } from "@heroicons/react/24/outline";
-import { StatCard, Badge, EmptyState, useToast, PageHeader, Tabs } from "../components";
+import { StatCard, Badge, EmptyState, useToast, PageHeader, Tabs, SelecteurExercice } from "../components";
 import { exporterExcel } from "../utils/exports";
-import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
+import { EXERCICE_COURANT } from "../data/dashboard-data";
 import { getCorpsElectoral } from "../api/resources";
 
 const MOTIF_LABEL = {
@@ -32,19 +32,7 @@ export function CorpsElectoral() {
   return (
     <div className="space-y-5">
       <PageHeader className="bpn-no-print" eyebrow="Membres" titre="Corps électoral" sousTitre="Liste générée automatiquement : avocats inscrits, à jour de cotisations et non suspendus (RG-04 à RG-06).">
-        <span className="bpn-label mr-1">Exercice</span>
-        {EXERCICES.map((a) => (
-          <button
-            key={a}
-            type="button"
-            onClick={() => setExercice(a)}
-            className={`rounded px-3 py-1 font-mono text-xs transition ${
-              a === exercice ? "bg-navy text-white" : "bg-grisL text-gris hover:bg-grisM"
-            }`}
-          >
-            {a}
-          </button>
-        ))}
+        <SelecteurExercice valeur={exercice} onChange={setExercice} />
       </PageHeader>
 
       {/* Statistiques (FR-CE) */}
