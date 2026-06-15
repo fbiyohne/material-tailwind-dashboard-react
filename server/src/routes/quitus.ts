@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
@@ -70,20 +71,35 @@ quitusRouter.post(
   requireRole("SECRETAIRE_GENERAL"),
   asyncH(async (req, res) => {
     const { membreId, annee } = genSchema.parse(req.body);
-    const cotisation = await prisma.cotisation.findUnique({ where: { membreId_annee: { membreId, annee } }, include: { membre: true } });
-    if (!cotisation || !eligibleQuitus(cotisation)) {
-      throw new HttpError(409, "Quitus bloqué : l'avocat doit être à jour ET validé par la Trésorière (BR-01)");
-    }
-    const numero = await prochainNumeroQuitus(annee);
     const dateEmission = new Date();
 
-    const quitus = await prisma.$transaction(async (tx) => {
-      const q = await tx.quitus.create({ data: { numero, membreId, annee, dateEmission } });
-      await tx.archive.create({
-        data: { categorie: "Quitus", titre: `Quitus ${numero} — Me ${cotisation.membre.nom}`, reference: numero, date: dateEmission, membreNom: cotisation.membre.nom },
-      });
-      return q;
-    });
+    // Numérotation atomique (rejoue sur collision @unique) + re-vérification de
+    // l'éligibilité DANS la transaction (BR-01) : interdit l'émission pour un
+    // avocat redevenu débiteur entre le contrôle et l'écriture (TOCTOU, ex.
+    // annulation de reçu concurrente).
+    const MAX_TENTATIVES = 5;
+    let quitus;
+    for (let tentative = 1; ; tentative++) {
+      const numero = await prochainNumeroQuitus(annee);
+      try {
+        quitus = await prisma.$transaction(async (tx) => {
+          const cotisation = await tx.cotisation.findUnique({ where: { membreId_annee: { membreId, annee } }, include: { membre: true } });
+          if (!cotisation || !eligibleQuitus(cotisation)) {
+            throw new HttpError(409, "Quitus bloqué : l'avocat doit être à jour ET validé par la Trésorière (BR-01)");
+          }
+          const q = await tx.quitus.create({ data: { numero, membreId, annee, dateEmission } });
+          await tx.archive.create({
+            data: { categorie: "Quitus", titre: `Quitus ${numero} — Me ${cotisation.membre.nom}`, reference: numero, date: dateEmission, membreNom: cotisation.membre.nom },
+          });
+          return q;
+        });
+        break;
+      } catch (e) {
+        const collisionNumero =
+          e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002" && tentative < MAX_TENTATIVES;
+        if (!collisionNumero) throw e;
+      }
+    }
     res.status(201).json(quitus);
   })
 );

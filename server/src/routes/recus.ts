@@ -56,6 +56,14 @@ recusRouter.delete(
       } else {
         const c = await tx.cotisation.findUnique({ where });
         if (c) await tx.cotisation.update({ where, data: { montantPaye: Math.max(0, c.montantPaye - recu.montant), valideTresoriere: false } });
+        // L'avocat n'est plus à jour : révoquer tout quitus déjà émis pour cet
+        // exercice (BR-01) et son archive — sinon un certificat de non-redevance
+        // resterait valide et vérifiable publiquement pour un membre redevenu débiteur.
+        const quitusEmis = await tx.quitus.findMany({ where: { membreId: recu.membreId, annee: recu.annee }, select: { numero: true } });
+        if (quitusEmis.length) {
+          await tx.quitus.deleteMany({ where: { membreId: recu.membreId, annee: recu.annee } });
+          await tx.archive.deleteMany({ where: { categorie: "Quitus", reference: { in: quitusEmis.map((q) => q.numero) } } });
+        }
       }
       await tx.archive.deleteMany({ where: { categorie: "Reçu de paiement", reference: recu.numero } });
       await tx.recu.delete({ where: { id: recu.id } });
