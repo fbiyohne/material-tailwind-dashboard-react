@@ -31,3 +31,5 @@ export { DocumentChrome } from "./DocumentChrome";
 export { EtatImprimable } from "./EtatImprimable";
 export { ImportMembresModal } from "./ImportMembresModal";
 export { PiecesDossier } from "./PiecesDossier";
+export { Skeleton, TableSkeleton } from "./Skeleton";
+export { ErrorState } from "./ErrorState";

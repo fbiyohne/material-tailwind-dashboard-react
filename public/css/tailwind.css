@@ -202,6 +202,13 @@
     opacity: 0;
     animation: authReveal 0.62s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
+
+  .bpn-skeleton {
+    @apply animate-pulse rounded bg-grisM/60;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bpn-skeleton { @apply animate-none; }
+  }
 }
 
 /* ─── Impression d'un document officiel — masquage total de l'interface
