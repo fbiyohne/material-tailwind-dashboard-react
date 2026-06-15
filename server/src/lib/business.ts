@@ -69,36 +69,34 @@ export function eligibleQuitus(c: { montantDu: number; montantPaye: number; vali
 const pad = (n: number, l: number) => String(n).padStart(l, "0");
 
 /**
+ * Prochain rang d'une séquence : max des suffixes existants + 1. `segment` est
+ * l'index du segment numérique dans une valeur découpée sur « - » (ex. pour
+ * « R-2026-007 » → segment 2). Robuste aux valeurs absentes/malformées (→ 0).
+ */
+function prochainRang(valeurs: string[], segment: number): number {
+  const max = valeurs.reduce((m, v) => Math.max(m, parseInt(v.split("-")[segment] ?? "0", 10) || 0), 0);
+  return max + 1;
+}
+
+/**
  * N° de reçu R-AAAA-NNN, séquence réinitialisée par exercice (RG-10).
  * Le numéro est unique et jamais réutilisé (contrainte @unique sur Recu.numero).
  */
 export async function prochainNumeroRecu(annee: number): Promise<string> {
-  const items = await prisma.recu.findMany({
-    where: { numero: { startsWith: `R-${annee}-` } },
-    select: { numero: true },
-  });
-  const suffixes = items.map((r) => parseInt(r.numero.split("-")[2] ?? "0", 10));
-  const suivant = (suffixes.length ? Math.max(...suffixes) : 0) + 1;
-  return `R-${annee}-${pad(suivant, 3)}`;
+  const items = await prisma.recu.findMany({ where: { numero: { startsWith: `R-${annee}-` } }, select: { numero: true } });
+  return `R-${annee}-${pad(prochainRang(items.map((r) => r.numero), 2), 3)}`;
 }
 
 /** N° de quitus Q-AAAA-NNN, séquence par exercice (BR — registre). */
 export async function prochainNumeroQuitus(annee: number): Promise<string> {
   const items = await prisma.quitus.findMany({ where: { annee }, select: { numero: true } });
-  const suffixes = items.map((q) => parseInt(q.numero.split("-")[2] ?? "0", 10));
-  const suivant = (suffixes.length ? Math.max(...suffixes) : 0) + 1;
-  return `Q-${annee}-${pad(suivant, 3)}`;
+  return `Q-${annee}-${pad(prochainRang(items.map((q) => q.numero), 2), 3)}`;
 }
 
 /** Référence disciplinaire unique AAAA-NN (BR-06 / RG-12). */
 export async function prochaineReferenceDossier(annee: number): Promise<string> {
-  const items = await prisma.dossierDisciplinaire.findMany({
-    where: { reference: { startsWith: `${annee}-` } },
-    select: { reference: true },
-  });
-  const nums = items.map((d) => parseInt(d.reference.split("-")[1] ?? "0", 10));
-  const suivant = (nums.length ? Math.max(...nums) : 0) + 1;
-  return `${annee}-${pad(suivant, 2)}`;
+  const items = await prisma.dossierDisciplinaire.findMany({ where: { reference: { startsWith: `${annee}-` } }, select: { reference: true } });
+  return `${annee}-${pad(prochainRang(items.map((d) => d.reference), 1), 2)}`;
 }
 
 /** N° d'inscription PN-AAAA-NNN. */

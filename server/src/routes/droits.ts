@@ -16,12 +16,14 @@ droitsRouter.get(
   "/",
   asyncH(async (req, res) => {
     const annee = anneeDeRequete(req);
-    const tarifs = await tarifsActuels();
-    const membres = await prisma.membre.findMany({
-      where: { qualite: "AVOCAT" },
-      orderBy: { num: "asc" },
-      include: { droitsPlaidoirie: { where: { annee } } },
-    });
+    const [tarifs, membres] = await Promise.all([
+      tarifsActuels(),
+      prisma.membre.findMany({
+        where: { qualite: "AVOCAT" },
+        orderBy: { num: "asc" },
+        include: { droitsPlaidoirie: { where: { annee } } },
+      }),
+    ]);
     let totDu = 0;
     let totPaye = 0;
     const lignes = membres.map((m) => {

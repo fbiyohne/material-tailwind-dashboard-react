@@ -18,8 +18,10 @@ cotisationsRouter.post(
   requireRole("SECRETAIRE_GENERAL", "TRESORIERE"),
   asyncH(async (req, res) => {
     const annee = anneeDeRequete(req);
-    const tarifs = await tarifsActuels();
-    const membres = await prisma.membre.findMany({ include: { cotisations: { where: { annee } } } });
+    const [tarifs, membres] = await Promise.all([
+      tarifsActuels(),
+      prisma.membre.findMany({ include: { cotisations: { where: { annee } } } }),
+    ]);
     const cibles = membres.filter((m) => {
       const c = m.cotisations[0];
       const du = c?.montantDu ?? montantDuAvec(tarifs, m.qualite);
@@ -57,11 +59,13 @@ cotisationsRouter.get(
   "/",
   asyncH(async (req, res) => {
     const annee = anneeDeRequete(req);
-    const tarifs = await tarifsActuels();
-    const membres = await prisma.membre.findMany({
-      orderBy: { num: "asc" },
-      include: { cotisations: { where: { annee } } },
-    });
+    const [tarifs, membres] = await Promise.all([
+      tarifsActuels(),
+      prisma.membre.findMany({
+        orderBy: { num: "asc" },
+        include: { cotisations: { where: { annee } } },
+      }),
+    ]);
     const lignes = membres.map((m) => {
       const c = m.cotisations[0];
       const du = c?.montantDu ?? montantDuAvec(tarifs, m.qualite);
@@ -91,11 +95,13 @@ cotisationsRouter.post(
   requireRole("SECRETAIRE_GENERAL", "TRESORIERE"),
   asyncH(async (req, res) => {
     const annee = anneeDeRequete(req);
-    const tarifs = await tarifsActuels();
-    const membres = await prisma.membre.findMany({
-      where: { statut: { not: "RADIE" } },
-      include: { cotisations: { where: { annee } } },
-    });
+    const [tarifs, membres] = await Promise.all([
+      tarifsActuels(),
+      prisma.membre.findMany({
+        where: { statut: { not: "RADIE" } },
+        include: { cotisations: { where: { annee } } },
+      }),
+    ]);
     const aCreer = membres
       .filter((m) => m.cotisations.length === 0)
       .map((m) => ({ membreId: m.id, annee, montantDu: montantDuAvec(tarifs, m.qualite), montantPaye: 0, valideTresoriere: false }));

@@ -13,8 +13,10 @@ dashboardRouter.get(
   "/",
   asyncH(async (req, res) => {
     const annee = anneeDeRequete(req);
-    const tarifs = await tarifsActuels();
-    const membres = await prisma.membre.findMany({ include: { cotisations: { where: { annee } } } });
+    const [tarifs, membres] = await Promise.all([
+      tarifsActuels(),
+      prisma.membre.findMany({ include: { cotisations: { where: { annee } } } }),
+    ]);
 
     let inscrits = 0;
     let stagiaires = 0;
