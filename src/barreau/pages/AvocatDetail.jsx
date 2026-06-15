@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeftIcon, DocumentPlusIcon, PencilSquareIcon, NoSymbolIcon, IdentificationIcon, BanknotesIcon, FolderIcon } from "@heroicons/react/24/outline";
 import { ScaleIcon } from "@heroicons/react/24/outline";
-import { Badge, StatutBadge, AttestationModal, EditMembreModal, PiecesDossier, useConfirm, useToast, PageHeader, Tabs } from "../components";
+import { Badge, StatutBadge, AttestationModal, EditMembreModal, PiecesDossier, useConfirm, useToast, PageHeader, Tabs, EmptyState } from "../components";
 import { QUALITE_LABEL, STATUT_META, infoStage } from "../data/derivations";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { formatFCFA } from "../utils/format";
@@ -213,7 +213,7 @@ export function AvocatDetail() {
 
                 <Carte titre="Documents émis">
                   {documents.length === 0 ? (
-                    <p className="py-4 text-center text-sm text-gris">Aucun document émis pour cet avocat.</p>
+                    <EmptyState title="Aucun document émis" description="Les quitus et reçus délivrés à cet avocat apparaîtront ici." />
                   ) : (
                     <ul className="divide-y divide-grisL">
                       {documents.map((d, i) => (

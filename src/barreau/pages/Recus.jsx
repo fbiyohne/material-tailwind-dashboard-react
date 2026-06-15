@@ -4,7 +4,7 @@ import { QUALITE_LABEL } from "../data/derivations";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { formatFCFA } from "../utils/format";
 import { montantEnLettresFCFA } from "../utils/nombreEnLettres";
-import { DocumentChrome, Pagination, useToast, useConfirm, PageHeader } from "../components";
+import { DocumentChrome, Pagination, useToast, useConfirm, PageHeader, EmptyState } from "../components";
 import { listerMembres, listerRecus, enregistrerPaiement, telechargerRecuPdf, annulerRecu } from "../api/resources";
 
 const MODES = ["Espèces", "Virement", "Chèque", "Mobile Money"];
@@ -175,7 +175,7 @@ export function Recus() {
               <span className="font-mono text-xs text-gris">{recus.length}</span>
             </div>
             {recus.length === 0 ? (
-              <p className="px-4 py-6 text-center text-sm text-gris">Aucun reçu émis.</p>
+              <EmptyState title="Aucun reçu émis" description="Les reçus de paiement émis apparaîtront ici." />
             ) : (
               <>
                 <ul className="divide-y divide-grisL">

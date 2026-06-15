@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DocumentCheckIcon, CheckCircleIcon, LockClosedIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
-import { DocumentChrome, SortTh, Pagination, useToast, PageHeader } from "../components";
+import { DocumentChrome, SortTh, Pagination, useToast, PageHeader, EmptyState } from "../components";
 import { useDataTable } from "../hooks/useDataTable";
 import { quitusEligibles, listerQuitus, genererQuitus, getCotisations, telechargerQuitusPdf } from "../api/resources";
 
@@ -155,7 +155,7 @@ export function Quitus() {
               <span className="font-mono text-xs text-gris">{registre.length}</span>
             </div>
             {registre.length === 0 ? (
-              <p className="px-4 py-6 text-center text-sm text-gris">Aucun quitus émis.</p>
+              <EmptyState title="Aucun quitus émis" description="Les quitus délivrés apparaîtront dans ce registre." />
             ) : (
               <>
                 <table className="bpn-table">
