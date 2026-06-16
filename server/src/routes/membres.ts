@@ -10,7 +10,7 @@ import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole, type AuthRequest } from "../middleware/auth.js";
 import { prochainNumInscription, prochainNumeroAttestation, archiver } from "../lib/business.js";
 import { enregistrerFichier } from "../lib/storage.js";
-import { htmlVersPdf } from "../lib/pdf.js";
+import { envoyerPdf } from "../lib/pdf.js";
 import { attestationHtml } from "../lib/templates.js";
 import { envoyerEmail } from "../lib/notifications.js";
 
@@ -383,9 +383,6 @@ membresRouter.get(
     const numero = await prochainNumeroAttestation();
     const date = new Date();
     await archiver({ categorie: "Attestation d'inscription", titre: `Attestation ${numero} — Me ${membre.nom}`, reference: numero, date, membreNom: membre.nom });
-    const pdf = await htmlVersPdf(attestationHtml(membre, numero, date));
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="Attestation-${numero}.pdf"`);
-    res.end(pdf);
+    await envoyerPdf(res, attestationHtml(membre, numero, date), `Attestation-${numero}.pdf`);
   })
 );

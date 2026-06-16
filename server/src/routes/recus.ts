@@ -2,7 +2,7 @@ import { Router } from "express";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
-import { htmlVersPdf } from "../lib/pdf.js";
+import { envoyerPdf } from "../lib/pdf.js";
 import { recuHtml } from "../lib/templates.js";
 
 export const recusRouter = Router();
@@ -15,10 +15,7 @@ recusRouter.get(
   asyncH(async (req, res) => {
     const recu = await prisma.recu.findUnique({ where: { id: Number(req.params.id) }, include: { membre: true } });
     if (!recu) throw new HttpError(404, "Reçu introuvable");
-    const pdf = await htmlVersPdf(recuHtml(recu, recu.membre));
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="Recu-${recu.numero}.pdf"`);
-    res.end(pdf);
+    await envoyerPdf(res, recuHtml(recu, recu.membre), `Recu-${recu.numero}.pdf`);
   })
 );
 

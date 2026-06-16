@@ -6,7 +6,7 @@ import { anneeDeRequete } from "../lib/requete.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { eligibleQuitus, prochainNumeroQuitus } from "../lib/business.js";
-import { htmlVersPdf } from "../lib/pdf.js";
+import { envoyerPdf } from "../lib/pdf.js";
 import { quitusHtml } from "../lib/templates.js";
 import { signerDocument, quitusPayload } from "../lib/signature.js";
 
@@ -21,10 +21,7 @@ quitusRouter.get(
     const quitus = await prisma.quitus.findUnique({ where: { id: Number(req.params.id) }, include: { membre: true } });
     if (!quitus) throw new HttpError(404, "Quitus introuvable");
     const signature = signerDocument(quitusPayload(quitus));
-    const pdf = await htmlVersPdf(quitusHtml(quitus, quitus.membre, signature));
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="Quitus-${quitus.numero}.pdf"`);
-    res.end(pdf);
+    await envoyerPdf(res, quitusHtml(quitus, quitus.membre, signature), `Quitus-${quitus.numero}.pdf`);
   })
 );
 
