@@ -333,6 +333,107 @@ describe("Discipline — accès restreint (RG-13)", () => {
   });
 });
 
+describe("Publications — workflow de validation & RBAC", () => {
+  it("la Trésorière n'a pas accès au module (403)", async () => {
+    expect((await request(app).get("/api/publications").set(...bearer(tr))).status).toBe(403);
+  });
+
+  it("le SG crée un projet ; seul le Bâtonnier/Admin peut le VALIDER", async () => {
+    const p = await request(app).post("/api/publications").set(...bearer(sg)).send({ titre: `Pub ${Date.now()}`, type: "Avis", contenu: "x" });
+    expect(p.status).toBe(201);
+    // VALIDE est réservé au Bâtonnier (ou Admin) — le SG est refusé.
+    expect((await request(app).post(`/api/publications/${p.body.id}/statut`).set(...bearer(sg)).send({ statut: "VALIDE" })).status).toBe(403);
+    expect((await request(app).post(`/api/publications/${p.body.id}/statut`).set(...bearer(admin)).send({ statut: "VALIDE" })).status).toBe(200);
+  });
+
+  it("une publication diffusée (PUBLIE) ne peut plus être supprimée (409)", async () => {
+    const p = await request(app).post("/api/publications").set(...bearer(sg)).send({ titre: `Pub ${Date.now()}`, type: "Avis" });
+    await request(app).post(`/api/publications/${p.body.id}/statut`).set(...bearer(admin)).send({ statut: "PUBLIE" });
+    expect((await request(app).delete(`/api/publications/${p.body.id}`).set(...bearer(sg))).status).toBe(409);
+  });
+
+  it("un projet non diffusé est supprimable par le SG (200)", async () => {
+    const p = await request(app).post("/api/publications").set(...bearer(sg)).send({ titre: `Pub ${Date.now()}`, type: "Avis" });
+    expect((await request(app).delete(`/api/publications/${p.body.id}`).set(...bearer(sg))).status).toBe(200);
+  });
+});
+
+describe("Réunions & Assemblées — création réservée au SG", () => {
+  it("le SG crée, met à jour et supprime une réunion ; la Trésorière est exclue (403)", async () => {
+    expect((await request(app).get("/api/reunions").set(...bearer(tr))).status).toBe(403);
+    const r = await request(app).post("/api/reunions").set(...bearer(sg)).send({ date: "2026-09-01", lieu: "Maison de l'Avocat", ordreDuJour: ["Point 1"] });
+    expect(r.status).toBe(201);
+    const patch = await request(app).patch(`/api/reunions/${r.body.id}`).set(...bearer(sg)).send({ pv: "Compte rendu", statut: "TENUE" });
+    expect(patch.status).toBe(200);
+    expect(patch.body.pv).toBe("Compte rendu");
+    expect((await request(app).delete(`/api/reunions/${r.body.id}`).set(...bearer(sg))).status).toBe(200);
+  });
+
+  it("le SG crée une assemblée AGO ; un type invalide est rejeté (400)", async () => {
+    const a = await request(app).post("/api/assemblees").set(...bearer(sg)).send({ type: "AGO", date: "2026-10-01", ordreDuJour: ["Bilan"] });
+    expect(a.status).toBe(201);
+    const patch = await request(app).patch(`/api/assemblees/${a.body.id}`).set(...bearer(sg)).send({ decisions: ["Adopté"], quorumPresent: 42 });
+    expect(patch.status).toBe(200);
+    expect(patch.body.decisions).toContain("Adopté");
+    expect((await request(app).post("/api/assemblees").set(...bearer(sg)).send({ type: "XXX", date: "2026-10-01" })).status).toBe(400);
+  });
+});
+
+describe("Archives — registre documentaire (RG-14, suppression SG)", () => {
+  it("crée, recherche puis supprime une archive (suppression réservée au SG)", async () => {
+    const ref = `E2E-ARC-${Date.now()}`;
+    const a = await request(app).post("/api/archives").set(...bearer(sg)).send({ categorie: "Test E2E", titre: "Document de test", reference: ref });
+    expect(a.status).toBe(201);
+    const recherche = await request(app).get(`/api/archives?q=${ref}`).set(...bearer(sg));
+    expect(recherche.status).toBe(200);
+    expect(Array.isArray(recherche.body.archives)).toBe(true);
+    expect(recherche.body.archives.some((x: any) => x.id === a.body.id)).toBe(true);
+    expect(Array.isArray(recherche.body.categories)).toBe(true);
+    // suppression réservée au SG (Trésorière exclue du module → 403)
+    expect((await request(app).delete(`/api/archives/${a.body.id}`).set(...bearer(tr))).status).toBe(403);
+    expect((await request(app).delete(`/api/archives/${a.body.id}`).set(...bearer(sg))).status).toBe(200);
+  });
+
+  it("rejette une date d'archive invalide (400)", async () => {
+    const r = await request(app).post("/api/archives").set(...bearer(sg)).send({ categorie: "Test", titre: "x", date: "pas-une-date" });
+    expect(r.status).toBe(400);
+  });
+});
+
+describe("Droits de plaidoirie — paiement & reçu (miroir BR-03)", () => {
+  it("enregistre un paiement et reflète le solde ; montant négatif rejeté (400)", async () => {
+    const m = await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: `DROIT Test ${Date.now()}`, qualite: "AVOCAT" });
+    const membreId = m.body.id;
+    const annee = new Date().getFullYear();
+    expect((await request(app).post("/api/droits/paiement").set(...bearer(sg)).send({ membreId, annee, montant: -1 })).status).toBe(400);
+    const pay = await request(app).post("/api/droits/paiement").set(...bearer(sg)).send({ membreId, annee, montant: 10000, mode: "Espèces" });
+    expect(pay.status).toBeLessThan(300);
+    const grille = await request(app).get(`/api/droits?annee=${annee}`).set(...bearer(tr));
+    expect(grille.status).toBe(200);
+    const ligne = grille.body.lignes.find((l: any) => l.membre.id === membreId);
+    expect(ligne.aLigne).toBe(true);
+    expect(ligne.paye).toBeGreaterThan(0);
+  });
+});
+
+describe("Demandes d'accès — dépôt public & traitement (SG/Admin)", () => {
+  it("dépôt public sans authentification, puis approbation unique (re-traitement → 409)", async () => {
+    const email = `demande.${Date.now()}@exemple.cg`;
+    const depot = await request(app).post("/api/auth/demande-acces").send({ nom: "Confrère Test", email, motif: "Je souhaite accéder à mon espace personnel." });
+    expect(depot.status).toBeLessThan(300);
+    // la Trésorière ne peut pas consulter les demandes (SG/Admin only)
+    expect((await request(app).get("/api/demandes-acces").set(...bearer(tr))).status).toBe(403);
+    const liste = await request(app).get("/api/demandes-acces").set(...bearer(sg));
+    expect(liste.status).toBe(200);
+    const demande = liste.body.find((d: any) => d.email === email);
+    expect(demande).toBeTruthy();
+    expect(demande.statut).toBe("EN_ATTENTE");
+    expect((await request(app).post(`/api/demandes-acces/${demande.id}/approuver`).set(...bearer(sg))).status).toBe(200);
+    // une demande déjà traitée ne peut être ré-approuvée (409)
+    expect((await request(app).post(`/api/demandes-acces/${demande.id}/approuver`).set(...bearer(sg))).status).toBe(409);
+  });
+});
+
 /** Provisionne un avocat avec accès espace activé ; renvoie sa fiche + son JWT. */
 async function creerAvocatEspace(suffixe: string) {
   const email = `e2e.${suffixe}.${Date.now()}.${Math.random().toString(36).slice(2, 7)}@barreau-pn.cg`;
