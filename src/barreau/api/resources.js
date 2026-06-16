@@ -186,6 +186,20 @@ export const telechargerEspaceQuitusPdf = (id, numero) => telechargerPdf(`/espac
 export const initierEspacePaiement = (body) => api("/espace/paiement", { method: "POST", body });
 export const confirmerEspacePaiementSandbox = (ref, succes = true) => api(`/espace/paiement/${ref}/confirmer-sandbox`, { method: "POST", body: { succes } });
 
+// Consultation en libre-service (annuaire, AG, discipline, archives, publications)
+export const getEspaceAnnuaire = (q = "") =>
+  api(`/espace/annuaire${q ? `?q=${encodeURIComponent(q)}` : ""}`).then((a) => a.map(normaliserMembre));
+export const getEspaceAssemblees = () => api("/espace/assemblees");
+export const getEspaceAssemblee = (id) => api(`/espace/assemblees/${id}`);
+export const telechargerEspaceConvocationAgPdf = (id) => telechargerPdf(`/espace/assemblees/${id}/convocation/pdf`, "Convocation-AG.pdf");
+export const telechargerEspacePvAgPdf = (id) => telechargerPdf(`/espace/assemblees/${id}/pv/pdf`, "PV-assemblee.pdf");
+export const getEspaceDiscipline = () => api("/espace/discipline").then((a) => a.map(normDossier));
+export const getEspaceDossier = (id) => api(`/espace/discipline/${id}`).then(normDossier);
+export const telechargerEspaceDecisionPdf = (id, ref) => telechargerPdf(`/espace/discipline/${id}/decision/pdf`, `Decision-${ref}.pdf`);
+export const getEspaceArchives = (q = "") => api(`/espace/archives${q ? `?q=${encodeURIComponent(q)}` : ""}`);
+export const getEspacePublications = () => api("/espace/publications").then((a) => a.map(normPub));
+export const getEspacePublication = (id) => api(`/espace/publications/${id}`).then(normPub);
+
 // ─── Activation de compte (page publique « Activer mon espace ») ──────────
 export const getActivation = (token) => api(`/auth/activation/${token}`, { auth: false });
 export const activerCompte = (token, password) => api("/auth/activer", { method: "POST", auth: false, body: { token, password } });

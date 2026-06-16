@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireAvocat, type AuthRequest } from "../middleware/auth.js";
@@ -7,7 +8,7 @@ import { montantDuAvec, droitDuAvec, statutCotisation, tarifsActuels } from "../
 import { finaliserPaiement } from "../lib/encaissement.js";
 import { CANAUX, modeSandbox, nouvelleReference, initierPaiement } from "../lib/paiement.js";
 import { htmlVersPdf } from "../lib/pdf.js";
-import { recuHtml, quitusHtml } from "../lib/templates.js";
+import { recuHtml, quitusHtml, convocationAgHtml, pvAssembleeHtml, decisionDisciplineHtml } from "../lib/templates.js";
 import { signerDocument, quitusPayload } from "../lib/signature.js";
 
 /**
@@ -187,5 +188,167 @@ espaceRouter.get(
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="Quitus-${quitus.numero}.pdf"`);
     res.end(pdf);
+  })
+);
+
+// ── Annuaire des confrères (lecture seule) ──────────────────────────────────
+
+/**
+ * GET /espace/annuaire — annuaire du Barreau accessible à tout membre.
+ * Projection professionnelle (nom, cabinet, coordonnées) pour permettre à un
+ * avocat de joindre un confrère ; aucune donnée personnelle sensible (adresse,
+ * RCCM, CNSS, finances…) n'est exposée.
+ */
+espaceRouter.get(
+  "/annuaire",
+  asyncH(async (req: AuthRequest, res) => {
+    const q = String(req.query.q ?? "").trim();
+    const membres = await prisma.membre.findMany({
+      where: q
+        ? { OR: [{ nom: { contains: q, mode: "insensitive" } }, { cabinet: { contains: q, mode: "insensitive" } }] }
+        : undefined,
+      orderBy: { nom: "asc" },
+      select: {
+        id: true, num: true, numInscription: true, nom: true, qualite: true,
+        statut: true, cabinet: true, tel: true, email: true, dateInscription: true,
+      },
+    });
+    res.json(membres.map((m) => ({ ...m, dateInscription: dateCourte(m.dateInscription) })));
+  })
+);
+
+// ── Assemblées générales (lecture seule — concernent tous les membres) ───────
+
+/** GET /espace/assemblees — liste des assemblées générales (convocations, PV). */
+espaceRouter.get(
+  "/assemblees",
+  asyncH(async (_req, res) => {
+    res.json(await prisma.assemblee.findMany({ orderBy: { date: "desc" } }));
+  })
+);
+
+/** GET /espace/assemblees/:id — détail d'une assemblée générale. */
+espaceRouter.get(
+  "/assemblees/:id",
+  asyncH(async (req: AuthRequest, res) => {
+    const a = await prisma.assemblee.findUnique({ where: { id: Number(req.params.id) } });
+    if (!a) throw new HttpError(404, "Assemblée introuvable");
+    res.json(a);
+  })
+);
+
+/** GET /espace/assemblees/:id/convocation/pdf — convocation d'AG (PDF). */
+espaceRouter.get(
+  "/assemblees/:id/convocation/pdf",
+  asyncH(async (req: AuthRequest, res) => {
+    const a = await prisma.assemblee.findUnique({ where: { id: Number(req.params.id) } });
+    if (!a) throw new HttpError(404, "Assemblée introuvable");
+    const jour = String(a.date).slice(0, 10);
+    const pdf = await htmlVersPdf(convocationAgHtml(a));
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="Convocation-${a.type}-${jour}.pdf"`);
+    res.end(pdf);
+  })
+);
+
+/** GET /espace/assemblees/:id/pv/pdf — procès-verbal d'AG (PDF), si disponible. */
+espaceRouter.get(
+  "/assemblees/:id/pv/pdf",
+  asyncH(async (req: AuthRequest, res) => {
+    const a = await prisma.assemblee.findUnique({ where: { id: Number(req.params.id) } });
+    if (!a) throw new HttpError(404, "Assemblée introuvable");
+    if (!a.pv) throw new HttpError(404, "Procès-verbal non disponible");
+    const jour = String(a.date).slice(0, 10);
+    const pdf = await htmlVersPdf(pvAssembleeHtml(a));
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="PV-${a.type}-${jour}.pdf"`);
+    res.end(pdf);
+  })
+);
+
+// ── Discipline — strictement les dossiers concernant l'avocat connecté ───────
+
+/** GET /espace/discipline — dossiers disciplinaires où l'avocat est mis en cause. */
+espaceRouter.get(
+  "/discipline",
+  asyncH(async (req: AuthRequest, res) => {
+    res.json(
+      await prisma.dossierDisciplinaire.findMany({
+        where: { membreId: monMembreId(req) },
+        orderBy: { id: "desc" },
+      })
+    );
+  })
+);
+
+/** GET /espace/discipline/:id — détail d'un dossier le concernant. */
+espaceRouter.get(
+  "/discipline/:id",
+  asyncH(async (req: AuthRequest, res) => {
+    const d = await prisma.dossierDisciplinaire.findUnique({ where: { id: Number(req.params.id) } });
+    if (!d || d.membreId !== monMembreId(req)) throw new HttpError(404, "Dossier introuvable");
+    res.json(d);
+  })
+);
+
+/** GET /espace/discipline/:id/decision/pdf — décision rendue, si disponible. */
+espaceRouter.get(
+  "/discipline/:id/decision/pdf",
+  asyncH(async (req: AuthRequest, res) => {
+    const d = await prisma.dossierDisciplinaire.findUnique({ where: { id: Number(req.params.id) } });
+    if (!d || d.membreId !== monMembreId(req)) throw new HttpError(404, "Dossier introuvable");
+    if (!d.decision) throw new HttpError(404, "Décision non disponible");
+    const pdf = await htmlVersPdf(decisionDisciplineHtml(d));
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="Decision-${d.reference}.pdf"`);
+    res.end(pdf);
+  })
+);
+
+// ── Archives officielles (institutionnelles + concernant l'avocat) ──────────
+
+/** Catégories d'archives confidentielles, jamais exposées dans l'espace avocat. */
+const ARCHIVES_EXCLUES = ["Convocation disciplinaire", "Décision disciplinaire"];
+
+/**
+ * GET /espace/archives — registre des documents officiels consultables par
+ * l'avocat : pièces institutionnelles (membreNom nul) et documents le concernant
+ * (son propre nom). Les pièces disciplinaires nominatives en sont exclues.
+ */
+espaceRouter.get(
+  "/archives",
+  asyncH(async (req: AuthRequest, res) => {
+    const moi = await prisma.membre.findUnique({ where: { id: monMembreId(req) }, select: { nom: true } });
+    const q = String(req.query.q ?? "").trim();
+    const where: Prisma.ArchiveWhereInput = {
+      categorie: { notIn: ARCHIVES_EXCLUES },
+      OR: [{ membreNom: null }, { membreNom: "" }, ...(moi?.nom ? [{ membreNom: moi.nom }] : [])],
+      ...(q
+        ? { AND: [{ OR: [{ titre: { contains: q, mode: "insensitive" } }, { reference: { contains: q, mode: "insensitive" } }] }] }
+        : {}),
+    };
+    const archives = await prisma.archive.findMany({ where, orderBy: { archiveLe: "desc" }, take: 300 });
+    const categories = [...new Set(archives.map((a) => a.categorie))].sort();
+    res.json({ archives, categories });
+  })
+);
+
+// ── Publications publiées (lecture seule) ───────────────────────────────────
+
+/** GET /espace/publications — communications officielles publiées du Barreau. */
+espaceRouter.get(
+  "/publications",
+  asyncH(async (_req, res) => {
+    res.json(await prisma.publication.findMany({ where: { statut: "PUBLIE" }, orderBy: { date: "desc" } }));
+  })
+);
+
+/** GET /espace/publications/:id — détail d'une publication publiée. */
+espaceRouter.get(
+  "/publications/:id",
+  asyncH(async (req: AuthRequest, res) => {
+    const p = await prisma.publication.findUnique({ where: { id: Number(req.params.id) } });
+    if (!p || p.statut !== "PUBLIE") throw new HttpError(404, "Publication introuvable");
+    res.json(p);
   })
 );
