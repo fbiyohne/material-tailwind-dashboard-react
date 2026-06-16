@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import PropTypes from "prop-types";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { XMarkIcon, ScaleIcon, ArrowRightOnRectangleIcon } from "@heroicons/react/24/outline";
 import { sectionsPourRole } from "../routes";
 import { useAuth } from "../auth/AuthContext";
-import { getCotisations, listerDossiers } from "../api/resources";
+import { getCotisations, listerDossiers, getMessagerieNonLus } from "../api/resources";
 import { EXERCICE_COURANT } from "../data/dashboard-data";
 
 const initiales = (nom) => {
@@ -27,6 +27,7 @@ const ROLE_LABEL = {
  */
 export function Sidebar({ open, onClose }) {
   const { user, logout } = useAuth();
+  const location = useLocation();
   const sections = sectionsPourRole(user?.role); // RBAC : menu filtré par rôle.
 
   // Pastilles de notification calculées sur des données réelles (et non codées
@@ -49,6 +50,17 @@ export function Sidebar({ open, onClose }) {
     }
     return () => { actif = false; };
   }, [user?.role]);
+
+  // Pastille de messagerie côté administration — rafraîchie à chaque navigation
+  // (donc remise à jour après lecture d'un fil) pour les officiers de l'Ordre.
+  useEffect(() => {
+    if (!["SECRETAIRE_GENERAL", "BATONNIER", "TRESORIERE", "ADMIN"].includes(user?.role)) return undefined;
+    let actif = true;
+    getMessagerieNonLus()
+      .then((d) => actif && setBadges((b) => ({ ...b, "/messagerie": d.total })))
+      .catch(() => {});
+    return () => { actif = false; };
+  }, [user?.role, location.pathname]);
 
   return (
     <>

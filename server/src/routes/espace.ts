@@ -10,6 +10,7 @@ import { CANAUX, modeSandbox, nouvelleReference, initierPaiement } from "../lib/
 import { htmlVersPdf } from "../lib/pdf.js";
 import { recuHtml, quitusHtml, convocationAgHtml, pvAssembleeHtml, decisionDisciplineHtml } from "../lib/templates.js";
 import { signerDocument, quitusPayload } from "../lib/signature.js";
+import { envoyerEmail } from "../lib/notifications.js";
 
 /**
  * Espace avocat — surface en libre-service, strictement cloisonnée.
@@ -361,6 +362,33 @@ async function monNom(req: AuthRequest) {
   return m ? `Me ${m.nom}` : "Avocat";
 }
 
+/**
+ * Notifie par email les officiers de l'administration (SG / Bâtonnier /
+ * Trésorière) d'un nouveau message d'avocat. L'envoi ne doit jamais bloquer ni
+ * faire échouer la requête (best-effort, journalisé par la couche notifications).
+ */
+async function notifierAdministration(sujet: string, auteurNom: string, corps: string) {
+  try {
+    const officiers = await prisma.user.findMany({
+      where: { actif: true, role: { in: ["SECRETAIRE_GENERAL", "BATONNIER", "TRESORIERE"] } },
+      select: { email: true },
+    });
+    const to = officiers.map((o) => o.email).filter(Boolean).join(", ");
+    if (!to) return;
+    await envoyerEmail({
+      to,
+      subject: `Messagerie — nouveau message de ${auteurNom}`,
+      text:
+        `${auteurNom} a adressé un message à l'administration du Barreau.\n\n` +
+        `Objet : ${sujet}\n\n« ${corps} »\n\n` +
+        `Connectez-vous à l'espace d'administration (module « Messagerie ») pour y répondre.`,
+      evenement: "MESSAGE",
+    });
+  } catch {
+    /* notification best-effort : on n'interrompt pas l'envoi du message */
+  }
+}
+
 /** GET /espace/messagerie — fils de discussion de l'avocat (synthèse + non-lus). */
 espaceRouter.get(
   "/messagerie",
@@ -478,6 +506,7 @@ espaceRouter.post(
         messages: { create: { corps, auteurMembreId: moi, auteurNom, estAdministration: false } },
       },
     });
+    if (avecAdministration) await notifierAdministration(sujet, auteurNom, corps);
     res.status(201).json({ id: conv.id });
   })
 );
@@ -491,15 +520,17 @@ espaceRouter.post(
     const moi = monMembreId(req);
     const id = Number(req.params.id);
     const { corps } = repondreSchema.parse(req.body);
-    const part = await prisma.conversationParticipant.findUnique({
-      where: { conversationId_membreId: { conversationId: id, membreId: moi } },
+    const conv = await prisma.conversation.findUnique({
+      where: { id },
+      include: { participants: { select: { membreId: true } } },
     });
-    if (!part) throw new HttpError(404, "Conversation introuvable");
+    if (!conv || !conv.participants.some((p) => p.membreId === moi)) throw new HttpError(404, "Conversation introuvable");
     const auteurNom = await monNom(req);
     const message = await prisma.message.create({
       data: { conversationId: id, corps, auteurMembreId: moi, auteurNom, estAdministration: false },
     });
     await prisma.conversation.update({ where: { id }, data: { updatedAt: new Date() } });
+    if (conv.avecAdministration) await notifierAdministration(conv.sujet, auteurNom, corps);
     res.status(201).json({ id: message.id });
   })
 );

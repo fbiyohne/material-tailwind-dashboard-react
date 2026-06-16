@@ -28,6 +28,7 @@ const EVT_LABEL = {
   RECU: "Reçu émis",
   CONVOCATION: "Convocation",
   ACCES_AVOCAT: "Accès espace avocat",
+  MESSAGE: "Messagerie — message avocat",
 };
 
 const DEFAUT = {
