@@ -8,6 +8,7 @@ import { Button } from "./Button";
 import { useToast } from "./Toast";
 import { formatFCFA } from "../utils/format";
 import { initierPaiement, confirmerPaiementSandbox } from "../api/resources";
+import { canauxActifs } from "../data/config";
 
 const CANAUX = [
   { value: "MTN", label: "MTN Mobile Money", icon: DevicePhoneMobileIcon },
@@ -15,6 +16,12 @@ const CANAUX = [
   { value: "CARTE", label: "Carte (Visa / MasterCard)", icon: CreditCardIcon },
   { value: "VIREMENT", label: "Virement (UBA / Ecobank)", icon: BuildingLibraryIcon },
 ];
+// Canaux réellement proposés = ceux activés dans les Paramètres (repli sur tous).
+const canauxProposes = () => {
+  const actifs = canauxActifs();
+  const liste = CANAUX.filter((c) => actifs.includes(c.value));
+  return liste.length ? liste : CANAUX;
+};
 
 /**
  * Paiement en ligne (passerelle) d'une cotisation ou d'un droit. En sandbox,
@@ -24,7 +31,8 @@ const CANAUX = [
 export function PaiementEnLigneModal({ ligne, exercice, type = "cotisation", open, onClose, onDone }) {
   const toast = useToast();
   const solde = ligne ? Math.max(0, ligne.montantDu - ligne.montantPaye) : 0;
-  const [canal, setCanal] = useState("MTN");
+  const canaux = canauxProposes();
+  const [canal, setCanal] = useState(canaux[0]?.value ?? "MTN");
   const [montant, setMontant] = useState(solde);
   const [phase, setPhase] = useState("form"); // form | attente
   const [paiement, setPaiement] = useState(null);
@@ -33,7 +41,7 @@ export function PaiementEnLigneModal({ ligne, exercice, type = "cotisation", ope
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (ligne) { setCanal("MTN"); setMontant(solde); setPhase("form"); setPaiement(null); setInstruction(""); }
+    if (ligne) { setCanal(canaux[0]?.value ?? "MTN"); setMontant(solde); setPhase("form"); setPaiement(null); setInstruction(""); }
   }, [ligne, solde]);
 
   if (!ligne) return null;
@@ -88,7 +96,7 @@ export function PaiementEnLigneModal({ ligne, exercice, type = "cotisation", ope
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <FormField label="Canal de paiement" full>
             <select value={canal} onChange={(e) => setCanal(e.target.value)} className="bpn-input">
-              {CANAUX.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+              {canaux.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
             </select>
           </FormField>
           <FormField label="Montant (FCFA)" full>

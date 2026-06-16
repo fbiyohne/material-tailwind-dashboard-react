@@ -2,13 +2,22 @@
  * Publications institutionnelles (FR-PUB) et calendrier de la Lettre du
  * Bâtonnier (FR-BAT). Remplacés par l'API en V2.
  */
+import { config, onConfigChange } from "./config";
 
-export const STATUT_PUBLICATION_META = {
+const STATUT_PUBLICATION_META_DEFAUT = {
   brouillon: { label: "Brouillon", ton: "gris" },
   a_valider: { label: "À valider", ton: "or" },
   valide: { label: "Validé", ton: "bleu" },
   publie: { label: "Publié", ton: "vert" },
 };
+export const STATUT_PUBLICATION_META = structuredClone(STATUT_PUBLICATION_META_DEFAUT);
+export const STATUT_PUBLICATION_META_CLES = STATUT_PUBLICATION_META_DEFAUT;
+onConfigChange(() => {
+  const surcharges = config.libellesStatuts?.publication ?? {};
+  for (const cle of Object.keys(STATUT_PUBLICATION_META)) {
+    STATUT_PUBLICATION_META[cle].label = surcharges[cle] || STATUT_PUBLICATION_META_DEFAUT[cle].label;
+  }
+});
 
 export const publicationsInitiales = [
   {

@@ -4,11 +4,13 @@ import { PlusIcon, MegaphoneIcon, TrashIcon } from "@heroicons/react/24/outline"
 import { Badge, Modal, EmptyState, ErrorState, Skeleton, useToast, useConfirm, PageHeader, FormField } from "../components";
 import { formatDate } from "../utils/format";
 import { STATUT_PUBLICATION_META } from "../data/publications";
+import { typesPublication } from "../data/config";
 import { listerPublications, creerPublication as apiCreerPublication, changerStatutPublication as apiChangerStatut, supprimerPublication } from "../api/resources";
 
 function NouvellePublicationModal({ open, onClose, onCreated }) {
   const toast = useToast();
-  const [form, setForm] = useState({ titre: "", type: "Avis", contenu: "" });
+  const types = typesPublication();
+  const [form, setForm] = useState({ titre: "", type: types[0] ?? "Avis", contenu: "" });
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
   const valider = async () => {
     if (!form.titre.trim()) return;
@@ -16,7 +18,7 @@ function NouvellePublicationModal({ open, onClose, onCreated }) {
       await apiCreerPublication(form);
       onCreated?.();
       onClose();
-      setForm({ titre: "", type: "Avis", contenu: "" });
+      setForm({ titre: "", type: types[0] ?? "Avis", contenu: "" });
     } catch (e) {
       toast.error(e.message);
     }
@@ -31,7 +33,7 @@ function NouvellePublicationModal({ open, onClose, onCreated }) {
           </FormField>
           <FormField label="Type">
             <select value={form.type} onChange={set("type")} className="bpn-input">
-              <option>Avis</option><option>Communiqué</option>
+              {types.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
           </FormField>
         </div>

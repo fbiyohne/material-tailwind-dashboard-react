@@ -2,6 +2,7 @@
  * Données institutionnelles — Réunions du Conseil, Assemblées générales et
  * dossiers disciplinaires. Remplacées par l'API / PostgreSQL en V2.
  */
+import { config, onConfigChange } from "./config";
 
 export const reunionsInitiales = [
   {
@@ -46,14 +47,22 @@ export const assembleesInitiales = [
   },
 ];
 
-/** Statut administratif d'un dossier disciplinaire. */
-export const STATUT_DOSSIER_META = {
+/** Statut administratif d'un dossier disciplinaire (libellés surchargeables). */
+const STATUT_DOSSIER_META_DEFAUT = {
   ouvert: { label: "Ouvert", ton: "gris" },
   instruction: { label: "Instruction", ton: "or" },
   audience: { label: "Audience fixée", ton: "bleu" },
   decision: { label: "Décision rendue", ton: "vert" },
   classe: { label: "Classé", ton: "gris" },
 };
+export const STATUT_DOSSIER_META = structuredClone(STATUT_DOSSIER_META_DEFAUT);
+export const STATUT_DOSSIER_META_CLES = STATUT_DOSSIER_META_DEFAUT;
+onConfigChange(() => {
+  const surcharges = config.libellesStatuts?.dossier ?? {};
+  for (const cle of Object.keys(STATUT_DOSSIER_META)) {
+    STATUT_DOSSIER_META[cle].label = surcharges[cle] || STATUT_DOSSIER_META_DEFAUT[cle].label;
+  }
+});
 
 export const dossiersInitiaux = [
   {

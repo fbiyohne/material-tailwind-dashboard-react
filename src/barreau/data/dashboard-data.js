@@ -1,12 +1,22 @@
 /**
  * Référentiel des exercices (années) du tableau de bord et des filtres associés.
  *
- * Les indicateurs, l'agenda et le journal d'activité sont désormais servis par
- * l'API REST (`/dashboard`, `/dashboard/agenda`, `/dashboard/journal`) ; les
- * anciennes données mockées de la maquette ont été retirées.
+ * La plage d'exercices et l'exercice courant proviennent désormais des
+ * Paramètres (centralisés, éditables) : `EXERCICES` est recalculé à chaque
+ * mise à jour de configuration, et `EXERCICE_COURANT` suit l'exercice courant.
+ * Les composants lisant ces exports au rendu reflètent la configuration en
+ * vigueur (chargée au démarrage avant l'affichage de l'application).
  */
+import { config, onConfigChange, exercices } from "./config";
 
-export const EXERCICES = [2026, 2025, 2024, 2023, 2022, 2021, 2020];
+/** Liste des exercices (mutée en place pour préserver la référence importée). */
+export const EXERCICES = [];
 
-/** Exercice par défaut (le plus récent) — source unique pour éviter le « 2026 » en dur. */
-export const EXERCICE_COURANT = EXERCICES[0];
+/** Exercice par défaut (le plus récent) — suit `config.exerciceCourant`. */
+export let EXERCICE_COURANT = config.exerciceCourant;
+
+onConfigChange(() => {
+  const liste = exercices();
+  EXERCICES.splice(0, EXERCICES.length, ...liste);
+  EXERCICE_COURANT = config.exerciceCourant ?? liste[0];
+});

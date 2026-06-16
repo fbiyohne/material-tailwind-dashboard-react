@@ -255,6 +255,44 @@ describe("Espace avocat — provisionnement, activation & cloisonnement", () => 
   });
 });
 
+describe("Paramètres — données de référence centralisées", () => {
+  it("la lecture est ouverte aux profils du back-office (Trésorière, 200)", async () => {
+    const r = await request(app).get("/api/parametres").set(...bearer(tr));
+    expect(r.status).toBe(200);
+    expect(r.body.tarifs).toBeTruthy();
+    expect(Array.isArray(r.body.documents.typesPublication)).toBe(true);
+    expect(Array.isArray(r.body.paiement.canauxActifs)).toBe(true);
+  });
+
+  it("l'écriture reste réservée au Secrétaire Général (Trésorière → 403)", async () => {
+    const r = await request(app).put("/api/parametres").set(...bearer(tr)).send({ stage: { dureeMois: 18 } });
+    expect(r.status).toBe(403);
+  });
+
+  it("le SG met à jour les données de référence et elles sont persistées", async () => {
+    const patch = {
+      exercices: { premier: 2019 },
+      documents: { typesPublication: ["Avis", "Communiqué", "Décision"] },
+      paiement: { canauxActifs: ["MTN", "CARTE"] },
+      stage: { dureeMois: 18 },
+      libellesStatuts: { cotisation: { ajour: "Régularisé" } },
+    };
+    const put = await request(app).put("/api/parametres").set(...bearer(sg)).send(patch);
+    expect(put.status).toBe(200);
+    const get = await request(app).get("/api/parametres").set(...bearer(sg));
+    expect(get.body.documents.typesPublication).toContain("Décision");
+    expect(get.body.paiement.canauxActifs).toEqual(["MTN", "CARTE"]);
+    expect(get.body.stage.dureeMois).toBe(18);
+    expect(get.body.libellesStatuts.cotisation.ajour).toBe("Régularisé");
+    expect(get.body.exercices.premier).toBe(2019);
+  });
+
+  it("rejette une clé arbitraire ou un canal inconnu (400)", async () => {
+    expect((await request(app).put("/api/parametres").set(...bearer(sg)).send({ inconnu: 1 })).status).toBe(400);
+    expect((await request(app).put("/api/parametres").set(...bearer(sg)).send({ paiement: { canauxActifs: ["BITCOIN"] } })).status).toBe(400);
+  });
+});
+
 describe("Discipline — accès restreint (RG-13)", () => {
   it("interdit l'accès à la Trésorière (403)", async () => {
     const r = await request(app).get("/api/discipline").set(...bearer(tr));
