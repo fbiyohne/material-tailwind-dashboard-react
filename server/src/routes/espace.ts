@@ -10,7 +10,7 @@ import { CANAUX, modeSandbox, nouvelleReference, initierPaiement } from "../lib/
 import { htmlVersPdf } from "../lib/pdf.js";
 import { recuHtml, quitusHtml, convocationAgHtml, pvAssembleeHtml, decisionDisciplineHtml } from "../lib/templates.js";
 import { signerDocument, quitusPayload } from "../lib/signature.js";
-import { envoyerEmail } from "../lib/notifications.js";
+import { notifierNouveauMessage, emailsAdministration, emailsMembres } from "../lib/messagerieNotif.js";
 
 /**
  * Espace avocat — surface en libre-service, strictement cloisonnée.
@@ -205,9 +205,11 @@ espaceRouter.get(
   asyncH(async (req: AuthRequest, res) => {
     const q = String(req.query.q ?? "").trim();
     const membres = await prisma.membre.findMany({
-      where: q
-        ? { OR: [{ nom: { contains: q, mode: "insensitive" } }, { cabinet: { contains: q, mode: "insensitive" } }] }
-        : undefined,
+      // Annuaire des confrères : on exclut sa propre fiche.
+      where: {
+        id: { not: monMembreId(req) },
+        ...(q ? { OR: [{ nom: { contains: q, mode: "insensitive" } }, { cabinet: { contains: q, mode: "insensitive" } }] } : {}),
+      },
       orderBy: { nom: "asc" },
       select: {
         id: true, num: true, numInscription: true, nom: true, qualite: true,
@@ -362,58 +364,24 @@ async function monNom(req: AuthRequest) {
   return m ? `Me ${m.nom}` : "Avocat";
 }
 
-/**
- * Notifie par email les officiers de l'administration (SG / Bâtonnier /
- * Trésorière) d'un nouveau message d'avocat. L'envoi ne doit jamais bloquer ni
- * faire échouer la requête (best-effort, journalisé par la couche notifications).
- */
-async function notifierAdministration(sujet: string, auteurNom: string, corps: string) {
-  try {
-    const officiers = await prisma.user.findMany({
-      where: { actif: true, role: { in: ["SECRETAIRE_GENERAL", "BATONNIER", "TRESORIERE"] } },
-      select: { email: true },
-    });
-    const to = officiers.map((o) => o.email).filter(Boolean).join(", ");
-    if (!to) return;
-    await envoyerEmail({
-      to,
-      subject: `Messagerie — nouveau message de ${auteurNom}`,
-      text:
-        `${auteurNom} a adressé un message à l'administration du Barreau.\n\n` +
-        `Objet : ${sujet}\n\n« ${corps} »\n\n` +
-        `Connectez-vous à l'espace d'administration (module « Messagerie ») pour y répondre.`,
-      evenement: "MESSAGE",
-    });
-  } catch {
-    /* notification best-effort : on n'interrompt pas l'envoi du message */
-  }
+/** Notifie l'administration (non bloquant) d'un nouveau message d'avocat. */
+function notifierAdministration(sujet: string, auteurNom: string, corps: string) {
+  notifierNouveauMessage(emailsAdministration, {
+    titre: `nouveau message de ${auteurNom}`,
+    intro: `${auteurNom} a adressé un message à l'administration du Barreau.`,
+    cta: "Connectez-vous à l'espace d'administration (module « Messagerie ») pour y répondre.",
+    auteurNom, sujet, corps,
+  });
 }
 
-/**
- * Notifie par email le(s) confrère(s) destinataire(s) d'un message entre avocats
- * (symétrique de la notification administration). Best-effort, jamais bloquant.
- */
-async function notifierConfreres(membreIds: number[], sujet: string, auteurNom: string, corps: string) {
-  try {
-    if (membreIds.length === 0) return;
-    const membres = await prisma.membre.findMany({
-      where: { id: { in: membreIds }, NOT: { email: null } },
-      select: { email: true },
-    });
-    const to = membres.map((m) => m.email).filter(Boolean).join(", ");
-    if (!to) return;
-    await envoyerEmail({
-      to,
-      subject: `Messagerie — nouveau message de ${auteurNom}`,
-      text:
-        `${auteurNom} vous a adressé un message via la messagerie du Barreau.\n\n` +
-        `Objet : ${sujet}\n\n« ${corps} »\n\n` +
-        `Connectez-vous à votre espace avocat (module « Messagerie ») pour y répondre.`,
-      evenement: "MESSAGE",
-    });
-  } catch {
-    /* notification best-effort : on n'interrompt pas l'envoi du message */
-  }
+/** Notifie le(s) confrère(s) destinataire(s) (non bloquant) d'un message entre avocats. */
+function notifierConfreres(membreIds: number[], sujet: string, auteurNom: string, corps: string) {
+  notifierNouveauMessage(() => emailsMembres(membreIds), {
+    titre: `nouveau message de ${auteurNom}`,
+    intro: `${auteurNom} vous a adressé un message via la messagerie du Barreau.`,
+    cta: "Connectez-vous à votre espace avocat (module « Messagerie ») pour y répondre.",
+    auteurNom, sujet, corps,
+  });
 }
 
 /** GET /espace/messagerie — fils de discussion de l'avocat (synthèse + non-lus). */
@@ -533,8 +501,8 @@ espaceRouter.post(
         messages: { create: { corps, auteurMembreId: moi, auteurNom, estAdministration: false } },
       },
     });
-    if (avecAdministration) await notifierAdministration(sujet, auteurNom, corps);
-    else if (destinataireMembreId) await notifierConfreres([destinataireMembreId], sujet, auteurNom, corps);
+    if (avecAdministration) notifierAdministration(sujet, auteurNom, corps);
+    else if (destinataireMembreId) notifierConfreres([destinataireMembreId], sujet, auteurNom, corps);
     res.status(201).json({ id: conv.id });
   })
 );
@@ -558,8 +526,8 @@ espaceRouter.post(
       data: { conversationId: id, corps, auteurMembreId: moi, auteurNom, estAdministration: false },
     });
     await prisma.conversation.update({ where: { id }, data: { updatedAt: new Date() } });
-    if (conv.avecAdministration) await notifierAdministration(conv.sujet, auteurNom, corps);
-    else await notifierConfreres(conv.participants.map((p) => p.membreId).filter((mid) => mid !== moi), conv.sujet, auteurNom, corps);
+    if (conv.avecAdministration) notifierAdministration(conv.sujet, auteurNom, corps);
+    else notifierConfreres(conv.participants.map((p) => p.membreId).filter((mid) => mid !== moi), conv.sujet, auteurNom, corps);
     res.status(201).json({ id: message.id });
   })
 );

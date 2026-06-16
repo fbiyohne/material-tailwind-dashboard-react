@@ -1,22 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChatBubbleLeftRightIcon, PaperAirplaneIcon, UserIcon } from "@heroicons/react/24/outline";
-import { Badge, PageHeader, useToast, TableSkeleton, ErrorState, EmptyState } from "../components";
-import { formatDateTime } from "../utils/format";
+import { Badge, PageHeader, useToast, TableSkeleton, ErrorState, EmptyState, MessageBulle } from "../components";
 import { getMessagerie, getConversationAdmin, repondreConversationAdmin } from "../api/resources";
-
-/** Bulle de message — alignée à droite pour l'administration. */
-function Bulle({ m }) {
-  const aDroite = m.estAdministration;
-  return (
-    <div className={`flex ${aDroite ? "justify-end" : "justify-start"}`}>
-      <div className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-sm ${aDroite ? "bg-navy text-white" : "bg-grisL text-encre"}`}>
-        <div className={`mb-0.5 text-[11px] font-semibold ${aDroite ? "text-or-2" : "text-or"}`}>{m.auteurNom}</div>
-        <div className="whitespace-pre-line leading-relaxed">{m.corps}</div>
-        <div className={`mt-1 text-[10px] ${aDroite ? "text-white/60" : "text-gris"}`}>{formatDateTime(m.createdAt)}</div>
-      </div>
-    </div>
-  );
-}
 
 /** Back-office — messagerie de l'administration (fils adressés par les avocats). */
 export function Messagerie() {
@@ -109,7 +94,9 @@ export function Messagerie() {
                 <Badge ton="bleu" dot={false}>{fil.expediteur}</Badge>
               </div>
               <div className="flex-1 space-y-3 overflow-y-auto p-4">
-                {fil.messages.map((m) => <Bulle key={m.id} m={m} />)}
+                {fil.messages.map((m) => (
+                  <MessageBulle key={m.id} aDroite={m.estAdministration} etiquette={m.auteurNom} corps={m.corps} date={m.createdAt} />
+                ))}
                 <div ref={finRef} />
               </div>
               <div className="border-t border-grisL p-3">

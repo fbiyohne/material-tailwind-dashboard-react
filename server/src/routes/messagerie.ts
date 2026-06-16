@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole, type AuthRequest } from "../middleware/auth.js";
+import { notifierNouveauMessage, emailsMembres } from "../lib/messagerieNotif.js";
 
 /**
  * Messagerie — côté administration (Secrétariat). Boîte partagée des officiers
@@ -105,13 +106,24 @@ messagerieRouter.post(
   asyncH(async (req: AuthRequest, res) => {
     const id = Number(req.params.id);
     const { corps } = repondreSchema.parse(req.body);
-    const conv = await prisma.conversation.findUnique({ where: { id }, select: { id: true, avecAdministration: true } });
+    const conv = await prisma.conversation.findUnique({
+      where: { id },
+      select: { id: true, sujet: true, avecAdministration: true, participants: { select: { membreId: true } } },
+    });
     if (!conv || !conv.avecAdministration) throw new HttpError(404, "Conversation introuvable");
     const auteurNom = await monNomAdmin(req);
     const message = await prisma.message.create({
       data: { conversationId: id, corps, auteurMembreId: null, auteurNom, estAdministration: true },
     });
     await prisma.conversation.update({ where: { id }, data: { updatedAt: new Date(), adminLastReadAt: new Date() } });
+    // Symétrie des notifications : on prévient l'avocat de la réponse (non bloquant).
+    const membreIds = conv.participants.map((p) => p.membreId);
+    notifierNouveauMessage(() => emailsMembres(membreIds), {
+      titre: "réponse de l'administration",
+      intro: `L'administration du Barreau (${auteurNom}) a répondu à votre message.`,
+      cta: "Connectez-vous à votre espace avocat (module « Messagerie ») pour la consulter.",
+      auteurNom, sujet: conv.sujet, corps,
+    });
     res.status(201).json({ id: message.id });
   })
 );

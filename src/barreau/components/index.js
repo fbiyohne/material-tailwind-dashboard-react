@@ -33,3 +33,4 @@ export { PiecesDossier } from "./PiecesDossier";
 export { Skeleton, TableSkeleton } from "./Skeleton";
 export { ErrorState } from "./ErrorState";
 export { DataTable } from "./DataTable";
+export { MessageBulle } from "./MessageBulle";

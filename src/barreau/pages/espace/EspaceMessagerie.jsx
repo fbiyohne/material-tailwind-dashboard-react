@@ -1,24 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChatBubbleLeftRightIcon, PaperAirplaneIcon, PlusIcon, BuildingLibraryIcon, UserIcon } from "@heroicons/react/24/outline";
-import { Badge, Modal, PageHeader, useToast, TableSkeleton, ErrorState, EmptyState } from "../../components";
-import { formatDateTime } from "../../utils/format";
+import { Badge, Modal, PageHeader, useToast, TableSkeleton, ErrorState, EmptyState, MessageBulle } from "../../components";
 import {
   getEspaceMessagerie, getEspaceConversation, creerEspaceConversation,
   repondreEspaceConversation, getEspaceAnnuaire,
 } from "../../api/resources";
-
-/** Bulle de message — alignée à droite pour l'avocat connecté. */
-function Bulle({ m }) {
-  return (
-    <div className={`flex ${m.estMoi ? "justify-end" : "justify-start"}`}>
-      <div className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-sm ${m.estMoi ? "bg-navy text-white" : "bg-grisL text-encre"}`}>
-        {!m.estMoi && <div className="mb-0.5 text-[11px] font-semibold text-or">{m.estAdministration ? "Administration" : m.auteurNom}</div>}
-        <div className="whitespace-pre-line leading-relaxed">{m.corps}</div>
-        <div className={`mt-1 text-[10px] ${m.estMoi ? "text-white/60" : "text-gris"}`}>{formatDateTime(m.createdAt)}</div>
-      </div>
-    </div>
-  );
-}
 
 /** Composeur d'un nouveau fil (administration ou confrère). */
 function NouveauFil({ open, onClose, onCree }) {
@@ -30,11 +16,13 @@ function NouveauFil({ open, onClose, onCree }) {
   const [confreres, setConfreres] = useState([]);
   const [envoi, setEnvoi] = useState(false);
 
+  // Annuaire (soi-même exclu côté serveur) chargé une seule fois ; la liste est
+  // conservée entre les ouvertures successives de la modale.
+  useEffect(() => { getEspaceAnnuaire().then(setConfreres).catch(() => {}); }, []);
+
+  // Réinitialise le formulaire à chaque ouverture.
   useEffect(() => {
-    if (open) {
-      setCible("administration"); setSujet(""); setCorps(""); setDestinataire("");
-      getEspaceAnnuaire().then(setConfreres).catch(() => setConfreres([]));
-    }
+    if (open) { setCible("administration"); setSujet(""); setCorps(""); setDestinataire(""); }
   }, [open]);
 
   const envoyer = async () => {
@@ -220,7 +208,15 @@ export function EspaceMessagerie() {
                 <Badge ton="bleu" dot={false}>{fil.interlocuteur}</Badge>
               </div>
               <div className="flex-1 space-y-3 overflow-y-auto p-4">
-                {fil.messages.map((m) => <Bulle key={m.id} m={m} />)}
+                {fil.messages.map((m) => (
+                  <MessageBulle
+                    key={m.id}
+                    aDroite={m.estMoi}
+                    etiquette={m.estMoi ? null : m.estAdministration ? "Administration" : m.auteurNom}
+                    corps={m.corps}
+                    date={m.createdAt}
+                  />
+                ))}
                 <div ref={finRef} />
               </div>
               <div className="border-t border-grisL p-3">
