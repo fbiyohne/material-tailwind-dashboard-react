@@ -37,9 +37,14 @@ export function EspaceAvocatLayout() {
   const location = useLocation();
   const [nonLus, setNonLus] = useState(0);
 
-  // Pastille de messagerie : rafraîchie au changement de page (lecture incluse).
+  // Pastille de messagerie : rafraîchie au changement de page (lecture incluse)
+  // et par sondage léger (30 s) pour rester « vivante » sans recharger.
   useEffect(() => {
-    getEspaceMessagerieNonLus().then((d) => setNonLus(d.total)).catch(() => {});
+    let actif = true;
+    const charger = () => getEspaceMessagerieNonLus().then((d) => actif && setNonLus(d.total)).catch(() => {});
+    charger();
+    const t = setInterval(charger, 30000);
+    return () => { actif = false; clearInterval(t); };
   }, [location.pathname]);
 
   return (

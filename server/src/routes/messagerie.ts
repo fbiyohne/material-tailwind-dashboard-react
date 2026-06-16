@@ -4,6 +4,7 @@ import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole, type AuthRequest } from "../middleware/auth.js";
 import { notifierNouveauMessage, emailsMembres } from "../lib/messagerieNotif.js";
+import { MESSAGE_DE_AVOCAT, compterNonLusParFil, totalNonLus, JAMAIS_LU } from "../lib/messagerie.js";
 
 /**
  * Messagerie — côté administration (Secrétariat). Boîte partagée des officiers
@@ -27,14 +28,8 @@ messagerieRouter.get(
       where: { avecAdministration: true },
       select: { id: true, adminLastReadAt: true },
     });
-    const total = (
-      await Promise.all(
-        convs.map((c) =>
-          prisma.message.count({ where: { conversationId: c.id, estAdministration: false, createdAt: { gt: c.adminLastReadAt ?? new Date(0) } } })
-        )
-      )
-    ).reduce((a, b) => a + b, 0);
-    res.json({ total });
+    const seuils = convs.map((c) => ({ conversationId: c.id, depuis: c.adminLastReadAt ?? JAMAIS_LU }));
+    res.json({ total: await totalNonLus(MESSAGE_DE_AVOCAT, seuils) });
   })
 );
 
@@ -50,23 +45,20 @@ messagerieRouter.get(
         messages: { orderBy: { createdAt: "desc" }, take: 1 },
       },
     });
-    const result = await Promise.all(
-      convs.map(async (c) => {
-        const nonLus = await prisma.message.count({
-          where: { conversationId: c.id, estAdministration: false, createdAt: { gt: c.adminLastReadAt ?? new Date(0) } },
-        });
-        const avocat = c.participants[0]?.membre ?? null;
-        const dernier = c.messages[0];
-        return {
-          id: c.id,
-          sujet: c.sujet,
-          expediteur: avocat ? `Me ${avocat.nom}` : "Avocat",
-          updatedAt: c.updatedAt,
-          apercu: dernier ? { corps: dernier.corps.slice(0, 140), auteurNom: dernier.auteurNom, estAdministration: dernier.estAdministration, createdAt: dernier.createdAt } : null,
-          nonLus,
-        };
-      })
-    );
+    const seuils = convs.map((c) => ({ conversationId: c.id, depuis: c.adminLastReadAt ?? JAMAIS_LU }));
+    const nonLusParFil = await compterNonLusParFil(MESSAGE_DE_AVOCAT, seuils);
+    const result = convs.map((c) => {
+      const avocat = c.participants[0]?.membre ?? null;
+      const dernier = c.messages[0];
+      return {
+        id: c.id,
+        sujet: c.sujet,
+        expediteur: avocat ? `Me ${avocat.nom}` : "Avocat",
+        updatedAt: c.updatedAt,
+        apercu: dernier ? { corps: dernier.corps.slice(0, 140), auteurNom: dernier.auteurNom, estAdministration: dernier.estAdministration, createdAt: dernier.createdAt } : null,
+        nonLus: nonLusParFil.get(c.id) ?? 0,
+      };
+    });
     res.json(result);
   })
 );

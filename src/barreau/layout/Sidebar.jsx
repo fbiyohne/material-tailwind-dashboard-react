@@ -52,14 +52,14 @@ export function Sidebar({ open, onClose }) {
   }, [user?.role]);
 
   // Pastille de messagerie côté administration — rafraîchie à chaque navigation
-  // (donc remise à jour après lecture d'un fil) pour les officiers de l'Ordre.
+  // (donc après lecture d'un fil) et par sondage léger (30 s) pour rester vivante.
   useEffect(() => {
     if (!["SECRETAIRE_GENERAL", "BATONNIER", "TRESORIERE", "ADMIN"].includes(user?.role)) return undefined;
     let actif = true;
-    getMessagerieNonLus()
-      .then((d) => actif && setBadges((b) => ({ ...b, "/messagerie": d.total })))
-      .catch(() => {});
-    return () => { actif = false; };
+    const charger = () => getMessagerieNonLus().then((d) => actif && setBadges((b) => ({ ...b, "/messagerie": d.total }))).catch(() => {});
+    charger();
+    const t = setInterval(charger, 30000);
+    return () => { actif = false; clearInterval(t); };
   }, [user?.role, location.pathname]);
 
   return (

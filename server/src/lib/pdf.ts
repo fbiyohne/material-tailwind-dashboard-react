@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import type { Response } from "express";
 import puppeteer, { type Browser } from "puppeteer-core";
 
 /** Résout le binaire Chromium (env prioritaire, sinon chemins connus). */
@@ -44,4 +45,12 @@ export async function htmlVersPdf(html: string): Promise<Buffer> {
   } finally {
     await page.close();
   }
+}
+
+/** Rend un HTML en PDF et le renvoie en pièce jointe (Content-Disposition). */
+export async function envoyerPdf(res: Response, html: string, filename: string): Promise<void> {
+  const pdf = await htmlVersPdf(html);
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+  res.end(pdf);
 }

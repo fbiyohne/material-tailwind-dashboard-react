@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
-import { htmlVersPdf } from "../lib/pdf.js";
+import { envoyerPdf } from "../lib/pdf.js";
 import { archiver } from "../lib/business.js";
 import { convocationAgHtml, pvAssembleeHtml } from "../lib/templates.js";
 
@@ -17,10 +17,7 @@ assembleesRouter.get("/:id/convocation/pdf", asyncH(async (req, res) => {
   if (!a) throw new HttpError(404, "Assemblée introuvable");
   const jour = String(a.date).slice(0, 10);
   await archiver({ categorie: "Convocation", titre: `Convocation ${a.type} du ${jour}`, reference: `CONV-${a.type}-${jour}`, date: new Date() });
-  const pdf = await htmlVersPdf(convocationAgHtml(a));
-  res.setHeader("Content-Type", "application/pdf");
-  res.setHeader("Content-Disposition", `attachment; filename="Convocation-${a.type}-${jour}.pdf"`);
-  res.end(pdf);
+  await envoyerPdf(res, convocationAgHtml(a), `Convocation-${a.type}-${jour}.pdf`);
 }));
 
 /** GET /assemblees/:id/pv/pdf — procès-verbal d'AG (PDF) + archivage auto. */
@@ -29,10 +26,7 @@ assembleesRouter.get("/:id/pv/pdf", asyncH(async (req, res) => {
   if (!a) throw new HttpError(404, "Assemblée introuvable");
   const jour = String(a.date).slice(0, 10);
   await archiver({ categorie: "Procès-verbal", titre: `PV ${a.type} du ${jour}`, reference: `${a.type}-${jour}`, date: new Date() });
-  const pdf = await htmlVersPdf(pvAssembleeHtml(a));
-  res.setHeader("Content-Type", "application/pdf");
-  res.setHeader("Content-Disposition", `attachment; filename="PV-${a.type}-${jour}.pdf"`);
-  res.end(pdf);
+  await envoyerPdf(res, pvAssembleeHtml(a), `PV-${a.type}-${jour}.pdf`);
 }));
 
 assembleesRouter.get("/", asyncH(async (_req, res) => {

@@ -7,10 +7,11 @@ import { requireAuth, requireAvocat, type AuthRequest } from "../middleware/auth
 import { montantDuAvec, droitDuAvec, statutCotisation, tarifsActuels } from "../lib/business.js";
 import { finaliserPaiement } from "../lib/encaissement.js";
 import { CANAUX, modeSandbox, nouvelleReference, initierPaiement } from "../lib/paiement.js";
-import { htmlVersPdf } from "../lib/pdf.js";
+import { envoyerPdf } from "../lib/pdf.js";
 import { recuHtml, quitusHtml, convocationAgHtml, pvAssembleeHtml, decisionDisciplineHtml } from "../lib/templates.js";
 import { signerDocument, quitusPayload } from "../lib/signature.js";
 import { notifierNouveauMessage, emailsAdministration, emailsMembres } from "../lib/messagerieNotif.js";
+import { messageNonDeMoi, compterNonLusParFil, totalNonLus, JAMAIS_LU } from "../lib/messagerie.js";
 
 /**
  * Espace avocat — surface en libre-service, strictement cloisonnée.
@@ -171,10 +172,7 @@ espaceRouter.get(
   asyncH(async (req: AuthRequest, res) => {
     const recu = await prisma.recu.findUnique({ where: { id: Number(req.params.id) }, include: { membre: true } });
     if (!recu || recu.membreId !== monMembreId(req)) throw new HttpError(404, "Reçu introuvable");
-    const pdf = await htmlVersPdf(recuHtml(recu, recu.membre));
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="Recu-${recu.numero}.pdf"`);
-    res.end(pdf);
+    await envoyerPdf(res, recuHtml(recu, recu.membre), `Recu-${recu.numero}.pdf`);
   })
 );
 
@@ -185,10 +183,7 @@ espaceRouter.get(
     const quitus = await prisma.quitus.findUnique({ where: { id: Number(req.params.id) }, include: { membre: true } });
     if (!quitus || quitus.membreId !== monMembreId(req)) throw new HttpError(404, "Quitus introuvable");
     const signature = signerDocument(quitusPayload(quitus));
-    const pdf = await htmlVersPdf(quitusHtml(quitus, quitus.membre, signature));
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="Quitus-${quitus.numero}.pdf"`);
-    res.end(pdf);
+    await envoyerPdf(res, quitusHtml(quitus, quitus.membre, signature), `Quitus-${quitus.numero}.pdf`);
   })
 );
 
@@ -247,10 +242,7 @@ espaceRouter.get(
     const a = await prisma.assemblee.findUnique({ where: { id: Number(req.params.id) } });
     if (!a) throw new HttpError(404, "Assemblée introuvable");
     const jour = String(a.date).slice(0, 10);
-    const pdf = await htmlVersPdf(convocationAgHtml(a));
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="Convocation-${a.type}-${jour}.pdf"`);
-    res.end(pdf);
+    await envoyerPdf(res, convocationAgHtml(a), `Convocation-${a.type}-${jour}.pdf`);
   })
 );
 
@@ -262,10 +254,7 @@ espaceRouter.get(
     if (!a) throw new HttpError(404, "Assemblée introuvable");
     if (!a.pv) throw new HttpError(404, "Procès-verbal non disponible");
     const jour = String(a.date).slice(0, 10);
-    const pdf = await htmlVersPdf(pvAssembleeHtml(a));
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="PV-${a.type}-${jour}.pdf"`);
-    res.end(pdf);
+    await envoyerPdf(res, pvAssembleeHtml(a), `PV-${a.type}-${jour}.pdf`);
   })
 );
 
@@ -301,10 +290,7 @@ espaceRouter.get(
     const d = await prisma.dossierDisciplinaire.findUnique({ where: { id: Number(req.params.id) } });
     if (!d || d.membreId !== monMembreId(req)) throw new HttpError(404, "Dossier introuvable");
     if (!d.decision) throw new HttpError(404, "Décision non disponible");
-    const pdf = await htmlVersPdf(decisionDisciplineHtml(d));
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="Decision-${d.reference}.pdf"`);
-    res.end(pdf);
+    await envoyerPdf(res, decisionDisciplineHtml(d), `Decision-${d.reference}.pdf`);
   })
 );
 
@@ -397,27 +383,21 @@ espaceRouter.get(
         messages: { orderBy: { createdAt: "desc" }, take: 1 },
       },
     });
-    const result = await Promise.all(
-      convs.map(async (c) => {
-        const moiPart = c.participants.find((p) => p.membreId === moi);
-        const nonLus = await prisma.message.count({
-          // « Non écrit par moi » : inclut l'administration (auteurMembreId NULL),
-          // que la négation SQL « <> moi » exclurait à tort.
-          where: { conversationId: c.id, OR: [{ auteurMembreId: null }, { auteurMembreId: { not: moi } }], createdAt: { gt: moiPart?.lastReadAt ?? new Date(0) } },
-        });
-        const autre = c.avecAdministration ? null : c.participants.find((p) => p.membreId !== moi)?.membre ?? null;
-        const dernier = c.messages[0];
-        return {
-          id: c.id,
-          sujet: c.sujet,
-          avecAdministration: c.avecAdministration,
-          interlocuteur: c.avecAdministration ? "Administration" : autre ? `Me ${autre.nom}` : "Confrère",
-          updatedAt: c.updatedAt,
-          apercu: dernier ? { corps: dernier.corps.slice(0, 140), auteurNom: dernier.auteurNom, estMoi: dernier.auteurMembreId === moi, createdAt: dernier.createdAt } : null,
-          nonLus,
-        };
-      })
-    );
+    const seuils = convs.map((c) => ({ conversationId: c.id, depuis: c.participants.find((p) => p.membreId === moi)?.lastReadAt ?? JAMAIS_LU }));
+    const nonLusParFil = await compterNonLusParFil(messageNonDeMoi(moi), seuils);
+    const result = convs.map((c) => {
+      const autre = c.avecAdministration ? null : c.participants.find((p) => p.membreId !== moi)?.membre ?? null;
+      const dernier = c.messages[0];
+      return {
+        id: c.id,
+        sujet: c.sujet,
+        avecAdministration: c.avecAdministration,
+        interlocuteur: c.avecAdministration ? "Administration" : autre ? `Me ${autre.nom}` : "Confrère",
+        updatedAt: c.updatedAt,
+        apercu: dernier ? { corps: dernier.corps.slice(0, 140), auteurNom: dernier.auteurNom, estMoi: dernier.auteurMembreId === moi, createdAt: dernier.createdAt } : null,
+        nonLus: nonLusParFil.get(c.id) ?? 0,
+      };
+    });
     res.json(result);
   })
 );
@@ -428,15 +408,8 @@ espaceRouter.get(
   asyncH(async (req: AuthRequest, res) => {
     const moi = monMembreId(req);
     const parts = await prisma.conversationParticipant.findMany({ where: { membreId: moi } });
-    const total = (
-      await Promise.all(
-        parts.map((p) =>
-          // « Non écrit par moi » inclut l'administration (auteurMembreId NULL).
-          prisma.message.count({ where: { conversationId: p.conversationId, OR: [{ auteurMembreId: null }, { auteurMembreId: { not: moi } }], createdAt: { gt: p.lastReadAt ?? new Date(0) } } })
-        )
-      )
-    ).reduce((a, b) => a + b, 0);
-    res.json({ total });
+    const seuils = parts.map((p) => ({ conversationId: p.conversationId, depuis: p.lastReadAt ?? JAMAIS_LU }));
+    res.json({ total: await totalNonLus(messageNonDeMoi(moi), seuils) });
   })
 );
 

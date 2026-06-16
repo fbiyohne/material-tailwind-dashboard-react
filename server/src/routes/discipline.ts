@@ -4,7 +4,7 @@ import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole, type AuthRequest } from "../middleware/auth.js";
 import { prochaineReferenceDossier, archiver } from "../lib/business.js";
-import { htmlVersPdf } from "../lib/pdf.js";
+import { envoyerPdf } from "../lib/pdf.js";
 import { convocationDisciplineHtml, decisionDisciplineHtml } from "../lib/templates.js";
 
 export const disciplineRouter = Router();
@@ -120,10 +120,7 @@ disciplineRouter.get(
     if (!d) throw new HttpError(404, "Dossier introuvable");
     await journaliser(`Génération convocation — dossier ${d.reference}`, req.user!.id);
     await archiver({ categorie: "Convocation disciplinaire", titre: `Convocation — dossier ${d.reference}`, reference: d.reference, date: new Date() });
-    const pdf = await htmlVersPdf(convocationDisciplineHtml(d));
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="Convocation-disciplinaire-${d.reference}.pdf"`);
-    res.end(pdf);
+    await envoyerPdf(res, convocationDisciplineHtml(d), `Convocation-disciplinaire-${d.reference}.pdf`);
   })
 );
 
@@ -135,9 +132,6 @@ disciplineRouter.get(
     if (!d) throw new HttpError(404, "Dossier introuvable");
     await journaliser(`Génération décision — dossier ${d.reference}`, req.user!.id);
     await archiver({ categorie: "Décision disciplinaire", titre: `Décision — dossier ${d.reference}`, reference: d.reference, date: new Date() });
-    const pdf = await htmlVersPdf(decisionDisciplineHtml(d));
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="Decision-disciplinaire-${d.reference}.pdf"`);
-    res.end(pdf);
+    await envoyerPdf(res, decisionDisciplineHtml(d), `Decision-disciplinaire-${d.reference}.pdf`);
   })
 );
