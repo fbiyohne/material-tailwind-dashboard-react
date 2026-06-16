@@ -389,6 +389,33 @@ async function notifierAdministration(sujet: string, auteurNom: string, corps: s
   }
 }
 
+/**
+ * Notifie par email le(s) confrère(s) destinataire(s) d'un message entre avocats
+ * (symétrique de la notification administration). Best-effort, jamais bloquant.
+ */
+async function notifierConfreres(membreIds: number[], sujet: string, auteurNom: string, corps: string) {
+  try {
+    if (membreIds.length === 0) return;
+    const membres = await prisma.membre.findMany({
+      where: { id: { in: membreIds }, NOT: { email: null } },
+      select: { email: true },
+    });
+    const to = membres.map((m) => m.email).filter(Boolean).join(", ");
+    if (!to) return;
+    await envoyerEmail({
+      to,
+      subject: `Messagerie — nouveau message de ${auteurNom}`,
+      text:
+        `${auteurNom} vous a adressé un message via la messagerie du Barreau.\n\n` +
+        `Objet : ${sujet}\n\n« ${corps} »\n\n` +
+        `Connectez-vous à votre espace avocat (module « Messagerie ») pour y répondre.`,
+      evenement: "MESSAGE",
+    });
+  } catch {
+    /* notification best-effort : on n'interrompt pas l'envoi du message */
+  }
+}
+
 /** GET /espace/messagerie — fils de discussion de l'avocat (synthèse + non-lus). */
 espaceRouter.get(
   "/messagerie",
@@ -507,6 +534,7 @@ espaceRouter.post(
       },
     });
     if (avecAdministration) await notifierAdministration(sujet, auteurNom, corps);
+    else if (destinataireMembreId) await notifierConfreres([destinataireMembreId], sujet, auteurNom, corps);
     res.status(201).json({ id: conv.id });
   })
 );
@@ -531,6 +559,7 @@ espaceRouter.post(
     });
     await prisma.conversation.update({ where: { id }, data: { updatedAt: new Date() } });
     if (conv.avecAdministration) await notifierAdministration(conv.sujet, auteurNom, corps);
+    else await notifierConfreres(conv.participants.map((p) => p.membreId).filter((mid) => mid !== moi), conv.sujet, auteurNom, corps);
     res.status(201).json({ id: message.id });
   })
 );
