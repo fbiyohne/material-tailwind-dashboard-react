@@ -5,6 +5,7 @@ import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole, type AuthRequest } from "../middleware/auth.js";
 import { notifierNouveauMessage, emailsMembres } from "../lib/messagerieNotif.js";
 import { MESSAGE_DE_AVOCAT, compterNonLusParFil, totalNonLus, jamaisLu } from "../lib/messagerie.js";
+import { realtimeMembres } from "../lib/realtime.js";
 
 /**
  * Messagerie — côté administration (Secrétariat). Boîte partagée des officiers
@@ -116,6 +117,7 @@ messagerieRouter.post(
       cta: "Connectez-vous à votre espace avocat (module « Messagerie ») pour la consulter.",
       auteurNom, sujet: conv.sujet, corps,
     });
+    realtimeMembres(membreIds, { type: "messagerie", conversationId: id });
     res.status(201).json({ id: message.id });
   })
 );

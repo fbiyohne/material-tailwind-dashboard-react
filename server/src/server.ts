@@ -1,10 +1,14 @@
 import { creerApp } from "./app.js";
 import { env } from "./env.js";
 import { logger } from "./lib/logger.js";
+import { initRealtime } from "./lib/realtime.js";
 
 const server = creerApp().listen(env.port, () => {
   logger.info({ port: env.port, env: env.nodeEnv }, `API Barreau de Pointe-Noire — http://localhost:${env.port}/api`);
 });
+
+// Messagerie temps réel (WebSocket /ws) attachée au même serveur HTTP.
+initRealtime(server);
 
 // Arrêt propre (conteneur / SIGTERM) et journalisation des erreurs fatales.
 const arret = (signal: string) => {

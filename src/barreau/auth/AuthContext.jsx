@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import { api, getToken, getRefreshToken, setSession, clearSession, setUnauthorizedHandler } from "../api/client";
+import { connecterRealtime, deconnecterRealtime } from "../api/realtime";
 import { appliquerConfig } from "../data/config";
 
 const AuthContext = createContext(null);
@@ -19,12 +20,13 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setUnauthorizedHandler(() => setUser(null));
+    setUnauthorizedHandler(() => { deconnecterRealtime(); setUser(null); });
     (async () => {
       if (getToken()) {
         try {
           setUser(await api("/auth/me"));
           await chargerReglages();
+          connecterRealtime();
         } catch {
           clearSession();
         }
@@ -38,11 +40,13 @@ export function AuthProvider({ children }) {
     setSession(data);
     await chargerReglages();
     setUser(data.user);
+    connecterRealtime();
     return data.user;
   };
 
   const logout = async () => {
     const refreshToken = getRefreshToken();
+    deconnecterRealtime();
     clearSession();
     setUser(null);
     if (refreshToken) api("/auth/logout", { method: "POST", auth: false, body: { refreshToken } }).catch(() => {});

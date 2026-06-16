@@ -5,6 +5,7 @@ import { XMarkIcon, ScaleIcon, ArrowRightOnRectangleIcon } from "@heroicons/reac
 import { sectionsPourRole } from "../routes";
 import { useAuth } from "../auth/AuthContext";
 import { getCotisations, listerDossiers, getMessagerieNonLus } from "../api/resources";
+import { onRealtime } from "../api/realtime";
 import { EXERCICE_COURANT } from "../data/dashboard-data";
 
 const initiales = (nom) => {
@@ -51,15 +52,16 @@ export function Sidebar({ open, onClose }) {
     return () => { actif = false; };
   }, [user?.role]);
 
-  // Pastille de messagerie côté administration — rafraîchie à chaque navigation
-  // (donc après lecture d'un fil) et par sondage léger (30 s) pour rester vivante.
+  // Pastille de messagerie côté administration — rafraîchie à chaque navigation,
+  // en temps réel (WebSocket) et par sondage léger (filet de sécurité).
   useEffect(() => {
     if (!["SECRETAIRE_GENERAL", "BATONNIER", "TRESORIERE", "ADMIN"].includes(user?.role)) return undefined;
     let actif = true;
     const charger = () => getMessagerieNonLus().then((d) => actif && setBadges((b) => ({ ...b, "/messagerie": d.total }))).catch(() => {});
     charger();
     const t = setInterval(charger, 30000);
-    return () => { actif = false; clearInterval(t); };
+    const off = onRealtime((evt) => { if (evt.type === "messagerie") charger(); });
+    return () => { actif = false; clearInterval(t); off(); };
   }, [user?.role, location.pathname]);
 
   return (

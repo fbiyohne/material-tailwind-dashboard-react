@@ -12,6 +12,7 @@ import { recuHtml, quitusHtml, convocationAgHtml, pvAssembleeHtml, decisionDisci
 import { signerDocument, quitusPayload } from "../lib/signature.js";
 import { notifierNouveauMessage, emailsAdministration, emailsMembres } from "../lib/messagerieNotif.js";
 import { messageNonDeMoi, compterNonLusParFil, totalNonLus, jamaisLu } from "../lib/messagerie.js";
+import { realtimeMembres, realtimeAdministration } from "../lib/realtime.js";
 
 /**
  * Espace avocat — surface en libre-service, strictement cloisonnée.
@@ -477,8 +478,13 @@ espaceRouter.post(
         messages: { create: { corps, auteurMembreId: moi, auteurNom, estAdministration: false } },
       },
     });
-    if (avecAdministration) notifierAdministration(sujet, auteurNom, corps);
-    else if (destinataireMembreId) notifierConfreres([destinataireMembreId], sujet, auteurNom, corps);
+    if (avecAdministration) {
+      notifierAdministration(sujet, auteurNom, corps);
+      realtimeAdministration({ type: "messagerie", conversationId: conv.id });
+    } else if (destinataireMembreId) {
+      notifierConfreres([destinataireMembreId], sujet, auteurNom, corps);
+      realtimeMembres([destinataireMembreId], { type: "messagerie", conversationId: conv.id });
+    }
     res.status(201).json({ id: conv.id });
   })
 );
@@ -502,8 +508,14 @@ espaceRouter.post(
       data: { conversationId: id, corps, auteurMembreId: moi, auteurNom, estAdministration: false },
     });
     await prisma.conversation.update({ where: { id }, data: { updatedAt: new Date() } });
-    if (conv.avecAdministration) notifierAdministration(conv.sujet, auteurNom, corps);
-    else notifierConfreres(conv.participants.map((p) => p.membreId).filter((mid) => mid !== moi), conv.sujet, auteurNom, corps);
+    if (conv.avecAdministration) {
+      notifierAdministration(conv.sujet, auteurNom, corps);
+      realtimeAdministration({ type: "messagerie", conversationId: id });
+    } else {
+      const autres = conv.participants.map((p) => p.membreId).filter((mid) => mid !== moi);
+      notifierConfreres(autres, conv.sujet, auteurNom, corps);
+      realtimeMembres(autres, { type: "messagerie", conversationId: id });
+    }
     res.status(201).json({ id: message.id });
   })
 );

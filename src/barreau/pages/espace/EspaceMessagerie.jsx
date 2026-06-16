@@ -5,6 +5,7 @@ import {
   getEspaceMessagerie, getEspaceConversation, creerEspaceConversation,
   repondreEspaceConversation, getEspaceAnnuaire,
 } from "../../api/resources";
+import { onRealtime } from "../../api/realtime";
 
 /** Composeur d'un nouveau fil (administration ou confrère). */
 function NouveauFil({ open, onClose, onCree }) {
@@ -122,6 +123,15 @@ export function EspaceMessagerie() {
 
   useEffect(() => { setErreur(false); chargerListe(); /* eslint-disable-line */ }, []);
   useEffect(() => { finRef.current?.scrollIntoView({ behavior: "smooth" }); }, [fil]);
+
+  // Temps réel : un nouveau message recharge la liste et, si concerné, le fil ouvert.
+  useEffect(() => onRealtime((evt) => {
+    if (evt.type !== "messagerie") return;
+    chargerListe();
+    if (selId && (!evt.conversationId || evt.conversationId === selId)) {
+      getEspaceConversation(selId).then(setFil).catch(() => {});
+    }
+  }), [selId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const ouvrir = (id) => {
     setSelId(id);

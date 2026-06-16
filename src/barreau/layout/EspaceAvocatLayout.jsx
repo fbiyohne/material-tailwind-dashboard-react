@@ -7,6 +7,7 @@ import {
 import { Sceau } from "../components";
 import { useAuth } from "../auth/AuthContext";
 import { getEspaceMessagerieNonLus } from "../api/resources";
+import { onRealtime } from "../api/realtime";
 import MaSituation from "../pages/espace/MaSituation";
 import MesDocuments from "../pages/espace/MesDocuments";
 import EspaceAnnuaire from "../pages/espace/EspaceAnnuaire";
@@ -37,14 +38,15 @@ export function EspaceAvocatLayout() {
   const location = useLocation();
   const [nonLus, setNonLus] = useState(0);
 
-  // Pastille de messagerie : rafraîchie au changement de page (lecture incluse)
-  // et par sondage léger (30 s) pour rester « vivante » sans recharger.
+  // Pastille de messagerie : rafraîchie au changement de page (lecture incluse),
+  // en temps réel (WebSocket) et par sondage léger (filet de sécurité).
   useEffect(() => {
     let actif = true;
     const charger = () => getEspaceMessagerieNonLus().then((d) => actif && setNonLus(d.total)).catch(() => {});
     charger();
     const t = setInterval(charger, 30000);
-    return () => { actif = false; clearInterval(t); };
+    const off = onRealtime((evt) => { if (evt.type === "messagerie") charger(); });
+    return () => { actif = false; clearInterval(t); off(); };
   }, [location.pathname]);
 
   return (
