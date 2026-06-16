@@ -8,8 +8,8 @@ import { prisma } from "../prisma.js";
  * NULL, c.-à-d. les messages de l'administration).
  */
 
-/** Borne basse par défaut quand un fil n'a jamais été ouvert. */
-export const JAMAIS_LU = new Date(0);
+/** Borne basse (fabrique) quand un fil n'a jamais été ouvert — évite une Date partagée mutable. */
+export const jamaisLu = () => new Date(0);
 
 /** Message « non écrit par l'avocat `moi` » — inclut l'administration (auteurMembreId NULL). */
 export function messageNonDeMoi(moi: number): Prisma.MessageWhereInput {
@@ -42,11 +42,12 @@ function whereNonLus(expediteur: Prisma.MessageWhereInput, seuils: SeuilLecture[
 export async function compterNonLusParFil(expediteur: Prisma.MessageWhereInput, seuils: SeuilLecture[]): Promise<Map<number, number>> {
   const compte = new Map<number, number>();
   if (seuils.length === 0) return compte;
-  const messages = await prisma.message.findMany({
+  const groupes = await prisma.message.groupBy({
+    by: ["conversationId"],
     where: whereNonLus(expediteur, seuils),
-    select: { conversationId: true },
+    _count: { _all: true },
   });
-  for (const m of messages) compte.set(m.conversationId, (compte.get(m.conversationId) ?? 0) + 1);
+  for (const g of groupes) compte.set(g.conversationId, g._count._all);
   return compte;
 }
 

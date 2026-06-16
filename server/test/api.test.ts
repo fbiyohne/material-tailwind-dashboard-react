@@ -332,3 +332,125 @@ describe("Discipline — accès restreint (RG-13)", () => {
     expect(r.status).toBe(200);
   });
 });
+
+/** Provisionne un avocat avec accès espace activé ; renvoie sa fiche + son JWT. */
+async function creerAvocatEspace(suffixe: string) {
+  const email = `e2e.${suffixe}.${Date.now()}.${Math.random().toString(36).slice(2, 7)}@barreau-pn.cg`;
+  const m = await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: `E2E ${suffixe} ${Date.now()}`, qualite: "AVOCAT", email });
+  const membreId = m.body.id as number;
+  const prov = await request(app).post(`/api/membres/${membreId}/acces`).set(...bearer(sg));
+  const activation = prov.body.lien.split("/activer/")[1];
+  await request(app).post("/api/auth/activer").send({ token: activation, password: "avocatpass8" });
+  const token = (await request(app).post("/api/auth/login").send({ email, password: "avocatpass8" })).body.token as string;
+  return { membreId, email, token };
+}
+
+describe("Espace avocat — consultation (annuaire, AG, publications, archives, discipline)", () => {
+  let av: { membreId: number; token: string };
+  beforeAll(async () => { av = await creerAvocatEspace("conso"); });
+
+  it("annuaire : 200, exclut sa propre fiche, sans données sensibles", async () => {
+    const r = await request(app).get("/api/espace/annuaire").set(...bearer(av.token));
+    expect(r.status).toBe(200);
+    expect(Array.isArray(r.body)).toBe(true);
+    expect(r.body.some((m: any) => m.id === av.membreId)).toBe(false);
+    if (r.body.length) expect(r.body[0]).not.toHaveProperty("adresse");
+  });
+
+  it("assemblées : 200 (liste)", async () => {
+    const r = await request(app).get("/api/espace/assemblees").set(...bearer(av.token));
+    expect(r.status).toBe(200);
+    expect(Array.isArray(r.body)).toBe(true);
+  });
+
+  it("publications : ne renvoie que les éléments PUBLIE", async () => {
+    const p = await request(app).post("/api/publications").set(...bearer(sg)).send({ titre: `E2E Pub ${Date.now()}`, type: "Avis", contenu: "x" });
+    await request(app).post(`/api/publications/${p.body.id}/statut`).set(...bearer(sg)).send({ statut: "PUBLIE" });
+    const brouillon = await request(app).post("/api/publications").set(...bearer(sg)).send({ titre: `E2E Brouillon ${Date.now()}`, type: "Avis" });
+    const r = await request(app).get("/api/espace/publications").set(...bearer(av.token));
+    expect(r.status).toBe(200);
+    expect(r.body.every((x: any) => x.statut === "PUBLIE")).toBe(true);
+    expect(r.body.some((x: any) => x.id === p.body.id)).toBe(true);
+    expect(r.body.some((x: any) => x.id === brouillon.body.id)).toBe(false);
+  });
+
+  it("archives : forme {archives, categories}, aucune catégorie disciplinaire", async () => {
+    const r = await request(app).get("/api/espace/archives").set(...bearer(av.token));
+    expect(r.status).toBe(200);
+    expect(Array.isArray(r.body.archives)).toBe(true);
+    expect(Array.isArray(r.body.categories)).toBe(true);
+    expect(r.body.categories.some((c: string) => /disciplinaire/i.test(c))).toBe(false);
+  });
+
+  it("discipline : ne voit que les dossiers le concernant", async () => {
+    const mien = await request(app).post("/api/discipline").set(...bearer(sg)).send({ avocatNom: "E2E Conso", objet: "Le concernant", membreId: av.membreId });
+    const autre = await request(app).post("/api/discipline").set(...bearer(sg)).send({ avocatNom: "Autre Confrère", objet: "D'autrui" });
+    const r = await request(app).get("/api/espace/discipline").set(...bearer(av.token));
+    expect(r.status).toBe(200);
+    expect(r.body.some((d: any) => d.id === mien.body.id)).toBe(true);
+    expect(r.body.some((d: any) => d.id === autre.body.id)).toBe(false);
+    expect((await request(app).get(`/api/espace/discipline/${autre.body.id}`).set(...bearer(av.token))).status).toBe(404);
+  });
+});
+
+describe("Messagerie interne — symétrie des non-lus & cloisonnement", () => {
+  let a: { membreId: number; token: string };
+  let b: { membreId: number; token: string };
+  beforeAll(async () => {
+    a = await creerAvocatEspace("msgA");
+    b = await creerAvocatEspace("msgB");
+  });
+
+  const total = async (tok: string) => (await request(app).get("/api/espace/messagerie/non-lus").set(...bearer(tok))).body.total as number;
+  const filNonLus = async (tok: string, id: number) => {
+    const r = await request(app).get("/api/espace/messagerie").set(...bearer(tok));
+    if (!Array.isArray(r.body)) throw new Error(`liste non-array: status=${r.status} body=${JSON.stringify(r.body)}`);
+    const f = r.body.find((c) => c.id === id);
+    return f ? f.nonLus : -1;
+  };
+
+  it("la route /non-lus n'est pas captée par /:id", async () => {
+    const r = await request(app).get("/api/espace/messagerie/non-lus").set(...bearer(a.token));
+    expect(r.status).toBe(200);
+    expect(typeof r.body.total).toBe("number");
+  });
+
+  it("avocat ↔ administration : le badge avocat monte sur réponse admin (régression NULL)", async () => {
+    const c = await request(app).post("/api/espace/messagerie").set(...bearer(a.token)).send({ sujet: "E2E admin", corps: "bonjour", avecAdministration: true });
+    expect(c.status).toBe(201);
+    const cid = c.body.id;
+
+    const filAdmin = (await request(app).get("/api/messagerie").set(...bearer(sg))).body.find((x: any) => x.id === cid);
+    expect(filAdmin).toBeTruthy();
+    expect(filAdmin.nonLus).toBeGreaterThanOrEqual(1);
+
+    await request(app).get(`/api/espace/messagerie/${cid}`).set(...bearer(a.token)); // a lit
+    expect(await filNonLus(a.token, cid)).toBe(0);
+    const avant = await total(a.token);
+
+    expect((await request(app).post(`/api/messagerie/${cid}`).set(...bearer(sg)).send({ corps: "réponse" })).status).toBe(201);
+    expect(await total(a.token)).toBe(avant + 1);
+
+    const fil = await request(app).get(`/api/espace/messagerie/${cid}`).set(...bearer(a.token));
+    expect(fil.body.messages.length).toBe(2);
+    expect(fil.body.messages[1].estAdministration).toBe(true);
+  });
+
+  it("confrère ↔ confrère : visible par le destinataire, invisible pour l'administration", async () => {
+    const sujet = `E2E confrere ${Date.now()}`;
+    const c = await request(app).post("/api/espace/messagerie").set(...bearer(a.token)).send({ sujet, corps: "cher confrère", avecAdministration: false, destinataireMembreId: b.membreId });
+    expect(c.status).toBe(201);
+    expect(await filNonLus(b.token, c.body.id)).toBe(1);
+    const listeAdmin = await request(app).get("/api/messagerie").set(...bearer(sg));
+    expect(listeAdmin.body.some((x: any) => x.id === c.body.id || x.sujet === sujet)).toBe(false);
+  });
+
+  it("auto-message interdit (400)", async () => {
+    const r = await request(app).post("/api/espace/messagerie").set(...bearer(a.token)).send({ sujet: "moi", corps: "x", avecAdministration: false, destinataireMembreId: a.membreId });
+    expect(r.status).toBe(400);
+  });
+
+  it("cloisonnement : un avocat ne voit pas la messagerie admin (403)", async () => {
+    expect((await request(app).get("/api/messagerie").set(...bearer(a.token))).status).toBe(403);
+  });
+});

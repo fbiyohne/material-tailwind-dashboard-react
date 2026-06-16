@@ -11,7 +11,7 @@ import { envoyerPdf } from "../lib/pdf.js";
 import { recuHtml, quitusHtml, convocationAgHtml, pvAssembleeHtml, decisionDisciplineHtml } from "../lib/templates.js";
 import { signerDocument, quitusPayload } from "../lib/signature.js";
 import { notifierNouveauMessage, emailsAdministration, emailsMembres } from "../lib/messagerieNotif.js";
-import { messageNonDeMoi, compterNonLusParFil, totalNonLus, JAMAIS_LU } from "../lib/messagerie.js";
+import { messageNonDeMoi, compterNonLusParFil, totalNonLus, jamaisLu } from "../lib/messagerie.js";
 
 /**
  * Espace avocat — surface en libre-service, strictement cloisonnée.
@@ -383,7 +383,7 @@ espaceRouter.get(
         messages: { orderBy: { createdAt: "desc" }, take: 1 },
       },
     });
-    const seuils = convs.map((c) => ({ conversationId: c.id, depuis: c.participants.find((p) => p.membreId === moi)?.lastReadAt ?? JAMAIS_LU }));
+    const seuils = convs.map((c) => ({ conversationId: c.id, depuis: c.participants.find((p) => p.membreId === moi)?.lastReadAt ?? jamaisLu() }));
     const nonLusParFil = await compterNonLusParFil(messageNonDeMoi(moi), seuils);
     const result = convs.map((c) => {
       const autre = c.avecAdministration ? null : c.participants.find((p) => p.membreId !== moi)?.membre ?? null;
@@ -408,7 +408,7 @@ espaceRouter.get(
   asyncH(async (req: AuthRequest, res) => {
     const moi = monMembreId(req);
     const parts = await prisma.conversationParticipant.findMany({ where: { membreId: moi } });
-    const seuils = parts.map((p) => ({ conversationId: p.conversationId, depuis: p.lastReadAt ?? JAMAIS_LU }));
+    const seuils = parts.map((p) => ({ conversationId: p.conversationId, depuis: p.lastReadAt ?? jamaisLu() }));
     res.json({ total: await totalNonLus(messageNonDeMoi(moi), seuils) });
   })
 );

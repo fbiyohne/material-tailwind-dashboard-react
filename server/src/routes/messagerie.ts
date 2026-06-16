@@ -4,7 +4,7 @@ import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole, type AuthRequest } from "../middleware/auth.js";
 import { notifierNouveauMessage, emailsMembres } from "../lib/messagerieNotif.js";
-import { MESSAGE_DE_AVOCAT, compterNonLusParFil, totalNonLus, JAMAIS_LU } from "../lib/messagerie.js";
+import { MESSAGE_DE_AVOCAT, compterNonLusParFil, totalNonLus, jamaisLu } from "../lib/messagerie.js";
 
 /**
  * Messagerie — côté administration (Secrétariat). Boîte partagée des officiers
@@ -28,7 +28,7 @@ messagerieRouter.get(
       where: { avecAdministration: true },
       select: { id: true, adminLastReadAt: true },
     });
-    const seuils = convs.map((c) => ({ conversationId: c.id, depuis: c.adminLastReadAt ?? JAMAIS_LU }));
+    const seuils = convs.map((c) => ({ conversationId: c.id, depuis: c.adminLastReadAt ?? jamaisLu() }));
     res.json({ total: await totalNonLus(MESSAGE_DE_AVOCAT, seuils) });
   })
 );
@@ -45,7 +45,7 @@ messagerieRouter.get(
         messages: { orderBy: { createdAt: "desc" }, take: 1 },
       },
     });
-    const seuils = convs.map((c) => ({ conversationId: c.id, depuis: c.adminLastReadAt ?? JAMAIS_LU }));
+    const seuils = convs.map((c) => ({ conversationId: c.id, depuis: c.adminLastReadAt ?? jamaisLu() }));
     const nonLusParFil = await compterNonLusParFil(MESSAGE_DE_AVOCAT, seuils);
     const result = convs.map((c) => {
       const avocat = c.participants[0]?.membre ?? null;

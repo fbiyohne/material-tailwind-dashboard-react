@@ -10,8 +10,9 @@ import { envoyerEmail } from "../lib/notifications.js";
 
 export const authRouter = Router();
 
-// Anti-brute-force sur la connexion (10 tentatives / 15 min / IP).
-const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false, message: { erreur: "Trop de tentatives, réessayez plus tard." } });
+// Anti-brute-force sur la connexion (10 tentatives / 15 min / IP). Désactivé en
+// test (NODE_ENV=test) où la suite enchaîne de nombreuses connexions légitimes.
+const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false, message: { erreur: "Trop de tentatives, réessayez plus tard." }, skip: () => process.env.NODE_ENV === "test" });
 
 const loginSchema = z.object({ email: z.string().email(), password: z.string().min(1) });
 
