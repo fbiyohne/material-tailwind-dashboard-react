@@ -3,6 +3,7 @@ import { MagnifyingGlassIcon, DocumentArrowDownIcon, ArrowDownTrayIcon, ArchiveB
 import { Badge, Modal, useToast, useConfirm, PageHeader, DataTable } from "../components";
 import { formatDate } from "../utils/format";
 import { telechargerCsv } from "../utils/exportCsv";
+import { categoriesArchives } from "../data/config";
 import { listerArchives, supprimerArchive } from "../api/resources";
 
 const COLONNES_CSV = [
@@ -29,7 +30,10 @@ export function Archives() {
     listerArchives()
       .then((d) => {
         setArchives(d.archives.map((a) => ({ ...a, date: a.date ? String(a.date).slice(0, 10) : "" })));
-        setCategories(["toutes", ...d.categories]);
+        // Fusionne les catégories de référence (Paramètres) et celles réellement
+        // présentes dans les archives, pour un filtre complet et stable.
+        const fusion = Array.from(new Set([...categoriesArchives(), ...d.categories]));
+        setCategories(["toutes", ...fusion]);
       })
       .catch(() => setErreur(true))
       .finally(() => setChargement(false));
