@@ -1,10 +1,12 @@
-import { Routes, Route, Navigate, NavLink } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Routes, Route, Navigate, NavLink, useLocation } from "react-router-dom";
 import {
   ArrowRightOnRectangleIcon, HomeIcon, FolderIcon, BookOpenIcon,
-  BuildingLibraryIcon, MegaphoneIcon, ArchiveBoxIcon, ScaleIcon,
+  BuildingLibraryIcon, MegaphoneIcon, ArchiveBoxIcon, ScaleIcon, ChatBubbleLeftRightIcon,
 } from "@heroicons/react/24/outline";
 import { Sceau } from "../components";
 import { useAuth } from "../auth/AuthContext";
+import { getEspaceMessagerieNonLus } from "../api/resources";
 import MaSituation from "../pages/espace/MaSituation";
 import MesDocuments from "../pages/espace/MesDocuments";
 import EspaceAnnuaire from "../pages/espace/EspaceAnnuaire";
@@ -12,10 +14,12 @@ import EspaceAssemblees from "../pages/espace/EspaceAssemblees";
 import EspacePublications from "../pages/espace/EspacePublications";
 import EspaceArchives from "../pages/espace/EspaceArchives";
 import EspaceDiscipline from "../pages/espace/EspaceDiscipline";
+import EspaceMessagerie from "../pages/espace/EspaceMessagerie";
 
 const NAV = [
   { to: "/", label: "Ma situation", icon: HomeIcon, end: true },
   { to: "/documents", label: "Mes documents", icon: FolderIcon, end: false },
+  { to: "/messagerie", label: "Messagerie", icon: ChatBubbleLeftRightIcon, end: false, badge: "messagerie" },
   { to: "/annuaire", label: "Annuaire", icon: BookOpenIcon, end: false },
   { to: "/assemblees", label: "Assemblées", icon: BuildingLibraryIcon, end: false },
   { to: "/publications", label: "Publications", icon: MegaphoneIcon, end: false },
@@ -30,6 +34,14 @@ const NAV = [
  */
 export function EspaceAvocatLayout() {
   const { user, logout } = useAuth();
+  const location = useLocation();
+  const [nonLus, setNonLus] = useState(0);
+
+  // Pastille de messagerie : rafraîchie au changement de page (lecture incluse).
+  useEffect(() => {
+    getEspaceMessagerieNonLus().then((d) => setNonLus(d.total)).catch(() => {});
+  }, [location.pathname]);
+
   return (
     <div className="min-h-screen bg-creme">
       <header className="bg-navy-3 text-white">
@@ -52,7 +64,7 @@ export function EspaceAvocatLayout() {
           </div>
         </div>
         <nav className="mx-auto flex max-w-container gap-1 overflow-x-auto px-4 md:px-8">
-          {NAV.map(({ to, label, icon: Icon, end }) => (
+          {NAV.map(({ to, label, icon: Icon, end, badge }) => (
             <NavLink
               key={to}
               to={to}
@@ -64,6 +76,9 @@ export function EspaceAvocatLayout() {
               }
             >
               <Icon className="h-4 w-4" /> {label}
+              {badge === "messagerie" && nonLus > 0 && (
+                <span className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-rouge px-1 text-[10px] font-semibold text-white">{nonLus}</span>
+              )}
             </NavLink>
           ))}
         </nav>
@@ -73,6 +88,7 @@ export function EspaceAvocatLayout() {
         <Routes>
           <Route path="/" element={<MaSituation />} />
           <Route path="/documents" element={<MesDocuments />} />
+          <Route path="/messagerie" element={<EspaceMessagerie />} />
           <Route path="/annuaire" element={<EspaceAnnuaire />} />
           <Route path="/assemblees" element={<EspaceAssemblees />} />
           <Route path="/publications" element={<EspacePublications />} />

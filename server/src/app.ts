@@ -34,6 +34,7 @@ import { conseilRouter } from "./routes/conseil.js";
 import { calendrierEditorialRouter } from "./routes/calendrierEditorial.js";
 import { verificationRouter } from "./routes/verification.js";
 import { espaceRouter } from "./routes/espace.js";
+import { messagerieRouter } from "./routes/messagerie.js";
 
 export function creerApp() {
   const app = express();
@@ -100,6 +101,7 @@ export function creerApp() {
   app.use("/api/conseil", conseilRouter);
   app.use("/api/calendrier-editorial", calendrierEditorialRouter);
   app.use("/api/espace", espaceRouter); // espace avocat (rôle AVOCAT, cloisonné)
+  app.use("/api/messagerie", messagerieRouter); // messagerie — côté administration
   app.use("/api/verifier", verificationRouter); // public — vérification d'authenticité (QR)
 
   // Déploiement mono-service : sert le front compilé (dist) sur la même origine

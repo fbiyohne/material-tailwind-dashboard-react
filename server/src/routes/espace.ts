@@ -352,3 +352,154 @@ espaceRouter.get(
     res.json(p);
   })
 );
+
+// ── Messagerie interne (avocat ↔ administration ↔ confrères) ─────────────────
+
+/** Nom lisible de l'avocat connecté (pour figer l'auteur d'un message). */
+async function monNom(req: AuthRequest) {
+  const m = await prisma.membre.findUnique({ where: { id: monMembreId(req) }, select: { nom: true } });
+  return m ? `Me ${m.nom}` : "Avocat";
+}
+
+/** GET /espace/messagerie — fils de discussion de l'avocat (synthèse + non-lus). */
+espaceRouter.get(
+  "/messagerie",
+  asyncH(async (req: AuthRequest, res) => {
+    const moi = monMembreId(req);
+    const convs = await prisma.conversation.findMany({
+      where: { participants: { some: { membreId: moi } } },
+      orderBy: { updatedAt: "desc" },
+      include: {
+        participants: { include: { membre: { select: { id: true, nom: true } } } },
+        messages: { orderBy: { createdAt: "desc" }, take: 1 },
+      },
+    });
+    const result = await Promise.all(
+      convs.map(async (c) => {
+        const moiPart = c.participants.find((p) => p.membreId === moi);
+        const nonLus = await prisma.message.count({
+          where: { conversationId: c.id, NOT: { auteurMembreId: moi }, createdAt: { gt: moiPart?.lastReadAt ?? new Date(0) } },
+        });
+        const autre = c.avecAdministration ? null : c.participants.find((p) => p.membreId !== moi)?.membre ?? null;
+        const dernier = c.messages[0];
+        return {
+          id: c.id,
+          sujet: c.sujet,
+          avecAdministration: c.avecAdministration,
+          interlocuteur: c.avecAdministration ? "Administration" : autre ? `Me ${autre.nom}` : "Confrère",
+          updatedAt: c.updatedAt,
+          apercu: dernier ? { corps: dernier.corps.slice(0, 140), auteurNom: dernier.auteurNom, estMoi: dernier.auteurMembreId === moi, createdAt: dernier.createdAt } : null,
+          nonLus,
+        };
+      })
+    );
+    res.json(result);
+  })
+);
+
+/** GET /espace/messagerie/non-lus — total de messages non lus (pastille de navigation). */
+espaceRouter.get(
+  "/messagerie/non-lus",
+  asyncH(async (req: AuthRequest, res) => {
+    const moi = monMembreId(req);
+    const parts = await prisma.conversationParticipant.findMany({ where: { membreId: moi } });
+    const total = (
+      await Promise.all(
+        parts.map((p) =>
+          prisma.message.count({ where: { conversationId: p.conversationId, NOT: { auteurMembreId: moi }, createdAt: { gt: p.lastReadAt ?? new Date(0) } } })
+        )
+      )
+    ).reduce((a, b) => a + b, 0);
+    res.json({ total });
+  })
+);
+
+/** GET /espace/messagerie/:id — fil détaillé ; marque le fil comme lu. */
+espaceRouter.get(
+  "/messagerie/:id",
+  asyncH(async (req: AuthRequest, res) => {
+    const moi = monMembreId(req);
+    const id = Number(req.params.id);
+    const conv = await prisma.conversation.findUnique({
+      where: { id },
+      include: { participants: { include: { membre: { select: { id: true, nom: true } } } }, messages: { orderBy: { createdAt: "asc" } } },
+    });
+    if (!conv || !conv.participants.some((p) => p.membreId === moi)) throw new HttpError(404, "Conversation introuvable");
+    await prisma.conversationParticipant.update({
+      where: { conversationId_membreId: { conversationId: id, membreId: moi } },
+      data: { lastReadAt: new Date() },
+    });
+    const autre = conv.avecAdministration ? null : conv.participants.find((p) => p.membreId !== moi)?.membre ?? null;
+    res.json({
+      id: conv.id,
+      sujet: conv.sujet,
+      avecAdministration: conv.avecAdministration,
+      interlocuteur: conv.avecAdministration ? "Administration" : autre ? `Me ${autre.nom}` : "Confrère",
+      messages: conv.messages.map((m) => ({
+        id: m.id,
+        corps: m.corps,
+        auteurNom: m.auteurNom,
+        estMoi: m.auteurMembreId === moi,
+        estAdministration: m.estAdministration,
+        createdAt: m.createdAt,
+      })),
+    });
+  })
+);
+
+const nouvelleConvSchema = z.object({
+  sujet: z.string().trim().min(1).max(160),
+  corps: z.string().trim().min(1).max(5000),
+  avecAdministration: z.boolean().default(false),
+  destinataireMembreId: z.number().int().positive().optional(),
+});
+
+/** POST /espace/messagerie — ouvre un fil (avec l'administration ou un confrère). */
+espaceRouter.post(
+  "/messagerie",
+  asyncH(async (req: AuthRequest, res) => {
+    const moi = monMembreId(req);
+    const { sujet, corps, avecAdministration, destinataireMembreId } = nouvelleConvSchema.parse(req.body);
+    const auteurNom = await monNom(req);
+
+    const participantsData: { membreId: number }[] = [{ membreId: moi }];
+    if (!avecAdministration) {
+      if (!destinataireMembreId || destinataireMembreId === moi) throw new HttpError(400, "Destinataire invalide.");
+      const dest = await prisma.membre.findUnique({ where: { id: destinataireMembreId }, select: { id: true } });
+      if (!dest) throw new HttpError(404, "Confrère introuvable.");
+      participantsData.push({ membreId: destinataireMembreId });
+    }
+
+    const conv = await prisma.conversation.create({
+      data: {
+        sujet,
+        avecAdministration,
+        participants: { create: participantsData },
+        messages: { create: { corps, auteurMembreId: moi, auteurNom, estAdministration: false } },
+      },
+    });
+    res.status(201).json({ id: conv.id });
+  })
+);
+
+const repondreSchema = z.object({ corps: z.string().trim().min(1).max(5000) });
+
+/** POST /espace/messagerie/:id — répond dans un fil dont l'avocat est participant. */
+espaceRouter.post(
+  "/messagerie/:id",
+  asyncH(async (req: AuthRequest, res) => {
+    const moi = monMembreId(req);
+    const id = Number(req.params.id);
+    const { corps } = repondreSchema.parse(req.body);
+    const part = await prisma.conversationParticipant.findUnique({
+      where: { conversationId_membreId: { conversationId: id, membreId: moi } },
+    });
+    if (!part) throw new HttpError(404, "Conversation introuvable");
+    const auteurNom = await monNom(req);
+    const message = await prisma.message.create({
+      data: { conversationId: id, corps, auteurMembreId: moi, auteurNom, estAdministration: false },
+    });
+    await prisma.conversation.update({ where: { id }, data: { updatedAt: new Date() } });
+    res.status(201).json({ id: message.id });
+  })
+);

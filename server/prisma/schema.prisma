@@ -110,6 +110,8 @@ model Membre {
   dossiers    DossierDisciplinaire[]
   pieces      PieceDossier[]
   paiements   Paiement[]
+  conversations   ConversationParticipant[] // fils de messagerie auxquels le membre participe
+  messagesEnvoyes Message[]                  // messages dont le membre est l'auteur
   compte      User?                  // compte d'accès à l'espace avocat (1-1, optionnel)
   createdAt   DateTime               @default(now())
 }
@@ -337,6 +339,54 @@ model CalendrierEditorial {
   theme  String
   statut String @default("a_rediger")
   ordre  Int    @default(0)
+}
+
+/// Messagerie interne — fil de discussion entre un avocat et l'administration
+/// (Secrétariat) ou entre confrères. Cloisonnée : un avocat n'accède qu'aux fils
+/// dont il est participant ; l'administration accède aux fils qui lui sont adressés.
+model Conversation {
+  id                 Int                       @id @default(autoincrement())
+  sujet              String
+  /// true : fil avec l'administration ; false : fil entre confrères.
+  avecAdministration Boolean                   @default(false)
+  /// Dernière lecture côté administration (boîte partagée du Secrétariat).
+  adminLastReadAt    DateTime?
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+  participants       ConversationParticipant[]
+  messages           Message[]
+
+  @@index([updatedAt])
+}
+
+/// Participation d'un membre à un fil (1 pour un fil administration, 2 entre confrères).
+model ConversationParticipant {
+  id             Int          @id @default(autoincrement())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId Int
+  membre         Membre       @relation(fields: [membreId], references: [id], onDelete: Cascade)
+  membreId       Int
+  /// Dernière lecture du fil par ce membre (pour le décompte des non-lus).
+  lastReadAt     DateTime?
+
+  @@unique([conversationId, membreId])
+}
+
+/// Message individuel d'un fil. L'auteur est soit un membre, soit l'administration.
+model Message {
+  id                Int          @id @default(autoincrement())
+  conversation      Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId    Int
+  auteurMembre      Membre?      @relation(fields: [auteurMembreId], references: [id], onDelete: SetNull)
+  auteurMembreId    Int?
+  /// true : message émis par l'administration (Secrétariat).
+  estAdministration Boolean      @default(false)
+  /// Nom lisible de l'auteur, figé au moment de l'envoi.
+  auteurNom         String
+  corps             String
+  createdAt         DateTime     @default(now())
+
+  @@index([conversationId])
 }
 
 enum StatutDemande {

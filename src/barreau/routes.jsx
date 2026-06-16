@@ -16,6 +16,7 @@ import {
   NewspaperIcon,
   Cog6ToothIcon,
   UserGroupIcon,
+  ChatBubbleLeftRightIcon,
 } from "@heroicons/react/24/outline";
 
 import Dashboard from "./pages/Dashboard";
@@ -35,6 +36,7 @@ import Publications from "./pages/Publications";
 import LettreBatonnier from "./pages/LettreBatonnier";
 import Parametres from "./pages/Parametres";
 import Utilisateurs from "./pages/Utilisateurs";
+import Messagerie from "./pages/Messagerie";
 import Profil from "./pages/Profil";
 import AvocatDetail from "./pages/AvocatDetail";
 import DossierDetail from "./pages/DossierDetail";
@@ -82,6 +84,7 @@ export const navSections = [
       { name: "Réunions", path: "/reunions", icon: CalendarDaysIcon, roles: INSTITUTIONNEL, element: <Reunions /> },
       { name: "Assemblées générales", path: "/assemblees", icon: BuildingLibraryIcon, roles: INSTITUTIONNEL, element: <Assemblees /> },
       { name: "Discipline", path: "/discipline", icon: ScaleIcon, roles: INSTITUTIONNEL, element: <Discipline /> },
+      { name: "Messagerie", path: "/messagerie", icon: ChatBubbleLeftRightIcon, roles: ["SECRETAIRE_GENERAL", "BATONNIER", "TRESORIERE"], element: <Messagerie /> },
     ],
   },
   {

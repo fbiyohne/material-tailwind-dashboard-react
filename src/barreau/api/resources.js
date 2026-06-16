@@ -200,6 +200,19 @@ export const getEspaceArchives = (q = "") => api(`/espace/archives${q ? `?q=${en
 export const getEspacePublications = () => api("/espace/publications").then((a) => a.map(normPub));
 export const getEspacePublication = (id) => api(`/espace/publications/${id}`).then(normPub);
 
+// Messagerie interne — côté avocat
+export const getEspaceMessagerie = () => api("/espace/messagerie");
+export const getEspaceMessagerieNonLus = () => api("/espace/messagerie/non-lus");
+export const getEspaceConversation = (id) => api(`/espace/messagerie/${id}`);
+export const creerEspaceConversation = (body) => api("/espace/messagerie", { method: "POST", body });
+export const repondreEspaceConversation = (id, corps) => api(`/espace/messagerie/${id}`, { method: "POST", body: { corps } });
+
+// Messagerie interne — côté administration (Secrétariat)
+export const getMessagerie = () => api("/messagerie");
+export const getMessagerieNonLus = () => api("/messagerie/non-lus");
+export const getConversationAdmin = (id) => api(`/messagerie/${id}`);
+export const repondreConversationAdmin = (id, corps) => api(`/messagerie/${id}`, { method: "POST", body: { corps } });
+
 // ─── Activation de compte (page publique « Activer mon espace ») ──────────
 export const getActivation = (token) => api(`/auth/activation/${token}`, { auth: false });
 export const activerCompte = (token, password) => api("/auth/activer", { method: "POST", auth: false, body: { token, password } });
