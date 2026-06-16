@@ -401,7 +401,9 @@ espaceRouter.get(
       convs.map(async (c) => {
         const moiPart = c.participants.find((p) => p.membreId === moi);
         const nonLus = await prisma.message.count({
-          where: { conversationId: c.id, NOT: { auteurMembreId: moi }, createdAt: { gt: moiPart?.lastReadAt ?? new Date(0) } },
+          // « Non écrit par moi » : inclut l'administration (auteurMembreId NULL),
+          // que la négation SQL « <> moi » exclurait à tort.
+          where: { conversationId: c.id, OR: [{ auteurMembreId: null }, { auteurMembreId: { not: moi } }], createdAt: { gt: moiPart?.lastReadAt ?? new Date(0) } },
         });
         const autre = c.avecAdministration ? null : c.participants.find((p) => p.membreId !== moi)?.membre ?? null;
         const dernier = c.messages[0];
@@ -429,7 +431,8 @@ espaceRouter.get(
     const total = (
       await Promise.all(
         parts.map((p) =>
-          prisma.message.count({ where: { conversationId: p.conversationId, NOT: { auteurMembreId: moi }, createdAt: { gt: p.lastReadAt ?? new Date(0) } } })
+          // « Non écrit par moi » inclut l'administration (auteurMembreId NULL).
+          prisma.message.count({ where: { conversationId: p.conversationId, OR: [{ auteurMembreId: null }, { auteurMembreId: { not: moi } }], createdAt: { gt: p.lastReadAt ?? new Date(0) } } })
         )
       )
     ).reduce((a, b) => a + b, 0);
