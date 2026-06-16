@@ -9,6 +9,7 @@ import { env } from "./env.js";
 import { logger } from "./lib/logger.js";
 import { errorHandler } from "./middleware/error.js";
 import { audit } from "./middleware/audit.js";
+import { confinementAvocat } from "./middleware/auth.js";
 import { authRouter } from "./routes/auth.js";
 import { membresRouter } from "./routes/membres.js";
 import { usersRouter } from "./routes/users.js";
@@ -32,6 +33,7 @@ import { signaturesRouter } from "./routes/signatures.js";
 import { conseilRouter } from "./routes/conseil.js";
 import { calendrierEditorialRouter } from "./routes/calendrierEditorial.js";
 import { verificationRouter } from "./routes/verification.js";
+import { espaceRouter } from "./routes/espace.js";
 
 export function creerApp() {
   const app = express();
@@ -70,6 +72,8 @@ export function creerApp() {
   app.use("/api", audit);
   // Limiteur global (protection DoS basique).
   app.use("/api", rateLimit({ windowMs: 15 * 60 * 1000, limit: 600, standardHeaders: true, legacyHeaders: false }));
+  // Cloisonnement : un jeton AVOCAT est confiné à /api/espace et /api/auth.
+  app.use("/api", confinementAvocat);
 
   app.get("/api/health", (_req, res) => res.json({ ok: true, service: "barreau-pn-api" }));
 
@@ -95,6 +99,7 @@ export function creerApp() {
   app.use("/api/signatures", signaturesRouter);
   app.use("/api/conseil", conseilRouter);
   app.use("/api/calendrier-editorial", calendrierEditorialRouter);
+  app.use("/api/espace", espaceRouter); // espace avocat (rôle AVOCAT, cloisonné)
   app.use("/api/verifier", verificationRouter); // public — vérification d'authenticité (QR)
 
   // Déploiement mono-service : sert le front compilé (dist) sur la même origine

@@ -15,6 +15,7 @@ enum Role {
   BATONNIER
   TRESORIERE
   ADMIN
+  AVOCAT
 }
 
 enum Qualite {
@@ -61,6 +62,14 @@ model User {
   actif         Boolean        @default(true)
   createdAt     DateTime       @default(now())
   refreshTokens RefreshToken[]
+  // Espace avocat : un compte de rôle AVOCAT est rattaché à sa fiche Membre
+  // (1-1). Le membreId du jeton sert au cloisonnement (un avocat ne voit que
+  // ses propres données). Activation par lien : le secrétariat provisionne le
+  // compte (actif=false) puis l'avocat choisit son mot de passe via le token.
+  membre           Membre?   @relation(fields: [membreId], references: [id], onDelete: Cascade)
+  membreId         Int?      @unique
+  activationToken  String?   @unique
+  activationExpire DateTime?
 }
 
 model RefreshToken {
@@ -101,6 +110,7 @@ model Membre {
   dossiers    DossierDisciplinaire[]
   pieces      PieceDossier[]
   paiements   Paiement[]
+  compte      User?                  // compte d'accès à l'espace avocat (1-1, optionnel)
   createdAt   DateTime               @default(now())
 }
 

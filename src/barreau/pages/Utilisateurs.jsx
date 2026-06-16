@@ -13,8 +13,11 @@ const ROLE_LABEL = {
   BATONNIER: "Bâtonnier",
   TRESORIERE: "Trésorière",
   ADMIN: "Administrateur",
+  AVOCAT: "Avocat",
 };
-const ROLES = Object.keys(ROLE_LABEL);
+// Rôles attribuables manuellement : le rôle AVOCAT n'en fait pas partie — un
+// compte avocat se provisionne depuis la fiche du membre (accès espace).
+const ROLES = ["SECRETAIRE_GENERAL", "BATONNIER", "TRESORIERE", "ADMIN"];
 
 const videCreation = (prefill = {}) => ({ nom: "", email: "", role: "SECRETAIRE_GENERAL", password: "", demandeId: null, ...prefill });
 
@@ -170,17 +173,21 @@ export function Utilisateurs() {
             {
               key: "role",
               label: "Rôle",
-              cell: (u) => (
-                <select
-                  value={u.role}
-                  onChange={(e) => changerRole(u, e.target.value)}
-                  disabled={u.id === courant?.id}
-                  className="bpn-input !w-auto !py-1 text-xs disabled:opacity-60"
-                  title={u.id === courant?.id ? "Vous ne pouvez pas changer votre propre rôle" : ""}
-                >
-                  {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
-                </select>
-              ),
+              cell: (u) =>
+                // Un compte avocat (espace) n'est pas un rôle du back-office : non modifiable ici.
+                u.role === "AVOCAT" ? (
+                  <Badge ton="bleu" dot={false}>Avocat</Badge>
+                ) : (
+                  <select
+                    value={u.role}
+                    onChange={(e) => changerRole(u, e.target.value)}
+                    disabled={u.id === courant?.id}
+                    className="bpn-input !w-auto !py-1 text-xs disabled:opacity-60"
+                    title={u.id === courant?.id ? "Vous ne pouvez pas changer votre propre rôle" : ""}
+                  >
+                    {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
+                  </select>
+                ),
             },
             {
               key: "statut",

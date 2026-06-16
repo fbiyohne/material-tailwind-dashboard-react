@@ -65,6 +65,44 @@ authRouter.post(
   })
 );
 
+/**
+ * GET /auth/activation/:token — vérifie un lien d'activation d'espace avocat et
+ * renvoie un minimum d'informations (nom/email) pour la page de définition du
+ * mot de passe. Public : le token (aléatoire, à durée limitée) fait foi.
+ */
+authRouter.get(
+  "/activation/:token",
+  asyncH(async (req, res) => {
+    const user = await prisma.user.findUnique({ where: { activationToken: req.params.token } });
+    if (!user || !user.activationExpire || user.activationExpire < new Date()) {
+      throw new HttpError(404, "Lien d'activation invalide ou expiré");
+    }
+    res.json({ nom: user.nom, email: user.email });
+  })
+);
+
+const activerSchema = z.object({ token: z.string().min(1), password: z.string().min(8) });
+
+/**
+ * POST /auth/activer — l'avocat définit son mot de passe et active son compte.
+ * Consomme le token (usage unique) et rend le compte actif.
+ */
+authRouter.post(
+  "/activer",
+  asyncH(async (req, res) => {
+    const { token, password } = activerSchema.parse(req.body);
+    const user = await prisma.user.findUnique({ where: { activationToken: token } });
+    if (!user || !user.activationExpire || user.activationExpire < new Date()) {
+      throw new HttpError(404, "Lien d'activation invalide ou expiré");
+    }
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash: bcrypt.hashSync(password, 10), actif: true, activationToken: null, activationExpire: null },
+    });
+    res.json({ ok: true, email: user.email });
+  })
+);
+
 const refreshSchema = z.object({ refreshToken: z.string().min(1) });
 
 authRouter.post(

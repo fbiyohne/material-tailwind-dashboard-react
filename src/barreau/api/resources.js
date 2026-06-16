@@ -65,6 +65,8 @@ export function modifierMembre(id, patch) {
 
 export const radierMembre = (id) => api(`/membres/${id}/radier`, { method: "POST" }).then(normaliserMembre);
 export const supprimerMembre = (id) => api(`/membres/${id}`, { method: "DELETE" });
+/** Provisionne (ou renvoie) l'accès à l'espace avocat d'un membre. SG/Admin. */
+export const provisionnerAccesAvocat = (membreId) => api(`/membres/${membreId}/acces`, { method: "POST" });
 export const importerMembres = (membres) => api("/membres/import", { method: "POST", body: { membres } });
 export const genererAttestation = (id) => api(`/membres/${id}/attestation`, { method: "POST" });
 
@@ -175,6 +177,16 @@ export const confirmerPaiementSandbox = (ref, succes = true) => api(`/paiements/
 export const getPaiement = (ref) => api(`/paiements/${ref}`);
 export const getParametres = () => api("/parametres");
 export const majParametres = (patch) => api("/parametres", { method: "PUT", body: patch });
+
+// ─── Espace avocat (rôle AVOCAT — libre-service cloisonné) ────────────────
+export const getEspaceMoi = () => api("/espace/moi");
+export const getEspaceDocuments = () => api("/espace/documents");
+export const telechargerEspaceRecuPdf = (id, numero) => telechargerPdf(`/espace/recus/${id}/pdf`, `Recu-${numero}.pdf`);
+export const telechargerEspaceQuitusPdf = (id, numero) => telechargerPdf(`/espace/quitus/${id}/pdf`, `Quitus-${numero}.pdf`);
+
+// ─── Activation de compte (page publique « Activer mon espace ») ──────────
+export const getActivation = (token) => api(`/auth/activation/${token}`, { auth: false });
+export const activerCompte = (token, password) => api("/auth/activer", { method: "POST", auth: false, body: { token, password } });
 
 // ─── Utilisateurs (comptes & rôles, SG/Admin) ────────────────────────────
 export const listerUsers = () => api("/users");

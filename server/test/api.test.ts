@@ -174,6 +174,87 @@ describe("Super-administrateur — comptes utilisateurs (ADMIN)", () => {
   });
 });
 
+describe("Espace avocat — provisionnement, activation & cloisonnement", () => {
+  let membreId = 0;
+  let token = ""; // token d'activation
+  let avocat = ""; // JWT d'accès de l'avocat
+  const email = `avocat.test.${Date.now()}@barreau-pn.cg`;
+
+  it("crée un avocat avec email (SG)", async () => {
+    const r = await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: `ESPACE Test ${Date.now()}`, qualite: "AVOCAT", email });
+    expect(r.status).toBe(201);
+    membreId = r.body.id;
+  });
+
+  it("refuse le provisionnement sans email sur la fiche (400)", async () => {
+    const m = await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: `NOEMAIL ${Date.now()}`, qualite: "AVOCAT" });
+    const r = await request(app).post(`/api/membres/${m.body.id}/acces`).set(...bearer(sg));
+    expect(r.status).toBe(400);
+    await request(app).delete(`/api/membres/${m.body.id}`).set(...bearer(admin));
+  });
+
+  it("provisionne l'accès espace (SG) et renvoie un lien d'activation", async () => {
+    const r = await request(app).post(`/api/membres/${membreId}/acces`).set(...bearer(sg));
+    expect(r.status).toBe(201);
+    expect(r.body.lien).toContain("/activer/");
+    token = r.body.lien.split("/activer/")[1];
+    expect(token).toBeTruthy();
+  });
+
+  it("le compte avocat ne peut pas se connecter avant activation (401)", async () => {
+    const r = await request(app).post("/api/auth/login").send({ email, password: "barreau" });
+    expect(r.status).toBe(401);
+  });
+
+  it("active le compte avec un mot de passe choisi, puis se connecte", async () => {
+    const info = await request(app).get(`/api/auth/activation/${token}`);
+    expect(info.status).toBe(200);
+    expect(info.body.email).toBe(email);
+    const act = await request(app).post("/api/auth/activer").send({ token, password: "avocatpass8" });
+    expect(act.status).toBe(200);
+    avocat = (await request(app).post("/api/auth/login").send({ email, password: "avocatpass8" })).body.token;
+    expect(avocat).toBeTruthy();
+  });
+
+  it("l'avocat consulte sa situation et ses documents", async () => {
+    const moi = await request(app).get("/api/espace/moi").set(...bearer(avocat));
+    expect(moi.status).toBe(200);
+    expect(moi.body.membre.id).toBe(membreId);
+    expect(moi.body.situation.cotisation).toBeTruthy();
+    const docs = await request(app).get("/api/espace/documents").set(...bearer(avocat));
+    expect(docs.status).toBe(200);
+    expect(Array.isArray(docs.body.recus)).toBe(true);
+  });
+
+  it("cloisonnement : un jeton avocat est refusé hors de l'espace (403)", async () => {
+    expect((await request(app).get("/api/membres").set(...bearer(avocat))).status).toBe(403);
+    expect((await request(app).get("/api/cotisations?annee=2026").set(...bearer(avocat))).status).toBe(403);
+    expect((await request(app).get("/api/users").set(...bearer(avocat))).status).toBe(403);
+  });
+
+  it("l'espace est refusé aux profils du back-office (403)", async () => {
+    expect((await request(app).get("/api/espace/moi").set(...bearer(sg))).status).toBe(403);
+  });
+
+  it("cloisonnement documentaire : un document inexistant/d'autrui renvoie 404", async () => {
+    expect((await request(app).get("/api/espace/recus/99999999/pdf").set(...bearer(avocat))).status).toBe(404);
+  });
+
+  it("refuse un second provisionnement quand l'accès est déjà actif (409)", async () => {
+    const r = await request(app).post(`/api/membres/${membreId}/acces`).set(...bearer(sg));
+    expect(r.status).toBe(409);
+  });
+
+  it("régénère le lien tant que l'accès n'est pas activé (renvoi)", async () => {
+    const m = await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: `RENVOI ${Date.now()}`, qualite: "AVOCAT", email: `renvoi.${Date.now()}@barreau-pn.cg` });
+    expect((await request(app).post(`/api/membres/${m.body.id}/acces`).set(...bearer(sg))).status).toBe(201);
+    const p2 = await request(app).post(`/api/membres/${m.body.id}/acces`).set(...bearer(sg));
+    expect(p2.status).toBe(201);
+    expect(p2.body.renvoi).toBe(true);
+    await request(app).delete(`/api/membres/${m.body.id}`).set(...bearer(admin)); // cascade le compte
+  });
+});
+
 describe("Discipline — accès restreint (RG-13)", () => {
   it("interdit l'accès à la Trésorière (403)", async () => {
     const r = await request(app).get("/api/discipline").set(...bearer(tr));

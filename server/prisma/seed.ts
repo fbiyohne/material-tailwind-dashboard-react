@@ -28,10 +28,11 @@ async function main() {
     prisma.archive.deleteMany(),
     prisma.quitus.deleteMany(),
     prisma.recu.deleteMany(),
+    prisma.paiement.deleteMany(), // RESTRICT vers Membre : à purger avant les fiches
     prisma.cotisation.deleteMany(),
     prisma.droitPlaidoirie.deleteMany(),
     prisma.dossierDisciplinaire.deleteMany(),
-    prisma.membre.deleteMany(),
+    prisma.membre.deleteMany(), // cascade les comptes avocat liés (User.membreId)
     prisma.user.deleteMany(),
   ]);
 
@@ -97,6 +98,15 @@ async function main() {
         },
       });
     }
+  }
+
+  // Compte de démonstration de l'espace avocat, rattaché à un membre existant.
+  // Identifiants : avocat@barreau-pn.cg · mot de passe « barreau ».
+  const demoAvocat = await prisma.membre.findFirst({ where: { num: 5 } });
+  if (demoAvocat) {
+    await prisma.user.create({
+      data: { nom: `Me ${demoAvocat.nom}`, email: "avocat@barreau-pn.cg", role: "AVOCAT", membreId: demoAvocat.id, passwordHash: hash("barreau"), actif: true },
+    });
   }
 
   // Quitus de référence (BIKINDOU, exercice 2026) + archive
