@@ -183,6 +183,8 @@ export const getEspaceMoi = () => api("/espace/moi");
 export const getEspaceDocuments = () => api("/espace/documents");
 export const telechargerEspaceRecuPdf = (id, numero) => telechargerPdf(`/espace/recus/${id}/pdf`, `Recu-${numero}.pdf`);
 export const telechargerEspaceQuitusPdf = (id, numero) => telechargerPdf(`/espace/quitus/${id}/pdf`, `Quitus-${numero}.pdf`);
+export const initierEspacePaiement = (body) => api("/espace/paiement", { method: "POST", body });
+export const confirmerEspacePaiementSandbox = (ref, succes = true) => api(`/espace/paiement/${ref}/confirmer-sandbox`, { method: "POST", body: { succes } });
 
 // ─── Activation de compte (page publique « Activer mon espace ») ──────────
 export const getActivation = (token) => api(`/auth/activation/${token}`, { auth: false });

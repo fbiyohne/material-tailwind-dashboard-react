@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
-import { encaisser } from "../lib/encaissement.js";
+import { finaliserPaiement } from "../lib/encaissement.js";
 import { CANAUX, modeSandbox, nouvelleReference, initierPaiement, verifierSignatureWebhook } from "../lib/paiement.js";
 
 /**
@@ -13,15 +13,6 @@ import { CANAUX, modeSandbox, nouvelleReference, initierPaiement, verifierSignat
  * jour la situation — idempotent (recuNumero).
  */
 export const paiementsRouter = Router();
-
-/** Finalise un paiement réussi : encaisse (BR-03) et marque REUSSI. Idempotent. */
-async function finaliser(paiementId: number) {
-  const p = await prisma.paiement.findUnique({ where: { id: paiementId }, include: { membre: true } });
-  if (!p) throw new HttpError(404, "Paiement introuvable");
-  if (p.statut === "REUSSI" && p.recuNumero) return p; // déjà encaissé
-  const { recu } = await encaisser({ membre: p.membre, annee: p.annee, montant: p.montant, type: p.type as "cotisation" | "droit", mode: `En ligne (${p.canal})`, ref: p.ref });
-  return prisma.paiement.update({ where: { id: p.id }, data: { statut: "REUSSI", recuNumero: recu.numero } });
-}
 
 /** POST /paiements/webhook — notification de la passerelle (réel), signée. */
 paiementsRouter.post(
@@ -39,7 +30,7 @@ paiementsRouter.post(
     const ref = String(req.body?.ref ?? "");
     const p = await prisma.paiement.findUnique({ where: { ref } });
     if (!p) throw new HttpError(404, "Paiement introuvable");
-    if (req.body?.statut === "REUSSI") await finaliser(p.id);
+    if (req.body?.statut === "REUSSI") await finaliserPaiement(p.id);
     else if (p.statut !== "REUSSI") await prisma.paiement.update({ where: { id: p.id }, data: { statut: "ECHEC" } });
     res.json({ ok: true });
   })
@@ -92,7 +83,7 @@ paiementsRouter.post(
     const { succes } = confirmerSchema.parse(req.body ?? {});
     const p = await prisma.paiement.findUnique({ where: { ref: req.params.ref } });
     if (!p) throw new HttpError(404, "Paiement introuvable");
-    if (succes) return res.json(await finaliser(p.id));
+    if (succes) return res.json(await finaliserPaiement(p.id));
     res.json(await prisma.paiement.update({ where: { id: p.id }, data: { statut: "ECHEC" } }));
   })
 );

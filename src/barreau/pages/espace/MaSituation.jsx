@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
+import PropTypes from "prop-types";
+import { CreditCardIcon } from "@heroicons/react/24/outline";
 import { Badge, StatCard, PageHeader, useToast, TableSkeleton, ErrorState } from "../../components";
 import { STATUT_META, QUALITE_LABEL } from "../../data/derivations";
 import { formatFCFA, formatDate } from "../../utils/format";
 import { getEspaceMoi } from "../../api/resources";
+import { PaiementEspaceModal } from "./PaiementEspaceModal";
 
-function CarteSituation({ titre, du, paye, solde, statut, valide }) {
+function CarteSituation({ titre, du, paye, solde, statut, valide, onPayer }) {
   const meta = STATUT_META[statut] ?? { ton: "gris", label: statut };
   return (
     <div className="bpn-card p-4">
@@ -20,9 +23,20 @@ function CarteSituation({ titre, du, paye, solde, statut, valide }) {
         <div><div className="text-[11px] uppercase tracking-wide text-gris">Payé</div><div className="mt-1 font-medium text-vert">{paye ? formatFCFA(paye) : "—"}</div></div>
         <div><div className="text-[11px] uppercase tracking-wide text-gris">Solde</div><div className={`mt-1 font-medium ${solde ? "text-rouge" : "text-vert"}`}>{solde ? formatFCFA(solde) : "✓ Soldé"}</div></div>
       </div>
+      {solde > 0 && onPayer && (
+        <div className="mt-3 flex justify-end">
+          <button className="bpn-btn bpn-btn-or !px-3 !py-1.5 text-xs" onClick={onPayer}>
+            <CreditCardIcon className="h-4 w-4" /> Payer en ligne
+          </button>
+        </div>
+      )}
     </div>
   );
 }
+CarteSituation.propTypes = {
+  titre: PropTypes.string, du: PropTypes.number, paye: PropTypes.number, solde: PropTypes.number,
+  statut: PropTypes.string, valide: PropTypes.bool, onPayer: PropTypes.func,
+};
 
 /** Tableau d'historique (cotisations ou droits) de l'avocat connecté. */
 function Historique({ titre, lignes }) {
@@ -65,6 +79,7 @@ export function MaSituation() {
   const toast = useToast();
   const [data, setData] = useState(null);
   const [erreur, setErreur] = useState(false);
+  const [paiement, setPaiement] = useState(null); // { type, annee, du, solde }
 
   const charger = () => {
     setErreur(false);
@@ -97,12 +112,34 @@ export function MaSituation() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <CarteSituation titre={`Cotisation ${annee}`} {...situation.cotisation} valide={situation.cotisation.valideTresoriere} />
-        {situation.droit && <CarteSituation titre={`Droit de plaidoirie ${annee}`} {...situation.droit} valide={false} />}
+        <CarteSituation
+          titre={`Cotisation ${annee}`}
+          {...situation.cotisation}
+          valide={situation.cotisation.valideTresoriere}
+          onPayer={() => setPaiement({ type: "cotisation", annee, du: situation.cotisation.du, solde: situation.cotisation.solde })}
+        />
+        {situation.droit && (
+          <CarteSituation
+            titre={`Droit de plaidoirie ${annee}`}
+            {...situation.droit}
+            valide={false}
+            onPayer={() => setPaiement({ type: "droit", annee, du: situation.droit.du, solde: situation.droit.solde })}
+          />
+        )}
       </div>
 
       <Historique titre="Historique des cotisations" lignes={cotisations} />
       {situation.droit && <Historique titre="Historique des droits de plaidoirie" lignes={droits} />}
+
+      <PaiementEspaceModal
+        open={!!paiement}
+        onClose={() => setPaiement(null)}
+        type={paiement?.type}
+        annee={paiement?.annee}
+        du={paiement?.du}
+        solde={paiement?.solde}
+        onDone={charger}
+      />
     </div>
   );
 }

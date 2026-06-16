@@ -1,5 +1,6 @@
 import { Prisma, type Membre } from "@prisma/client";
 import { prisma } from "../prisma.js";
+import { HttpError } from "../middleware/error.js";
 import { montantDuAvec, droitDuAvec, prochainNumeroRecu, tarifsActuels } from "./business.js";
 import { envoyerEmail } from "./notifications.js";
 
@@ -72,4 +73,20 @@ export async function encaisser(opts: {
     });
   }
   return resultat;
+}
+
+/**
+ * Finalise un paiement passerelle réussi : encaisse (BR-03), émet le reçu et
+ * marque le paiement REUSSI. Idempotent (recuNumero). Partagé par le webhook,
+ * la simulation sandbox et l'espace avocat.
+ */
+export async function finaliserPaiement(paiementId: number) {
+  const p = await prisma.paiement.findUnique({ where: { id: paiementId }, include: { membre: true } });
+  if (!p) throw new HttpError(404, "Paiement introuvable");
+  if (p.statut === "REUSSI" && p.recuNumero) return p; // déjà encaissé
+  const { recu } = await encaisser({
+    membre: p.membre, annee: p.annee, montant: p.montant,
+    type: p.type as TypeReglement, mode: `En ligne (${p.canal})`, ref: p.ref,
+  });
+  return prisma.paiement.update({ where: { id: p.id }, data: { statut: "REUSSI", recuNumero: recu.numero } });
 }

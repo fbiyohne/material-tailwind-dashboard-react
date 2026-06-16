@@ -226,10 +226,39 @@ describe("Espace avocat — provisionnement, activation & cloisonnement", () => 
     expect(Array.isArray(docs.body.recus)).toBe(true);
   });
 
+  it("l'avocat paie sa cotisation en ligne (sandbox) — reçu émis, situation à jour", async () => {
+    const anneeNow = new Date().getFullYear();
+    const init = await request(app).post("/api/espace/paiement").set(...bearer(avocat)).send({ annee: anneeNow, type: "cotisation", canal: "MTN" });
+    expect(init.status).toBe(201);
+    expect(init.body.sandbox).toBe(true);
+    const ref = init.body.paiement.ref;
+    const conf = await request(app).post(`/api/espace/paiement/${ref}/confirmer-sandbox`).set(...bearer(avocat)).send({ succes: true });
+    expect(conf.status).toBe(200);
+    expect(conf.body.statut).toBe("REUSSI");
+    expect(conf.body.recuNumero).toBeTruthy();
+    const moi = await request(app).get("/api/espace/moi").set(...bearer(avocat));
+    expect(moi.body.situation.cotisation.paye).toBeGreaterThan(0);
+    expect(moi.body.situation.cotisation.solde).toBe(0);
+    const docs = await request(app).get("/api/espace/documents").set(...bearer(avocat));
+    expect(docs.body.recus.length).toBeGreaterThan(0);
+  });
+
+  it("refuse de confirmer un paiement inexistant / d'autrui (404)", async () => {
+    expect((await request(app).post("/api/espace/paiement/PAY-INCONNU/confirmer-sandbox").set(...bearer(avocat)).send({ succes: true })).status).toBe(404);
+  });
+
+  it("rejette un paiement sans solde à régler (cotisation déjà soldée, 400)", async () => {
+    const anneeNow = new Date().getFullYear();
+    const r = await request(app).post("/api/espace/paiement").set(...bearer(avocat)).send({ annee: anneeNow, type: "cotisation", canal: "MTN" });
+    expect(r.status).toBe(400);
+  });
+
   it("cloisonnement : un jeton avocat est refusé hors de l'espace (403)", async () => {
     expect((await request(app).get("/api/membres").set(...bearer(avocat))).status).toBe(403);
     expect((await request(app).get("/api/cotisations?annee=2026").set(...bearer(avocat))).status).toBe(403);
     expect((await request(app).get("/api/users").set(...bearer(avocat))).status).toBe(403);
+    // le paiement staff reste hors d'atteinte du rôle avocat (cloisonnement)
+    expect((await request(app).post("/api/paiements/initier").set(...bearer(avocat)).send({ membreId, annee: 2026, montant: 1000, type: "cotisation", canal: "MTN" })).status).toBe(403);
   });
 
   it("l'espace est refusé aux profils du back-office (403)", async () => {
