@@ -26,17 +26,26 @@ export function DocumentModal({
 }) {
   const [archive, setArchive] = useState(false);
 
-  const generer = () => {
-    onArchive?.();
-    setArchive(true);
-    setTimeout(() => window.print(), 50);
-  };
-
   const nomFichier = `${title} ${reference ?? ""}`.trim().replace(/\s+/g, "-");
 
   // PDF serveur (Puppeteer, document scellé) si pdfPath fourni ; sinon export client.
   const telecharger = () =>
     pdfPath ? telechargerPdf(pdfPath, pdfFilename ?? `${nomFichier}.pdf`) : exporterPdf(nomFichier);
+
+  // « Générer & archiver » : archive (RG-14) puis produit le document officiel.
+  // On télécharge le PDF scellé du serveur quand il existe — fiable, contrairement
+  // à window.print() depuis une modale (zone d'impression tronquée par l'overlay) ;
+  // repli sur l'impression navigateur uniquement faute de PDF serveur.
+  const generer = async () => {
+    try {
+      await onArchive?.();
+      setArchive(true);
+      if (pdfPath) await telechargerPdf(pdfPath, pdfFilename ?? `${nomFichier}.pdf`);
+      else setTimeout(() => window.print(), 50);
+    } catch {
+      /* l'échec d'archivage/téléchargement reste silencieux ici (pas de toast dans ce composant) */
+    }
+  };
 
   return (
     <Modal

@@ -127,17 +127,17 @@ export function Discipline() {
         <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-rougeL text-rouge">
           <ShieldExclamationIcon className="h-7 w-7" />
         </div>
-        <h2 className="font-display text-2xl text-navy">Accès restreint</h2>
+        <h2 className="font-display text-2xl text-navy">Module confidentiel</h2>
         <p className="mt-2 max-w-md text-sm text-gris">
-          Le Conseil de discipline contient des données strictement confidentielles. L'accès est
-          réservé aux profils Secrétaire Général, Bâtonnier et Administrateur. Toute consultation
-          est <strong>journalisée</strong> (règle RG-13).
+          Le Conseil de discipline contient des données strictement confidentielles.
+          <strong> Vous y avez accès</strong> (Secrétaire Général, Bâtonnier, Administrateur) ;
+          conformément à la règle RG-13, chaque consultation est <strong>journalisée</strong>.
         </p>
         <button
           className="bpn-btn bpn-btn-danger mt-6"
           onClick={() => { setAcces(true); charger(); }}
         >
-          <LockClosedIcon className="h-4 w-4" /> Accéder — consultation journalisée
+          <LockClosedIcon className="h-4 w-4" /> Entrer dans le module — consultation journalisée
         </button>
       </div>
     );
