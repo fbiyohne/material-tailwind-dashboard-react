@@ -79,6 +79,9 @@ function Section({ titre, description, children, action }) {
   );
 }
 
+/** Intitulé de sous-section homogène à l'intérieur des cartes de réglages. */
+const SOUS_TITRE = "mb-2 text-[11px] font-semibold uppercase tracking-wider text-gris";
+
 /** Liste de chaînes éditable (ajout/suppression) — catégories, types… */
 function ListeEditable({ valeurs, onChange, placeholder }) {
   const [saisie, setSaisie] = useState("");
@@ -88,29 +91,32 @@ function ListeEditable({ valeurs, onChange, placeholder }) {
     setSaisie("");
   };
   return (
-    <div>
-      <div className="flex flex-wrap gap-1.5">
-        {valeurs.map((v) => (
-          <span key={v} className="inline-flex items-center gap-1 rounded-full border border-grisM bg-grisL/50 px-2.5 py-1 text-xs text-encre">
-            {v}
-            <button type="button" aria-label={`Retirer ${v}`} onClick={() => onChange(valeurs.filter((x) => x !== v))} className="text-gris transition hover:text-rouge">
-              <XMarkIcon className="h-3 w-3" />
-            </button>
-          </span>
-        ))}
-        {valeurs.length === 0 && <span className="text-xs text-gris">Aucune entrée.</span>}
-      </div>
-      <div className="mt-2 flex gap-2">
+    <div className="space-y-2.5">
+      <div className="flex gap-2">
         <input
           value={saisie}
           onChange={(e) => setSaisie(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); ajouter(); } }}
           placeholder={placeholder}
-          className="bpn-input !py-1.5 text-sm"
+          className="bpn-input text-sm"
         />
-        <button type="button" onClick={ajouter} className="bpn-btn bpn-btn-ghost !py-1.5 text-xs shrink-0">
-          <PlusIcon className="h-3.5 w-3.5" /> Ajouter
+        <button type="button" onClick={ajouter} className="bpn-btn bpn-btn-ghost shrink-0 text-sm">
+          <PlusIcon className="h-4 w-4" /> Ajouter
         </button>
+      </div>
+      <div className="flex min-h-[2.75rem] flex-wrap content-start gap-1.5 rounded-lg border border-dashed border-grisM bg-grisL/30 p-2">
+        {valeurs.length === 0 ? (
+          <span className="px-1 py-0.5 text-xs text-gris">Aucune entrée pour l'instant.</span>
+        ) : (
+          valeurs.map((v) => (
+            <span key={v} className="inline-flex items-center gap-1 rounded-full border border-grisM bg-white px-2.5 py-1 text-xs text-encre">
+              {v}
+              <button type="button" aria-label={`Retirer ${v}`} onClick={() => onChange(valeurs.filter((x) => x !== v))} className="text-gris transition hover:text-rouge">
+                <XMarkIcon className="h-3 w-3" />
+              </button>
+            </span>
+          ))
+        )}
       </div>
     </div>
   );
@@ -229,11 +235,11 @@ export function Parametres() {
       <Section titre="Catégories & types de documents" description="Listes de référence utilisées dans l'archivage et les publications.">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div>
-            <div className="mb-2 text-xs font-medium uppercase tracking-wide text-gris">Catégories d'archives</div>
+            <div className={SOUS_TITRE}>Catégories d'archives</div>
             <ListeEditable valeurs={categories} onChange={setCategories} placeholder="Nouvelle catégorie…" />
           </div>
           <div>
-            <div className="mb-2 text-xs font-medium uppercase tracking-wide text-gris">Types de publication</div>
+            <div className={SOUS_TITRE}>Types de publication</div>
             <ListeEditable valeurs={typesPub} onChange={setTypesPub} placeholder="Nouveau type…" />
           </div>
         </div>
@@ -242,38 +248,44 @@ export function Parametres() {
       <Section titre="Canaux de paiement & stage" description="Moyens de paiement proposés en ligne et durée de stage par défaut.">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div>
-            <div className="mb-2 text-xs font-medium uppercase tracking-wide text-gris">Canaux de paiement actifs</div>
-            <div className="space-y-2">
-              {CANAUX_DISPO.map((c) => (
-                <label key={c.value} className="flex cursor-pointer items-center gap-2.5 text-sm">
-                  <input type="checkbox" checked={canaux.includes(c.value)} onChange={() => basculerCanal(c.value)} className="h-4 w-4 accent-navy" />
-                  <span className={canaux.includes(c.value) ? "text-encre" : "text-gris"}>{c.label}</span>
-                </label>
-              ))}
+            <div className={SOUS_TITRE}>Canaux de paiement actifs</div>
+            <div className="overflow-hidden rounded-lg border border-grisM">
+              {CANAUX_DISPO.map((c, i) => {
+                const actif = canaux.includes(c.value);
+                return (
+                  <label key={c.value} className={`flex cursor-pointer items-center justify-between gap-3 px-3 py-2.5 text-sm transition hover:bg-grisL/40 ${i > 0 ? "border-t border-grisL" : ""}`}>
+                    <span className={actif ? "font-medium text-encre" : "text-gris"}>{c.label}</span>
+                    <input type="checkbox" checked={actif} onChange={() => basculerCanal(c.value)} className="h-4 w-4 accent-navy" />
+                  </label>
+                );
+              })}
             </div>
           </div>
           <div>
-            <FormField label="Durée du stage (mois)" hint="avocats stagiaires">
-              <input type="number" min={1} max={120} value={dureeStage} onChange={(e) => setDureeStage(Number(e.target.value))} className="bpn-input sm:!w-40" />
-            </FormField>
+            <div className={SOUS_TITRE}>Durée du stage par défaut</div>
+            <div className="flex items-center gap-2">
+              <input type="number" min={1} max={120} value={dureeStage} onChange={(e) => setDureeStage(Number(e.target.value))} className="bpn-input w-28 text-sm" />
+              <span className="text-sm text-gris">mois</span>
+            </div>
+            <p className="mt-2 text-xs text-gris">Appliquée automatiquement aux avocats stagiaires lors de leur inscription.</p>
           </div>
         </div>
       </Section>
 
       <Section titre="Libellés des statuts" description="Renommez l'affichage des statuts sans changer la logique. Laissez vide pour conserver le libellé par défaut.">
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-x-8 gap-y-6 lg:grid-cols-2">
           {DOMAINES_STATUT.map((dom) => (
             <div key={dom.cle}>
-              <div className="mb-2 text-xs font-medium uppercase tracking-wide text-gris">{dom.titre}</div>
+              <div className={SOUS_TITRE}>{dom.titre}</div>
               <div className="space-y-2">
                 {Object.entries(dom.defauts).map(([cle, meta]) => (
-                  <div key={cle} className="flex items-center gap-2">
-                    <Badge ton={meta.ton} dot={false}>{meta.label}</Badge>
+                  <div key={cle} className="grid grid-cols-[7.5rem_1fr] items-center gap-3">
+                    <span className="flex"><Badge ton={meta.ton} dot={false}>{meta.label}</Badge></span>
                     <input
                       value={libelles[dom.cle]?.[cle] ?? ""}
                       onChange={setLib(dom.cle, cle)}
-                      placeholder={meta.label}
-                      className="bpn-input !py-1.5 text-sm"
+                      placeholder={`Par défaut : ${meta.label}`}
+                      className="bpn-input text-sm"
                     />
                   </div>
                 ))}
