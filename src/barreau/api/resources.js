@@ -219,6 +219,17 @@ export const repondreConversationAdmin = (id, corps) => api(`/messagerie/${id}`,
 export const getActivation = (token) => api(`/auth/activation/${token}`, { auth: false });
 export const activerCompte = (token, password) => api("/auth/activer", { method: "POST", auth: false, body: { token, password } });
 
+// Réinitialisation de mot de passe en self-service
+export const demanderResetMdp = (email) => api("/auth/forgot-password", { method: "POST", auth: false, body: { email } });
+export const verifierResetToken = (token) => api(`/auth/reset/${token}`, { auth: false });
+export const reinitialiserMdp = (token, password) => api("/auth/reset", { method: "POST", auth: false, body: { token, password } });
+
+// Journal d'audit (consultation filtrée)
+export const listerAudit = (params = {}) => {
+  const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v != null && v !== "")).toString();
+  return api(`/audit${qs ? `?${qs}` : ""}`);
+};
+
 // ─── Utilisateurs (comptes & rôles, SG/Admin) ────────────────────────────
 export const listerUsers = () => api("/users");
 export const creerUser = (data) => api("/users", { method: "POST", body: data });

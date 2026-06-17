@@ -41,3 +41,8 @@ export async function rafraichir(rawRefresh: string) {
 export async function revoquer(rawRefresh: string) {
   await prisma.refreshToken.updateMany({ where: { tokenHash: hash(rawRefresh) }, data: { revoked: true } });
 }
+
+/** Révoque tous les refresh tokens d'un utilisateur (reset de mot de passe, désactivation). */
+export async function revoquerTousLesJetons(userId: number) {
+  await prisma.refreshToken.updateMany({ where: { userId, revoked: false }, data: { revoked: true } });
+}

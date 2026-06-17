@@ -5,7 +5,9 @@ import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, type AuthRequest } from "../middleware/auth.js";
-import { emettrePaire, rafraichir, revoquer } from "../lib/tokens.js";
+import crypto from "node:crypto";
+import { env } from "../env.js";
+import { emettrePaire, rafraichir, revoquer, revoquerTousLesJetons } from "../lib/tokens.js";
 import { envoyerEmail } from "../lib/notifications.js";
 
 export const authRouter = Router();
@@ -101,6 +103,73 @@ authRouter.post(
       data: { passwordHash: bcrypt.hashSync(password, 10), actif: true, activationToken: null, activationExpire: null },
     });
     res.json({ ok: true, email: user.email });
+  })
+);
+
+// Anti-abus sur la réinitialisation (5 demandes / heure / IP).
+const resetLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 5, standardHeaders: true, legacyHeaders: false, message: { erreur: "Trop de demandes envoyées, réessayez plus tard." }, skip: () => process.env.NODE_ENV === "test" });
+
+const forgotSchema = z.object({ email: z.string().email() });
+
+/**
+ * POST /auth/forgot-password — déclenche une réinitialisation : envoie un lien
+ * à durée limitée si un compte actif correspond. Réponse toujours neutre (pas de
+ * divulgation de l'existence d'un compte).
+ */
+authRouter.post(
+  "/forgot-password",
+  resetLimiter,
+  asyncH(async (req, res) => {
+    const { email } = forgotSchema.parse(req.body);
+    const user = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });
+    if (user && user.actif) {
+      const token = crypto.randomBytes(32).toString("hex");
+      const resetExpire = new Date(Date.now() + 3_600_000); // 1 heure
+      await prisma.user.update({ where: { id: user.id }, data: { resetToken: token, resetExpire } });
+      const lien = `${env.clientOrigin}/reinitialiser/${token}`;
+      void envoyerEmail({
+        to: user.email,
+        subject: "Réinitialisation de votre mot de passe · Barreau de Pointe-Noire",
+        text: `Bonjour ${user.nom},\n\nVous avez demandé à réinitialiser votre mot de passe. Ouvrez le lien suivant (valable 1 heure) pour en définir un nouveau :\n${lien}\n\nSi vous n'êtes pas à l'origine de cette demande, ignorez ce message.\n\nLe Secrétariat Général du Barreau de Pointe-Noire.`,
+        evenement: "RESET_MDP",
+      });
+    }
+    res.json({ ok: true });
+  })
+);
+
+/** GET /auth/reset/:token — vérifie un lien de réinitialisation (page de saisie). */
+authRouter.get(
+  "/reset/:token",
+  asyncH(async (req, res) => {
+    const user = await prisma.user.findUnique({ where: { resetToken: req.params.token } });
+    if (!user || !user.resetExpire || user.resetExpire < new Date()) {
+      throw new HttpError(404, "Lien de réinitialisation invalide ou expiré");
+    }
+    res.json({ email: user.email });
+  })
+);
+
+const resetSchema = z.object({ token: z.string().min(1), password: z.string().min(8) });
+
+/**
+ * POST /auth/reset — définit un nouveau mot de passe via le token. Consomme le
+ * token (usage unique) et révoque toutes les sessions existantes.
+ */
+authRouter.post(
+  "/reset",
+  asyncH(async (req, res) => {
+    const { token, password } = resetSchema.parse(req.body);
+    const user = await prisma.user.findUnique({ where: { resetToken: token } });
+    if (!user || !user.resetExpire || user.resetExpire < new Date()) {
+      throw new HttpError(404, "Lien de réinitialisation invalide ou expiré");
+    }
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash: bcrypt.hashSync(password, 10), resetToken: null, resetExpire: null },
+    });
+    await revoquerTousLesJetons(user.id);
+    res.json({ ok: true });
   })
 );
 

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import request from "supertest";
 import { creerApp } from "../src/app.js";
+import { prisma } from "../src/prisma.js";
 
 const app = creerApp();
 const bearer = (t: string) => ["Authorization", `Bearer ${t}`] as const;
@@ -480,6 +481,53 @@ async function creerAvocatEspace(suffixe: string) {
   const token = (await request(app).post("/api/auth/login").send({ email, password: "avocatpass8" })).body.token as string;
   return { membreId, email, token };
 }
+
+describe("Sécurité — réinitialisation de mot de passe", () => {
+  it("forgot-password répond 200 sans divulguer l'existence du compte", async () => {
+    expect((await request(app).post("/api/auth/forgot-password").send({ email: "sg@barreau-pn.cg" })).status).toBe(200);
+    expect((await request(app).post("/api/auth/forgot-password").send({ email: "inconnu@nulle-part.cg" })).status).toBe(200);
+  });
+
+  it("reset avec un token invalide → 404", async () => {
+    expect((await request(app).post("/api/auth/reset").send({ token: "faux-token", password: "nouveaupass8" })).status).toBe(404);
+  });
+
+  it("flux complet : lien → nouveau mot de passe → connexion (token à usage unique)", async () => {
+    const av = await creerAvocatEspace("reset");
+    await request(app).post("/api/auth/forgot-password").send({ email: av.email });
+    const u = await prisma.user.findUnique({ where: { email: av.email } });
+    expect(u?.resetToken).toBeTruthy();
+    expect((await request(app).get(`/api/auth/reset/${u!.resetToken}`)).status).toBe(200);
+    expect((await request(app).post("/api/auth/reset").send({ token: u!.resetToken, password: "toutNeuf9" })).status).toBe(200);
+    // ancien mot de passe rejeté, nouveau accepté
+    expect((await request(app).post("/api/auth/login").send({ email: av.email, password: "avocatpass8" })).status).toBe(401);
+    expect((await request(app).post("/api/auth/login").send({ email: av.email, password: "toutNeuf9" })).status).toBe(200);
+    // token consommé
+    expect((await request(app).post("/api/auth/reset").send({ token: u!.resetToken, password: "encore9999" })).status).toBe(404);
+  });
+});
+
+describe("Sécurité — accès espace lié au statut du membre", () => {
+  it("suspension coupe l'accès ; retour à INSCRIT le rétablit automatiquement", async () => {
+    const av = await creerAvocatEspace("statut");
+    expect((await request(app).post("/api/auth/login").send({ email: av.email, password: "avocatpass8" })).status).toBe(200);
+    await request(app).patch(`/api/membres/${av.membreId}`).set(...bearer(sg)).send({ statut: "SUSPENDU" });
+    expect((await request(app).post("/api/auth/login").send({ email: av.email, password: "avocatpass8" })).status).toBe(401);
+    await request(app).patch(`/api/membres/${av.membreId}`).set(...bearer(sg)).send({ statut: "INSCRIT" });
+    expect((await request(app).post("/api/auth/login").send({ email: av.email, password: "avocatpass8" })).status).toBe(200);
+  });
+});
+
+describe("Journal d'audit — consultation (RG-16)", () => {
+  it("accessible au SG, refusé à la Trésorière (403), paginé", async () => {
+    expect((await request(app).get("/api/audit").set(...bearer(tr))).status).toBe(403);
+    const r = await request(app).get("/api/audit?pageSize=5").set(...bearer(sg));
+    expect(r.status).toBe(200);
+    expect(Array.isArray(r.body.items)).toBe(true);
+    expect(typeof r.body.total).toBe("number");
+    expect(r.body.pageSize).toBe(5);
+  });
+});
 
 describe("Espace avocat — consultation (annuaire, AG, publications, archives, discipline)", () => {
   let av: { membreId: number; token: string };

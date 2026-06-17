@@ -29,6 +29,7 @@ import { archivesRouter } from "./routes/archives.js";
 import { parametresRouter } from "./routes/parametres.js";
 import { corpsElectoralRouter } from "./routes/corpsElectoral.js";
 import { dashboardRouter } from "./routes/dashboard.js";
+import { auditRouter } from "./routes/audit.js";
 import { signaturesRouter } from "./routes/signatures.js";
 import { conseilRouter } from "./routes/conseil.js";
 import { calendrierEditorialRouter } from "./routes/calendrierEditorial.js";
@@ -97,6 +98,7 @@ export function creerApp() {
   app.use("/api/parametres", parametresRouter);
   app.use("/api/corps-electoral", corpsElectoralRouter);
   app.use("/api/dashboard", dashboardRouter);
+  app.use("/api/audit", auditRouter);
   app.use("/api/signatures", signaturesRouter);
   app.use("/api/conseil", conseilRouter);
   app.use("/api/calendrier-editorial", calendrierEditorialRouter);

@@ -38,6 +38,7 @@ import Publications from "./pages/Publications";
 import LettreBatonnier from "./pages/LettreBatonnier";
 import Parametres from "./pages/Parametres";
 import Utilisateurs from "./pages/Utilisateurs";
+import JournalAudit from "./pages/JournalAudit";
 import Messagerie from "./pages/Messagerie";
 import Profil from "./pages/Profil";
 import AvocatDetail from "./pages/AvocatDetail";
@@ -104,6 +105,7 @@ export const navSections = [
     items: [
       { name: "Paramètres", path: "/parametres", icon: Cog6ToothIcon, roles: SYSTEME, element: <Parametres /> },
       { name: "Utilisateurs", path: "/utilisateurs", icon: UserGroupIcon, roles: SYSTEME, element: <Utilisateurs /> },
+      { name: "Journal d'audit", path: "/journal-audit", icon: ShieldCheckIcon, roles: INSTITUTIONNEL, element: <JournalAudit /> },
     ],
   },
 ];

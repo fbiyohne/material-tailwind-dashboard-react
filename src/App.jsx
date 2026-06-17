@@ -5,6 +5,7 @@ import { ErrorBoundary, ToastProvider, ConfirmProvider } from "@/barreau/compone
 import { AuthProvider, useAuth } from "@/barreau/auth/AuthContext";
 import { AuthShell } from "@/barreau/auth/AuthShell";
 import { ActivationCompte } from "@/barreau/auth/ActivationCompte";
+import { ReinitialiserMotDePasse } from "@/barreau/auth/ReinitialiserMotDePasse";
 import { VerificationPublique } from "@/barreau/pages/VerificationPublique";
 
 function Splash() {
@@ -42,6 +43,9 @@ function PublicOrApp() {
   // Activation publique de l'espace avocat (lien envoyé par le secrétariat).
   const a = location.pathname.match(/^\/activer\/([^/]+)\/?$/);
   if (a) return <ActivationCompte token={decodeURIComponent(a[1])} />;
+  // Réinitialisation publique de mot de passe (lien envoyé par e-mail).
+  const r = location.pathname.match(/^\/reinitialiser\/([^/]+)\/?$/);
+  if (r) return <ReinitialiserMotDePasse token={decodeURIComponent(r[1])} />;
   return <AuthGate />;
 }
 

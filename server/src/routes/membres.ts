@@ -9,7 +9,7 @@ import { prochainNumInscription, prochainNumeroAttestation, archiver } from "../
 import { enregistrerFichier } from "../lib/storage.js";
 import { envoyerPdf } from "../lib/pdf.js";
 import { attestationHtml } from "../lib/templates.js";
-import { provisionnerAccesEspace } from "../lib/acces.js";
+import { provisionnerAccesEspace, synchroniserAccesAuStatut } from "../lib/acces.js";
 
 export const membresRouter = Router();
 membresRouter.use(requireAuth);
@@ -254,6 +254,8 @@ membresRouter.patch(
         dateInscription: data.dateInscription ? new Date(data.dateInscription) : undefined,
       },
     });
+    // L'accès espace suit le statut (suspendu/radié/omis → coupé ; régulier → rétabli).
+    await synchroniserAccesAuStatut(membre.id, membre.statut);
     res.json(membre);
   })
 );
@@ -267,6 +269,7 @@ membresRouter.post(
       where: { id: Number(req.params.id) },
       data: { statut: "RADIE" },
     });
+    await synchroniserAccesAuStatut(membre.id, membre.statut);
     res.json(membre);
   })
 );

@@ -12,7 +12,7 @@ const COMPTES = [
   { email: "batonnier@barreau-pn.cg", role: "Bâtonnier" },
 ];
 
-export function Login({ onDemande }) {
+export function Login({ onDemande, onOubli }) {
   const { login } = useAuth();
   const [email, setEmail] = useState("sg@barreau-pn.cg");
   const [password, setPassword] = useState("barreau");
@@ -94,6 +94,12 @@ export function Login({ onDemande }) {
         <Button type="submit" variant="or" loading={loading} className="!w-full justify-center !rounded-lg !py-2.5 !text-sm">
           Se connecter <ArrowRightIcon className="h-4 w-4" />
         </Button>
+
+        <div className="text-right">
+          <button type="button" onClick={onOubli} className="text-[12.5px] text-white/45 underline-offset-4 transition hover:text-or-2 hover:underline">
+            Mot de passe oublié ?
+          </button>
+        </div>
       </form>
 
       <div className="mt-6">
@@ -120,6 +126,6 @@ export function Login({ onDemande }) {
   );
 }
 
-Login.propTypes = { onDemande: PropTypes.func };
+Login.propTypes = { onDemande: PropTypes.func, onOubli: PropTypes.func };
 
 export default Login;

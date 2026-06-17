@@ -29,6 +29,7 @@ const EVT_LABEL = {
   CONVOCATION: "Convocation",
   ACCES_AVOCAT: "Accès espace avocat",
   MESSAGE: "Messagerie — message avocat",
+  RESET_MDP: "Réinitialisation de mot de passe",
 };
 
 const DEFAUT = {

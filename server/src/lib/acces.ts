@@ -4,6 +4,25 @@ import { prisma } from "../prisma.js";
 import { env } from "../env.js";
 import { HttpError } from "../middleware/error.js";
 import { envoyerEmail } from "./notifications.js";
+import { revoquerTousLesJetons } from "./tokens.js";
+
+/** Statuts pour lesquels l'accès à l'espace avocat est suspendu. */
+const STATUTS_BLOQUANTS = ["SUSPENDU", "RADIE", "OMIS"];
+
+/**
+ * Synchronise l'activation du compte espace avec le statut du membre : un avocat
+ * suspendu / radié / omis perd l'accès (et ses sessions sont coupées) ; il le
+ * retrouve automatiquement au retour à un statut régulier. Les comptes encore en
+ * attente d'activation ne sont pas touchés (le flux d'activation s'en charge).
+ */
+export async function synchroniserAccesAuStatut(membreId: number, statut: string): Promise<void> {
+  const user = await prisma.user.findUnique({ where: { membreId }, select: { id: true, actif: true, activationToken: true } });
+  if (!user || user.activationToken) return;
+  const doitEtreActif = !STATUTS_BLOQUANTS.includes(statut);
+  if (user.actif === doitEtreActif) return;
+  await prisma.user.update({ where: { id: user.id }, data: { actif: doitEtreActif } });
+  if (!doitEtreActif) await revoquerTousLesJetons(user.id);
+}
 
 export interface AccesProvisionne {
   email: string;
