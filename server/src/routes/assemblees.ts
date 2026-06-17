@@ -15,7 +15,7 @@ assembleesRouter.use(requireAuth, requireRole("SECRETAIRE_GENERAL", "BATONNIER")
 assembleesRouter.get("/:id/convocation/pdf", asyncH(async (req, res) => {
   const a = await prisma.assemblee.findUnique({ where: { id: Number(req.params.id) } });
   if (!a) throw new HttpError(404, "Assemblée introuvable");
-  const jour = String(a.date).slice(0, 10);
+  const jour = new Date(a.date).toISOString().slice(0, 10);
   await archiver({ categorie: "Convocation", titre: `Convocation ${a.type} du ${jour}`, reference: `CONV-${a.type}-${jour}`, date: new Date() });
   await envoyerPdf(res, convocationAgHtml(a), `Convocation-${a.type}-${jour}.pdf`);
 }));
@@ -24,7 +24,7 @@ assembleesRouter.get("/:id/convocation/pdf", asyncH(async (req, res) => {
 assembleesRouter.get("/:id/pv/pdf", asyncH(async (req, res) => {
   const a = await prisma.assemblee.findUnique({ where: { id: Number(req.params.id) } });
   if (!a) throw new HttpError(404, "Assemblée introuvable");
-  const jour = String(a.date).slice(0, 10);
+  const jour = new Date(a.date).toISOString().slice(0, 10);
   await archiver({ categorie: "Procès-verbal", titre: `PV ${a.type} du ${jour}`, reference: `${a.type}-${jour}`, date: new Date() });
   await envoyerPdf(res, pvAssembleeHtml(a), `PV-${a.type}-${jour}.pdf`);
 }));

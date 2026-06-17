@@ -15,7 +15,7 @@ reunionsRouter.use(requireAuth, requireRole("SECRETAIRE_GENERAL", "BATONNIER"));
 reunionsRouter.get("/:id/convocation/pdf", asyncH(async (req, res) => {
   const r = await prisma.reunion.findUnique({ where: { id: Number(req.params.id) } });
   if (!r) throw new HttpError(404, "Réunion introuvable");
-  const jour = String(r.date).slice(0, 10);
+  const jour = new Date(r.date).toISOString().slice(0, 10);
   await archiver({ categorie: "Convocation", titre: `Convocation réunion du ${jour}`, reference: `CONV-REU-${jour}`, date: new Date() });
   await envoyerPdf(res, convocationReunionHtml(r), `Convocation-reunion-${jour}.pdf`);
 }));
@@ -23,14 +23,14 @@ reunionsRouter.get("/:id/convocation/pdf", asyncH(async (req, res) => {
 reunionsRouter.get("/:id/feuille-presence/pdf", asyncH(async (req, res) => {
   const r = await prisma.reunion.findUnique({ where: { id: Number(req.params.id) } });
   if (!r) throw new HttpError(404, "Réunion introuvable");
-  await envoyerPdf(res, feuillePresenceHtml(r), `Feuille-presence-${String(r.date).slice(0, 10)}.pdf`);
+  await envoyerPdf(res, feuillePresenceHtml(r), `Feuille-presence-${new Date(r.date).toISOString().slice(0, 10)}.pdf`);
 }));
 
 /** GET /reunions/:id/pv/pdf — procès-verbal (PDF) + archivage auto (RG-14). */
 reunionsRouter.get("/:id/pv/pdf", asyncH(async (req, res) => {
   const r = await prisma.reunion.findUnique({ where: { id: Number(req.params.id) } });
   if (!r) throw new HttpError(404, "Réunion introuvable");
-  const jour = String(r.date).slice(0, 10);
+  const jour = new Date(r.date).toISOString().slice(0, 10);
   await archiver({ categorie: "Procès-verbal", titre: `PV réunion du ${jour}`, reference: `REU-${jour}`, date: new Date() });
   await envoyerPdf(res, pvReunionHtml(r), `PV-reunion-${jour}.pdf`);
 }));

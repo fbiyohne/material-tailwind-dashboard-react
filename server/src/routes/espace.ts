@@ -242,7 +242,7 @@ espaceRouter.get(
   asyncH(async (req: AuthRequest, res) => {
     const a = await prisma.assemblee.findUnique({ where: { id: Number(req.params.id) } });
     if (!a) throw new HttpError(404, "Assemblée introuvable");
-    const jour = String(a.date).slice(0, 10);
+    const jour = new Date(a.date).toISOString().slice(0, 10);
     await envoyerPdf(res, convocationAgHtml(a), `Convocation-${a.type}-${jour}.pdf`);
   })
 );
@@ -254,7 +254,7 @@ espaceRouter.get(
     const a = await prisma.assemblee.findUnique({ where: { id: Number(req.params.id) } });
     if (!a) throw new HttpError(404, "Assemblée introuvable");
     if (!a.pv) throw new HttpError(404, "Procès-verbal non disponible");
-    const jour = String(a.date).slice(0, 10);
+    const jour = new Date(a.date).toISOString().slice(0, 10);
     await envoyerPdf(res, pvAssembleeHtml(a), `PV-${a.type}-${jour}.pdf`);
   })
 );
