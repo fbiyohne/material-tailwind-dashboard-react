@@ -95,12 +95,21 @@ export async function telechargerPdf(path, filename) {
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
+  // L'ancre doit être présente dans le DOM pour que `.click()` déclenche le
+  // téléchargement (Firefox l'exige), et la révocation de l'URL doit être
+  // différée : la révoquer juste après le clic interrompt le téléchargement.
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
 
 /** Ouvre un fichier protégé (auth) dans un nouvel onglet (consultation de pièce). */
 export async function ouvrirFichierAuth(path) {
+  // L'onglet est ouvert dans le contexte synchrone du clic (avant tout `await`)
+  // pour ne pas être bloqué par le bloqueur de pop-ups ; le blob authentifié y
+  // est injecté une fois récupéré. (Pas de `noopener` : on garde la référence.)
+  const onglet = window.open("", "_blank");
   const charger = () => {
     const headers = {};
     const token = getToken();
@@ -115,10 +124,12 @@ export async function ouvrirFichierAuth(path) {
     if (ok) res = await charger();
   }
   if (!res.ok) {
+    onglet?.close();
     if (res.status === 401) { clearSession(); onUnauthorized?.(); }
     throw new Error("Échec de l'ouverture du fichier");
   }
   const url = URL.createObjectURL(await res.blob());
-  window.open(url, "_blank", "noopener");
+  if (onglet) onglet.location = url;
+  else window.open(url, "_blank", "noopener"); // repli si l'onglet n'a pu être ouvert
   setTimeout(() => URL.revokeObjectURL(url), 60000);
 }

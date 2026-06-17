@@ -96,7 +96,7 @@ export const voterScrutin = (id, candidatIds) => api(`/espace/scrutins/${id}/vot
 
 // Tableau de l'Ordre
 export const getTableau = () => api("/tableau");
-export const telechargerTableauPdf = () => ouvrirFichierAuth("/tableau/pdf");
+export const telechargerTableauPdf = () => telechargerPdf("/tableau/pdf", "Tableau-de-l-Ordre.pdf");
 export const publierTableau = () => api("/tableau/publier", { method: "POST" });
 
 // Cycle du stage (avocats stagiaires)
