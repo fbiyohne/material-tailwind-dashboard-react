@@ -13,13 +13,33 @@ export async function exporterPdf(filename, selector = ".bpn-print-zone") {
   ]);
   const JsPDF = jspdfMod.jsPDF || jspdfMod.default;
   const canvas = await html2canvas(el, { scale: 2, backgroundColor: "#ffffff", useCORS: true });
-  const img = canvas.toDataURL("image/png");
   const pdf = new JsPDF({ unit: "pt", format: "a4" });
   const pageW = pdf.internal.pageSize.getWidth();
+  const pageH = pdf.internal.pageSize.getHeight();
   const margin = 40;
   const w = pageW - margin * 2;
-  const h = (canvas.height / canvas.width) * w;
-  pdf.addImage(img, "PNG", margin, margin, w, h);
+  const ratio = w / canvas.width; // px du canvas → pt sur la page
+  const pageHpx = (pageH - margin * 2) / ratio; // hauteur d'une page A4, en px du canvas
+
+  // Une seule page si le contenu tient ; sinon découpe en tranches A4 pour ne
+  // jamais déborder (les états/listes longs sont paginés au lieu d'être rognés).
+  if (canvas.height <= pageHpx + 1) {
+    pdf.addImage(canvas.toDataURL("image/png"), "PNG", margin, margin, w, canvas.height * ratio);
+  } else {
+    for (let offset = 0, premier = true; offset < canvas.height; premier = false) {
+      const sliceHpx = Math.min(pageHpx, canvas.height - offset);
+      const part = document.createElement("canvas");
+      part.width = canvas.width;
+      part.height = Math.ceil(sliceHpx);
+      const ctx = part.getContext("2d");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, part.width, part.height);
+      ctx.drawImage(canvas, 0, offset, canvas.width, sliceHpx, 0, 0, canvas.width, sliceHpx);
+      if (!premier) pdf.addPage();
+      pdf.addImage(part.toDataURL("image/png"), "PNG", margin, margin, w, sliceHpx * ratio);
+      offset += sliceHpx;
+    }
+  }
   pdf.save(filename.endsWith(".pdf") ? filename : `${filename}.pdf`);
 }
 

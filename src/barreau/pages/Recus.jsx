@@ -5,9 +5,8 @@ import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { formatFCFA, formatDate } from "../utils/format";
 import { telechargerCsv } from "../utils/exportCsv";
 import { montantEnLettresFCFA } from "../utils/nombreEnLettres";
-import { exporterPdf } from "../utils/exports";
 import { RecuDocument, useToast, useConfirm, PageHeader, DataTable } from "../components";
-import { listerMembres, listerRecus, enregistrerPaiement, annulerRecu } from "../api/resources";
+import { listerMembres, listerRecus, enregistrerPaiement, annulerRecu, telechargerRecuPdf } from "../api/resources";
 
 const COLONNES_CSV = [
   { label: "N°", valeur: (r) => r.numero },
@@ -77,7 +76,8 @@ export function Recus() {
       setSucces(recu);
       setReference("");
       chargerRecus();
-      setTimeout(() => window.print(), 50);
+      // Reçu officiel vectoriel rendu côté serveur (A4, une page).
+      await telechargerRecuPdf(recu.id, recu.numero);
     } catch (e) {
       toast.error(e.message);
     }
@@ -148,9 +148,9 @@ export function Recus() {
               <input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="Auto si vide" className="bpn-input-dark" />
             </Champ>
             <button type="button" onClick={emettre} disabled={!membre || montant <= 0} className="bpn-btn bpn-btn-or w-full justify-center !py-2.5">
-              <PrinterIcon className="h-4 w-4" /> Imprimer &amp; archiver
+              <PrinterIcon className="h-4 w-4" /> Émettre &amp; archiver
             </button>
-            <button type="button" onClick={() => succes && exporterPdf(`Recu-${succes.numero}`, ".bpn-print-zone")} disabled={!succes} title={succes ? "" : "Émettez d'abord le reçu"} className="bpn-btn bpn-btn-ghost w-full justify-center border-white/20 text-white/70 hover:bg-white/10 hover:text-white disabled:opacity-40">
+            <button type="button" onClick={() => succes && telechargerRecuPdf(succes.id, succes.numero).catch((e) => toast.error(e.message))} disabled={!succes} title={succes ? "" : "Émettez d'abord le reçu"} className="bpn-btn bpn-btn-ghost w-full justify-center border-white/20 text-white/70 hover:bg-white/10 hover:text-white disabled:opacity-40">
               <ArrowDownTrayIcon className="h-4 w-4" /> Télécharger PDF
             </button>
           </div>
