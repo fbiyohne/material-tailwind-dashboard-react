@@ -104,9 +104,8 @@ export function Dashboard() {
           <span className="bpn-card-heading">Situation financière {exercice}</span>
           <span className="font-mono text-xs text-gris">en FCFA</span>
         </div>
-        <div className="grid grid-cols-1 divide-y divide-grisM md:grid-cols-3 md:divide-x md:divide-y-0">
+        <div className="grid grid-cols-1 divide-y divide-grisM md:grid-cols-2 md:divide-x md:divide-y-0">
           <ColonneFinance label="Cotisations payées" montant={finances?.payees ?? 0} total={totalDu} accent="vert" />
-          <ColonneFinance label="Impayées" montant={finances?.impayees ?? 0} total={totalDu} accent="rouge" />
           <ColonneFinance label="Solde à recouvrer" montant={finances?.solde ?? 0} total={totalDu} accent="or" />
         </div>
       </div>

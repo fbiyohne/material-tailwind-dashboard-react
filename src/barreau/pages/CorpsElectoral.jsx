@@ -94,7 +94,7 @@ export function CorpsElectoral() {
                     className="bpn-btn bpn-btn-ghost disabled:opacity-40">
                     <ArrowDownTrayIcon className="h-4 w-4" /> Export CSV
                   </button>
-                  <button type="button" onClick={exporterXlsx} className="bpn-btn bpn-btn-or">
+                  <button type="button" onClick={exporterXlsx} className="bpn-btn bpn-btn-ghost">
                     <ArrowDownTrayIcon className="h-4 w-4" /> Export Excel
                   </button>
                 </div>

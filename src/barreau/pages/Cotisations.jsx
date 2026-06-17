@@ -267,7 +267,7 @@ export function Cotisations() {
         <button className="bpn-btn bpn-btn-ghost !py-1.5 text-xs" onClick={() => exporterEtat("pdf")}>
           <PrinterIcon className="h-4 w-4" /> État PDF
         </button>
-        <button className="bpn-btn bpn-btn-or !py-1.5 text-xs" onClick={() => exporterEtat("xlsx")}>
+        <button className="bpn-btn bpn-btn-ghost !py-1.5 text-xs" onClick={() => exporterEtat("xlsx")}>
           <ArrowDownTrayIcon className="h-4 w-4" /> Excel
         </button>
         <button

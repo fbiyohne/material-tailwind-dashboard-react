@@ -109,7 +109,7 @@ export function DroitsPlaidoirie() {
           onClick={() => telechargerCsv(`Droits-plaidoirie-${exercice}`, COLONNES_CSV, lignes)}>
           <ArrowDownTrayIcon className="h-4 w-4" /> CSV
         </button>
-        <button className="bpn-btn bpn-btn-or !py-1.5 text-xs" onClick={() => exporterEtat("xlsx")}>
+        <button className="bpn-btn bpn-btn-ghost !py-1.5 text-xs" onClick={() => exporterEtat("xlsx")}>
           <ArrowDownTrayIcon className="h-4 w-4" /> Excel
         </button>
       </PageHeader>
