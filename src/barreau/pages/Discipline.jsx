@@ -5,6 +5,8 @@ import {
   ShieldExclamationIcon,
   PlusIcon,
   TrashIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
 } from "@heroicons/react/24/outline";
 import { Badge, Modal, useToast, useConfirm, PageHeader, FormField, Notice, DataTable } from "../components";
 import { useAuth } from "../auth/AuthContext";
@@ -71,6 +73,7 @@ export function Discipline() {
   const [ouvrir, setOuvrir] = useState(false);
   const [dossiers, setDossiers] = useState([]);
   const [journalDiscipline, setJournalDiscipline] = useState([]);
+  const [pageJournal, setPageJournal] = useState(1);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState(false);
 
@@ -143,6 +146,13 @@ export function Discipline() {
     );
   }
 
+  // Journal d'accès (RG-13) paginé côté client : il peut grossir vite (chaque
+  // consultation y est tracée), on ne rend qu'une page à la fois.
+  const TAILLE_JOURNAL = 12;
+  const totalPagesJournal = Math.max(1, Math.ceil(journalDiscipline.length / TAILLE_JOURNAL));
+  const pageJournalEff = Math.min(Math.max(1, pageJournal), totalPagesJournal);
+  const journalAffiche = journalDiscipline.slice((pageJournalEff - 1) * TAILLE_JOURNAL, pageJournalEff * TAILLE_JOURNAL);
+
   return (
     <div className="space-y-5">
       <PageHeader eyebrow="Institutionnel · Confidentiel" titre="Conseil de discipline" sousTitre="Dossiers disciplinaires — accès restreint et journalisé.">
@@ -179,8 +189,8 @@ export function Discipline() {
           <span className="font-mono text-xs text-gris">{journalDiscipline.length}</span>
         </div>
         <ul className="divide-y divide-grisL">
-          {journalDiscipline.map((j, i) => (
-            <li key={i} className="flex items-center justify-between gap-3 px-4 py-2 text-xs">
+          {journalAffiche.map((j, i) => (
+            <li key={`${pageJournalEff}-${i}`} className="flex items-center justify-between gap-3 px-4 py-2 text-xs">
               <span className="text-encre">{j.action}</span>
               <span className="font-mono text-gris">{formatDateTime(j.quand)}</span>
             </li>
@@ -189,6 +199,19 @@ export function Discipline() {
             <li className="px-4 py-4 text-center text-xs text-gris">Aucune entrée.</li>
           )}
         </ul>
+        {journalDiscipline.length > TAILLE_JOURNAL && (
+          <div className="flex items-center justify-between border-t border-grisL px-4 py-2 text-xs text-gris">
+            <span>{journalDiscipline.length} consultation{journalDiscipline.length > 1 ? "s" : ""} · page {pageJournalEff} / {totalPagesJournal}</span>
+            <div className="flex gap-1.5">
+              <button type="button" className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 disabled:opacity-40" disabled={pageJournalEff <= 1} onClick={() => setPageJournal(pageJournalEff - 1)}>
+                <ChevronLeftIcon className="h-4 w-4" /> Précédent
+              </button>
+              <button type="button" className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 disabled:opacity-40" disabled={pageJournalEff >= totalPagesJournal} onClick={() => setPageJournal(pageJournalEff + 1)}>
+                Suivant <ChevronRightIcon className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <OuvrirDossierModal open={ouvrir} onClose={() => setOuvrir(false)} onCreated={charger} />
