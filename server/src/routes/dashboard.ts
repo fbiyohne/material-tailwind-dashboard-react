@@ -75,7 +75,13 @@ dashboardRouter.get(
   asyncH(async (req, res) => {
     const limitBrut = Number(req.query.limit ?? 12);
     const take = Number.isFinite(limitBrut) ? Math.min(50, Math.max(1, Math.trunc(limitBrut))) : 12;
-    const entries = await prisma.journalAudit.findMany({ orderBy: { id: "desc" }, take });
+    // Le fil d'activité privilégie les actions institutionnelles : on écarte le
+    // bruit des connexions/déconnexions (le journal d'audit complet les conserve).
+    const entries = await prisma.journalAudit.findMany({
+      where: { NOT: { chemin: { contains: "/api/auth/" } } },
+      orderBy: { id: "desc" },
+      take,
+    });
     const userIds = [...new Set(entries.map((e) => e.userId).filter((v): v is number => v != null))];
     const users = userIds.length ? await prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, nom: true } }) : [];
     const nomParId = new Map(users.map((u) => [u.id, u.nom]));

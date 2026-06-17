@@ -94,7 +94,7 @@ export function Dashboard() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Avocats inscrits" value={membres?.inscrits ?? "…"} sub="au tableau" accent="or" valueAccent="navy" onClick={() => navigate("/avocats")} />
         <StatCard label="À jour" value={membres?.aJour ?? "…"} sub="avocats + stagiaires" accent="vert" onClick={() => navigate("/cotisations?statut=ajour")} />
-        <StatCard label="En retard" value={membres?.enRetard ?? "…"} sub="relances nécessaires" accent="rouge" onClick={() => navigate("/cotisations?statut=retard")} />
+        <StatCard label="En retard" value={membres?.enRetard ?? "…"} sub="relances nécessaires" accent="rouge" onClick={() => navigate("/cotisations?statut=retard")} className={(membres?.enRetard ?? 0) > 0 ? "!border-rouge !bg-rougeL" : ""} />
         <StatCard label="Stagiaires" value={membres?.stagiaires ?? "…"} sub="en cours" accent="navy" onClick={() => navigate("/stagiaires")} />
       </div>
 

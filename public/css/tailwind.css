@@ -100,8 +100,9 @@
   .bpn-badge-vert {
     @apply bg-vertL text-vert;
   }
+  /* Statut actionnable / alerte : pastille pleine (la plus visible de la ligne). */
   .bpn-badge-rouge {
-    @apply bg-rougeL text-rouge;
+    @apply bg-rouge text-white;
   }
   .bpn-badge-or {
     @apply bg-or-L text-or;
