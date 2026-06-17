@@ -71,8 +71,20 @@ export async function api(path, opts = {}) {
   return data;
 }
 
+/** Détecte iOS / iPadOS, où l'attribut `download` est ignoré (le blob doit être
+ *  ouvert dans un onglet, l'enregistrement se faisant via la feuille de partage). */
+const estIOS = () =>
+  typeof navigator !== "undefined" &&
+  (/iP(ad|hone|od)/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
+
 /** Télécharge un PDF serveur authentifié (rafraîchissement automatique sur 401). */
 export async function telechargerPdf(path, filename) {
+  // Sur iOS/Safari l'attribut `download` ne déclenche aucun enregistrement : on
+  // ouvre alors le PDF dans un onglet. Cet onglet doit être ouvert AVANT le
+  // `await` (dans le geste de clic) pour échapper au bloqueur de pop-ups.
+  const ios = estIOS();
+  const onglet = ios ? window.open("", "_blank") : null;
   const charger = () => {
     const headers = {};
     const token = getToken();
@@ -87,20 +99,25 @@ export async function telechargerPdf(path, filename) {
     if (ok) res = await charger();
   }
   if (!res.ok) {
+    onglet?.close();
     if (res.status === 401) { clearSession(); onUnauthorized?.(); }
     throw new Error("Échec du téléchargement du PDF");
   }
-  const blob = await res.blob();
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  // L'ancre doit être présente dans le DOM pour que `.click()` déclenche le
-  // téléchargement (Firefox l'exige), et la révocation de l'URL doit être
-  // différée : la révoquer juste après le clic interrompt le téléchargement.
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+  const url = URL.createObjectURL(await res.blob());
+  if (ios) {
+    if (onglet) onglet.location = url;
+    else window.open(url, "_blank");
+  } else {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    // L'ancre doit être présente dans le DOM pour que `.click()` déclenche le
+    // téléchargement (Firefox l'exige), et la révocation de l'URL doit être
+    // différée : la révoquer juste après le clic interrompt le téléchargement.
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
   setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
 
