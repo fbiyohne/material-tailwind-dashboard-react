@@ -55,7 +55,7 @@ export function Modal({ open, onClose, title, children, footer }) {
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-navy-3/60 p-4"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-navy-3/80 p-4 backdrop-blur-[2px]"
       onClick={onClose}
     >
       <div

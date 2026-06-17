@@ -111,7 +111,7 @@ export function AvocatDetail() {
           <button className="bpn-btn bpn-btn-primary" onClick={() => setAttestation(membre)}><DocumentPlusIcon className="h-4 w-4" /> Attestation</button>
         )}
         {membre.statut !== "radie" && (
-          <button className="bpn-btn bpn-btn-danger" onClick={async () => {
+          <button className="bpn-btn bpn-btn-ghost text-rouge hover:!bg-rougeL hover:!text-rouge" onClick={async () => {
             const ok = await confirm({ title: "Radier cet avocat ?", message: `Me ${membre.nom} sera radié(e) du tableau et exclu(e) du corps électoral.`, confirmLabel: "Radier", danger: true });
             if (ok) { try { await radierMembre(membre.id); toast.success(`Me ${membre.nom} a été radié(e).`); charger(); } catch (e) { toast.error(e.message); } }
           }}>

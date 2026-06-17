@@ -152,7 +152,11 @@ export function Parametres() {
     getNotifications().then(setNotif).catch(() => setNotif(null));
   }, [toast]);
 
-  const setT = (k) => (e) => setTarifs({ ...tarifs, [k]: Number(e.target.value) });
+  // Saisie des montants : on accepte les espaces de milliers en affichage et on
+  // ne conserve que les chiffres en valeur (parseNb), pour un champ lisible.
+  const parseNb = (v) => Number(String(v).replace(/\D/g, "")) || 0;
+  const fmtNb = (n) => String(n ?? "").replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  const setT = (k) => (e) => setTarifs({ ...tarifs, [k]: parseNb(e.target.value) });
   const setI = (k) => (e) => setIdentite({ ...identite, [k]: e.target.value });
   const setLib = (dom, cle) => (e) =>
     setLibelles((l) => ({ ...l, [dom]: { ...l[dom], [cle]: e.target.value } }));
@@ -192,18 +196,18 @@ export function Parametres() {
     <Section titre="Tarifs de référence & exercices" description="Montants annuels des calculs de cotisations et de droits (BR-07 / BR-08), et plage d'exercices affichée.">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <FormField label="Cotisation avocat (FCFA)">
-          <input type="number" step={25000} value={tarifs.avocat} onChange={setT("avocat")} className="bpn-input" />
+          <input type="text" inputMode="numeric" value={fmtNb(tarifs.avocat)} onChange={setT("avocat")} className="bpn-input" />
         </FormField>
         <FormField label="Cotisation stagiaire (FCFA)">
-          <input type="number" step={25000} value={tarifs.stagiaire} onChange={setT("stagiaire")} className="bpn-input" />
+          <input type="text" inputMode="numeric" value={fmtNb(tarifs.stagiaire)} onChange={setT("stagiaire")} className="bpn-input" />
         </FormField>
         <FormField label="Droit de plaidoirie (FCFA)">
-          <input type="number" step={10000} value={tarifs.droitsPlaidoirie} onChange={setT("droitsPlaidoirie")} className="bpn-input" />
+          <input type="text" inputMode="numeric" value={fmtNb(tarifs.droitsPlaidoirie)} onChange={setT("droitsPlaidoirie")} className="bpn-input" />
         </FormField>
         <FormField label="Exercice courant">
           <input type="number" value={exercice} onChange={(e) => setExercice(Number(e.target.value))} className="bpn-input" />
         </FormField>
-        <FormField label="Premier exercice (borne basse)" hint="filtres par année">
+        <FormField label="Premier exercice" hint="borne basse des filtres">
           <input type="number" value={premierExercice} onChange={(e) => setPremierExercice(Number(e.target.value))} className="bpn-input" />
         </FormField>
       </div>
