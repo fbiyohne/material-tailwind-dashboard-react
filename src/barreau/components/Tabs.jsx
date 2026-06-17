@@ -7,10 +7,12 @@ import PropTypes from "prop-types";
  * - Onglet actif : libellé marine + liseré or sous l'onglet.
  *
  * Usage :
- *   <Tabs tabs={[{ id, label, icon?, badge?, content }]} />
+ *   <Tabs tabs={[{ id, label, icon?, badge?, content }]} ariaLabel="…" />
  * `content` peut être un nœud ou une fonction (rendu paresseux du panneau actif).
+ * `ariaLabel` nomme la liste d'onglets (défaut « Sections ») — à distinguer
+ * lorsqu'on imbrique des Tabs pour éviter deux tablists homonymes.
  */
-export function Tabs({ tabs, defaultTab, className = "" }) {
+export function Tabs({ tabs, defaultTab, className = "", ariaLabel = "Sections" }) {
   const base = useId();
   const [active, setActive] = useState(defaultTab ?? tabs[0]?.id);
   const refs = useRef({});
@@ -36,7 +38,7 @@ export function Tabs({ tabs, defaultTab, className = "" }) {
     <div className={className}>
       <div
         role="tablist"
-        aria-label="Sections"
+        aria-label={ariaLabel}
         onKeyDown={onKeyDown}
         className="flex flex-wrap gap-1 border-b border-grisM"
       >
@@ -99,6 +101,7 @@ Tabs.propTypes = {
   ).isRequired,
   defaultTab: PropTypes.string,
   className: PropTypes.string,
+  ariaLabel: PropTypes.string,
 };
 
 export default Tabs;

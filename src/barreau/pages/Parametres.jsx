@@ -243,6 +243,7 @@ export function Parametres() {
   const panneauReference = (
     <div className="space-y-5">
       <Tabs
+        ariaLabel="Catégories de données de référence"
         tabs={[
           { id: "documents", label: "Documents", content: (
       <Section titre="Catégories & types de documents" description="Listes de référence utilisées dans l'archivage et les publications.">
@@ -392,6 +393,7 @@ export function Parametres() {
       <PageHeader eyebrow="Système" titre="Paramètres" sousTitre="Tarifs, identité de l'institution, données de référence centralisées, rôles et notifications." />
 
       <Tabs
+        ariaLabel="Sections des paramètres"
         tabs={[
           { id: "tarifs", label: "Tarifs & exercices", icon: BanknotesIcon, content: panneauTarifs },
           { id: "identite", label: "Institution", icon: BuildingLibraryIcon, content: panneauIdentite },
