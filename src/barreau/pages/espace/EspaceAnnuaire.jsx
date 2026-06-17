@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { MagnifyingGlassIcon, BookOpenIcon, EnvelopeIcon, PhoneIcon } from "@heroicons/react/24/outline";
-import { Badge, PageHeader, useToast, TableSkeleton, ErrorState, EmptyState } from "../../components";
+import { Badge, PageHeader, DataTable, useToast } from "../../components";
 import { QUALITE_LABEL } from "../../data/derivations";
 import { getEspaceAnnuaire } from "../../api/resources";
 
@@ -8,12 +8,14 @@ import { getEspaceAnnuaire } from "../../api/resources";
 export function EspaceAnnuaire() {
   const toast = useToast();
   const [membres, setMembres] = useState(null);
+  const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState(false);
   const [recherche, setRecherche] = useState("");
 
   const charger = () => {
+    setChargement(true);
     setErreur(false);
-    getEspaceAnnuaire().then(setMembres).catch((e) => { setErreur(true); toast.error(e.message); });
+    getEspaceAnnuaire().then(setMembres).catch((e) => { setErreur(true); toast.error(e.message); }).finally(() => setChargement(false));
   };
   useEffect(() => { charger(); /* eslint-disable-line */ }, []);
 
@@ -23,8 +25,24 @@ export function EspaceAnnuaire() {
     return membres.filter((m) => !q || m.nom.toLowerCase().includes(q) || (m.cabinet ?? "").toLowerCase().includes(q));
   }, [membres, recherche]);
 
-  if (erreur) return <div className="bpn-card p-6"><ErrorState title="Indisponible" description="L'annuaire n'a pas pu être chargé." onRetry={charger} /></div>;
-  if (!membres) return <div className="bpn-card p-6"><TableSkeleton rows={6} cols={3} /></div>;
+  const colonnes = [
+    { key: "identite", label: "Identité", sortable: true, sortValue: (m) => m.nom.toLowerCase(),
+      cell: (m) => <span className="font-medium text-encre">Me {m.nom}</span> },
+    { key: "titre", label: "Titre", sortable: true, sortValue: (m) => m.qualite,
+      cell: (m) => <Badge ton="bleu" dot={false}>{QUALITE_LABEL[m.qualite] ?? m.qualite}</Badge> },
+    { key: "cabinet", label: "Cabinet", sortable: true, sortValue: (m) => (m.cabinet ?? "").toLowerCase(),
+      cell: (m) => <span className="text-gris">{m.cabinet || "—"}</span> },
+    { key: "num", label: "N° d'inscription",
+      cell: (m) => <span className="font-mono text-xs text-or">{m.numInscription || "—"}</span> },
+    { key: "tel", label: "Téléphone",
+      cell: (m) => (m.tel
+        ? <a href={`tel:${m.tel}`} className="inline-flex items-center gap-1 font-mono text-xs text-gris transition hover:text-navy"><PhoneIcon className="h-3.5 w-3.5" />{m.tel}</a>
+        : <span className="text-gris">—</span>) },
+    { key: "email", label: "E-mail",
+      cell: (m) => (m.email
+        ? <a href={`mailto:${m.email}`} className="inline-flex items-center gap-1 text-xs text-navy transition hover:underline"><EnvelopeIcon className="h-3.5 w-3.5" />{m.email}</a>
+        : <span className="text-gris">—</span>) },
+  ];
 
   return (
     <div className="space-y-5">
@@ -36,44 +54,20 @@ export function EspaceAnnuaire() {
       </div>
 
       <div className="bpn-card">
-        <div className="bpn-card-header">
-          <span className="bpn-card-heading">Annuaire — Barreau de Pointe-Noire</span>
-          <span className="font-mono text-xs text-gris">{lignes.length}</span>
-        </div>
-        {lignes.length === 0 ? (
-          <div className="p-4"><EmptyState icon={BookOpenIcon} title="Aucun confrère trouvé" description="Essayez un autre nom ou cabinet." /></div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-grisL text-left text-[11px] uppercase tracking-wide text-gris">
-                  <th className="px-4 py-2.5 font-medium">Identité</th>
-                  <th className="px-4 py-2.5 font-medium">Titre</th>
-                  <th className="px-4 py-2.5 font-medium">Cabinet</th>
-                  <th className="px-4 py-2.5 font-medium">N° d'inscription</th>
-                  <th className="px-4 py-2.5 font-medium">Téléphone</th>
-                  <th className="px-4 py-2.5 font-medium">E-mail</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-grisL">
-                {lignes.map((m) => (
-                  <tr key={m.id} className="hover:bg-grisL/40">
-                    <td className="whitespace-nowrap px-4 py-2.5 font-medium text-encre">Me {m.nom}</td>
-                    <td className="px-4 py-2.5"><Badge ton="bleu" dot={false}>{QUALITE_LABEL[m.qualite] ?? m.qualite}</Badge></td>
-                    <td className="px-4 py-2.5 text-gris">{m.cabinet || "—"}</td>
-                    <td className="whitespace-nowrap px-4 py-2.5 font-mono text-xs text-or">{m.numInscription || "—"}</td>
-                    <td className="whitespace-nowrap px-4 py-2.5">
-                      {m.tel ? <a href={`tel:${m.tel}`} className="inline-flex items-center gap-1 font-mono text-xs text-gris transition hover:text-navy"><PhoneIcon className="h-3.5 w-3.5" />{m.tel}</a> : <span className="text-gris">—</span>}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-2.5">
-                      {m.email ? <a href={`mailto:${m.email}`} className="inline-flex items-center gap-1 text-xs text-navy transition hover:underline"><EnvelopeIcon className="h-3.5 w-3.5" />{m.email}</a> : <span className="text-gris">—</span>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <DataTable
+          columns={colonnes}
+          rows={lignes}
+          getRowId={(m) => m.id}
+          loading={chargement}
+          error={erreur}
+          onRetry={charger}
+          pageSize={12}
+          libelle="confrères"
+          initialSort={{ key: "identite", dir: "asc" }}
+          emptyIcon={BookOpenIcon}
+          emptyTitle="Aucun confrère trouvé"
+          emptyDescription={recherche ? "Essayez un autre nom ou cabinet." : "L'annuaire est vide."}
+        />
       </div>
     </div>
   );
