@@ -23,7 +23,7 @@ const smtpSchema = z.object({
 });
 
 const installSchema = z.object({
-  admin: z.object({ nom: z.string().trim().min(1), email: z.string().email(), motDePasse: z.string().min(8) }),
+  admin: z.object({ nom: z.string().trim().min(1), email: z.string().trim().email(), motDePasse: z.string().min(8) }),
   identite: z.object({
     denomination: z.string().trim().min(1), ordre: z.string().trim().min(1),
     batonnier: z.string().trim().min(1), tresoriere: z.string().trim().min(1),
@@ -40,7 +40,10 @@ installationRouter.post("/", asyncH(async (req, res) => {
   if (!(await wizardActif())) throw new HttpError(409, "Application déjà installée.");
   const d = installSchema.parse(req.body);
   await prisma.$transaction(async (tx) => {
-    await tx.user.create({ data: { nom: d.admin.nom, email: d.admin.email.toLowerCase(), role: "ADMIN", passwordHash: bcrypt.hashSync(d.admin.motDePasse, 10) } });
+    // Email stocké tel quel (la connexion compare sans normaliser la casse,
+    // comme la création de comptes via le module Utilisateurs) : le lowercaser
+    // ici verrouillerait un admin ayant saisi une adresse à casse mixte.
+    await tx.user.create({ data: { nom: d.admin.nom, email: d.admin.email, role: "ADMIN", passwordHash: bcrypt.hashSync(d.admin.motDePasse, 10) } });
     const row = await tx.parametres.findUnique({ where: { id: 1 } });
     const base = (row?.data as object) ?? {};
     const data = {

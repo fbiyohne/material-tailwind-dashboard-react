@@ -139,7 +139,7 @@ export function Installation() {
               <div><span className="text-gris">Administrateur :</span> {admin.nom} ({admin.email})</div>
               <div><span className="text-gris">Institution :</span> {identite.denomination}</div>
               <div><span className="text-gris">Tarifs :</span> avocat {tarifs.avocat} · stagiaire {tarifs.stagiaire} · droit {tarifs.droitsPlaidoirie} FCFA</div>
-              <div><span className="text-gris">Exercices :</span> {exercice} → {premier}</div>
+              <div><span className="text-gris">Exercices :</span> {premier} → {exercice}</div>
               <div><span className="text-gris">Email :</span> {emailActif && smtp.host ? `${smtp.host} (${smtp.user})` : "simulation"}</div>
               <p className="pt-2 text-xs text-gris">La base démarrera vide (seuls le compte admin et cette configuration). Action finale ci-dessous.</p>
             </div>

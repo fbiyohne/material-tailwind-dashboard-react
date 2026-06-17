@@ -108,14 +108,17 @@ describe("Installation — parcours actif (destructif, restauré en fin)", () =>
       smtp: { host: "smtp.gmail.com", port: 587, user: "u@gmail.com", pass: "app-pass", from: "u@gmail.com", secure: false },
     });
     expect(r.status).toBe(201);
-    const admin = await prisma.user.findUnique({ where: { email: "admin.test@barreau-pn.cg" } });
+    // L'email est stocké TEL QUEL (casse préservée) : on le retrouve avec la
+    // casse exacte saisie, et la connexion doit fonctionner avec cette même
+    // casse — régression contre un verrouillage de l'admin (cf. revue).
+    const admin = await prisma.user.findUnique({ where: { email: "Admin.Test@Barreau-PN.cg" } });
     expect(admin?.role).toBe("ADMIN");
     const row = await prisma.parametres.findUnique({ where: { id: 1 } });
     const data = row?.data as Record<string, any>;
     expect(data.installe).toBe(true);
     expect(data.identite.denomination).toBe("Barreau X");
     expect(data.smtp.host).toBe("smtp.gmail.com");
-    const login = await request(app).post("/api/auth/login").send({ email: "admin.test@barreau-pn.cg", password: "motdepasse123" });
+    const login = await request(app).post("/api/auth/login").send({ email: "Admin.Test@Barreau-PN.cg", password: "motdepasse123" });
     expect(login.status).toBe(200);
   });
 
