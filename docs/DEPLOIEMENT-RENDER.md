@@ -17,9 +17,19 @@ base **PostgreSQL gérée**. Tout est décrit dans [`render.yaml`](../render.yam
 | Le service **s'endort** après ~15 min d'inactivité | 1er chargement lent (~30-50 s), puis rapide |
 | PostgreSQL gratuit **supprimé après 90 jours** | La démo cesse de fonctionner ; à recréer |
 | Le **seed se relance à chaque déploiement** | Les données sont **réinitialisées** (démo, pas de persistance réelle) |
-| Pas de Chromium installé | La **génération des PDF** (reçus, attestations…) est indisponible |
+| Build plus long (~2-3 min de plus) | Chrome (~150 Mo) est téléchargé au build pour la génération PDF |
+| RAM limitée (512 Mo) | La génération PDF (qui lance Chrome) peut être lente, voire échouer sous forte charge |
 
-➡️ Pour une vraie mise en service (données d'avocats), préférer un **VPS + Docker**.
+> **Génération PDF** : Chrome est désormais installé automatiquement au build
+> (`@puppeteer/browsers`, dossier `.cache/puppeteer` sous le projet, repéré par
+> `PUPPETEER_CACHE_DIR`). Les reçus, quitus et attestations sont donc produits en
+> **PDF vectoriel côté serveur**. Sur le niveau gratuit (512 Mo), si la mémoire
+> manque au moment du rendu, l'application bascule sur un rendu de secours côté
+> client — pour un fonctionnement confortable, passer à une instance payante ou au VPS.
+
+➡️ Pour une vraie mise en service (données d'avocats), préférer un **VPS + Docker**
+(Chromium installé via le gestionnaire de paquets — le serveur le détecte aussi
+sur `/usr/bin/chromium`).
 
 ---
 
@@ -71,4 +81,8 @@ la main : bouton *Manual Deploy* dans le tableau de bord du service.
   pas encore prête au tout premier démarrage (Render relance).
 - **Page blanche** → vérifier que `STATIC_DIR=../dist` est défini et que
   `npm run build` a bien produit `dist/` pendant le build.
-- **PDF en erreur** → attendu sur le niveau gratuit (pas de Chromium).
+- **PDF en erreur** → vérifier dans les *Logs* que l'étape
+  `@puppeteer/browsers install chrome` a réussi au build et que
+  `PUPPETEER_CACHE_DIR` pointe bien sur `/opt/render/project/src/.cache/puppeteer`.
+  Une erreur au moment du rendu (et non au lancement) évoque un manque de RAM
+  (niveau gratuit) : l'app bascule alors automatiquement sur le rendu client.

@@ -18,10 +18,14 @@ services:
     plan: free
     # --include=dev : tsx, prisma et vite sont en devDependencies ; le mode
     # production de npm les ignorerait sinon (node_modules persiste au runtime).
+    # Chrome est téléchargé au build par @puppeteer/browsers dans un dossier du
+    # projet (persistant au runtime) → génération PDF (reçus, quitus,
+    # attestations…) opérationnelle. Le serveur le localise via PUPPETEER_CACHE_DIR.
     buildCommand: >-
       npm install --include=dev &&
       npm run build &&
       npm install --prefix server --include=dev &&
+      (cd server && npx @puppeteer/browsers install chrome@stable --path /opt/render/project/src/.cache/puppeteer) &&
       npm run prisma:generate --prefix server &&
       npm run prisma:deploy --prefix server &&
       npm run seed --prefix server
@@ -40,5 +44,9 @@ services:
           property: connectionString
       - key: JWT_SECRET
         generateValue: true
+      # Emplacement du Chrome téléchargé au build (sous le projet → persiste au
+      # runtime). Lu par le serveur (lib/pdf.ts) pour lancer Puppeteer.
+      - key: PUPPETEER_CACHE_DIR
+        value: /opt/render/project/src/.cache/puppeteer
       # PORT est injecté automatiquement par Render.
       # SMTP_*, SMS_*, PAYMENT_*, ANTHROPIC_API_KEY laissés vides → simulation.
