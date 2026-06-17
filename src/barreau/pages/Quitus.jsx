@@ -5,7 +5,7 @@ import { QuitusDocument, useToast, useConfirm, PageHeader, DataTable } from "../
 import { useAuth } from "../auth/AuthContext";
 import { formatDate } from "../utils/format";
 import { telechargerCsv } from "../utils/exportCsv";
-import { telechargerDocumentPdf } from "../utils/exports";
+import { exporterPdf } from "../utils/exports";
 import { quitusEligibles, listerQuitus, genererQuitus, supprimerQuitus, getCotisations, getMembre, telechargerQuitusPdf } from "../api/resources";
 
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
@@ -105,9 +105,9 @@ export function Quitus() {
       const q = await genererQuitus(membreActif.id, exercice);
       setSucces(q);
       charger();
-      // Document officiel vectoriel rendu côté serveur (A4, une page) ; repli
-      // sur le rendu client de l'aperçu si le serveur ne peut pas le produire.
-      await telechargerDocumentPdf(() => telechargerQuitusPdf(q.id, q.numero), `Quitus-${q.numero}`);
+      // Le PDF est la capture exacte du quitus affiché à l'écran (aperçu), une
+      // fois celui-ci rafraîchi avec le numéro réel.
+      setTimeout(() => exporterPdf(`Quitus-${q.numero}`, ".bpn-print-zone", { page: true }).catch((e) => toast.error(e.message)), 150);
     } catch (e) {
       toast.error(e.message);
     }
@@ -190,7 +190,7 @@ export function Quitus() {
             <button type="button" onClick={generer} disabled={!membreActif} className="bpn-btn bpn-btn-or w-full justify-center !py-2.5">
               <DocumentCheckIcon className="h-4 w-4" /> Générer &amp; archiver
             </button>
-            <button type="button" onClick={() => succes && telechargerDocumentPdf(() => telechargerQuitusPdf(succes.id, succes.numero), `Quitus-${succes.numero}`).catch((e) => toast.error(e.message))} disabled={!succes} title={succes ? "" : "Générez d'abord le quitus"} className="bpn-btn bpn-btn-ghost w-full justify-center border-white/20 text-white/70 hover:bg-white/10 hover:text-white disabled:opacity-40">
+            <button type="button" onClick={() => succes && exporterPdf(`Quitus-${succes.numero}`, ".bpn-print-zone", { page: true }).catch((e) => toast.error(e.message))} disabled={!succes} title={succes ? "" : "Générez d'abord le quitus"} className="bpn-btn bpn-btn-ghost w-full justify-center border-white/20 text-white/70 hover:bg-white/10 hover:text-white disabled:opacity-40">
               <ArrowDownTrayIcon className="h-4 w-4" /> Télécharger PDF
             </button>
           </div>

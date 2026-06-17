@@ -16,23 +16,26 @@ export async function exporterPdf(filename, selector = ".bpn-print-zone", { page
   const pdf = new JsPDF({ unit: "pt", format: "a4" });
   const pageW = pdf.internal.pageSize.getWidth();
   const pageH = pdf.internal.pageSize.getHeight();
-  const img = canvas.toDataURL("image/png");
 
   // Mode « document » : une seule page A4, le document mis à l'échelle pour tenir
   // entièrement (jamais rogné ni débordé) et centré. Marge minime car les
   // documents portent déjà leur propre cadre. Idéal pour reçus/quitus/attestations.
   if (page) {
+    // JPEG haute qualité : un PNG 2× d'une A4 pèse >10 Mo ; le JPEG ramène à ~1 Mo
+    // sans perte visible sur un document (fond blanc + aplats).
+    const img = canvas.toDataURL("image/jpeg", 0.95);
     const m = 14;
     const echelle = Math.min((pageW - 2 * m) / canvas.width, (pageH - 2 * m) / canvas.height);
     const w = canvas.width * echelle;
     const h = canvas.height * echelle;
-    pdf.addImage(img, "PNG", (pageW - w) / 2, (pageH - h) / 2, w, h);
+    pdf.addImage(img, "JPEG", (pageW - w) / 2, (pageH - h) / 2, w, h);
     pdf.save(filename.endsWith(".pdf") ? filename : `${filename}.pdf`);
     return;
   }
 
   // Mode « flux » (états/listes) : largeur fixée, contenu plus haut qu'une page
   // découpé en tranches A4 successives pour ne jamais déborder ni rogner.
+  const img = canvas.toDataURL("image/png");
   const margin = 40;
   const w = pageW - margin * 2;
   const ratio = w / canvas.width;
