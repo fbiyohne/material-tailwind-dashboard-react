@@ -31,6 +31,9 @@ const DEFAUT = {
   },
   paiement: { canauxActifs: ["MTN", "AIRTEL", "CARTE", "VIREMENT"] },
   stage: { dureeMois: 24 },
+  conseil: {
+    fonctions: ["Bâtonnier", "Vice-Bâtonnier", "Secrétaire Général", "Trésorière", "Membre du Conseil"],
+  },
   libellesStatuts: { membre: {}, cotisation: {}, dossier: {}, publication: {} },
 };
 
@@ -67,6 +70,9 @@ const majSchema = z.object({
     canauxActifs: z.array(z.enum(["MTN", "AIRTEL", "CARTE", "VIREMENT"])),
   }).partial().optional(),
   stage: z.object({ dureeMois: z.number().int().positive().max(120) }).partial().optional(),
+  conseil: z.object({
+    fonctions: z.array(z.string().trim().min(1)).max(40),
+  }).partial().optional(),
   libellesStatuts: z.object({
     membre: listeLibellesSchema, cotisation: listeLibellesSchema,
     dossier: listeLibellesSchema, publication: listeLibellesSchema,

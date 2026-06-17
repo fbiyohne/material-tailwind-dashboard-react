@@ -41,6 +41,7 @@ const DEFAUT = {
   typesPublication: [],
   canauxActifs: ["MTN", "AIRTEL", "CARTE", "VIREMENT"],
   dureeStage: 24,
+  fonctionsConseil: ["Bâtonnier", "Vice-Bâtonnier", "Secrétaire Général", "Trésorière", "Membre du Conseil"],
   libelles: { membre: {}, cotisation: {}, dossier: {}, publication: {} },
 };
 
@@ -134,6 +135,7 @@ export function Parametres() {
   const [typesPub, setTypesPub] = useState(DEFAUT.typesPublication);
   const [canaux, setCanaux] = useState(DEFAUT.canauxActifs);
   const [dureeStage, setDureeStage] = useState(DEFAUT.dureeStage);
+  const [fonctions, setFonctions] = useState(DEFAUT.fonctionsConseil);
   const [libelles, setLibelles] = useState(DEFAUT.libelles);
   const [notif, setNotif] = useState(null);
 
@@ -147,6 +149,7 @@ export function Parametres() {
       setTypesPub(p.documents?.typesPublication ?? []);
       setCanaux(p.paiement?.canauxActifs ?? DEFAUT.canauxActifs);
       setDureeStage(p.stage?.dureeMois ?? DEFAUT.dureeStage);
+      setFonctions(p.conseil?.fonctions ?? DEFAUT.fonctionsConseil);
       setLibelles({ membre: {}, cotisation: {}, dossier: {}, publication: {}, ...p.libellesStatuts });
     }).catch((e) => toast.error(e.message));
     getNotifications().then(setNotif).catch(() => setNotif(null));
@@ -187,6 +190,7 @@ export function Parametres() {
         documents: { categoriesArchives: categories, typesPublication: typesPub },
         paiement: { canauxActifs: canaux },
         stage: { dureeMois: Number(dureeStage) },
+        conseil: { fonctions },
         libellesStatuts: libelles,
       },
       "Données de référence enregistrées."
@@ -249,6 +253,10 @@ export function Parametres() {
             <ListeEditable valeurs={typesPub} onChange={setTypesPub} placeholder="Nouveau type…" />
           </div>
         </div>
+      </Section>
+
+      <Section titre="Fonctions du Conseil de l'Ordre" description="Intitulés proposés à l'ajout ou à la modification d'un membre du Conseil (Bâtonnier, Trésorière, Membre du Conseil…).">
+        <ListeEditable valeurs={fonctions} onChange={setFonctions} placeholder="Nouvelle fonction…" />
       </Section>
 
       <Section titre="Canaux de paiement & stage" description="Moyens de paiement proposés en ligne et durée de stage par défaut.">

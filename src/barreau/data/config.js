@@ -43,6 +43,11 @@ export const PARAMETRES_DEFAUT = {
   },
   paiement: { canauxActifs: ["MTN", "AIRTEL", "CARTE", "VIREMENT"] },
   stage: { dureeMois: 24 },
+  // Fonctions du Conseil de l'Ordre — données de référence éditables, proposées
+  // à l'ajout/édition d'un membre du Conseil (au lieu d'une saisie libre).
+  conseil: {
+    fonctions: ["Bâtonnier", "Vice-Bâtonnier", "Secrétaire Général", "Trésorière", "Membre du Conseil"],
+  },
   // Surcharges de libellés d'affichage des statuts (la logique/les clés enum ne
   // changent pas — on ne renomme que ce qui s'affiche). Vide = libellé par défaut.
   libellesStatuts: { membre: {}, cotisation: {}, dossier: {}, publication: {} },
@@ -72,6 +77,7 @@ export function appliquerConfig(patch) {
   if (patch.documents) config.documents = { ...config.documents, ...patch.documents };
   if (patch.paiement) config.paiement = { ...config.paiement, ...patch.paiement };
   if (patch.stage) config.stage = { ...config.stage, ...patch.stage };
+  if (patch.conseil) config.conseil = { ...config.conseil, ...patch.conseil };
   if (patch.libellesStatuts) {
     const l = config.libellesStatuts;
     for (const dom of Object.keys(patch.libellesStatuts)) {
@@ -95,6 +101,8 @@ export const categoriesArchives = () => config.documents?.categoriesArchives ?? 
 export const typesPublication = () => config.documents?.typesPublication ?? [];
 export const canauxActifs = () => config.paiement?.canauxActifs ?? [];
 export const dureeStageMois = () => config.stage?.dureeMois ?? PARAMETRES_DEFAUT.stage.dureeMois;
+/** Fonctions du Conseil de l'Ordre configurées (données de référence). */
+export const fonctionsConseil = () => config.conseil?.fonctions ?? PARAMETRES_DEFAUT.conseil.fonctions;
 /** Libellé d'un statut, surchargé en Paramètres ou repli sur le défaut fourni. */
 export const libelleStatut = (domaine, cle, defaut) =>
   config.libellesStatuts?.[domaine]?.[cle] || defaut;
