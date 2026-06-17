@@ -4,7 +4,7 @@ import { Modal } from "./Modal";
 import { FormField } from "./FormField";
 import { Notice } from "./Notice";
 import { useToast } from "./Toast";
-import { enregistrerPaiement, enregistrerPaiementDroit } from "../api/resources";
+import { enregistrerPaiement, enregistrerPaiementDroit, telechargerRecuPdf } from "../api/resources";
 import { formatFCFA } from "../utils/format";
 
 const MODES = ["Espèces", "Virement", "Chèque", "Mobile Money"];
@@ -42,6 +42,11 @@ export function PaiementModal({ ligne, exercice, type = "cotisation", open, onCl
       toast.success(`Paiement enregistré — reçu N° ${recu.numero} (Me ${membre.nom})`);
       onDone?.();
       onClose();
+      // Téléchargement immédiat du reçu officiel (cotisation comme droit de
+      // plaidoirie) ; le paiement reste enregistré même si le PDF échoue.
+      telechargerRecuPdf(recu.id, recu.numero).catch(() =>
+        toast.error("Reçu enregistré, mais le PDF n'a pu être téléchargé. Réessayez depuis le registre des reçus.")
+      );
     } catch (e) {
       toast.error(e.message);
     } finally {

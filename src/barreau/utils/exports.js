@@ -43,6 +43,22 @@ export async function exporterPdf(filename, selector = ".bpn-print-zone") {
   pdf.save(filename.endsWith(".pdf") ? filename : `${filename}.pdf`);
 }
 
+/**
+ * Télécharge un document officiel : PDF vectoriel rendu par le serveur en
+ * priorité ; si le serveur ne peut pas le produire (p. ex. navigateur
+ * d'impression absent), repli automatique sur un rendu client de l'aperçu
+ * visible (zone `selector`), paginé en A4. Le document reste donc obtenable
+ * même sans Chromium côté serveur.
+ */
+export async function telechargerDocumentPdf(rendreServeur, filename, selector = ".bpn-print-zone") {
+  try {
+    await rendreServeur();
+  } catch (e) {
+    if (!document.querySelector(selector)) throw e; // pas d'aperçu local : on remonte l'erreur serveur
+    await exporterPdf(filename, selector);
+  }
+}
+
 export async function exporterExcel(filename, lignes, sheetName = "Feuille1") {
   const XLSX = await import("xlsx");
   const ws = XLSX.utils.aoa_to_sheet(lignes);
