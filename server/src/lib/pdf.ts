@@ -1,24 +1,49 @@
 import fs from "node:fs";
+import path from "node:path";
 import type { Response } from "express";
 import puppeteer, { type Browser } from "puppeteer-core";
 
-/** Résout le binaire Chromium (env prioritaire, sinon chemins connus). */
-function executablePath(): string {
-  const candidats = [
-    process.env.PUPPETEER_EXECUTABLE_PATH,
-    "/opt/pw-browsers/chromium-1223/chrome-linux64/chrome",
-    "/usr/bin/chromium",
-    "/usr/bin/chromium-browser",
-    "/usr/bin/google-chrome",
-  ].filter(Boolean) as string[];
-  const exe = candidats.find((p) => {
-    try {
-      return fs.existsSync(p);
-    } catch {
-      return false;
+const existe = (p?: string | null): p is string => {
+  try { return !!p && fs.existsSync(p); } catch { return false; }
+};
+
+/**
+ * Résout le binaire Chromium SANS figer la version : variable d'environnement,
+ * puis exploration des navigateurs Playwright installés (chromium-<version>,
+ * version la plus récente d'abord), puis Chromium/Chrome système. Le chemin
+ * codé en dur précédent cassait dès que la version de Chromium changeait.
+ */
+function trouverChromium(): string | null {
+  if (existe(process.env.PUPPETEER_EXECUTABLE_PATH)) return process.env.PUPPETEER_EXECUTABLE_PATH!;
+
+  const racine = process.env.PLAYWRIGHT_BROWSERS_PATH || "/opt/pw-browsers";
+  try {
+    const dossiers = fs
+      .readdirSync(racine)
+      .filter((d) => d.startsWith("chromium-") || d.startsWith("chromium_headless_shell-"))
+      .sort((a, b) => (parseInt(b.split("-").pop() || "0", 10) || 0) - (parseInt(a.split("-").pop() || "0", 10) || 0));
+    for (const d of dossiers) {
+      for (const rel of ["chrome-linux64/chrome", "chrome-linux/chrome", "chrome-linux/headless_shell", "chrome-linux64/headless_shell"]) {
+        const p = path.join(racine, d, rel);
+        if (existe(p)) return p;
+      }
     }
-  });
-  if (!exe) throw new Error("Chromium introuvable (définir PUPPETEER_EXECUTABLE_PATH)");
+  } catch { /* racine absente : on continue vers les chemins système */ }
+
+  for (const p of ["/usr/bin/chromium", "/usr/bin/chromium-browser", "/usr/bin/google-chrome", "/usr/bin/google-chrome-stable"]) {
+    if (existe(p)) return p;
+  }
+  return null;
+}
+
+function executablePath(): string {
+  const exe = trouverChromium();
+  if (!exe) {
+    throw new Error(
+      "Génération PDF indisponible : aucun navigateur Chromium trouvé sur le serveur. " +
+        "Définissez PUPPETEER_EXECUTABLE_PATH ou installez Chromium."
+    );
+  }
   return exe;
 }
 
