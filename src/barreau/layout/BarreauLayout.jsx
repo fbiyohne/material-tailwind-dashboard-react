@@ -3,7 +3,6 @@ import { Routes, Route, useLocation, Navigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 import { allModules, detailRoutes, aAcces } from "../routes";
-import Placeholder from "../pages/Placeholder";
 import NotFound from "../pages/NotFound";
 import { InscriptionModal } from "../components";
 import { useAuth } from "../auth/AuthContext";
@@ -47,12 +46,12 @@ export function BarreauLayout() {
 
         <main id="contenu-principal" tabIndex={-1} className="mx-auto max-w-container px-4 py-6 outline-none md:px-8 md:py-8">
           <Routes>
-            {allModules.map(({ path, name, element, roles }) => (
+            {allModules.map(({ path, element, roles }) => (
               <Route
                 key={path}
                 path={path}
                 element={
-                  aAcces({ roles }, role) ? (element ?? <Placeholder title={name} />) : <Navigate to="/" replace />
+                  aAcces({ roles }, role) ? element : <Navigate to="/" replace />
                 }
               />
             ))}

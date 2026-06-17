@@ -2,7 +2,7 @@ import { Router } from "express";
 import { prisma } from "../prisma.js";
 import { anneeDeRequete } from "../lib/requete.js";
 import { asyncH } from "../middleware/error.js";
-import { requireAuth } from "../middleware/auth.js";
+import { requireAuth, type AuthRequest } from "../middleware/auth.js";
 import { montantDuAvec, statutCotisation, tarifsActuels } from "../lib/business.js";
 
 export const dashboardRouter = Router();
@@ -37,10 +37,14 @@ dashboardRouter.get(
       else if (st === "retard" || st === "partiel") enRetard += 1;
     }
 
+    // RG-15 : les montants financiers ne sont servis qu'aux profils finances ;
+    // le Bâtonnier reçoit la composition des membres mais pas les finances.
+    const role = (req as AuthRequest).user?.role;
+    const voitFinances = role === "SECRETAIRE_GENERAL" || role === "TRESORIERE" || role === "ADMIN";
     res.json({
       annee,
       membres: { inscrits, stagiaires, aJour, enRetard },
-      finances: { payees, impayees: du - payees, solde: du - payees },
+      ...(voitFinances ? { finances: { payees, impayees: du - payees, solde: du - payees } } : {}),
     });
   })
 );

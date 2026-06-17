@@ -6,6 +6,16 @@ import { formatFCFA, ratioPct } from "../utils/format";
 import { EXERCICE_COURANT } from "../data/dashboard-data";
 import { api } from "../api/client";
 import { getJournalAudit, getAgenda } from "../api/resources";
+import { useAuth } from "../auth/AuthContext";
+import { aAcces, allModules } from "../routes";
+
+/** En-tête du tableau de bord adapté au rôle (cadrage de la mission). */
+const ENTETE = {
+  SECRETAIRE_GENERAL: { eyebrow: "Secrétariat Général", sous: "Vue d'ensemble du Barreau — membres, finances et vie institutionnelle." },
+  ADMIN: { eyebrow: "Administration", sous: "Vue d'ensemble du Barreau — membres, finances et vie institutionnelle." },
+  TRESORIERE: { eyebrow: "Trésorerie", sous: "Suivi financier du Barreau — cotisations, recouvrement et échéances." },
+  BATONNIER: { eyebrow: "Bâtonnat", sous: "Vie institutionnelle du Barreau — membres, instances et échéances." },
+};
 
 /** Nombre maximal de lignes rendues dans les cartes de synthèse du tableau de
  * bord (le reste est borné par un défilement interne). */
@@ -36,6 +46,7 @@ function ColonneFinance({ label, montant, total, accent }) {
 
 export function Dashboard() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [exercice, setExercice] = useState(EXERCICE_COURANT);
   const [data, setData] = useState(null);
   const [erreur, setErreur] = useState(null);
@@ -80,9 +91,21 @@ export function Dashboard() {
   const finances = data?.finances;
   const totalDu = finances ? finances.payees + finances.impayees : 0;
 
+  // Cadrage par rôle : en-tête adapté, navigation des cartes restreinte aux
+  // modules réellement accessibles, et finances réservées aux profils finances
+  // (RG-15 : le Bâtonnier ne voit pas les montants).
+  const role = user?.role;
+  const peut = (path) => {
+    const m = allModules.find((x) => x.path === path.split("?")[0]);
+    return m ? aAcces(m, role) : false;
+  };
+  const allerVers = (path) => (peut(path) ? () => navigate(path) : undefined);
+  const voitFinances = peut("/cotisations");
+  const entete = ENTETE[role] ?? ENTETE.SECRETAIRE_GENERAL;
+
   return (
     <div className="space-y-5">
-      <PageHeader eyebrow="Secrétariat Général" titre="Tableau de bord" sousTitre="Vue d'ensemble du Barreau — membres, finances et vie institutionnelle.">
+      <PageHeader eyebrow={entete.eyebrow} titre="Tableau de bord" sousTitre={entete.sous}>
         <SelecteurExercice valeur={exercice} onChange={setExercice} />
       </PageHeader>
 
@@ -92,23 +115,26 @@ export function Dashboard() {
 
       {/* 4 indicateurs (données réelles de la base) */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Avocats inscrits" value={membres?.inscrits ?? "…"} sub="au tableau" accent="or" valueAccent="navy" onClick={() => navigate("/avocats")} />
-        <StatCard label="À jour" value={membres?.aJour ?? "…"} sub="avocats + stagiaires" accent="vert" onClick={() => navigate("/cotisations?statut=ajour")} />
-        <StatCard label="En retard" value={membres?.enRetard ?? "…"} sub="relances nécessaires" accent="rouge" onClick={() => navigate("/cotisations?statut=retard")} className={(membres?.enRetard ?? 0) > 0 ? "!border-rouge !bg-rougeL" : ""} />
-        <StatCard label="Stagiaires" value={membres?.stagiaires ?? "…"} sub="en cours" accent="navy" onClick={() => navigate("/stagiaires")} />
+        <StatCard label="Avocats inscrits" value={membres?.inscrits ?? "…"} sub="au tableau" accent="or" valueAccent="navy" onClick={allerVers("/avocats")} />
+        <StatCard label="À jour" value={membres?.aJour ?? "…"} sub="avocats + stagiaires" accent="vert" onClick={allerVers("/cotisations?statut=ajour")} />
+        <StatCard label="En retard" value={membres?.enRetard ?? "…"} sub="relances nécessaires" accent="rouge" onClick={allerVers("/cotisations?statut=retard")} className={(membres?.enRetard ?? 0) > 0 ? "!border-rouge !bg-rougeL" : ""} />
+        <StatCard label="Stagiaires" value={membres?.stagiaires ?? "…"} sub="en cours" accent="navy" onClick={allerVers("/stagiaires")} />
       </div>
 
-      {/* Situation financière */}
-      <div className="bpn-card">
-        <div className="bpn-card-header">
-          <span className="bpn-card-heading">Situation financière {exercice}</span>
-          <span className="font-mono text-xs text-gris">en FCFA</span>
+      {/* Situation financière — réservée aux profils finances (RG-15) ; le
+          Bâtonnier ne voit pas les montants. */}
+      {voitFinances && (
+        <div className="bpn-card">
+          <div className="bpn-card-header">
+            <span className="bpn-card-heading">Situation financière {exercice}</span>
+            <span className="font-mono text-xs text-gris">en FCFA</span>
+          </div>
+          <div className="grid grid-cols-1 divide-y divide-grisM md:grid-cols-2 md:divide-x md:divide-y-0">
+            <ColonneFinance label="Cotisations payées" montant={finances?.payees ?? 0} total={totalDu} accent="vert" />
+            <ColonneFinance label="Solde à recouvrer" montant={finances?.solde ?? 0} total={totalDu} accent="or" />
+          </div>
         </div>
-        <div className="grid grid-cols-1 divide-y divide-grisM md:grid-cols-2 md:divide-x md:divide-y-0">
-          <ColonneFinance label="Cotisations payées" montant={finances?.payees ?? 0} total={totalDu} accent="vert" />
-          <ColonneFinance label="Solde à recouvrer" montant={finances?.solde ?? 0} total={totalDu} accent="or" />
-        </div>
-      </div>
+      )}
 
       {/* Agenda (réel) + journal d'audit (réel) */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
