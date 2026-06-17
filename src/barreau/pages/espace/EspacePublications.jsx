@@ -20,7 +20,7 @@ export function EspacePublications() {
   if (!items) return <div className="bpn-card p-6"><TableSkeleton rows={4} cols={2} /></div>;
 
   return (
-    <div className="space-y-5">
+    <div className="mx-auto max-w-3xl space-y-5">
       <PageHeader eyebrow="Mon espace" titre="Publications" sousTitre="Avis, communiqués et actualités officielles du Barreau de Pointe-Noire." />
 
       {items.length === 0 ? (
