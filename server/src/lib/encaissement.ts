@@ -40,17 +40,27 @@ export async function encaisser(opts: {
     const numero = await prochainNumeroRecu(annee);
     try {
       resultat = await prisma.$transaction(async (tx) => {
-        const situation = estDroit
-          ? await tx.droitPlaidoirie.upsert({
-              where: { membreId_annee: { membreId: membre.id, annee } },
-              create: { membreId: membre.id, annee, montantDu: droitDuAvec(tarifs, membre.qualite), montantPaye: montant, datePaiement: dateP, mode, ref },
-              update: { montantPaye: { increment: montant }, datePaiement: dateP, mode, ref },
-            })
-          : await tx.cotisation.upsert({
-              where: { membreId_annee: { membreId: membre.id, annee } },
-              create: { membreId: membre.id, annee, montantDu: montantDuAvec(tarifs, membre.qualite), montantPaye: montant, datePaiement: dateP, mode, ref },
-              update: { montantPaye: { increment: montant }, datePaiement: dateP, mode, ref },
-            });
+        let situation;
+        if (estDroit) {
+          situation = await tx.droitPlaidoirie.upsert({
+            where: { membreId_annee: { membreId: membre.id, annee } },
+            create: { membreId: membre.id, annee, montantDu: droitDuAvec(tarifs, membre.qualite), montantPaye: montant, datePaiement: dateP, mode, ref },
+            update: { montantPaye: { increment: montant }, datePaiement: dateP, mode, ref },
+          });
+        } else {
+          const cot = await tx.cotisation.upsert({
+            where: { membreId_annee: { membreId: membre.id, annee } },
+            create: { membreId: membre.id, annee, montantDu: montantDuAvec(tarifs, membre.qualite), montantPaye: montant, datePaiement: dateP, mode, ref },
+            update: { montantPaye: { increment: montant }, datePaiement: dateP, mode, ref },
+          });
+          // Règlement intégral = validation Trésorière (BR-01) : dès que la
+          // cotisation est soldée, l'avocat est marqué « validé » et devient
+          // immédiatement éligible au quitus — le reçu officiel émis fait foi,
+          // sans seconde action manuelle. Un solde partiel reste « à valider ».
+          situation = cot.montantPaye >= cot.montantDu && cot.montantPaye > 0 && !cot.valideTresoriere
+            ? await tx.cotisation.update({ where: { membreId_annee: { membreId: membre.id, annee } }, data: { valideTresoriere: true } })
+            : cot;
+        }
         const recu = await tx.recu.create({ data: { numero, membreId: membre.id, montant, annee, date: dateP, mode, ref, objet } });
         await tx.archive.create({ data: { categorie: "Reçu de paiement", titre: `Reçu N° ${numero} — Me ${membre.nom}`, reference: numero, date: dateP, membreNom: membre.nom } });
         return estDroit ? { droit: situation, recu } : { cotisation: situation, recu };

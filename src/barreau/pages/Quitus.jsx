@@ -74,13 +74,13 @@ export function Quitus() {
   useEffect(() => { charger(); }, [charger]);
 
   const synthese = useMemo(() => {
-    let aValider = 0;
+    let partiels = 0;
     let bloques = 0;
     lignes.forEach((l) => {
-      if (l.statut === "ajour") { if (!l.valideTresoriere) aValider += 1; }
-      else if (l.statut !== "exonere") bloques += 1;
+      if (l.statut === "partiel") partiels += 1;
+      else if (l.statut === "retard") bloques += 1;
     });
-    return { eligibles: eligibles.length, aValider, bloques };
+    return { eligibles: eligibles.length, partiels, bloques };
   }, [lignes, eligibles.length]);
 
   const membreActif = eligibles.find((m) => m.id === membreId) ?? eligibles[0] ?? null;
@@ -137,11 +137,11 @@ export function Quitus() {
 
   return (
     <div className="space-y-5">
-      <PageHeader className="bpn-no-print" eyebrow="Finances" titre="Quitus de cotisation" sousTitre="Délivrance d'un quitus officiel — uniquement pour les avocats à jour et validés par la Trésorière." />
+      <PageHeader className="bpn-no-print" eyebrow="Finances" titre="Quitus de cotisation" sousTitre="Délivrance d'un quitus officiel — automatique dès que la cotisation de l'avocat est soldée." />
 
       <div className="bpn-no-print flex items-start gap-2 rounded border-l-[3px] border-vert bg-vertL px-4 py-2.5 text-sm text-vert">
         <CheckCircleIcon className="mt-0.5 h-5 w-5 shrink-0" />
-        <span>Seuls les avocats <strong>à jour</strong> et <strong>validés par la Trésorière</strong> apparaissent. La génération est sinon bloquée (règle BR-01).</span>
+        <span>Tout avocat dont la cotisation est <strong>intégralement réglée</strong> apparaît automatiquement : le règlement vaut validation. La génération reste bloquée tant qu'un solde est dû (règle BR-01).</span>
       </div>
 
       {succes && (
@@ -151,9 +151,9 @@ export function Quitus() {
       )}
 
       <div className="bpn-no-print grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <PuceSynthese valeur={synthese.eligibles} label="Éligibles (à jour + validés)" accent="vert" />
-        <PuceSynthese valeur={synthese.aValider} label="À jour, à valider par la Trésorière" accent="or" />
-        <PuceSynthese valeur={synthese.bloques} label="Non à jour — quitus bloqué" accent="rouge" />
+        <PuceSynthese valeur={synthese.eligibles} label="Éligibles (cotisation soldée)" accent="vert" />
+        <PuceSynthese valeur={synthese.partiels} label="Paiements partiels (solde dû)" accent="or" />
+        <PuceSynthese valeur={synthese.bloques} label="Non réglés — quitus bloqué" accent="rouge" />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[320px_1fr]">
@@ -192,7 +192,7 @@ export function Quitus() {
             <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-grisM bg-white px-6 py-16 text-center">
               <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-rougeL text-rouge"><LockClosedIcon className="h-6 w-6" /></div>
               <p className="font-display text-lg text-navy">Génération bloquée</p>
-              <p className="mt-2 max-w-md text-sm text-gris">Aucun avocat n'est éligible pour l'exercice {exercice} : un quitus n'est délivrable que si la cotisation est réglée <strong>et</strong> validée par la Trésorière (BR-01).</p>
+              <p className="mt-2 max-w-md text-sm text-gris">Aucun avocat n'est éligible pour l'exercice {exercice} : un quitus n'est délivrable que si la cotisation est <strong>intégralement réglée</strong> (BR-01).</p>
             </div>
           )}
 
