@@ -216,6 +216,11 @@ export const majParametres = (patch) => api("/parametres", { method: "PUT", body
 // Réinitialisation totale (ADMIN) — supprime toutes les données sauf le compte admin.
 export const reinitialiserDonnees = () => api("/parametres/reinitialiser-donnees", { method: "POST" });
 
+// ─── Installation (assistant de premier lancement, VPS) ──────────────────────
+export const getEtatInstallation = () => api("/installation/etat", { auth: false });
+export const installer = (body) => api("/installation", { method: "POST", auth: false, body });
+export const testerEmailInstallation = (body) => api("/installation/test-email", { method: "POST", auth: false, body });
+
 // ─── Espace avocat (rôle AVOCAT — libre-service cloisonné) ────────────────
 export const getEspaceMoi = () => api("/espace/moi");
 export const getEspaceDocuments = () => api("/espace/documents");
