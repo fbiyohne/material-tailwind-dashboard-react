@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import { CreditCardIcon } from "@heroicons/react/24/outline";
-import { Badge, StatCard, PageHeader, useToast, TableSkeleton, ErrorState } from "../../components";
+import { Badge, PageHeader, useToast, TableSkeleton, ErrorState } from "../../components";
 import { STATUT_META, QUALITE_LABEL } from "../../data/derivations";
 import { formatFCFA, formatDate } from "../../utils/format";
 import { getEspaceMoi } from "../../api/resources";
@@ -49,20 +49,24 @@ function Historique({ titre, lignes }) {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-[11px] uppercase tracking-wide text-gris">
-                <th className="px-4 pb-2 pt-3">Exercice</th><th className="pb-2 pt-3 text-right">Dû</th><th className="pb-2 pt-3 text-right">Payé</th><th className="pb-2 pt-3">Date</th><th className="px-4 pb-2 pt-3">Statut</th>
+              <tr className="border-b border-grisL text-left text-[11px] uppercase tracking-wide text-gris">
+                <th className="px-4 py-2.5 font-medium">Exercice</th>
+                <th className="px-4 py-2.5 text-right font-medium">Dû</th>
+                <th className="px-4 py-2.5 text-right font-medium">Payé</th>
+                <th className="px-4 py-2.5 font-medium">Date</th>
+                <th className="px-4 py-2.5 font-medium">Statut</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-grisL">
               {lignes.map((l) => {
                 const meta = STATUT_META[l.statut] ?? { ton: "gris", label: l.statut };
                 return (
-                  <tr key={l.annee} className="border-t border-grisL">
-                    <td className="px-4 py-2 font-mono text-xs text-gris">{l.annee}</td>
-                    <td className="py-2 text-right">{formatFCFA(l.du)}</td>
-                    <td className="py-2 text-right">{l.paye ? formatFCFA(l.paye) : "—"}</td>
-                    <td className="py-2 text-xs text-gris">{formatDate(l.datePaiement)}</td>
-                    <td className="px-4 py-2"><Badge ton={meta.ton}>{meta.label}</Badge></td>
+                  <tr key={l.annee}>
+                    <td className="px-4 py-2.5 font-mono text-xs text-gris">{l.annee}</td>
+                    <td className="px-4 py-2.5 text-right">{formatFCFA(l.du)}</td>
+                    <td className="px-4 py-2.5 text-right">{l.paye ? formatFCFA(l.paye) : "—"}</td>
+                    <td className="px-4 py-2.5 text-xs text-gris">{l.datePaiement ? formatDate(l.datePaiement) : "—"}</td>
+                    <td className="px-4 py-2.5"><Badge ton={meta.ton}>{meta.label}</Badge></td>
                   </tr>
                 );
               })}
@@ -104,12 +108,6 @@ export function MaSituation() {
           </span>
         }
       />
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard label={`Cotisation ${annee} — solde`} value={situation.cotisation.solde ? formatFCFA(situation.cotisation.solde) : "À jour"} accent={situation.cotisation.solde ? "rouge" : "vert"} />
-        {situation.droit && <StatCard label={`Droit de plaidoirie ${annee} — solde`} value={situation.droit.solde ? formatFCFA(situation.droit.solde) : "À jour"} accent={situation.droit.solde ? "rouge" : "vert"} />}
-        <StatCard label="Inscription au tableau" value={membre.numInscription ?? `N° ${membre.num}`} accent="navy" />
-      </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <CarteSituation
