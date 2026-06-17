@@ -1,6 +1,7 @@
 import { prisma } from "../prisma.js";
 import { logger } from "./logger.js";
-import { envoyerMail, modeSimulation as emailSimule } from "./mail.js";
+import { envoyerMail, emailEnSimulation } from "./mail.js";
+export { emailEnSimulation };
 
 /**
  * Couche de notifications (NotificationProvider) — abstrait l'email et le SMS
@@ -13,7 +14,6 @@ import { envoyerMail, modeSimulation as emailSimule } from "./mail.js";
  */
 const smsConfigure = Boolean(process.env.SMS_API_URL && process.env.SMS_API_KEY);
 
-export const modeSimulationEmail = emailSimule;
 export const modeSimulationSms = !smsConfigure;
 
 type Canal = "EMAIL" | "SMS";
@@ -29,14 +29,17 @@ async function journaliser(canal: Canal, destinataire: string, sujet: string, ev
 /** Envoie un email (via SMTP réel ou simulation) et journalise l'envoi. */
 export async function envoyerEmail(opts: { to: string; subject: string; text: string; evenement: string }): Promise<{ statut: "ENVOYE" | "ECHEC"; simulation: boolean }> {
   let statut: "ENVOYE" | "ECHEC" = "ENVOYE";
+  let simulation = true;
   try {
-    await envoyerMail({ to: opts.to, subject: opts.subject, text: opts.text });
+    const r = await envoyerMail({ to: opts.to, subject: opts.subject, text: opts.text });
+    simulation = r.simulation;
   } catch (err) {
     statut = "ECHEC";
+    simulation = await emailEnSimulation();
     logger.warn({ err, to: opts.to }, "Échec d'envoi d'email");
   }
-  await journaliser("EMAIL", opts.to, opts.subject, opts.evenement, statut, modeSimulationEmail);
-  return { statut, simulation: modeSimulationEmail };
+  await journaliser("EMAIL", opts.to, opts.subject, opts.evenement, statut, simulation);
+  return { statut, simulation };
 }
 
 /** Adaptateur SMS réel (HTTP générique). À adapter selon le fournisseur. */

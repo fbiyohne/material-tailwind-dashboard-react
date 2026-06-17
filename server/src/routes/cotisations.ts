@@ -6,7 +6,7 @@ import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { montantDuAvec, statutCotisation, tarifsActuels } from "../lib/business.js";
 import { encaisser } from "../lib/encaissement.js";
-import { envoyerEmail, envoyerSms, modeSimulationEmail } from "../lib/notifications.js";
+import { envoyerEmail, envoyerSms, emailEnSimulation } from "../lib/notifications.js";
 
 export const cotisationsRouter = Router();
 // Données financières restreintes aux profils autorisés (RG-15) : SG, Trésorière, Admin.
@@ -50,7 +50,7 @@ cotisationsRouter.post(
       }
       envoyes += 1;
     }
-    res.json({ annee, envoyes, simulation: modeSimulationEmail, destinataires: cibles.map((m) => ({ nom: m.nom, email: m.email })) });
+    res.json({ annee, envoyes, simulation: await emailEnSimulation(), destinataires: cibles.map((m) => ({ nom: m.nom, email: m.email })) });
   })
 );
 
