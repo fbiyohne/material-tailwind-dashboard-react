@@ -64,7 +64,7 @@ export function RecuDocument({ numero, membre, montant, exercice, mode, objet, d
   const verifHost = origin.replace(/^https?:\/\//, "");
 
   return (
-    <div className="bpn-print-zone relative mx-auto w-full max-w-[820px] overflow-hidden border-2 border-or bg-white font-serif text-[13px] text-encre">
+    <div className="bpn-print-zone relative mx-auto flex w-[820px] min-h-[1160px] flex-col overflow-hidden border-2 border-or bg-white font-serif text-[13px] text-encre">
       <div className="pointer-events-none absolute inset-[7px] border border-or/60" />
       <div className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-bl-[100%] bg-navy-2">
         <div className="absolute inset-3 rounded-bl-[100%] border-[3px] border-or/70" />
@@ -73,7 +73,7 @@ export function RecuDocument({ numero, membre, montant, exercice, mode, objet, d
         <Sceau size={360} />
       </div>
 
-      <div className="relative z-10 px-12 pb-0 pt-12">
+      <div className="relative z-10 flex flex-1 flex-col px-12 pb-0 pt-10">
         {/* En-tête */}
         <div className="flex items-center gap-6">
           <Sceau size={104} />
@@ -87,7 +87,7 @@ export function RecuDocument({ numero, membre, montant, exercice, mode, objet, d
 
         {/* Titre */}
         <div className="mt-8 text-center">
-          <h3 className="font-display text-[62px] font-bold leading-none tracking-wide text-navy">REÇU</h3>
+          <h3 className="font-display text-[56px] font-bold leading-[1.08] tracking-wide text-navy">REÇU</h3>
           <FiletOr className="w-44" />
           <h4 className="text-[20px] font-medium uppercase tracking-[0.12em] text-or">Reçu de paiement</h4>
         </div>
