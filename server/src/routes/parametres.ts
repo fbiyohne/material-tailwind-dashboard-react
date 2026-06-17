@@ -98,3 +98,50 @@ parametresRouter.put(
     res.json(saved.data);
   })
 );
+
+/**
+ * POST /parametres/reinitialiser-donnees — RÉINITIALISATION TOTALE (ADMIN).
+ * Supprime toutes les données métier (membres, finances, institutionnel,
+ * documents, messagerie, journaux, comptes non-admin) en CONSERVANT uniquement
+ * le(s) compte(s) ADMIN et la configuration (table Parametres). Atomique : en
+ * cas d'échec d'une contrainte, rien n'est supprimé. Outil de remise à zéro.
+ */
+parametresRouter.post(
+  "/reinitialiser-donnees",
+  requireRole("ADMIN"),
+  asyncH(async (_req, res) => {
+    // Ordre : enfants / tables à contrainte « restrict » d'abord, comptes
+    // non-admin, puis les membres en dernier (les cascades font le reste).
+    await prisma.$transaction([
+      prisma.message.deleteMany({}),
+      prisma.conversationParticipant.deleteMany({}),
+      prisma.conversation.deleteMany({}),
+      prisma.bulletin.deleteMany({}),
+      prisma.emargement.deleteMany({}),
+      prisma.candidat.deleteMany({}),
+      prisma.scrutin.deleteMany({}),
+      prisma.journalDiscipline.deleteMany({}),
+      prisma.dossierDisciplinaire.deleteMany({}),
+      prisma.pieceDossier.deleteMany({}),
+      prisma.quitus.deleteMany({}),
+      prisma.recu.deleteMany({}),
+      prisma.paiement.deleteMany({}),
+      prisma.droitPlaidoirie.deleteMany({}),
+      prisma.cotisation.deleteMany({}),
+      prisma.rapportStage.deleteMany({}),
+      prisma.membreConseil.deleteMany({}),
+      prisma.reunion.deleteMany({}),
+      prisma.assemblee.deleteMany({}),
+      prisma.archive.deleteMany({}),
+      prisma.publication.deleteMany({}),
+      prisma.calendrierEditorial.deleteMany({}),
+      prisma.journalNotification.deleteMany({}),
+      prisma.demandeAcces.deleteMany({}),
+      prisma.journalAudit.deleteMany({}),
+      // Comptes non-admin (les jetons de rafraîchissement liés sont supprimés en cascade).
+      prisma.user.deleteMany({ where: { role: { not: "ADMIN" } } }),
+      prisma.membre.deleteMany({}),
+    ]);
+    res.json({ ok: true });
+  })
+);

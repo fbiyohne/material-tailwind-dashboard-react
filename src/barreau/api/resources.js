@@ -213,6 +213,8 @@ export const confirmerPaiementSandbox = (ref, succes = true) => api(`/paiements/
 export const getPaiement = (ref) => api(`/paiements/${ref}`);
 export const getParametres = () => api("/parametres");
 export const majParametres = (patch) => api("/parametres", { method: "PUT", body: patch });
+// Réinitialisation totale (ADMIN) — supprime toutes les données sauf le compte admin.
+export const reinitialiserDonnees = () => api("/parametres/reinitialiser-donnees", { method: "POST" });
 
 // ─── Espace avocat (rôle AVOCAT — libre-service cloisonné) ────────────────
 export const getEspaceMoi = () => api("/espace/moi");

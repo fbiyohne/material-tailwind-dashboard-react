@@ -12,14 +12,17 @@ import {
   AdjustmentsHorizontalIcon,
   PlusIcon,
   XMarkIcon,
+  ExclamationTriangleIcon,
+  TrashIcon,
 } from "@heroicons/react/24/outline";
-import { Badge, useToast, PageHeader, FormField, Tabs, DataTable } from "../components";
+import { Badge, useToast, PageHeader, FormField, Tabs, DataTable, Modal } from "../components";
+import { useAuth } from "../auth/AuthContext";
 import { formatFCFA, formatDateTime } from "../utils/format";
 import { appliquerConfig } from "../data/config";
 import { STATUT_META_CLES, STATUT_MEMBRE_META_CLES } from "../data/derivations";
 import { STATUT_DOSSIER_META_CLES } from "../data/institutionnel";
 import { STATUT_PUBLICATION_META_CLES } from "../data/publications";
-import { getParametres, majParametres, getNotifications } from "../api/resources";
+import { getParametres, majParametres, getNotifications, reinitialiserDonnees } from "../api/resources";
 
 const EVT_LABEL = {
   RELANCE: "Relance cotisation",
@@ -127,6 +130,9 @@ function ListeEditable({ valeurs, onChange, placeholder }) {
 
 export function Parametres() {
   const toast = useToast();
+  const { user } = useAuth();
+  const estAdmin = user?.role === "ADMIN";
+  const [reset, setReset] = useState({ ouvert: false, saisie: "", enCours: false });
   const [tarifs, setTarifs] = useState(DEFAUT.tarifs);
   const [exercice, setExercice] = useState(DEFAUT.exerciceCourant);
   const [premierExercice, setPremierExercice] = useState(DEFAUT.premierExercice);
@@ -195,6 +201,20 @@ export function Parametres() {
       },
       "Données de référence enregistrées."
     );
+
+  // Réinitialisation totale (ADMIN) — confirmée par saisie du mot « SUPPRIMER ».
+  const lancerReset = async () => {
+    setReset((r) => ({ ...r, enCours: true }));
+    try {
+      await reinitialiserDonnees();
+      toast.success("Toutes les données ont été supprimées — compte administrateur conservé.");
+      setReset({ ouvert: false, saisie: "", enCours: false });
+      setTimeout(() => window.location.assign("/"), 800);
+    } catch (e) {
+      toast.error(e.message);
+      setReset((r) => ({ ...r, enCours: false }));
+    }
+  };
 
   const panneauTarifs = (
     <Section titre="Tarifs de référence & exercices" description="Montants annuels des calculs de cotisations et de droits (BR-07 / BR-08), et plage d'exercices affichée.">
@@ -326,6 +346,7 @@ export function Parametres() {
   );
 
   const panneauRoles = (
+    <div className="space-y-5">
     <Section titre="Rôles & permissions" description="Profils d'accès de l'application (parties prenantes du CDC).">
       <div className="overflow-x-auto">
         <table className="bpn-table">
@@ -354,6 +375,24 @@ export function Parametres() {
         <Link to="/utilisateurs" className="font-medium text-navy underline">Utilisateurs</Link>.
       </div>
     </Section>
+
+    {estAdmin && (
+      <Section titre="Zone de danger" description="Opérations irréversibles réservées à l'administrateur système.">
+        <div className="flex flex-col gap-3 rounded-lg border border-rouge/40 bg-rougeL/40 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-2">
+            <ExclamationTriangleIcon className="mt-0.5 h-5 w-5 shrink-0 text-rouge" />
+            <div className="text-sm text-encre">
+              <div className="font-medium">Supprimer toutes les données</div>
+              <p className="mt-0.5 text-xs text-gris">Efface définitivement membres, finances, dossiers, documents, messagerie, journaux et comptes non-administrateurs. <strong>Seuls le compte administrateur et la configuration sont conservés.</strong> Action irréversible.</p>
+            </div>
+          </div>
+          <button type="button" className="bpn-btn bpn-btn-danger shrink-0" onClick={() => setReset({ ouvert: true, saisie: "", enCours: false })}>
+            <TrashIcon className="h-4 w-4" /> Supprimer toutes les données
+          </button>
+        </div>
+      </Section>
+    )}
+    </div>
   );
 
   const panneauNotifications = (
@@ -402,6 +441,33 @@ export function Parametres() {
           { id: "notifications", label: "Notifications", icon: BellIcon, badge: notif?.journal?.length || null, content: panneauNotifications },
         ]}
       />
+
+      <Modal
+        open={reset.ouvert}
+        onClose={() => !reset.enCours && setReset({ ouvert: false, saisie: "", enCours: false })}
+        title="Supprimer toutes les données"
+        footer={
+          <>
+            <button className="bpn-btn bpn-btn-ghost" disabled={reset.enCours} onClick={() => setReset({ ouvert: false, saisie: "", enCours: false })}>Annuler</button>
+            <button className="bpn-btn bpn-btn-danger" disabled={reset.saisie.trim() !== "SUPPRIMER" || reset.enCours} onClick={lancerReset}>
+              {reset.enCours ? "Suppression…" : "Supprimer définitivement"}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rougeL text-rouge"><ExclamationTriangleIcon className="h-5 w-5" /></div>
+            <p className="text-sm leading-6 text-encre">
+              Cette action supprime <strong>définitivement</strong> toutes les données (membres, cotisations, reçus, quitus, dossiers disciplinaires, documents, messagerie, journaux et comptes non-administrateurs). Seuls <strong>votre compte administrateur</strong> et la configuration sont conservés. <strong>Elle est irréversible.</strong>
+            </p>
+          </div>
+          <label className="block text-sm">
+            <span className="text-gris">Pour confirmer, tapez <strong className="font-mono text-rouge">SUPPRIMER</strong> :</span>
+            <input value={reset.saisie} onChange={(e) => setReset((r) => ({ ...r, saisie: e.target.value }))} className="bpn-input mt-1" placeholder="SUPPRIMER" autoComplete="off" />
+          </label>
+        </div>
+      </Modal>
     </div>
   );
 }
