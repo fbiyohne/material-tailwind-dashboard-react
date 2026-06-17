@@ -1,18 +1,15 @@
 import path from "node:path";
-import crypto from "node:crypto";
 import { Router } from "express";
 import { z } from "zod";
-import bcrypt from "bcryptjs";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../prisma.js";
-import { env } from "../env.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole, type AuthRequest } from "../middleware/auth.js";
 import { prochainNumInscription, prochainNumeroAttestation, archiver } from "../lib/business.js";
 import { enregistrerFichier } from "../lib/storage.js";
 import { envoyerPdf } from "../lib/pdf.js";
 import { attestationHtml } from "../lib/templates.js";
-import { envoyerEmail } from "../lib/notifications.js";
+import { provisionnerAccesEspace } from "../lib/acces.js";
 
 export const membresRouter = Router();
 membresRouter.use(requireAuth);
@@ -311,45 +308,8 @@ membresRouter.post(
   "/:id/acces",
   requireRole("SECRETAIRE_GENERAL"),
   asyncH(async (req, res) => {
-    const id = Number(req.params.id);
-    const membre = await prisma.membre.findUnique({ where: { id } });
-    if (!membre) throw new HttpError(404, "Avocat introuvable");
-    if (!membre.email) throw new HttpError(400, "Renseignez d'abord l'email de l'avocat sur sa fiche");
-
-    const existant = await prisma.user.findUnique({ where: { membreId: id } });
-    if (existant?.actif) throw new HttpError(409, "Un accès actif existe déjà pour cet avocat");
-    // L'email doit être libre (ou déjà celui de ce compte avocat en attente).
-    const homonyme = await prisma.user.findUnique({ where: { email: membre.email } });
-    if (homonyme && homonyme.membreId !== id) {
-      throw new HttpError(409, "Cet email est déjà utilisé par un autre compte");
-    }
-
-    const token = crypto.randomBytes(32).toString("hex");
-    const activationExpire = new Date(Date.now() + 7 * 86_400_000); // 7 jours
-    const data = {
-      nom: `Me ${membre.nom}`,
-      email: membre.email,
-      role: "AVOCAT" as const,
-      membreId: id,
-      actif: false,
-      activationToken: token,
-      activationExpire,
-      passwordHash: bcrypt.hashSync(crypto.randomBytes(24).toString("hex"), 10), // inutilisable avant activation
-    };
-    if (existant) {
-      await prisma.user.update({ where: { id: existant.id }, data: { activationToken: token, activationExpire } });
-    } else {
-      await prisma.user.create({ data });
-    }
-
-    const lien = `${env.clientOrigin}/activer/${token}`;
-    void envoyerEmail({
-      to: membre.email,
-      subject: "Activez votre espace avocat · Barreau de Pointe-Noire",
-      text: `Maître ${membre.nom},\n\nLe Secrétariat Général vous ouvre l'accès à votre espace personnel.\nPour définir votre mot de passe et activer votre compte, ouvrez le lien suivant (valable 7 jours) :\n${lien}\n\nLe Secrétariat Général du Barreau de Pointe-Noire.`,
-      evenement: "ACCES_AVOCAT",
-    });
-    res.status(201).json({ ok: true, email: membre.email, lien, renvoi: !!existant });
+    const acces = await provisionnerAccesEspace(Number(req.params.id));
+    res.status(201).json({ ok: true, ...acces });
   })
 );
 
