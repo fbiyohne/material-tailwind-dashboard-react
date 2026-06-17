@@ -107,7 +107,7 @@ export function Pieces() {
             </button>
           )}
           {peutGerer && (
-            <button type="button" onClick={() => supprimer(p)} title="Supprimer la pièce" aria-label="Supprimer la pièce"
+            <button type="button" onClick={() => supprimer(p)} title="Supprimer la pièce" aria-label={`Supprimer la pièce ${TYPE_LABEL[p.type] ?? p.type}`}
               className="rounded p-1.5 text-gris transition hover:bg-rougeL hover:text-rouge">
               <TrashIcon className="h-3.5 w-3.5" />
             </button>

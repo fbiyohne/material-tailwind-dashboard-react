@@ -73,7 +73,7 @@ export function QuitusDocument({ numero, membre, exercice, date }) {
       </div>
 
       {/* Filigrane (balance) */}
-      <div className="pointer-events-none absolute right-6 top-1/4 opacity-[0.05]">
+      <div className="pointer-events-none absolute right-6 top-1/4 opacity-[0.05]" aria-hidden="true">
         <Sceau size={360} />
       </div>
 

@@ -121,7 +121,7 @@ export function Assemblees() {
                     type="button"
                     onClick={(e) => { e.stopPropagation(); supprimer(a); }}
                     title="Supprimer l'assemblée"
-                    aria-label="Supprimer l'assemblée"
+                    aria-label={`Supprimer l'assemblée ${TYPE_LABEL[a.type]} du ${formatDate(a.date)}`}
                     className="rounded p-1.5 text-gris transition hover:bg-rougeL hover:text-rouge"
                   >
                     <TrashIcon className="h-4 w-4" />

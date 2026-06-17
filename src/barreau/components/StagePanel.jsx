@@ -117,7 +117,7 @@ export function StagePanel({ membre, onChange }) {
                   <p className="mt-0.5 text-sm text-encre/80">{r.appreciation}</p>
                 </div>
                 {peutGerer && (
-                  <button type="button" onClick={() => supprimer(r)} title="Supprimer" aria-label="Supprimer le rapport" className="shrink-0 rounded p-1.5 text-gris transition hover:bg-rougeL hover:text-rouge">
+                  <button type="button" onClick={() => supprimer(r)} title="Supprimer" aria-label={`Supprimer le rapport ${r.periode}`} className="shrink-0 rounded p-1.5 text-gris transition hover:bg-rougeL hover:text-rouge">
                     <TrashIcon className="h-3.5 w-3.5" />
                   </button>
                 )}

@@ -79,7 +79,7 @@ export function Archives() {
             type="button"
             onClick={() => supprimer(a)}
             title="Supprimer l'archive"
-            aria-label="Supprimer l'archive"
+            aria-label={`Supprimer l'archive « ${a.titre} »`}
             className="rounded p-1.5 text-gris transition hover:bg-rougeL hover:text-rouge"
           >
             <TrashIcon className="h-3.5 w-3.5" />

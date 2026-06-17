@@ -155,7 +155,7 @@ export function Conseil() {
                           <button className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs" onClick={() => action(() => majMembreConseil(m.id, { actif: !m.actif }), m.actif ? "Mandat clôturé." : "Membre réactivé.")}>
                             {m.actif ? "Clôturer" : "Réactiver"}
                           </button>
-                          <button type="button" onClick={() => supprimer(m)} title="Retirer" aria-label="Retirer du Conseil" className="rounded p-1.5 text-gris transition hover:bg-rougeL hover:text-rouge">
+                          <button type="button" onClick={() => supprimer(m)} title="Retirer" aria-label={`Retirer ${m.nom} du Conseil`} className="rounded p-1.5 text-gris transition hover:bg-rougeL hover:text-rouge">
                             <TrashIcon className="h-3.5 w-3.5" />
                           </button>
                         </>

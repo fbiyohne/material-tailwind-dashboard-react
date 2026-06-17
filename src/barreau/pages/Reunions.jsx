@@ -120,7 +120,7 @@ export function Reunions() {
                     type="button"
                     onClick={(e) => { e.stopPropagation(); supprimer(r); }}
                     title="Supprimer la réunion"
-                    aria-label="Supprimer la réunion"
+                    aria-label={`Supprimer la réunion du ${formatDate(r.date)}`}
                     className="rounded p-1.5 text-gris transition hover:bg-rougeL hover:text-rouge"
                   >
                     <TrashIcon className="h-4 w-4" />

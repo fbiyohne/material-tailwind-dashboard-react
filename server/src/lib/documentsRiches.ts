@@ -129,7 +129,7 @@ const page = (corps: string) =>
   `<!doctype html><html lang="fr"><head><meta charset="utf-8">${fonts}${styles}</head><body><div class="doc-root">
     <div class="inner-border"></div>
     <div class="corner"><div></div></div>
-    <div class="watermark">${sceau(360)}</div>
+    <div class="watermark" aria-hidden="true">${sceau(360)}</div>
     ${corps}
     ${bandeauContact}
   </div></body></html>`;

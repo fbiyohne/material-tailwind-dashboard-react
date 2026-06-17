@@ -69,7 +69,7 @@ export function RecuDocument({ numero, membre, montant, exercice, mode, objet, d
       <div className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-bl-[100%] bg-navy-2">
         <div className="absolute inset-3 rounded-bl-[100%] border-[3px] border-or/70" />
       </div>
-      <div className="pointer-events-none absolute right-6 top-1/4 opacity-[0.05]">
+      <div className="pointer-events-none absolute right-6 top-1/4 opacity-[0.05]" aria-hidden="true">
         <Sceau size={360} />
       </div>
 
