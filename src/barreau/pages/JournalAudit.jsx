@@ -49,10 +49,10 @@ export function JournalAudit() {
           <input type="text" value={q} onChange={resetPage(setQ)} placeholder="Action, acteur, chemin, cible…" className="bpn-input pl-9" />
         </div>
         <label className="flex items-center gap-2 text-xs text-gris">
-          Du <input type="date" value={from} onChange={resetPage(setFrom)} className="bpn-input !w-auto !py-1.5" />
+          Du <input type="date" lang="fr-FR" value={from} onChange={resetPage(setFrom)} className="bpn-input !w-auto !py-1.5" />
         </label>
         <label className="flex items-center gap-2 text-xs text-gris">
-          Au <input type="date" value={to} onChange={resetPage(setTo)} className="bpn-input !w-auto !py-1.5" />
+          Au <input type="date" lang="fr-FR" value={to} onChange={resetPage(setTo)} className="bpn-input !w-auto !py-1.5" />
         </label>
       </div>
 
@@ -81,8 +81,8 @@ export function JournalAudit() {
                   <td className="px-4 py-2.5 font-medium text-encre">{e.acteur}</td>
                   <td className="px-4 py-2.5 text-encre/90">{e.action}</td>
                   <td className="px-4 py-2.5 font-mono text-xs text-or">{e.cible ?? "—"}</td>
-                  <td className="px-4 py-2.5 text-right">
-                    <Badge ton={e.statut < 400 ? "vert" : "rouge"} dot={false}>{e.statut}</Badge>
+                  <td className="px-4 py-2.5 text-right" title={`Code HTTP ${e.statut}`}>
+                    <Badge ton={e.statut < 400 ? "vert" : "rouge"} dot={false}>{e.statut < 400 ? "Réussi" : "Échec"}</Badge>
                   </td>
                 </tr>
               ))}

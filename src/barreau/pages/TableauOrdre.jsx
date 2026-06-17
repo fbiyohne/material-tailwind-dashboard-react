@@ -63,18 +63,21 @@ export function TableauOrdre() {
                 <th className="px-4 py-2.5 font-medium">Nom</th>
                 <th className="px-4 py-2.5 font-medium">Cabinet</th>
                 <th className="px-4 py-2.5 font-medium">Inscription</th>
+                <th className="px-4 py-2.5 font-medium">Statut</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-grisL">
               {s.membres.map((m) => (
                 <tr key={m.id} className="hover:bg-grisL/40">
                   <td className="px-4 py-2.5 font-mono text-or">{m.rang}</td>
-                  <td className="px-4 py-2.5">
-                    <span className="font-medium text-encre">Me {m.nom}</span>
-                    {MENTION[m.statut] && <Badge ton={MENTION[m.statut].ton} dot={false} className="ml-2">{MENTION[m.statut].label}</Badge>}
-                  </td>
+                  <td className="px-4 py-2.5 font-medium text-encre">Me {m.nom}</td>
                   <td className="px-4 py-2.5 text-gris">{m.cabinet ?? "—"}</td>
                   <td className="px-4 py-2.5 text-xs text-gris">{m.dateInscription ? formatDate(m.dateInscription) : "—"}</td>
+                  <td className="px-4 py-2.5">
+                    {MENTION[m.statut]
+                      ? <Badge ton={MENTION[m.statut].ton} dot={false} className="whitespace-nowrap">{MENTION[m.statut].label}</Badge>
+                      : <span className="text-xs text-gris">En exercice</span>}
+                  </td>
                 </tr>
               ))}
             </tbody>

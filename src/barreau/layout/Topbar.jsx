@@ -150,7 +150,7 @@ export function Topbar({ title, onOpenMenu, onAddAvocat }) {
       </div>
 
       {onAddAvocat && (
-        <button type="button" className="bpn-btn bpn-btn-or shrink-0" onClick={onAddAvocat}>
+        <button type="button" className="bpn-btn bpn-btn-primary shrink-0" onClick={onAddAvocat}>
           <PlusIcon className="h-4 w-4" />
           <span className="hidden sm:inline">Avocat</span>
         </button>
