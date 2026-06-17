@@ -38,6 +38,7 @@ import { calendrierEditorialRouter } from "./routes/calendrierEditorial.js";
 import { verificationRouter } from "./routes/verification.js";
 import { espaceRouter } from "./routes/espace.js";
 import { messagerieRouter } from "./routes/messagerie.js";
+import { installationRouter } from "./routes/installation.js";
 
 export function creerApp() {
   const app = express();
@@ -81,6 +82,7 @@ export function creerApp() {
 
   app.get("/api/health", (_req, res) => res.json({ ok: true, service: "barreau-pn-api" }));
 
+  app.use("/api/installation", installationRouter);
   app.use("/api/auth", authRouter);
   app.use("/api/membres", membresRouter);
   app.use("/api/users", usersRouter);
