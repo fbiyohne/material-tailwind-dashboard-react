@@ -32,6 +32,7 @@ import Pieces from "./pages/Pieces";
 import TableauOrdre from "./pages/TableauOrdre";
 import CorpsElectoral from "./pages/CorpsElectoral";
 import Elections from "./pages/Elections";
+import Conseil from "./pages/Conseil";
 import Reunions from "./pages/Reunions";
 import Assemblees from "./pages/Assemblees";
 import Discipline from "./pages/Discipline";
@@ -94,6 +95,7 @@ export const navSections = [
       { name: "Assemblées générales", path: "/assemblees", icon: BuildingLibraryIcon, roles: INSTITUTIONNEL, element: <Assemblees /> },
       { name: "Discipline", path: "/discipline", icon: ScaleIcon, roles: INSTITUTIONNEL, element: <Discipline /> },
       { name: "Élections", path: "/elections", icon: HandRaisedIcon, roles: INSTITUTIONNEL, element: <Elections /> },
+      { name: "Conseil de l'Ordre", path: "/conseil", icon: UserGroupIcon, roles: INSTITUTIONNEL, element: <Conseil /> },
       { name: "Messagerie", path: "/messagerie", icon: ChatBubbleLeftRightIcon, roles: ["SECRETAIRE_GENERAL", "BATONNIER", "TRESORIERE"], element: <Messagerie /> },
     ],
   },

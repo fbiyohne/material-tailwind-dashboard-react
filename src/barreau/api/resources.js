@@ -71,6 +71,12 @@ export const importerMembres = (membres) => api("/membres/import", { method: "PO
 export const genererAttestation = (id) => api(`/membres/${id}/attestation`, { method: "POST" });
 
 // ─── Pièces du dossier (vérification documentaire) ───────────────────────────
+// Conseil de l'Ordre (composition)
+export const listerConseil = (tous) => api(`/conseil${tous ? "?tous=1" : ""}`);
+export const ajouterMembreConseil = (body) => api("/conseil", { method: "POST", body });
+export const majMembreConseil = (id, body) => api(`/conseil/${id}`, { method: "PATCH", body });
+export const supprimerMembreConseil = (id) => api(`/conseil/${id}`, { method: "DELETE" });
+
 // Élections — back-office (scrutins)
 export const listerScrutins = () => api("/scrutins");
 export const getScrutin = (id) => api(`/scrutins/${id}`);

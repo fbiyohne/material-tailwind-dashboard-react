@@ -407,6 +407,20 @@ describe("Élections — scrutins (confidentialité, unicité, deux modalités)"
   });
 });
 
+describe("Conseil de l'Ordre — composition (SG)", () => {
+  it("ajout, mise à jour, clôture de mandat (filtre actif / historique)", async () => {
+    const m = await request(app).post("/api/conseil").set(...bearer(sg)).send({ nom: "Me Test Conseil", fonction: "Membre du Conseil" });
+    expect(m.status).toBe(201);
+    expect((await request(app).get("/api/conseil").set(...bearer(sg))).body.some((x: any) => x.id === m.body.id)).toBe(true);
+    const maj = await request(app).patch(`/api/conseil/${m.body.id}`).set(...bearer(sg)).send({ actif: false });
+    expect(maj.body.actif).toBe(false);
+    // clôturé → absent par défaut, présent dans l'historique
+    expect((await request(app).get("/api/conseil").set(...bearer(sg))).body.some((x: any) => x.id === m.body.id)).toBe(false);
+    expect((await request(app).get("/api/conseil?tous=1").set(...bearer(sg))).body.some((x: any) => x.id === m.body.id)).toBe(true);
+    expect((await request(app).delete(`/api/conseil/${m.body.id}`).set(...bearer(sg))).status).toBe(204);
+  });
+});
+
 describe("Tableau de l'Ordre (RG-04..06)", () => {
   it("compose par ancienneté en sections ; publication réservée au SG", async () => {
     const r = await request(app).get("/api/tableau").set(...bearer(sg));
