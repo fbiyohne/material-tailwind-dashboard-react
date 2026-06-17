@@ -83,6 +83,7 @@ export const voirPiece = (id) => ouvrirFichierAuth(`/pieces/${id}/fichier`);
 export const soumettreDemandeAcces = (body) => api("/auth/demande-acces", { method: "POST", auth: false, body });
 export const listerDemandesAcces = (statut) => api(`/demandes-acces${statut ? `?statut=${statut}` : ""}`);
 export const approuverDemandeAcces = (id) => api(`/demandes-acces/${id}/approuver`, { method: "POST" });
+export const approuverDemandeEspace = (id) => api(`/demandes-acces/${id}/approuver-espace`, { method: "POST" });
 export const refuserDemandeAcces = (id) => api(`/demandes-acces/${id}/refuser`, { method: "POST" });
 
 // ─── Cotisations ─────────────────────────────────────────────────────────

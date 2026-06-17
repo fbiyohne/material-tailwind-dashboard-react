@@ -446,6 +446,27 @@ describe("Demandes d'accès — dépôt public & traitement (SG/Admin)", () => {
     // une demande déjà traitée ne peut être ré-approuvée (409)
     expect((await request(app).post(`/api/demandes-acces/${demande.id}/approuver`).set(...bearer(sg))).status).toBe(409);
   });
+
+  it("approbation « accès espace avocat » : crée la fiche + un compte AVOCAT inactif avec lien d'activation", async () => {
+    const email = `avodemande.${Date.now()}@exemple.cg`;
+    const nom = `DEMANDE Avocat ${Date.now()}`;
+    await request(app).post("/api/auth/demande-acces").send({ nom, email, numInscription: "PN-9999", motif: "Accès à mon espace personnel d'avocat." });
+    const demande = (await request(app).get("/api/demandes-acces").set(...bearer(sg))).body.find((d: any) => d.email === email);
+    const r = await request(app).post(`/api/demandes-acces/${demande.id}/approuver-espace`).set(...bearer(sg));
+    expect(r.status).toBe(201);
+    expect(r.body.lien).toContain("/activer/");
+    expect(r.body.membreId).toBeGreaterThan(0);
+    // la fiche membre avocat existe désormais
+    const membres = await request(app).get(`/api/membres?q=${encodeURIComponent(nom)}`).set(...bearer(sg));
+    expect(membres.body.items.some((m: any) => m.nom === nom)).toBe(true);
+    // un compte AVOCAT inactif (en attente d'activation) a été provisionné
+    const compte = (await request(app).get("/api/users").set(...bearer(admin))).body.find((u: any) => u.email === email);
+    expect(compte).toBeTruthy();
+    expect(compte.role).toBe("AVOCAT");
+    expect(compte.actif).toBe(false);
+    // la demande est traitée → re-traitement refusé (409)
+    expect((await request(app).post(`/api/demandes-acces/${demande.id}/approuver-espace`).set(...bearer(sg))).status).toBe(409);
+  });
 });
 
 /** Provisionne un avocat avec accès espace activé ; renvoie sa fiche + son JWT. */

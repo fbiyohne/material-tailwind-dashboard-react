@@ -3,12 +3,17 @@ import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { envoyerEmail } from "../lib/notifications.js";
+import { prochainNumInscription } from "../lib/business.js";
+import { provisionnerAccesEspace } from "../lib/acces.js";
 
 /**
  * Revue des demandes d'accès (page publique « Demander un accès »).
- * Réservé au Secrétaire Général et à l'Administrateur. L'approbation ne crée
- * pas le compte ici : le SG provisionne le compte via le module Utilisateurs
- * (choix du rôle et du mot de passe), puis marque la demande approuvée.
+ * Réservé au Secrétaire Général et à l'Administrateur. Deux façons de traiter
+ * une demande, au choix du SG (le rôle n'est jamais déduit automatiquement) :
+ *  • compte du personnel : via le module Utilisateurs (rôle + mot de passe),
+ *    puis `approuver` marque la demande ;
+ *  • accès espace avocat : `approuver-espace` résout/crée la fiche membre et
+ *    envoie un lien d'activation (l'avocat choisit son mot de passe).
  */
 export const demandesAccesRouter = Router();
 demandesAccesRouter.use(requireAuth, requireRole("SECRETAIRE_GENERAL", "ADMIN"));
@@ -41,6 +46,40 @@ async function trancher(id: number, statut: "APPROUVEE" | "REFUSEE") {
 
 demandesAccesRouter.post("/:id/approuver", asyncH(async (req, res) => {
   res.json(await trancher(Number(req.params.id), "APPROUVEE"));
+}));
+
+/**
+ * POST /demandes-acces/:id/approuver-espace — approuve la demande EN PROVISIONNANT
+ * un accès à l'espace avocat : résout la fiche membre par email (ou la crée), puis
+ * génère/envoie le lien d'activation. Le provisionnement précède le changement de
+ * statut : s'il échoue (email déjà rattaché à un autre compte…), la demande reste
+ * EN_ATTENTE.
+ */
+demandesAccesRouter.post("/:id/approuver-espace", asyncH(async (req, res) => {
+  const id = Number(req.params.id);
+  const demande = await prisma.demandeAcces.findUnique({ where: { id } });
+  if (!demande) throw new HttpError(404, "Demande introuvable");
+  if (demande.statut !== "EN_ATTENTE") throw new HttpError(409, "Cette demande a déjà été traitée.");
+
+  let membre = await prisma.membre.findFirst({ where: { email: { equals: demande.email, mode: "insensitive" } } });
+  if (!membre) {
+    const { num, numInscription } = await prochainNumInscription();
+    membre = await prisma.membre.create({
+      data: {
+        num,
+        numInscription: demande.numInscription || numInscription,
+        nom: demande.nom,
+        qualite: "AVOCAT",
+        statut: "INSCRIT",
+        email: demande.email,
+        cabinet: demande.cabinet ?? undefined,
+        dateInscription: new Date(),
+      },
+    });
+  }
+  const acces = await provisionnerAccesEspace(membre.id); // envoie le lien d'activation
+  await prisma.demandeAcces.update({ where: { id }, data: { statut: "APPROUVEE", traiteeAt: new Date() } });
+  res.status(201).json({ ...acces, membreId: membre.id });
 }));
 
 demandesAccesRouter.post("/:id/refuser", asyncH(async (req, res) => {

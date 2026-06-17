@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { UserPlusIcon, KeyIcon, CheckIcon, XMarkIcon, TrashIcon, InboxArrowDownIcon, IdentificationIcon, BuildingOffice2Icon } from "@heroicons/react/24/outline";
+import { UserPlusIcon, KeyIcon, CheckIcon, XMarkIcon, TrashIcon, InboxArrowDownIcon, IdentificationIcon, BuildingOffice2Icon, ClipboardIcon } from "@heroicons/react/24/outline";
 import { Badge, Modal, PageHeader, FormField, useToast, useConfirm, DataTable } from "../components";
 import { formatDate } from "../utils/format";
 import { useAuth } from "../auth/AuthContext";
 import {
   listerUsers, creerUser, majUser, resetPasswordUser, supprimerUser,
-  listerDemandesAcces, approuverDemandeAcces, refuserDemandeAcces,
+  listerDemandesAcces, approuverDemandeAcces, approuverDemandeEspace, refuserDemandeAcces,
 } from "../api/resources";
 
 const ROLE_LABEL = {
@@ -19,7 +19,9 @@ const ROLE_LABEL = {
 // compte avocat se provisionne depuis la fiche du membre (accès espace).
 const ROLES = ["SECRETAIRE_GENERAL", "BATONNIER", "TRESORIERE", "ADMIN"];
 
-const videCreation = (prefill = {}) => ({ nom: "", email: "", role: "SECRETAIRE_GENERAL", password: "", demandeId: null, ...prefill });
+// `type` : "personnel" (compte back-office, rôle + mot de passe) ou "avocat"
+// (accès espace, lien d'activation). Le toggle n'apparaît que pour une demande.
+const videCreation = (prefill = {}) => ({ nom: "", email: "", role: "SECRETAIRE_GENERAL", password: "", demandeId: null, type: "personnel", ...prefill });
 
 /** Gestion des comptes utilisateurs et des rôles (CDC §5.1). Réservé SG/Admin. */
 export function Utilisateurs() {
@@ -29,6 +31,7 @@ export function Utilisateurs() {
   const [users, setUsers] = useState([]);
   const [demandes, setDemandes] = useState([]);
   const [creation, setCreation] = useState(null); // form objet ou null
+  const [acces, setAcces] = useState(null); // { email, lien, renvoi } après provisionnement espace
   const [motDePasse, setMotDePasse] = useState(null); // { id, nom, password }
   const [loading, setLoading] = useState(false);
   const [chargement, setChargement] = useState(true);
@@ -42,7 +45,10 @@ export function Utilisateurs() {
   const chargerDemandes = () => listerDemandesAcces("EN_ATTENTE").then(setDemandes).catch((e) => toast.error(e.message));
   useEffect(() => { charger(); chargerDemandes(); /* eslint-disable-line */ }, []);
 
-  const provisionner = (d) => setCreation(videCreation({ nom: d.nom, email: d.email, demandeId: d.id }));
+  // Une demande émane d'un avocat (champs n° d'inscription / cabinet) : on
+  // propose l'accès espace par défaut, le SG pouvant basculer vers un compte staff.
+  const provisionner = (d) => setCreation(videCreation({ nom: d.nom, email: d.email, demandeId: d.id, type: "avocat" }));
+  const copier = (t) => { navigator.clipboard?.writeText(t).then(() => toast.success("Lien copié.")).catch(() => {}); };
   const refuser = async (d) => {
     try { await refuserDemandeAcces(d.id); await chargerDemandes(); toast.success(`Demande de ${d.nom} refusée.`); }
     catch (e) { toast.error(e.message); }
@@ -83,13 +89,21 @@ export function Utilisateurs() {
   const enregistrerCreation = async () => {
     setLoading(true);
     try {
-      const { demandeId, ...payload } = creation;
-      await creerUser(payload);
-      // Si le compte provient d'une demande d'accès, on la marque approuvée.
-      if (demandeId) { await approuverDemandeAcces(demandeId); await chargerDemandes(); }
-      toast.success(`Compte créé — ${creation.nom}.`);
-      setCreation(null);
-      await charger();
+      if (creation.type === "avocat" && creation.demandeId) {
+        // Accès espace avocat : provisionne la fiche + le lien d'activation, puis approuve.
+        const r = await approuverDemandeEspace(creation.demandeId);
+        setCreation(null);
+        setAcces(r);
+        await chargerDemandes();
+      } else {
+        const { demandeId, type, ...payload } = creation; // eslint-disable-line no-unused-vars
+        await creerUser(payload);
+        // Si le compte provient d'une demande d'accès, on la marque approuvée.
+        if (demandeId) { await approuverDemandeAcces(demandeId); await chargerDemandes(); }
+        toast.success(`Compte créé — ${creation.nom}.`);
+        setCreation(null);
+        await charger();
+      }
     } catch (e) { toast.error(e.message); } finally { setLoading(false); }
   };
 
@@ -137,7 +151,7 @@ export function Utilisateurs() {
                 </div>
                 <div className="flex shrink-0 gap-2">
                   <button className="bpn-btn bpn-btn-or !py-1.5 text-xs" onClick={() => provisionner(d)}>
-                    <CheckIcon className="h-3.5 w-3.5" /> Créer le compte
+                    <CheckIcon className="h-3.5 w-3.5" /> Provisionner
                   </button>
                   <button className="bpn-btn bpn-btn-ghost !py-1.5 text-xs" onClick={() => refuser(d)}>
                     <XMarkIcon className="h-3.5 w-3.5" /> Refuser
@@ -245,27 +259,65 @@ export function Utilisateurs() {
         title={creation?.demandeId ? `Provisionner l'accès — ${creation.nom || "demande"}` : "Nouveau compte"}
         footer={
           <button className="bpn-btn bpn-btn-or" onClick={enregistrerCreation}
-            disabled={loading || !creation?.nom?.trim() || !creation?.email?.trim() || (creation?.password?.length ?? 0) < 8}>
-            <CheckIcon className="h-4 w-4" /> Créer le compte
+            disabled={loading || !creation?.nom?.trim() || !creation?.email?.trim() || (creation?.type !== "avocat" && (creation?.password?.length ?? 0) < 8)}>
+            <CheckIcon className="h-4 w-4" /> {creation?.type === "avocat" ? "Créer l'accès espace" : "Créer le compte"}
           </button>
         }
       >
         {creation && (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {creation.demandeId && (
+              <div className="flex gap-1.5 rounded-lg bg-grisL p-1 sm:col-span-2">
+                {[["avocat", "Accès espace avocat"], ["personnel", "Compte du personnel"]].map(([v, l]) => (
+                  <button key={v} type="button" onClick={() => setCreation({ ...creation, type: v })}
+                    className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition ${creation.type === v ? "bg-white text-navy shadow-sm" : "text-gris hover:text-encre"}`}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+            )}
             <FormField label="Nom" required full>
               <input value={creation.nom} onChange={setC("nom")} className="bpn-input" placeholder="Me KOUMBA Jean" />
             </FormField>
-            <FormField label="Email" required>
+            <FormField label="Email" required full={creation.type === "avocat"}>
               <input type="email" value={creation.email} onChange={setC("email")} className="bpn-input" />
             </FormField>
-            <FormField label="Rôle">
-              <select value={creation.role} onChange={setC("role")} className="bpn-input">
-                {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
-              </select>
-            </FormField>
-            <FormField label="Mot de passe" hint="min. 8 caractères" required full>
-              <input type="password" value={creation.password} onChange={setC("password")} className="bpn-input" />
-            </FormField>
+            {creation.type === "avocat" ? (
+              <p className="rounded border-l-[3px] border-or bg-or-L px-3 py-2 text-xs text-gris sm:col-span-2">
+                Un accès à l'espace avocat sera créé (la fiche membre est établie si elle n'existe pas). L'avocat recevra un
+                lien d'activation pour définir lui-même son mot de passe — aucun rôle du back-office ne lui est attribué.
+              </p>
+            ) : (
+              <>
+                <FormField label="Rôle">
+                  <select value={creation.role} onChange={setC("role")} className="bpn-input">
+                    {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
+                  </select>
+                </FormField>
+                <FormField label="Mot de passe" hint="min. 8 caractères" required full>
+                  <input type="password" value={creation.password} onChange={setC("password")} className="bpn-input" />
+                </FormField>
+              </>
+            )}
+          </div>
+        )}
+      </Modal>
+
+      {/* Lien d'activation de l'espace avocat (après provisionnement depuis une demande) */}
+      <Modal open={!!acces} onClose={() => setAcces(null)} title={acces?.renvoi ? "Lien d'activation régénéré" : "Accès espace avocat créé"}>
+        {acces && (
+          <div className="space-y-3 text-sm">
+            <p className="text-encre">
+              Un lien d'activation a été {acces.renvoi ? "régénéré" : "généré"} et envoyé à{" "}
+              <span className="font-medium">{acces.email}</span>. L'avocat y définira son mot de passe (lien valable 7 jours).
+            </p>
+            <div className="flex items-center gap-2 rounded border border-grisM bg-grisL/40 p-2">
+              <input readOnly value={acces.lien} className="bpn-input !border-0 !bg-transparent font-mono text-xs" onFocus={(e) => e.target.select()} />
+              <button className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs shrink-0" onClick={() => copier(acces.lien)}>
+                <ClipboardIcon className="h-3.5 w-3.5" /> Copier
+              </button>
+            </div>
+            <p className="text-xs text-gris">Vous pouvez transmettre ce lien directement à l'avocat si nécessaire.</p>
           </div>
         )}
       </Modal>
