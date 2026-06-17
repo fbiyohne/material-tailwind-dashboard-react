@@ -242,6 +242,9 @@ export function Parametres() {
 
   const panneauReference = (
     <div className="space-y-5">
+      <Tabs
+        tabs={[
+          { id: "documents", label: "Documents", content: (
       <Section titre="Catégories & types de documents" description="Listes de référence utilisées dans l'archivage et les publications.">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div>
@@ -254,11 +257,13 @@ export function Parametres() {
           </div>
         </div>
       </Section>
-
+          ) },
+          { id: "conseil", label: "Conseil de l'Ordre", content: (
       <Section titre="Fonctions du Conseil de l'Ordre" description="Intitulés proposés à l'ajout ou à la modification d'un membre du Conseil (Bâtonnier, Trésorière, Membre du Conseil…).">
         <ListeEditable valeurs={fonctions} onChange={setFonctions} placeholder="Nouvelle fonction…" />
       </Section>
-
+          ) },
+          { id: "paiement", label: "Paiement & stage", content: (
       <Section titre="Canaux de paiement & stage" description="Moyens de paiement proposés en ligne et durée de stage par défaut.">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div>
@@ -285,7 +290,8 @@ export function Parametres() {
           </div>
         </div>
       </Section>
-
+          ) },
+          { id: "statuts", label: "Libellés des statuts", content: (
       <Section titre="Libellés des statuts" description="Renommez l'affichage des statuts sans changer la logique. Laissez vide pour conserver le libellé par défaut.">
         <div className="grid grid-cols-1 gap-x-8 gap-y-6 lg:grid-cols-2">
           {DOMAINES_STATUT.map((dom) => (
@@ -308,6 +314,9 @@ export function Parametres() {
           ))}
         </div>
       </Section>
+          ) },
+        ]}
+      />
 
       <div className="flex justify-end">
         <button className="bpn-btn bpn-btn-primary" onClick={sauverReference}><CheckIcon className="h-4 w-4" /> Enregistrer les données de référence</button>
