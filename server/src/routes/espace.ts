@@ -4,7 +4,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireAvocat, type AuthRequest } from "../middleware/auth.js";
-import { montantDuAvec, droitDuAvec, statutCotisation, tarifsActuels } from "../lib/business.js";
+import { montantDuAvec, droitDuAvec, statutCotisation, tarifsActuels, eligibiliteElectorale } from "../lib/business.js";
 import { finaliserPaiement } from "../lib/encaissement.js";
 import { CANAUX, modeSandbox, nouvelleReference, initierPaiement } from "../lib/paiement.js";
 import { envoyerPdf } from "../lib/pdf.js";
@@ -517,5 +517,76 @@ espaceRouter.post(
       realtimeMembres(autres, { type: "messagerie", conversationId: id });
     }
     res.status(201).json({ id: message.id });
+  })
+);
+
+// ── Élections : vote en ligne depuis l'espace avocat ─────────────────────────
+
+/** GET /espace/scrutins — scrutins en ligne (ouverts/clos/publiés) + statut de vote de l'avocat. */
+espaceRouter.get(
+  "/scrutins",
+  asyncH(async (req: AuthRequest, res) => {
+    const moi = monMembreId(req);
+    const scrutins = await prisma.scrutin.findMany({
+      where: { modalite: "EN_LIGNE", statut: { in: ["OUVERT", "CLOS", "PUBLIE"] } },
+      orderBy: { id: "desc" },
+      include: { candidats: { orderBy: [{ voix: "desc" }, { nom: "asc" }], select: { id: true, nom: true, voix: true } } },
+    });
+    const emarges = await prisma.emargement.findMany({ where: { membreId: moi, scrutinId: { in: scrutins.map((s) => s.id) } }, select: { scrutinId: true } });
+    const aVote = new Set(emarges.map((e) => e.scrutinId));
+    res.json(
+      scrutins.map((s) => ({
+        id: s.id,
+        titre: s.titre,
+        type: s.type,
+        statut: s.statut,
+        nbSieges: s.nbSieges,
+        aDejaVote: aVote.has(s.id),
+        // Les voix ne sont révélées qu'une fois le scrutin publié.
+        candidats: s.candidats.map((c) => ({ id: c.id, nom: c.nom, ...(s.statut === "PUBLIE" ? { voix: c.voix } : {}) })),
+      }))
+    );
+  })
+);
+
+const voterSchema = z.object({ candidatIds: z.array(z.number().int()).min(1) });
+
+/**
+ * POST /espace/scrutins/:id/voter — vote en ligne, confidentiel et unique.
+ * L'émargement (participation) et les bulletins (choix anonymes) sont dissociés :
+ * aucun lien ne relie le votant à son vote.
+ */
+espaceRouter.post(
+  "/scrutins/:id/voter",
+  asyncH(async (req: AuthRequest, res) => {
+    const moi = monMembreId(req);
+    const id = Number(req.params.id);
+    const scrutin = await prisma.scrutin.findUnique({ where: { id }, include: { candidats: { select: { id: true } } } });
+    if (!scrutin) throw new HttpError(404, "Scrutin introuvable");
+    if (scrutin.modalite !== "EN_LIGNE" || scrutin.statut !== "OUVERT") throw new HttpError(409, "Ce scrutin n'est pas ouvert au vote en ligne.");
+
+    // Éligibilité de l'électeur (corps électoral : statut + cotisation à jour).
+    const annee = new Date().getFullYear();
+    const membre = await prisma.membre.findUnique({ where: { id: moi }, include: { cotisations: { where: { annee } } } });
+    if (!membre) throw new HttpError(404, "Fiche introuvable");
+    if (!eligibiliteElectorale(membre, membre.cotisations[0] ?? null).eligible) {
+      throw new HttpError(403, "Vous ne figurez pas dans le corps électoral pour ce scrutin.");
+    }
+
+    const { candidatIds } = voterSchema.parse(req.body);
+    const valides = new Set(scrutin.candidats.map((c) => c.id));
+    const choix = [...new Set(candidatIds)].filter((cid) => valides.has(cid));
+    if (choix.length === 0) throw new HttpError(400, "Aucun candidat valide sélectionné.");
+    if (choix.length > scrutin.nbSieges) throw new HttpError(400, `Vous ne pouvez voter que pour ${scrutin.nbSieges} candidat(s) au maximum.`);
+
+    try {
+      await prisma.$transaction([
+        prisma.emargement.create({ data: { scrutinId: id, membreId: moi } }), // unicité via @@unique(scrutinId, membreId)
+        ...choix.map((cid) => prisma.bulletin.create({ data: { scrutinId: id, candidatId: cid } })), // bulletins anonymes
+      ]);
+    } catch {
+      throw new HttpError(409, "Vous avez déjà voté pour ce scrutin.");
+    }
+    res.status(201).json({ ok: true });
   })
 );

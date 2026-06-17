@@ -71,6 +71,20 @@ export const importerMembres = (membres) => api("/membres/import", { method: "PO
 export const genererAttestation = (id) => api(`/membres/${id}/attestation`, { method: "POST" });
 
 // ─── Pièces du dossier (vérification documentaire) ───────────────────────────
+// Élections — back-office (scrutins)
+export const listerScrutins = () => api("/scrutins");
+export const getScrutin = (id) => api(`/scrutins/${id}`);
+export const creerScrutin = (body) => api("/scrutins", { method: "POST", body });
+export const ajouterCandidat = (id, body) => api(`/scrutins/${id}/candidats`, { method: "POST", body });
+export const supprimerCandidat = (id, cid) => api(`/scrutins/${id}/candidats/${cid}`, { method: "DELETE" });
+export const ouvrirScrutin = (id) => api(`/scrutins/${id}/ouvrir`, { method: "POST" });
+export const saisirVoix = (id, candidatId, voix) => api(`/scrutins/${id}/voix`, { method: "POST", body: { candidatId, voix } });
+export const cloreScrutin = (id) => api(`/scrutins/${id}/clore`, { method: "POST" });
+export const publierScrutin = (id) => api(`/scrutins/${id}/publier`, { method: "POST" });
+// Élections — espace avocat (vote en ligne)
+export const getEspaceScrutins = () => api("/espace/scrutins");
+export const voterScrutin = (id, candidatIds) => api(`/espace/scrutins/${id}/voter`, { method: "POST", body: { candidatIds } });
+
 // Tableau de l'Ordre
 export const getTableau = () => api("/tableau");
 export const telechargerTableauPdf = () => ouvrirFichierAuth("/tableau/pdf");

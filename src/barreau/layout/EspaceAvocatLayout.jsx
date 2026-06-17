@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Routes, Route, Navigate, NavLink, useLocation } from "react-router-dom";
 import {
   ArrowRightOnRectangleIcon, HomeIcon, FolderIcon, BookOpenIcon,
-  BuildingLibraryIcon, MegaphoneIcon, ArchiveBoxIcon, ScaleIcon, ChatBubbleLeftRightIcon,
+  BuildingLibraryIcon, MegaphoneIcon, ArchiveBoxIcon, ScaleIcon, ChatBubbleLeftRightIcon, HandRaisedIcon,
 } from "@heroicons/react/24/outline";
 import { Sceau } from "../components";
 import { useAuth } from "../auth/AuthContext";
@@ -16,6 +16,7 @@ import EspacePublications from "../pages/espace/EspacePublications";
 import EspaceArchives from "../pages/espace/EspaceArchives";
 import EspaceDiscipline from "../pages/espace/EspaceDiscipline";
 import EspaceMessagerie from "../pages/espace/EspaceMessagerie";
+import EspaceScrutins from "../pages/espace/EspaceScrutins";
 
 const NAV = [
   { to: "/", label: "Ma situation", icon: HomeIcon, end: true },
@@ -23,6 +24,7 @@ const NAV = [
   { to: "/messagerie", label: "Messagerie", icon: ChatBubbleLeftRightIcon, end: false, badge: "messagerie" },
   { to: "/annuaire", label: "Annuaire", icon: BookOpenIcon, end: false },
   { to: "/assemblees", label: "Assemblées", icon: BuildingLibraryIcon, end: false },
+  { to: "/elections", label: "Élections", icon: HandRaisedIcon, end: false },
   { to: "/publications", label: "Publications", icon: MegaphoneIcon, end: false },
   { to: "/archives", label: "Archives", icon: ArchiveBoxIcon, end: false },
   { to: "/discipline", label: "Discipline", icon: ScaleIcon, end: false },
@@ -98,6 +100,7 @@ export function EspaceAvocatLayout() {
           <Route path="/messagerie" element={<EspaceMessagerie />} />
           <Route path="/annuaire" element={<EspaceAnnuaire />} />
           <Route path="/assemblees" element={<EspaceAssemblees />} />
+          <Route path="/elections" element={<EspaceScrutins />} />
           <Route path="/publications" element={<EspacePublications />} />
           <Route path="/archives" element={<EspaceArchives />} />
           <Route path="/discipline" element={<EspaceDiscipline />} />

@@ -346,11 +346,84 @@ model Parametres {
 
 /// Composition du Conseil de l'Ordre — alimente les feuilles de présence des réunions (FR-REU).
 model MembreConseil {
-  id       Int     @id @default(autoincrement())
-  nom      String
-  fonction String
-  ordre    Int     @default(0)
-  actif    Boolean @default(true)
+  id          Int       @id @default(autoincrement())
+  nom         String
+  fonction    String
+  ordre       Int       @default(0)
+  actif       Boolean   @default(true)
+  membreId    Int? // avocat rattaché (mandat issu d'un scrutin)
+  mandatDebut DateTime?
+  mandatFin   DateTime?
+}
+
+enum TypeScrutin {
+  CONSEIL
+  BATONNIER
+  AUTRE
+}
+
+enum ModaliteScrutin {
+  PRESENTIEL // résultats saisis par le Secrétariat (vote en assemblée)
+  EN_LIGNE // vote des avocats depuis leur espace
+}
+
+enum StatutScrutin {
+  PREPARATION
+  OUVERT
+  CLOS
+  PUBLIE
+}
+
+/// Scrutin (élection du Conseil de l'Ordre / du Bâtonnier).
+model Scrutin {
+  id        Int             @id @default(autoincrement())
+  titre     String
+  type      TypeScrutin
+  modalite  ModaliteScrutin
+  statut    StatutScrutin   @default(PREPARATION)
+  nbSieges  Int             @default(1)
+  ouvertLe  DateTime?
+  closLe    DateTime?
+  createdAt DateTime        @default(now())
+
+  candidats   Candidat[]
+  emargements Emargement[]
+  bulletins   Bulletin[]
+}
+
+model Candidat {
+  id        Int      @id @default(autoincrement())
+  scrutin   Scrutin  @relation(fields: [scrutinId], references: [id], onDelete: Cascade)
+  scrutinId Int
+  membreId  Int?
+  nom       String
+  voix      Int      @default(0) // saisie (présentiel) ou figée à la clôture (en ligne)
+  bulletins Bulletin[]
+
+  @@index([scrutinId])
+}
+
+/// Émargement : trace la PARTICIPATION d'un votant (unicité), sans lien vers son choix.
+model Emargement {
+  id        Int      @id @default(autoincrement())
+  scrutin   Scrutin  @relation(fields: [scrutinId], references: [id], onDelete: Cascade)
+  scrutinId Int
+  membreId  Int
+  createdAt DateTime @default(now())
+
+  @@unique([scrutinId, membreId])
+}
+
+/// Bulletin anonyme (vote en ligne) : aucun lien vers le votant (confidentialité).
+model Bulletin {
+  id         Int      @id @default(autoincrement())
+  scrutin    Scrutin  @relation(fields: [scrutinId], references: [id], onDelete: Cascade)
+  scrutinId  Int
+  candidat   Candidat @relation(fields: [candidatId], references: [id], onDelete: Cascade)
+  candidatId Int
+  createdAt  DateTime @default(now())
+
+  @@index([scrutinId])
 }
 
 /// Calendrier éditorial mensuel de la Lettre du Bâtonnier (FR-BAT).

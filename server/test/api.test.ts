@@ -358,6 +358,55 @@ describe("Cycle du stage — rapports & validation (Bâtonnier)", () => {
   });
 });
 
+describe("Élections — scrutins (confidentialité, unicité, deux modalités)", () => {
+  it("cloisonnement : un avocat ne gère pas les scrutins (403)", async () => {
+    const av = await creerAvocatEspace("scrutin-cloison");
+    expect((await request(app).get("/api/scrutins").set(...bearer(av.token))).status).toBe(403);
+  });
+
+  it("présentiel : saisie des voix par le SG", async () => {
+    const s = await request(app).post("/api/scrutins").set(...bearer(sg)).send({ titre: `Bâtonnier ${Date.now()}`, type: "BATONNIER", modalite: "PRESENTIEL", nbSieges: 1 });
+    const sid = s.body.id;
+    const c = await request(app).post(`/api/scrutins/${sid}/candidats`).set(...bearer(sg)).send({ nom: "Me Candidat Bâtonnier" });
+    expect((await request(app).post(`/api/scrutins/${sid}/ouvrir`).set(...bearer(sg))).status).toBe(200);
+    const r = await request(app).post(`/api/scrutins/${sid}/voix`).set(...bearer(sg)).send({ candidatId: c.body.id, voix: 42 });
+    expect(r.status).toBe(200);
+    expect(r.body.candidats[0].voix).toBe(42);
+  });
+
+  it("en ligne : cycle complet, électeur éligible, vote unique", async () => {
+    const s = await request(app).post("/api/scrutins").set(...bearer(sg)).send({ titre: `Conseil ${Date.now()}`, type: "CONSEIL", modalite: "EN_LIGNE", nbSieges: 2 });
+    const sid = s.body.id;
+    const c1 = await request(app).post(`/api/scrutins/${sid}/candidats`).set(...bearer(sg)).send({ nom: "Me Candidat A" });
+    const c2 = await request(app).post(`/api/scrutins/${sid}/candidats`).set(...bearer(sg)).send({ nom: "Me Candidat B" });
+
+    // électeur éligible (cotisation à jour + validée)
+    const av = await creerAvocatEspace("vote");
+    const annee = new Date().getFullYear();
+    await request(app).post("/api/cotisations/paiement").set(...bearer(sg)).send({ membreId: av.membreId, annee, montant: 150000, mode: "Espèces" });
+    await request(app).post(`/api/cotisations/${av.membreId}/valider`).set(...bearer(sg)).send({ annee });
+
+    // pas de vote avant ouverture
+    expect((await request(app).post(`/api/espace/scrutins/${sid}/voter`).set(...bearer(av.token)).send({ candidatIds: [c1.body.id] })).status).toBe(409);
+    expect((await request(app).post(`/api/scrutins/${sid}/ouvrir`).set(...bearer(sg))).status).toBe(200);
+
+    // vote valide
+    expect((await request(app).post(`/api/espace/scrutins/${sid}/voter`).set(...bearer(av.token)).send({ candidatIds: [c1.body.id, c2.body.id] })).status).toBe(201);
+    // unicité : second vote refusé
+    expect((await request(app).post(`/api/espace/scrutins/${sid}/voter`).set(...bearer(av.token)).send({ candidatIds: [c1.body.id] })).status).toBe(409);
+
+    // clôture → dépouillement automatique des bulletins
+    expect((await request(app).post(`/api/scrutins/${sid}/clore`).set(...bearer(sg))).status).toBe(200);
+    const detail = await request(app).get(`/api/scrutins/${sid}`).set(...bearer(sg));
+    expect(detail.body._count.emargements).toBe(1);
+    expect(detail.body.candidats.find((c: any) => c.id === c1.body.id).voix).toBe(1);
+    expect(detail.body.candidats.find((c: any) => c.id === c2.body.id).voix).toBe(1);
+
+    // publication → Conseil recomposé
+    expect((await request(app).post(`/api/scrutins/${sid}/publier`).set(...bearer(sg))).status).toBe(200);
+  });
+});
+
 describe("Tableau de l'Ordre (RG-04..06)", () => {
   it("compose par ancienneté en sections ; publication réservée au SG", async () => {
     const r = await request(app).get("/api/tableau").set(...bearer(sg));

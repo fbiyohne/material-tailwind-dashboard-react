@@ -19,6 +19,7 @@ import {
   ChatBubbleLeftRightIcon,
   ShieldCheckIcon,
   ClipboardDocumentListIcon,
+  HandRaisedIcon,
 } from "@heroicons/react/24/outline";
 
 import Dashboard from "./pages/Dashboard";
@@ -30,6 +31,7 @@ import Stagiaires from "./pages/Stagiaires";
 import Pieces from "./pages/Pieces";
 import TableauOrdre from "./pages/TableauOrdre";
 import CorpsElectoral from "./pages/CorpsElectoral";
+import Elections from "./pages/Elections";
 import Reunions from "./pages/Reunions";
 import Assemblees from "./pages/Assemblees";
 import Discipline from "./pages/Discipline";
@@ -91,6 +93,7 @@ export const navSections = [
       { name: "Réunions", path: "/reunions", icon: CalendarDaysIcon, roles: INSTITUTIONNEL, element: <Reunions /> },
       { name: "Assemblées générales", path: "/assemblees", icon: BuildingLibraryIcon, roles: INSTITUTIONNEL, element: <Assemblees /> },
       { name: "Discipline", path: "/discipline", icon: ScaleIcon, roles: INSTITUTIONNEL, element: <Discipline /> },
+      { name: "Élections", path: "/elections", icon: HandRaisedIcon, roles: INSTITUTIONNEL, element: <Elections /> },
       { name: "Messagerie", path: "/messagerie", icon: ChatBubbleLeftRightIcon, roles: ["SECRETAIRE_GENERAL", "BATONNIER", "TRESORIERE"], element: <Messagerie /> },
     ],
   },
