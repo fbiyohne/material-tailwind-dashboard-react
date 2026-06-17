@@ -1,10 +1,10 @@
 import { Router } from "express";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
-import nodemailer from "nodemailer";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { wizardActif } from "../lib/installation.js";
+import { creerTransport } from "../lib/mail.js";
 
 export const installationRouter = Router();
 
@@ -57,11 +57,16 @@ installationRouter.post("/", asyncH(async (req, res) => {
   res.status(201).json({ ok: true });
 }));
 
-/** POST /installation/test-email — test d'envoi avec le SMTP saisi (non persisté). */
+/**
+ * POST /installation/test-email — test d'envoi avec le SMTP saisi (non persisté).
+ * Verrouillé par `wizardActif()` : n'est donc joignable que pendant la fenêtre
+ * d'installation (VPS, flag posé, aucun admin, non installé). Sujet/corps figés
+ * (pas de contenu arbitraire), et le limiteur global borne le volume — l'usage
+ * abusif se limite à épuiser la réputation du SMTP saisi durant cette fenêtre.
+ */
 installationRouter.post("/test-email", asyncH(async (req, res) => {
   if (!(await wizardActif())) throw new HttpError(409, "Application déjà installée.");
   const s = smtpSchema.extend({ to: z.string().email() }).parse(req.body);
-  const transport = nodemailer.createTransport({ host: s.host, port: s.port, secure: s.secure, auth: s.user ? { user: s.user, pass: s.pass } : undefined });
-  await transport.sendMail({ from: s.from, to: s.to, subject: "Test — Barreau de Pointe-Noire", text: "Votre configuration SMTP fonctionne." });
+  await creerTransport(s).sendMail({ from: s.from, to: s.to, subject: "Test — Barreau de Pointe-Noire", text: "Votre configuration SMTP fonctionne." });
   res.json({ ok: true });
 }));
