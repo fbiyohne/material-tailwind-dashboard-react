@@ -2,8 +2,9 @@ import { Router } from "express";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
-import { envoyerPdf } from "../lib/pdf.js";
-import { recuHtml } from "../lib/templates.js";
+import QRCode from "qrcode";
+import { envoyerDocumentPdf } from "../lib/pdf.js";
+import { recuRicheHtml } from "../lib/documentsRiches.js";
 
 export const recusRouter = Router();
 // Données financières restreintes (RG-15) : SG, Trésorière, Admin.
@@ -15,7 +16,10 @@ recusRouter.get(
   asyncH(async (req, res) => {
     const recu = await prisma.recu.findUnique({ where: { id: Number(req.params.id) }, include: { membre: true } });
     if (!recu) throw new HttpError(404, "Reçu introuvable");
-    await envoyerPdf(res, recuHtml(recu, recu.membre), `Recu-${recu.numero}.pdf`);
+    const host = req.get("host") ?? "";
+    const proto = req.get("x-forwarded-proto") ?? req.protocol;
+    const qr = await QRCode.toDataURL(`${proto}://${host}/verifier/recu/${recu.numero}`, { margin: 1, width: 234, color: { dark: "#1A3A6B", light: "#ffffff" } });
+    await envoyerDocumentPdf(res, recuRicheHtml(recu, recu.membre, qr, host), `Recu-${recu.numero}.pdf`);
   })
 );
 

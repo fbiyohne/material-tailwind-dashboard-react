@@ -7,9 +7,10 @@ import { requireAuth, requireAvocat, type AuthRequest } from "../middleware/auth
 import { montantDuAvec, droitDuAvec, statutCotisation, tarifsActuels, eligibiliteElectorale } from "../lib/business.js";
 import { finaliserPaiement } from "../lib/encaissement.js";
 import { CANAUX, modeSandbox, nouvelleReference, initierPaiement } from "../lib/paiement.js";
-import { envoyerPdf } from "../lib/pdf.js";
-import { recuHtml, quitusHtml, convocationAgHtml, pvAssembleeHtml, decisionDisciplineHtml } from "../lib/templates.js";
-import { signerDocument, quitusPayload } from "../lib/signature.js";
+import QRCode from "qrcode";
+import { envoyerPdf, envoyerDocumentPdf } from "../lib/pdf.js";
+import { convocationAgHtml, pvAssembleeHtml, decisionDisciplineHtml } from "../lib/templates.js";
+import { recuRicheHtml, quitusRicheHtml } from "../lib/documentsRiches.js";
 import { notifierNouveauMessage, emailsAdministration, emailsMembres } from "../lib/messagerieNotif.js";
 import { messageNonDeMoi, compterNonLusParFil, totalNonLus, jamaisLu } from "../lib/messagerie.js";
 import { realtimeMembres, realtimeAdministration } from "../lib/realtime.js";
@@ -173,7 +174,10 @@ espaceRouter.get(
   asyncH(async (req: AuthRequest, res) => {
     const recu = await prisma.recu.findUnique({ where: { id: Number(req.params.id) }, include: { membre: true } });
     if (!recu || recu.membreId !== monMembreId(req)) throw new HttpError(404, "Reçu introuvable");
-    await envoyerPdf(res, recuHtml(recu, recu.membre), `Recu-${recu.numero}.pdf`);
+    const host = req.get("host") ?? "";
+    const proto = req.get("x-forwarded-proto") ?? req.protocol;
+    const qr = await QRCode.toDataURL(`${proto}://${host}/verifier/recu/${recu.numero}`, { margin: 1, width: 234, color: { dark: "#1A3A6B", light: "#ffffff" } });
+    await envoyerDocumentPdf(res, recuRicheHtml(recu, recu.membre, qr, host), `Recu-${recu.numero}.pdf`);
   })
 );
 
@@ -183,8 +187,10 @@ espaceRouter.get(
   asyncH(async (req: AuthRequest, res) => {
     const quitus = await prisma.quitus.findUnique({ where: { id: Number(req.params.id) }, include: { membre: true } });
     if (!quitus || quitus.membreId !== monMembreId(req)) throw new HttpError(404, "Quitus introuvable");
-    const signature = signerDocument(quitusPayload(quitus));
-    await envoyerPdf(res, quitusHtml(quitus, quitus.membre, signature), `Quitus-${quitus.numero}.pdf`);
+    const host = req.get("host") ?? "";
+    const proto = req.get("x-forwarded-proto") ?? req.protocol;
+    const qr = await QRCode.toDataURL(`${proto}://${host}/verifier/quitus/${quitus.numero}`, { margin: 1, width: 234, color: { dark: "#1A3A6B", light: "#ffffff" } });
+    await envoyerDocumentPdf(res, quitusRicheHtml(quitus, quitus.membre, qr, host), `Quitus-${quitus.numero}.pdf`);
   })
 );
 

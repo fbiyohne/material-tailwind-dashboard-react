@@ -94,3 +94,33 @@ export async function envoyerPdf(res: Response, html: string, filename: string):
   res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
   res.end(pdf);
 }
+
+/**
+ * Rend un DOCUMENT pleine page (reçu/quitus riches) : pas de marge, format A4,
+ * et mise à l'échelle pour tenir sur UNE page (le document .doc-root porte son
+ * propre cadre). Sert la reproduction vectorielle des composants à l'écran.
+ */
+export async function envoyerDocumentPdf(res: Response, html: string, filename: string): Promise<void> {
+  const page = await (await getNavigateur()).newPage();
+  try {
+    await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 2 });
+    await page.setContent(html, { waitUntil: "networkidle0" } as unknown as Parameters<typeof page.setContent>[1]);
+    const hauteur = await page.evaluate(() => {
+      const el = document.querySelector(".doc-root");
+      return el ? Math.ceil((el as HTMLElement).getBoundingClientRect().height) : document.body.scrollHeight;
+    });
+    const scale = Math.min(1, 1122.5 / hauteur); // 297mm @96dpi ; tient sur une page
+    const pdf = (await page.pdf({
+      format: "A4",
+      printBackground: true,
+      margin: { top: "0", right: "0", bottom: "0", left: "0" },
+      scale,
+      pageRanges: "1",
+    })) as Buffer;
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.end(pdf);
+  } finally {
+    await page.close();
+  }
+}

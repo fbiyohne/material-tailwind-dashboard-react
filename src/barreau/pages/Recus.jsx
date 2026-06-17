@@ -5,7 +5,7 @@ import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { formatFCFA, formatDate } from "../utils/format";
 import { telechargerCsv } from "../utils/exportCsv";
 import { montantEnLettresFCFA } from "../utils/nombreEnLettres";
-import { exporterPdf } from "../utils/exports";
+import { telechargerDocumentPdf } from "../utils/exports";
 import { Badge, RecuDocument, useToast, useConfirm, PageHeader, DataTable } from "../components";
 import { listerMembres, listerRecus, enregistrerPaiement, annulerRecu, telechargerRecuPdf } from "../api/resources";
 
@@ -77,8 +77,9 @@ export function Recus() {
       setSucces(recu);
       setReference("");
       chargerRecus();
-      // Le PDF est la capture exacte du reçu affiché à l'écran (aperçu).
-      setTimeout(() => exporterPdf(`Recu-${recu.numero}`, ".bpn-print-zone", { page: true }).catch((e) => toast.error(e.message)), 150);
+      // PDF vectoriel rendu par le serveur (même design que l'aperçu) ; repli
+      // sur la capture de l'aperçu affiché si le serveur ne peut pas le produire.
+      await telechargerDocumentPdf(() => telechargerRecuPdf(recu.id, recu.numero), `Recu-${recu.numero}`);
     } catch (e) {
       toast.error(e.message);
     }
@@ -151,7 +152,7 @@ export function Recus() {
             <button type="button" onClick={emettre} disabled={!membre || montant <= 0} className="bpn-btn bpn-btn-or w-full justify-center !py-2.5">
               <PrinterIcon className="h-4 w-4" /> Émettre &amp; archiver
             </button>
-            <button type="button" onClick={() => succes && exporterPdf(`Recu-${succes.numero}`, ".bpn-print-zone", { page: true }).catch((e) => toast.error(e.message))} disabled={!succes} title={succes ? "" : "Émettez d'abord le reçu"} className="bpn-btn bpn-btn-ghost w-full justify-center border-white/20 text-white/70 hover:bg-white/10 hover:text-white disabled:opacity-40">
+            <button type="button" onClick={() => succes && telechargerDocumentPdf(() => telechargerRecuPdf(succes.id, succes.numero), `Recu-${succes.numero}`).catch((e) => toast.error(e.message))} disabled={!succes} title={succes ? "" : "Émettez d'abord le reçu"} className="bpn-btn bpn-btn-ghost w-full justify-center border-white/20 text-white/70 hover:bg-white/10 hover:text-white disabled:opacity-40">
               <ArrowDownTrayIcon className="h-4 w-4" /> Télécharger PDF
             </button>
           </div>

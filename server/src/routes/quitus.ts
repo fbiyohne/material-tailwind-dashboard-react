@@ -5,9 +5,10 @@ import { prisma } from "../prisma.js";
 import { anneeDeRequete } from "../lib/requete.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import QRCode from "qrcode";
 import { eligibleQuitus, prochainNumeroQuitus } from "../lib/business.js";
-import { envoyerPdf } from "../lib/pdf.js";
-import { quitusHtml } from "../lib/templates.js";
+import { envoyerDocumentPdf } from "../lib/pdf.js";
+import { quitusRicheHtml } from "../lib/documentsRiches.js";
 import { signerDocument, quitusPayload } from "../lib/signature.js";
 
 export const quitusRouter = Router();
@@ -20,8 +21,10 @@ quitusRouter.get(
   asyncH(async (req, res) => {
     const quitus = await prisma.quitus.findUnique({ where: { id: Number(req.params.id) }, include: { membre: true } });
     if (!quitus) throw new HttpError(404, "Quitus introuvable");
-    const signature = signerDocument(quitusPayload(quitus));
-    await envoyerPdf(res, quitusHtml(quitus, quitus.membre, signature), `Quitus-${quitus.numero}.pdf`);
+    const host = req.get("host") ?? "";
+    const proto = req.get("x-forwarded-proto") ?? req.protocol;
+    const qr = await QRCode.toDataURL(`${proto}://${host}/verifier/quitus/${quitus.numero}`, { margin: 1, width: 234, color: { dark: "#1A3A6B", light: "#ffffff" } });
+    await envoyerDocumentPdf(res, quitusRicheHtml(quitus, quitus.membre, qr, host), `Quitus-${quitus.numero}.pdf`);
   })
 );
 
