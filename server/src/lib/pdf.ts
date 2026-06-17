@@ -110,11 +110,21 @@ export async function envoyerDocumentPdf(res: Response, html: string, filename: 
       return el ? Math.ceil((el as HTMLElement).getBoundingClientRect().height) : document.body.scrollHeight;
     });
     const scale = Math.min(1, 1122.5 / hauteur); // 297mm @96dpi ; tient sur une page
+    // Si le document doit être réduit pour tenir sur la page, on l'échelonne EN CSS
+    // avec un origine « haut-centre » afin qu'il reste CENTRÉ horizontalement
+    // (l'option `scale` de page.pdf, elle, aligne en haut-gauche → vide à droite).
+    if (scale < 1) {
+      await page.evaluate((s) => {
+        const el = document.querySelector(".doc-root") as HTMLElement;
+        el.style.transformOrigin = "top center";
+        el.style.transform = `scale(${s})`;
+        document.body.style.cssText = "margin:0;width:794px;overflow:hidden;background:#fff;";
+      }, scale);
+    }
     const pdf = (await page.pdf({
       format: "A4",
       printBackground: true,
       margin: { top: "0", right: "0", bottom: "0", left: "0" },
-      scale,
       pageRanges: "1",
     })) as Buffer;
     res.setHeader("Content-Type", "application/pdf");

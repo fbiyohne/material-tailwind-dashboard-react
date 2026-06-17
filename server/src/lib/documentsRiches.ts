@@ -187,37 +187,37 @@ export function quitusRicheHtml(quitus: { numero: string; annee: number; dateEmi
   const corps = `
     <div class="main">
       ${enTete("Ordre des Avocats au Barreau de Pointe-Noire")}
-      <div style="margin-top:24px; text-align:center;">
+      <div style="margin-top:14px; text-align:center;">
         <div class="disp navy" style="font-size:56px; font-weight:700; line-height:1.08;">QUITUS</div>
         ${filet(176)}
         <div class="or" style="font-size:20px; font-weight:500; text-transform:uppercase; letter-spacing:.12em;">Certificat de non-redevance</div>
       </div>
-      <div class="row-nd mono navy" style="margin-top:24px; font-size:14px;">
+      <div class="row-nd mono navy" style="margin-top:16px; font-size:14px;">
         <span>N° ${esc(quitus.numero)}</span><span>Pointe-Noire, le ${fmtDateFr(quitus.dateEmission)}</span>
       </div>
-      <div style="margin-top:24px;">
+      <div style="margin-top:16px;">
         <div style="text-align:center; font-size:16px; font-weight:700; text-transform:uppercase; line-height:1.375;">Le Bâtonnier de l'Ordre des Avocats<br/>au Barreau de Pointe-Noire</div>
-        <div style="margin-top:16px; text-align:center; font-size:15px; font-style:italic;">Atteste qu'après vérification des écritures de l'Ordre, Maître :</div>
-        <div style="margin-top:24px; display:flex; flex-direction:column; gap:16px;">
+        <div style="margin-top:14px; text-align:center; font-size:15px; font-style:italic;">Atteste qu'après vérification des écritures de l'Ordre, Maître :</div>
+        <div style="margin-top:16px; display:flex; flex-direction:column; gap:13px;">
           <div class="champ"><b>Nom et Prénom(s) :</b><span>Me ${esc(membre.nom)}</span></div>
           <div class="champ"><b>Inscrit(e) au Barreau sous le n° :</b><span>${esc(inscr)}</span></div>
           <div class="champ"><b>Date d'inscription :</b><span>${fmtDateFr(membre.dateInscription)}</span></div>
           <div class="champ multi"><b>Adresse professionnelle :</b><span>${esc(adresse || "—")}</span></div>
         </div>
-        <div style="margin-top:20px; text-align:center; line-height:1.6;">
+        <div style="margin-top:14px; text-align:center; line-height:1.6;">
           <div style="font-size:17px; font-weight:700;">est à jour de toutes ses cotisations, contributions et redevances</div>
           <div style="font-size:15px;">envers l'Ordre des Avocats au Barreau de Pointe-Noire, au titre de l'exercice ${esc(quitus.annee)}.</div>
         </div>
-        <div style="margin-top:16px; text-align:center; font-size:15px;">En foi de quoi, le présent quitus lui est délivré pour servir et valoir ce que de droit.</div>
+        <div style="margin-top:12px; text-align:center; font-size:15px;">En foi de quoi, le présent quitus lui est délivré pour servir et valoir ce que de droit.</div>
       </div>
-      <div class="valid" style="margin-top:24px;">
+      <div class="valid" style="margin-top:16px;">
         <div class="ico">${calendrier}</div>
         <div>
           <div class="navy" style="font-size:14px; font-weight:700; text-transform:uppercase;">Validité du présent quitus</div>
           <div class="gris" style="margin-top:2px; font-size:13px;">Le présent quitus est valable pour une durée de trois (03) mois à compter de sa date de délivrance.</div>
         </div>
       </div>
-      <div class="sigrow" style="margin-top:24px;">
+      <div class="sigrow" style="margin-top:16px;">
         <div class="sig">
           <div style="font-size:13px; font-weight:600;">Le Trésorier de l'Ordre</div>
           <div class="line"></div>
@@ -230,10 +230,10 @@ export function quitusRicheHtml(quitus: { numero: string; annee: number; dateEmi
           <div class="gris" style="margin-top:4px; font-size:12px;">Me BIKINDOU Audrey Séverin</div>
         </div>
       </div>
-      <div style="margin-top:20px; border-top:1px solid #E0DBD0; padding-top:12px;">
+      <div style="margin-top:14px; border-top:1px solid #E0DBD0; padding-top:12px;">
         ${verif(qr, host, `/verifier/quitus/${quitus.numero}`)}
       </div>
-      <div class="gris" style="margin-top:12px; text-align:center; font-size:11px; font-style:italic;">Ce document est strictement personnel et ne peut être utilisé à d'autres fins que celles pour lesquelles il est délivré.</div>
+      <div class="gris" style="margin-top:10px; text-align:center; font-size:11px; font-style:italic;">Ce document est strictement personnel et ne peut être utilisé à d'autres fins que celles pour lesquelles il est délivré.</div>
     </div>`;
   return page(corps);
 }
