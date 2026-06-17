@@ -5,10 +5,8 @@ import {
   ShieldExclamationIcon,
   PlusIcon,
   TrashIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
 } from "@heroicons/react/24/outline";
-import { Badge, Modal, useToast, useConfirm, PageHeader, FormField, Notice, DataTable } from "../components";
+import { Badge, Modal, useToast, useConfirm, PageHeader, FormField, Notice, DataTable, Pagination } from "../components";
 import { useAuth } from "../auth/AuthContext";
 import { STATUT_DOSSIER_META } from "../data/institutionnel";
 import { formatDate, formatDateTime } from "../utils/format";
@@ -200,17 +198,7 @@ export function Discipline() {
           )}
         </ul>
         {journalDiscipline.length > TAILLE_JOURNAL && (
-          <div className="flex items-center justify-between border-t border-grisL px-4 py-2 text-xs text-gris">
-            <span>{journalDiscipline.length} consultation{journalDiscipline.length > 1 ? "s" : ""} · page {pageJournalEff} / {totalPagesJournal}</span>
-            <div className="flex gap-1.5">
-              <button type="button" className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 disabled:opacity-40" disabled={pageJournalEff <= 1} onClick={() => setPageJournal(pageJournalEff - 1)}>
-                <ChevronLeftIcon className="h-4 w-4" /> Précédent
-              </button>
-              <button type="button" className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 disabled:opacity-40" disabled={pageJournalEff >= totalPagesJournal} onClick={() => setPageJournal(pageJournalEff + 1)}>
-                Suivant <ChevronRightIcon className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
+          <Pagination page={pageJournalEff} totalPages={totalPagesJournal} total={journalDiscipline.length} onPage={setPageJournal} libelle="consultations" />
         )}
       </div>
 
