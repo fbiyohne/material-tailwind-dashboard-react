@@ -43,25 +43,36 @@ export function EspaceAnnuaire() {
         {lignes.length === 0 ? (
           <div className="p-4"><EmptyState icon={BookOpenIcon} title="Aucun confrère trouvé" description="Essayez un autre nom ou cabinet." /></div>
         ) : (
-          <ul className="divide-y divide-grisL">
-            {lignes.map((m) => (
-              <li key={m.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-medium text-encre">Me {m.nom}</span>
-                    <Badge ton="bleu" dot={false}>{QUALITE_LABEL[m.qualite] ?? m.qualite}</Badge>
-                  </div>
-                  <div className="mt-0.5 text-xs text-gris">
-                    {m.cabinet || "Cabinet non renseigné"}{m.numInscription ? ` · ${m.numInscription}` : ""}
-                  </div>
-                </div>
-                <div className="flex shrink-0 items-center gap-4 text-xs">
-                  {m.tel && <a href={`tel:${m.tel}`} className="inline-flex items-center gap-1 font-mono text-gris transition hover:text-navy"><PhoneIcon className="h-3.5 w-3.5" />{m.tel}</a>}
-                  {m.email && <a href={`mailto:${m.email}`} className="inline-flex items-center gap-1 text-navy transition hover:underline"><EnvelopeIcon className="h-3.5 w-3.5" />{m.email}</a>}
-                </div>
-              </li>
-            ))}
-          </ul>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-grisL text-left text-[11px] uppercase tracking-wide text-gris">
+                  <th className="px-4 py-2.5 font-medium">Identité</th>
+                  <th className="px-4 py-2.5 font-medium">Titre</th>
+                  <th className="px-4 py-2.5 font-medium">Cabinet</th>
+                  <th className="px-4 py-2.5 font-medium">N° d'inscription</th>
+                  <th className="px-4 py-2.5 font-medium">Téléphone</th>
+                  <th className="px-4 py-2.5 font-medium">E-mail</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-grisL">
+                {lignes.map((m) => (
+                  <tr key={m.id} className="hover:bg-grisL/40">
+                    <td className="whitespace-nowrap px-4 py-2.5 font-medium text-encre">Me {m.nom}</td>
+                    <td className="px-4 py-2.5"><Badge ton="bleu" dot={false}>{QUALITE_LABEL[m.qualite] ?? m.qualite}</Badge></td>
+                    <td className="px-4 py-2.5 text-gris">{m.cabinet || "—"}</td>
+                    <td className="whitespace-nowrap px-4 py-2.5 font-mono text-xs text-or">{m.numInscription || "—"}</td>
+                    <td className="whitespace-nowrap px-4 py-2.5">
+                      {m.tel ? <a href={`tel:${m.tel}`} className="inline-flex items-center gap-1 font-mono text-xs text-gris transition hover:text-navy"><PhoneIcon className="h-3.5 w-3.5" />{m.tel}</a> : <span className="text-gris">—</span>}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-2.5">
+                      {m.email ? <a href={`mailto:${m.email}`} className="inline-flex items-center gap-1 text-xs text-navy transition hover:underline"><EnvelopeIcon className="h-3.5 w-3.5" />{m.email}</a> : <span className="text-gris">—</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>
