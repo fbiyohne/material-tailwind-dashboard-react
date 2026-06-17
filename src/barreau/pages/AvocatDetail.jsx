@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeftIcon, DocumentPlusIcon, PencilSquareIcon, NoSymbolIcon, TrashIcon, IdentificationIcon, BanknotesIcon, FolderIcon, KeyIcon, ClipboardIcon } from "@heroicons/react/24/outline";
+import { ArrowLeftIcon, DocumentPlusIcon, PencilSquareIcon, NoSymbolIcon, TrashIcon, IdentificationIcon, BanknotesIcon, FolderIcon, KeyIcon } from "@heroicons/react/24/outline";
 import { ScaleIcon } from "@heroicons/react/24/outline";
-import { Badge, StatutBadge, AttestationModal, EditMembreModal, PiecesDossier, Modal, useConfirm, useToast, PageHeader, Tabs, EmptyState, TableSkeleton, ErrorState } from "../components";
+import { Badge, StatutBadge, AttestationModal, EditMembreModal, PiecesDossier, AccesActivationModal, useConfirm, useToast, PageHeader, Tabs, EmptyState, TableSkeleton, ErrorState } from "../components";
 import { QUALITE_LABEL, STATUT_META, infoStage } from "../data/derivations";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { formatFCFA, formatDate } from "../utils/format";
@@ -63,9 +63,6 @@ export function AvocatDetail() {
   const creerAcces = async () => {
     try { setAcces(await provisionnerAccesAvocat(membre.id)); }
     catch (e) { toast.error(e.message); }
-  };
-  const copier = (texte) => {
-    navigator.clipboard?.writeText(texte).then(() => toast.success("Lien copié.")).catch(() => {});
   };
 
   if (membre === false) {
@@ -283,23 +280,7 @@ export function AvocatDetail() {
       <EditMembreModal membre={edition ? membre : null} open={edition} onClose={() => setEdition(false)} onSaved={charger} />
 
       {/* Lien d'activation de l'espace avocat (après provisionnement) */}
-      <Modal open={!!acces} onClose={() => setAcces(null)} title={acces?.renvoi ? "Lien d'activation régénéré" : "Accès espace avocat créé"}>
-        {acces && (
-          <div className="space-y-3 text-sm">
-            <p className="text-encre">
-              Un lien d'activation a été {acces.renvoi ? "régénéré" : "généré"} et envoyé à{" "}
-              <span className="font-medium">{acces.email}</span>. L'avocat y définira son mot de passe (lien valable 7 jours).
-            </p>
-            <div className="flex items-center gap-2 rounded border border-grisM bg-grisL/40 p-2">
-              <input readOnly value={acces.lien} className="bpn-input !border-0 !bg-transparent font-mono text-xs" onFocus={(e) => e.target.select()} />
-              <button className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs shrink-0" onClick={() => copier(acces.lien)}>
-                <ClipboardIcon className="h-3.5 w-3.5" /> Copier
-              </button>
-            </div>
-            <p className="text-xs text-gris">Vous pouvez transmettre ce lien directement à l'avocat si nécessaire.</p>
-          </div>
-        )}
-      </Modal>
+      <AccesActivationModal acces={acces} onClose={() => setAcces(null)} />
     </div>
   );
 }

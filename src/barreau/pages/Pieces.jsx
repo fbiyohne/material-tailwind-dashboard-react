@@ -1,26 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  MagnifyingGlassIcon, EyeIcon, CheckIcon, XMarkIcon, TrashIcon,
-  ClockIcon, CheckBadgeIcon, ExclamationTriangleIcon, ShieldCheckIcon,
-} from "@heroicons/react/24/outline";
+import { MagnifyingGlassIcon, EyeIcon, CheckIcon, XMarkIcon, TrashIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
 import { Badge, useToast, useConfirm, PageHeader, DataTable } from "../components";
 import { formatDate } from "../utils/format";
 import { useAuth } from "../auth/AuthContext";
+import { TYPE_PIECE_LABEL as TYPE_LABEL, STATUT_PIECE_META as STATUT } from "../data/pieces";
 import { listerToutesPieces, verifierPiece, rejeterPiece, supprimerPiece, voirPiece } from "../api/resources";
 
-const TYPE_LABEL = {
-  IDENTITE: "Pièce d'identité",
-  DIPLOME: "Diplôme / Maîtrise",
-  SERMENT: "PV de serment",
-  PHOTO: "Photo d'identité",
-  CASIER: "Casier judiciaire",
-  AUTRE: "Autre pièce",
-};
-const STATUT = {
-  A_VERIFIER: { label: "À vérifier", ton: "or", icon: ClockIcon },
-  VERIFIEE: { label: "Vérifiée", ton: "vert", icon: CheckBadgeIcon },
-  REJETEE: { label: "Rejetée", ton: "rouge", icon: ExclamationTriangleIcon },
-};
 const FILTRES = [
   { cle: "A_VERIFIER", label: "À vérifier" },
   { cle: "VERIFIEE", label: "Vérifiées" },

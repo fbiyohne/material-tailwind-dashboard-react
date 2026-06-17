@@ -1,33 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import PropTypes from "prop-types";
-import {
-  PaperClipIcon, ArrowUpTrayIcon, EyeIcon, TrashIcon, CheckIcon, XMarkIcon,
-  CheckBadgeIcon, ExclamationTriangleIcon, ClockIcon,
-} from "@heroicons/react/24/outline";
+import { PaperClipIcon, ArrowUpTrayIcon, EyeIcon, TrashIcon, CheckIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { Badge } from "./Badge";
 import { useToast } from "./Toast";
 import { useConfirm } from "./ConfirmDialog";
+import { TYPE_PIECE_LABEL as TYPE_LABEL, STATUT_PIECE_META as STATUT, PIECES_REQUISES as REQUISES, PIECE_TAILLE_MAX as MAX } from "../data/pieces";
 import { listerPieces, televerserPiece, verifierPiece, rejeterPiece, supprimerPiece, voirPiece } from "../api/resources";
-
-const TYPE_LABEL = {
-  IDENTITE: "Pièce d'identité (CNI / passeport)",
-  DIPLOME: "Diplôme / Maîtrise en droit",
-  SERMENT: "PV de prestation de serment",
-  PHOTO: "Photo d'identité",
-  CASIER: "Casier judiciaire",
-  AUTRE: "Autre pièce",
-};
-const REQUISES = {
-  avocat: ["IDENTITE", "DIPLOME", "SERMENT", "PHOTO"],
-  stagiaire: ["IDENTITE", "DIPLOME", "SERMENT", "PHOTO"],
-  honoraire: ["IDENTITE", "PHOTO"],
-};
-const STATUT = {
-  A_VERIFIER: { label: "À vérifier", ton: "or", icon: ClockIcon },
-  VERIFIEE: { label: "Vérifiée", ton: "vert", icon: CheckBadgeIcon },
-  REJETEE: { label: "Rejetée", ton: "rouge", icon: ExclamationTriangleIcon },
-};
-const MAX = 5 * 1024 * 1024;
 
 const lireBase64 = (file) => new Promise((resolve, reject) => {
   const r = new FileReader();

@@ -34,3 +34,4 @@ export { Skeleton, TableSkeleton } from "./Skeleton";
 export { ErrorState } from "./ErrorState";
 export { DataTable } from "./DataTable";
 export { MessageBulle } from "./MessageBulle";
+export { AccesActivationModal } from "./AccesActivationModal";

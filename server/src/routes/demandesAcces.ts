@@ -61,25 +61,42 @@ demandesAccesRouter.post("/:id/approuver-espace", asyncH(async (req, res) => {
   if (!demande) throw new HttpError(404, "Demande introuvable");
   if (demande.statut !== "EN_ATTENTE") throw new HttpError(409, "Cette demande a déjà été traitée.");
 
-  let membre = await prisma.membre.findFirst({ where: { email: { equals: demande.email, mode: "insensitive" } } });
-  if (!membre) {
-    const { num, numInscription } = await prochainNumInscription();
-    membre = await prisma.membre.create({
-      data: {
-        num,
-        numInscription: demande.numInscription || numInscription,
-        nom: demande.nom,
-        qualite: "AVOCAT",
-        statut: "INSCRIT",
-        email: demande.email,
-        cabinet: demande.cabinet ?? undefined,
-        dateInscription: new Date(),
-      },
-    });
+  // Claim atomique : seule une approbation peut faire passer la demande de
+  // EN_ATTENTE à APPROUVEE — empêche deux traitements concurrents de la même
+  // demande de créer deux fiches membres.
+  const claim = await prisma.demandeAcces.updateMany({
+    where: { id, statut: "EN_ATTENTE" },
+    data: { statut: "APPROUVEE", traiteeAt: new Date() },
+  });
+  if (claim.count === 0) throw new HttpError(409, "Cette demande a déjà été traitée.");
+
+  try {
+    let membre = await prisma.membre.findFirst({ where: { email: { equals: demande.email, mode: "insensitive" } } });
+    if (!membre) {
+      // Numéro d'inscription généré (séquentiel, unique) : le n° déclaré dans la
+      // demande n'est pas autoritatif et pourrait entrer en collision. Le SG
+      // l'ajustera depuis la fiche si nécessaire.
+      const { num, numInscription } = await prochainNumInscription();
+      membre = await prisma.membre.create({
+        data: {
+          num,
+          numInscription,
+          nom: demande.nom,
+          qualite: "AVOCAT",
+          statut: "INSCRIT",
+          email: demande.email,
+          cabinet: demande.cabinet ?? undefined,
+          dateInscription: new Date(),
+        },
+      });
+    }
+    const acces = await provisionnerAccesEspace(membre.id); // envoie le lien d'activation
+    res.status(201).json({ ...acces, membreId: membre.id });
+  } catch (err) {
+    // Le provisionnement a échoué : on relibère la demande pour permettre un nouvel essai.
+    await prisma.demandeAcces.update({ where: { id }, data: { statut: "EN_ATTENTE", traiteeAt: null } }).catch(() => {});
+    throw err;
   }
-  const acces = await provisionnerAccesEspace(membre.id); // envoie le lien d'activation
-  await prisma.demandeAcces.update({ where: { id }, data: { statut: "APPROUVEE", traiteeAt: new Date() } });
-  res.status(201).json({ ...acces, membreId: membre.id });
 }));
 
 demandesAccesRouter.post("/:id/refuser", asyncH(async (req, res) => {

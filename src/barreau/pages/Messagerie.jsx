@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ChatBubbleLeftRightIcon, PaperAirplaneIcon, UserIcon } from "@heroicons/react/24/outline";
 import { Badge, PageHeader, useToast, TableSkeleton, ErrorState, EmptyState, MessageBulle } from "../components";
 import { getMessagerie, getConversationAdmin, repondreConversationAdmin } from "../api/resources";
-import { onRealtime } from "../api/realtime";
+import { useMessagerieRealtime } from "../hooks/useMessagerieRealtime";
 
 /** Back-office — messagerie de l'administration (fils adressés par les avocats). */
 export function Messagerie() {
@@ -22,13 +22,7 @@ export function Messagerie() {
   useEffect(() => { finRef.current?.scrollIntoView({ behavior: "smooth" }); }, [fil]);
 
   // Temps réel : un nouveau message d'avocat recharge la liste et le fil ouvert.
-  useEffect(() => onRealtime((evt) => {
-    if (evt.type !== "messagerie") return;
-    chargerListe();
-    if (selId && (!evt.conversationId || evt.conversationId === selId)) {
-      getConversationAdmin(selId).then(setFil).catch(() => {});
-    }
-  }), [selId]); // eslint-disable-line react-hooks/exhaustive-deps
+  useMessagerieRealtime({ selId, onListe: chargerListe, onFilActif: (id) => getConversationAdmin(id).then(setFil).catch(() => {}) });
 
   const ouvrir = (id) => {
     setSelId(id);
