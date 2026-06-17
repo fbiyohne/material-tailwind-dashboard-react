@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeftIcon, DocumentPlusIcon, PencilSquareIcon, NoSymbolIcon, TrashIcon, IdentificationIcon, BanknotesIcon, FolderIcon, KeyIcon } from "@heroicons/react/24/outline";
+import { ArrowLeftIcon, DocumentPlusIcon, PencilSquareIcon, NoSymbolIcon, TrashIcon, IdentificationIcon, BanknotesIcon, FolderIcon, KeyIcon, AcademicCapIcon } from "@heroicons/react/24/outline";
 import { ScaleIcon } from "@heroicons/react/24/outline";
-import { Badge, StatutBadge, AttestationModal, EditMembreModal, PiecesDossier, AccesActivationModal, useConfirm, useToast, PageHeader, Tabs, EmptyState, TableSkeleton, ErrorState } from "../components";
+import { Badge, StatutBadge, AttestationModal, EditMembreModal, PiecesDossier, AccesActivationModal, StagePanel, useConfirm, useToast, PageHeader, Tabs, EmptyState, TableSkeleton, ErrorState } from "../components";
 import { QUALITE_LABEL, STATUT_META, infoStage } from "../data/derivations";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { formatFCFA, formatDate } from "../utils/format";
@@ -195,6 +195,9 @@ export function AvocatDetail() {
               </div>
             ),
           },
+          ...(membre.qualite === "stagiaire"
+            ? [{ id: "stage", label: "Stage", icon: AcademicCapIcon, content: <StagePanel membre={membre} onChange={charger} /> }]
+            : []),
           {
             id: "cotisations",
             label: "Cotisations",

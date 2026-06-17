@@ -274,6 +274,76 @@ membresRouter.post(
   })
 );
 
+// ── Cycle du stage (avocats stagiaires) ──────────────────────────────────────
+
+/** Nom lisible de l'agent connecté (auteur d'un rapport / validateur). */
+async function nomActeur(userId: number) {
+  const u = await prisma.user.findUnique({ where: { id: userId }, select: { nom: true } });
+  return u?.nom ?? null;
+}
+
+const rapportSchema = z.object({
+  periode: z.string().trim().min(1).max(80),
+  appreciation: z.string().trim().min(1).max(2000),
+  note: z.string().trim().max(120).optional(),
+});
+
+/** GET /membres/:id/rapports — rapports/évaluations de stage (SG / Bâtonnier). */
+membresRouter.get(
+  "/:id/rapports",
+  requireRole("SECRETAIRE_GENERAL", "BATONNIER"),
+  asyncH(async (req, res) => {
+    res.json(await prisma.rapportStage.findMany({ where: { membreId: Number(req.params.id) }, orderBy: { date: "desc" } }));
+  })
+);
+
+/** POST /membres/:id/rapports — consigne un rapport de stage (SG). */
+membresRouter.post(
+  "/:id/rapports",
+  requireRole("SECRETAIRE_GENERAL"),
+  asyncH(async (req: AuthRequest, res) => {
+    const membreId = Number(req.params.id);
+    const membre = await prisma.membre.findUnique({ where: { id: membreId }, select: { qualite: true } });
+    if (!membre) throw new HttpError(404, "Avocat introuvable");
+    if (membre.qualite !== "STAGIAIRE") throw new HttpError(400, "Les rapports de stage ne concernent que les avocats stagiaires.");
+    const data = rapportSchema.parse(req.body);
+    const auteur = await nomActeur(req.user!.id);
+    res.status(201).json(await prisma.rapportStage.create({ data: { membreId, ...data, auteur } }));
+  })
+);
+
+/** DELETE /membres/:id/rapports/:rid — retire un rapport de stage (SG). */
+membresRouter.delete(
+  "/:id/rapports/:rid",
+  requireRole("SECRETAIRE_GENERAL"),
+  asyncH(async (req, res) => {
+    await prisma.rapportStage.deleteMany({ where: { id: Number(req.params.rid), membreId: Number(req.params.id) } });
+    res.status(204).end();
+  })
+);
+
+/**
+ * POST /membres/:id/valider-stage — validation de fin de stage (Bâtonnier) :
+ * l'avocat stagiaire passe au tableau des avocats (qualité AVOCAT, statut INSCRIT).
+ */
+membresRouter.post(
+  "/:id/valider-stage",
+  requireRole("BATONNIER"),
+  asyncH(async (req: AuthRequest, res) => {
+    const membreId = Number(req.params.id);
+    const membre = await prisma.membre.findUnique({ where: { id: membreId } });
+    if (!membre) throw new HttpError(404, "Avocat introuvable");
+    if (membre.qualite !== "STAGIAIRE") throw new HttpError(409, "Ce membre n'est pas un avocat stagiaire.");
+    const acteur = await nomActeur(req.user!.id);
+    const maj = await prisma.membre.update({
+      where: { id: membreId },
+      data: { qualite: "AVOCAT", statut: "INSCRIT", stageValideAt: new Date(), stageValidePar: acteur ?? undefined },
+    });
+    await archiver({ categorie: "Fin de stage", titre: `Fin de stage validée — Me ${membre.nom}`, reference: `STAGE-${membre.num}`, date: new Date(), membreNom: membre.nom });
+    res.json(maj);
+  })
+);
+
 /**
  * DELETE /membres/:id — suppression définitive d'un membre (avocat/stagiaire).
  * Réservé au super-administrateur (ADMIN). Efface en cascade tout l'historique

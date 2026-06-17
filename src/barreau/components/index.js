@@ -35,3 +35,4 @@ export { ErrorState } from "./ErrorState";
 export { DataTable } from "./DataTable";
 export { MessageBulle } from "./MessageBulle";
 export { AccesActivationModal } from "./AccesActivationModal";
+export { StagePanel } from "./StagePanel";

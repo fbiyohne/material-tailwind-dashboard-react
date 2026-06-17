@@ -71,6 +71,12 @@ export const importerMembres = (membres) => api("/membres/import", { method: "PO
 export const genererAttestation = (id) => api(`/membres/${id}/attestation`, { method: "POST" });
 
 // ─── Pièces du dossier (vérification documentaire) ───────────────────────────
+// Cycle du stage (avocats stagiaires)
+export const listerRapportsStage = (membreId) => api(`/membres/${membreId}/rapports`);
+export const ajouterRapportStage = (membreId, body) => api(`/membres/${membreId}/rapports`, { method: "POST", body });
+export const supprimerRapportStage = (membreId, rid) => api(`/membres/${membreId}/rapports/${rid}`, { method: "DELETE" });
+export const validerStage = (membreId) => api(`/membres/${membreId}/valider-stage`, { method: "POST" });
+
 export const listerPieces = (membreId) => api(`/membres/${membreId}/pieces`);
 export const listerToutesPieces = (statut) => api(`/pieces${statut ? `?statut=${statut}` : ""}`);
 export const televerserPiece = (membreId, body) => api(`/membres/${membreId}/pieces`, { method: "POST", body });

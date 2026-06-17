@@ -334,6 +334,30 @@ describe("Discipline — accès restreint (RG-13)", () => {
   });
 });
 
+describe("Cycle du stage — rapports & validation (Bâtonnier)", () => {
+  it("rapports : SG consigne, Trésorière exclue (403), non-stagiaire rejeté (400)", async () => {
+    const stagiaire = await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: `STAGE Test ${Date.now()}`, qualite: "STAGIAIRE" });
+    const sid = stagiaire.body.id;
+    expect((await request(app).get(`/api/membres/${sid}/rapports`).set(...bearer(tr))).status).toBe(403);
+    const r = await request(app).post(`/api/membres/${sid}/rapports`).set(...bearer(sg)).send({ periode: "T1 2026", appreciation: "Stagiaire assidu et rigoureux.", note: "Favorable" });
+    expect(r.status).toBe(201);
+    const liste = await request(app).get(`/api/membres/${sid}/rapports`).set(...bearer(sg));
+    expect(liste.body.some((x: any) => x.id === r.body.id)).toBe(true);
+    const avocat = await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: `AVOC ${Date.now()}`, qualite: "AVOCAT" });
+    expect((await request(app).post(`/api/membres/${avocat.body.id}/rapports`).set(...bearer(sg)).send({ periode: "x", appreciation: "y" })).status).toBe(400);
+  });
+
+  it("validation de fin de stage réservée au Bâtonnier ; passe stagiaire → avocat", async () => {
+    const stagiaire = await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: `STAGE Fin ${Date.now()}`, qualite: "STAGIAIRE" });
+    const sid = stagiaire.body.id;
+    expect((await request(app).post(`/api/membres/${sid}/valider-stage`).set(...bearer(sg))).status).toBe(403);
+    const v = await request(app).post(`/api/membres/${sid}/valider-stage`).set(...bearer(admin));
+    expect(v.status).toBe(200);
+    expect(v.body.qualite).toBe("AVOCAT");
+    expect((await request(app).post(`/api/membres/${sid}/valider-stage`).set(...bearer(admin))).status).toBe(409);
+  });
+});
+
 describe("Pièces — file de vérification documentaire (RG-15)", () => {
   it("liste transverse accessible au SG/Bâtonnier, filtrable par statut ; Trésorière exclue (403)", async () => {
     expect((await request(app).get("/api/pieces").set(...bearer(tr))).status).toBe(403);

@@ -105,7 +105,10 @@ model Membre {
   dateServment    DateTime?
   dureeMois       Int?
   maitreStage     String?
+  stageValideAt   DateTime? // fin de stage validée (passage stagiaire → avocat)
+  stageValidePar  String?
 
+  rapportsStage RapportStage[]
   cotisations Cotisation[]
   recus       Recu[]
   quitus      Quitus[]
@@ -117,6 +120,21 @@ model Membre {
   messagesEnvoyes Message[]                  // messages dont le membre est l'auteur
   compte      User?                  // compte d'accès à l'espace avocat (1-1, optionnel)
   createdAt   DateTime               @default(now())
+}
+
+/// Rapport / évaluation périodique de stage d'un avocat stagiaire.
+model RapportStage {
+  id           Int      @id @default(autoincrement())
+  membre       Membre   @relation(fields: [membreId], references: [id], onDelete: Cascade)
+  membreId     Int
+  periode      String // ex. « 1er trimestre 2026 »
+  date         DateTime @default(now())
+  appreciation String // évaluation / compte rendu
+  note         String? // mention (Favorable / Réservé / Défavorable…)
+  auteur       String? // qui a consigné le rapport
+  createdAt    DateTime @default(now())
+
+  @@index([membreId])
 }
 
 enum StatutPaiement {
