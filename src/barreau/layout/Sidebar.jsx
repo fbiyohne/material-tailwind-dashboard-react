@@ -4,7 +4,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import { XMarkIcon, ScaleIcon, ArrowRightOnRectangleIcon } from "@heroicons/react/24/outline";
 import { sectionsPourRole } from "../routes";
 import { useAuth } from "../auth/AuthContext";
-import { getCotisations, listerDossiers, getMessagerieNonLus } from "../api/resources";
+import { getCotisations, listerDossiers, getMessagerieNonLus, listerToutesPieces } from "../api/resources";
 import { onRealtime } from "../api/realtime";
 import { EXERCICE_COURANT } from "../data/dashboard-data";
 
@@ -47,6 +47,9 @@ export function Sidebar({ open, onClose }) {
     if (["SECRETAIRE_GENERAL", "BATONNIER"].includes(role)) {
       listerDossiers()
         .then((ds) => actif && setBadges((b) => ({ ...b, "/discipline": ds.filter((d) => d.statut !== "classe").length })))
+        .catch(() => {});
+      listerToutesPieces("A_VERIFIER")
+        .then((ps) => actif && setBadges((b) => ({ ...b, "/pieces": ps.length })))
         .catch(() => {});
     }
     return () => { actif = false; };

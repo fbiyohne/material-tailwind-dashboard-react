@@ -72,6 +72,7 @@ export const genererAttestation = (id) => api(`/membres/${id}/attestation`, { me
 
 // ─── Pièces du dossier (vérification documentaire) ───────────────────────────
 export const listerPieces = (membreId) => api(`/membres/${membreId}/pieces`);
+export const listerToutesPieces = (statut) => api(`/pieces${statut ? `?statut=${statut}` : ""}`);
 export const televerserPiece = (membreId, body) => api(`/membres/${membreId}/pieces`, { method: "POST", body });
 export const verifierPiece = (id) => api(`/pieces/${id}/verifier`, { method: "POST" });
 export const rejeterPiece = (id, note) => api(`/pieces/${id}/rejeter`, { method: "POST", body: { note } });

@@ -17,6 +17,7 @@ import {
   Cog6ToothIcon,
   UserGroupIcon,
   ChatBubbleLeftRightIcon,
+  ShieldCheckIcon,
 } from "@heroicons/react/24/outline";
 
 import Dashboard from "./pages/Dashboard";
@@ -25,6 +26,7 @@ import Recus from "./pages/Recus";
 import Quitus from "./pages/Quitus";
 import Avocats from "./pages/Avocats";
 import Stagiaires from "./pages/Stagiaires";
+import Pieces from "./pages/Pieces";
 import CorpsElectoral from "./pages/CorpsElectoral";
 import Reunions from "./pages/Reunions";
 import Assemblees from "./pages/Assemblees";
@@ -66,6 +68,7 @@ export const navSections = [
     items: [
       { name: "Avocats inscrits", path: "/avocats", icon: UsersIcon, roles: INSTITUTIONNEL, element: <Avocats /> },
       { name: "Avocats stagiaires", path: "/stagiaires", icon: AcademicCapIcon, roles: INSTITUTIONNEL, element: <Stagiaires /> },
+      { name: "Vérification des pièces", path: "/pieces", icon: ShieldCheckIcon, roles: INSTITUTIONNEL, element: <Pieces /> },
       { name: "Corps électoral", path: "/corps-electoral", icon: CheckBadgeIcon, roles: INSTITUTIONNEL, element: <CorpsElectoral /> },
     ],
   },

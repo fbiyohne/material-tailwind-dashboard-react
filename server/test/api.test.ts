@@ -333,6 +333,20 @@ describe("Discipline — accès restreint (RG-13)", () => {
   });
 });
 
+describe("Pièces — file de vérification documentaire (RG-15)", () => {
+  it("liste transverse accessible au SG/Bâtonnier, filtrable par statut ; Trésorière exclue (403)", async () => {
+    expect((await request(app).get("/api/pieces").set(...bearer(tr))).status).toBe(403);
+    const toutes = await request(app).get("/api/pieces").set(...bearer(sg));
+    expect(toutes.status).toBe(200);
+    expect(Array.isArray(toutes.body)).toBe(true);
+    const filtre = await request(app).get("/api/pieces?statut=A_VERIFIER").set(...bearer(sg));
+    expect(filtre.status).toBe(200);
+    expect(filtre.body.every((p: any) => p.statut === "A_VERIFIER")).toBe(true);
+    // chaque pièce expose le membre rattaché (pour la file de validation)
+    if (toutes.body.length) expect(toutes.body[0].membre).toHaveProperty("nom");
+  });
+});
+
 describe("Publications — workflow de validation & RBAC", () => {
   it("la Trésorière n'a pas accès au module (403)", async () => {
     expect((await request(app).get("/api/publications").set(...bearer(tr))).status).toBe(403);

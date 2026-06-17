@@ -24,6 +24,29 @@ async function nomActeur(userId: number) {
   return u?.nom ?? null;
 }
 
+const STATUTS_PIECE = ["A_VERIFIER", "VERIFIEE", "REJETEE"] as const;
+
+/**
+ * GET /pieces — file d'attente de vérification documentaire : toutes les pièces
+ * (filtrables par statut), avec le membre rattaché. SG / Bâtonnier (RG-15).
+ */
+piecesRouter.get(
+  "/",
+  requireRole("SECRETAIRE_GENERAL", "BATONNIER"),
+  asyncH(async (req, res) => {
+    const statut = typeof req.query.statut === "string" ? req.query.statut : undefined;
+    const where = statut && (STATUTS_PIECE as readonly string[]).includes(statut)
+      ? { statut: statut as (typeof STATUTS_PIECE)[number] }
+      : {};
+    const pieces = await prisma.pieceDossier.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      include: { membre: { select: { id: true, num: true, nom: true, qualite: true } } },
+    });
+    res.json(pieces);
+  })
+);
+
 /** GET /pieces/:id/fichier — flux du fichier (consultation cloisonnée). */
 piecesRouter.get(
   "/:id/fichier",
