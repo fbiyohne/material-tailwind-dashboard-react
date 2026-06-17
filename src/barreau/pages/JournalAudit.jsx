@@ -64,24 +64,24 @@ export function JournalAudit() {
         ) : items.length === 0 ? (
           <div className="p-6"><EmptyState icon={ShieldExclamationIcon} title="Aucune entrée" description={q || from || to ? "Aucune action ne correspond à ce filtre." : "Aucune action enregistrée."} /></div>
         ) : (
-          <table className="w-full text-sm">
+          <table className="bpn-table">
             <thead>
-              <tr className="border-b border-grisL text-left text-[11px] uppercase tracking-wide text-gris">
-                <th className="px-4 py-2.5 font-medium">Date</th>
-                <th className="px-4 py-2.5 font-medium">Acteur</th>
-                <th className="px-4 py-2.5 font-medium">Action</th>
-                <th className="px-4 py-2.5 font-medium">Cible</th>
-                <th className="px-4 py-2.5 text-right font-medium">Statut</th>
+              <tr>
+                <th>Date</th>
+                <th>Acteur</th>
+                <th>Action</th>
+                <th>Cible</th>
+                <th className="text-right">Statut</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-grisL">
+            <tbody>
               {items.map((e) => (
-                <tr key={e.id} className="hover:bg-grisL/40">
-                  <td className="whitespace-nowrap px-4 py-2.5 text-xs text-gris">{formatDateTime(e.quand)}</td>
-                  <td className="px-4 py-2.5 font-medium text-encre">{e.acteur}</td>
-                  <td className="px-4 py-2.5 text-encre/90">{e.action}</td>
-                  <td className="px-4 py-2.5 font-mono text-xs text-or">{e.cible ?? "—"}</td>
-                  <td className="px-4 py-2.5 text-right" title={`Code HTTP ${e.statut}`}>
+                <tr key={e.id}>
+                  <td className="whitespace-nowrap text-xs text-gris">{formatDateTime(e.quand)}</td>
+                  <td className="font-medium text-encre">{e.acteur}</td>
+                  <td className="text-encre/90">{e.action}</td>
+                  <td className="font-mono text-xs text-or">{e.cible ?? "—"}</td>
+                  <td className="text-right" title={`Code HTTP ${e.statut}`}>
                     <Badge ton={e.statut < 400 ? "vert" : "rouge"} dot={false}>{e.statut < 400 ? "Réussi" : "Échec"}</Badge>
                   </td>
                 </tr>

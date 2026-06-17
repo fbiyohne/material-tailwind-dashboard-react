@@ -123,22 +123,22 @@ export function Conseil() {
         {membres.length === 0 ? (
           <div className="p-6"><EmptyState icon={UserGroupIcon} title="Conseil vide" description="Ajoutez les membres du Conseil ou publiez une élection." /></div>
         ) : (
-          <table className="w-full text-sm">
+          <table className="bpn-table">
             <thead>
-              <tr className="border-b border-grisL text-left text-[11px] uppercase tracking-wide text-gris">
-                <th className="w-12 px-4 py-2.5 font-medium">Ordre</th>
-                <th className="px-4 py-2.5 font-medium">Membre</th>
-                <th className="px-4 py-2.5 font-medium">Fonction</th>
-                <th className="whitespace-nowrap px-4 py-2.5 font-medium">Mandat depuis</th>
-                <th className="px-4 py-2.5 text-right font-medium">{peutGerer ? "Actions" : "Statut"}</th>
+              <tr>
+                <th className="w-12">Ordre</th>
+                <th>Membre</th>
+                <th>Fonction</th>
+                <th className="whitespace-nowrap">Mandat depuis</th>
+                <th className="text-right">{peutGerer ? "Actions" : "Statut"}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-grisL">
+            <tbody>
               {membres.map((m) => (
-                <tr key={m.id} className={`hover:bg-grisL/40 ${m.actif ? "" : "opacity-60"}`}>
-                  <td className="px-4 py-2.5 font-mono text-or">{m.ordre}</td>
-                  <td className="px-4 py-2.5 font-medium text-encre">{m.nom}</td>
-                  <td className="px-4 py-2.5">
+                <tr key={m.id} className={m.actif ? "" : "opacity-60"}>
+                  <td className="font-mono text-or">{m.ordre}</td>
+                  <td className="font-medium text-encre">{m.nom}</td>
+                  <td>
                     {peutGerer ? (
                       <select defaultValue={m.fonction} className="bpn-input !w-52 !py-1 text-sm"
                         onChange={(e) => { const v = e.target.value; if (v && v !== m.fonction) action(() => majMembreConseil(m.id, { fonction: v }), "Fonction mise à jour."); }}>
@@ -146,8 +146,8 @@ export function Conseil() {
                       </select>
                     ) : <span className="text-gris">{m.fonction}</span>}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-2.5 text-xs text-gris">{m.mandatDebut ? formatDate(m.mandatDebut) : "—"}</td>
-                  <td className="px-4 py-2.5">
+                  <td className="whitespace-nowrap text-xs text-gris">{m.mandatDebut ? formatDate(m.mandatDebut) : "—"}</td>
+                  <td>
                     <div className="flex items-center justify-end gap-2">
                       <Badge ton={m.actif ? "vert" : "gris"} className="whitespace-nowrap">{m.actif ? "En exercice" : "Ancien"}</Badge>
                       {peutGerer && (

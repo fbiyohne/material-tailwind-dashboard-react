@@ -56,24 +56,24 @@ export function TableauOrdre() {
             <span className="bpn-card-heading">{QUALITE[s.qualite] ?? s.qualite}</span>
             <Badge ton="bleu" dot={false}>{s.membres.length}</Badge>
           </div>
-          <table className="w-full text-sm">
+          <table className="bpn-table">
             <thead>
-              <tr className="border-b border-grisL text-left text-[11px] uppercase tracking-wide text-gris">
-                <th className="w-14 px-4 py-2.5 font-medium">N°</th>
-                <th className="px-4 py-2.5 font-medium">Nom</th>
-                <th className="px-4 py-2.5 font-medium">Cabinet</th>
-                <th className="px-4 py-2.5 font-medium">Inscription</th>
-                <th className="px-4 py-2.5 font-medium">Statut</th>
+              <tr>
+                <th className="w-14">N°</th>
+                <th>Nom</th>
+                <th>Cabinet</th>
+                <th>Inscription</th>
+                <th>Statut</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-grisL">
+            <tbody>
               {s.membres.map((m) => (
-                <tr key={m.id} className="hover:bg-grisL/40">
-                  <td className="px-4 py-2.5 font-mono text-or">{m.rang}</td>
-                  <td className="px-4 py-2.5 font-medium text-encre">Me {m.nom}</td>
-                  <td className="px-4 py-2.5 text-gris">{m.cabinet ?? "—"}</td>
-                  <td className="px-4 py-2.5 text-xs text-gris">{m.dateInscription ? formatDate(m.dateInscription) : "—"}</td>
-                  <td className="px-4 py-2.5">
+                <tr key={m.id}>
+                  <td className="font-mono text-or">{m.rang}</td>
+                  <td className="font-medium text-encre">Me {m.nom}</td>
+                  <td className="text-gris">{m.cabinet ?? "—"}</td>
+                  <td className="text-xs text-gris">{m.dateInscription ? formatDate(m.dateInscription) : "—"}</td>
+                  <td>
                     {MENTION[m.statut]
                       ? <Badge ton={MENTION[m.statut].ton} dot={false} className="whitespace-nowrap">{MENTION[m.statut].label}</Badge>
                       : <span className="text-xs text-gris">En exercice</span>}
