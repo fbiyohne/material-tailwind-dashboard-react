@@ -27,8 +27,17 @@ services:
       CLIENT_ORIGIN: ${CLIENT_ORIGIN}
       INSTALL_WIZARD: "1"
       STATIC_DIR: ../dist
+      # Chemins persistés (cf. volumes) : pièces téléversées et clés de signature.
+      # Sans ces volumes, `docker compose up --build` détruirait les documents et
+      # régénérerait la paire de clés (invalidant la vérification QR des documents
+      # déjà signés).
+      STORAGE_DIR: /app/server/uploads
+      SIGNATURE_KEY_DIR: /app/server/secrets
       PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
       NODE_ENV: production
+    volumes:
+      - app-uploads:/app/server/uploads
+      - app-secrets:/app/server/secrets
     expose:
       - "4000"
 
@@ -49,5 +58,7 @@ services:
 
 volumes:
   db-data:
+  app-uploads:
+  app-secrets:
   caddy-data:
   caddy-config:

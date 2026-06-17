@@ -38,11 +38,20 @@ comptes Secrétaire Général / Bâtonnier / Trésorière dans **Utilisateurs**.
 
 ## Données & sauvegardes
 
-Les données PostgreSQL persistent dans le volume Docker `db-data`. Sauvegarde
-recommandée :
+Trois volumes Docker conservent les données entre les redémarrages et les mises
+à jour :
+
+- `db-data` — base PostgreSQL (membres, finances, etc.) ;
+- `app-uploads` — pièces téléversées (documents des dossiers) ;
+- `app-secrets` — paire de clés de signature électronique. **À conserver** :
+  la perdre invaliderait la vérification QR de tous les documents déjà signés.
+
+Sauvegarde de la base recommandée :
 ```bash
 docker compose exec db pg_dump -U barreau barreau_pn > sauvegarde-$(date +%F).sql
 ```
+Pour une sauvegarde complète, archiver aussi les volumes `app-uploads` et
+`app-secrets` (p. ex. `docker run --rm -v barreau_app-secrets:/v -v "$PWD":/o alpine tar czf /o/secrets.tgz -C /v .`).
 
 ## Mise à jour
 
