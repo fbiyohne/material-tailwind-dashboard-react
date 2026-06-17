@@ -86,3 +86,9 @@ la main : bouton *Manual Deploy* dans le tableau de bord du service.
   `PUPPETEER_CACHE_DIR` pointe bien sur `/opt/render/project/src/.cache/puppeteer`.
   Une erreur au moment du rendu (et non au lancement) évoque un manque de RAM
   (niveau gratuit) : l'app bascule alors automatiquement sur le rendu client.
+
+## Assistant d'installation
+
+L'assistant d'installation (déploiement VPS) **n'est jamais actif sur Render** :
+la variable `INSTALL_WIZARD` n'y est pas définie, et le seed crée déjà le compte
+administrateur. Le déploiement Render se comporte donc comme aujourd'hui.
