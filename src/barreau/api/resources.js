@@ -71,6 +71,11 @@ export const importerMembres = (membres) => api("/membres/import", { method: "PO
 export const genererAttestation = (id) => api(`/membres/${id}/attestation`, { method: "POST" });
 
 // ─── Pièces du dossier (vérification documentaire) ───────────────────────────
+// Tableau de l'Ordre
+export const getTableau = () => api("/tableau");
+export const telechargerTableauPdf = () => ouvrirFichierAuth("/tableau/pdf");
+export const publierTableau = () => api("/tableau/publier", { method: "POST" });
+
 // Cycle du stage (avocats stagiaires)
 export const listerRapportsStage = (membreId) => api(`/membres/${membreId}/rapports`);
 export const ajouterRapportStage = (membreId, body) => api(`/membres/${membreId}/rapports`, { method: "POST", body });

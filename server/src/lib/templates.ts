@@ -82,6 +82,32 @@ export function documentHtml({ org, title, reference, bodyHtml, signataire, date
 const liste = (items: string[]) =>
   `<ol style="margin:6px 0 0 18px">${items.map((p) => `<li style="margin:2px 0">${p}</li>`).join("")}</ol>`;
 
+const QUALITE_TABLEAU: Record<string, string> = { AVOCAT: "Avocats", STAGIAIRE: "Avocats stagiaires", HONORAIRE: "Avocats honoraires" };
+const MENTION_STATUT: Record<string, string> = { SUSPENDU: "Suspendu", OMIS: "Omis" };
+
+/** Tableau de l'Ordre — registre officiel par ordre d'ancienneté, sections par qualité. */
+export function tableauOrdreHtml(sections: { qualite: string; membres: any[] }[], date: Date | string): string {
+  const section = (s: { qualite: string; membres: any[] }) => `
+    <h3 style="font-family:'Playfair Display',serif;color:#1A3A6B;font-size:16px;margin:18px 0 6px">${QUALITE_TABLEAU[s.qualite] ?? s.qualite} <span style="font-size:11px;color:#7A756A">(${s.membres.length})</span></h3>
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr style="border-bottom:1.5px solid #1A3A6B;color:#7A756A;text-align:left">
+        <th style="padding:5px 6px;width:42px">N°</th><th style="padding:5px 6px">Nom</th><th style="padding:5px 6px">Cabinet</th><th style="padding:5px 6px;width:120px">Inscription</th></tr></thead>
+      <tbody>${s.membres.map((m) => `<tr style="border-bottom:1px solid #E0DBD0">
+        <td style="padding:5px 6px;font-family:'DM Mono',monospace;color:#C4990A">${m.rang}</td>
+        <td style="padding:5px 6px"><b>Me ${m.nom}</b>${MENTION_STATUT[m.statut] ? ` <span style="font-size:9px;color:#b3261e">(${MENTION_STATUT[m.statut]})</span>` : ""}</td>
+        <td style="padding:5px 6px;color:#7A756A">${m.cabinet ?? "—"}</td>
+        <td style="padding:5px 6px;color:#7A756A">${m.dateInscription ? fmtDate(m.dateInscription) : "—"}</td></tr>`).join("")}</tbody>
+    </table>`;
+  return documentHtml({
+    org: "Le Bâtonnier",
+    title: "Tableau de l'Ordre",
+    reference: `Arrêté au ${fmtDate(date)}`,
+    bodyHtml: `<p style="margin-bottom:4px">Tableau de l'Ordre des Avocats du Barreau de Pointe-Noire, dressé par ordre d'ancienneté.</p>${sections.map(section).join("")}`,
+    signataire: { role: "Le Bâtonnier", nom: "Me BIKINDOU Audrey Séverin" },
+    date,
+  });
+}
+
 export function attestationHtml(membre: { nom: string; num: number; dateInscription?: Date | string | null }, numero: string, date: Date | string): string {
   const depuis = membre.dateInscription ? `, depuis le <b>${fmtDate(membre.dateInscription)}</b>` : "";
   return documentHtml({

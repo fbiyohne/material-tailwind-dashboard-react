@@ -358,6 +358,22 @@ describe("Cycle du stage — rapports & validation (Bâtonnier)", () => {
   });
 });
 
+describe("Tableau de l'Ordre (RG-04..06)", () => {
+  it("compose par ancienneté en sections ; publication réservée au SG", async () => {
+    const r = await request(app).get("/api/tableau").set(...bearer(sg));
+    expect(r.status).toBe(200);
+    expect(Array.isArray(r.body.sections)).toBe(true);
+    expect(typeof r.body.total).toBe("number");
+    const sec = r.body.sections.find((s: any) => s.membres.length > 1);
+    if (sec) { expect(sec.membres[0].rang).toBe(1); expect(sec.membres[1].rang).toBe(2); }
+    // publication (arrêté) réservée au SG ; Trésorière exclue du module (403)
+    expect((await request(app).get("/api/tableau").set(...bearer(tr))).status).toBe(403);
+    const pub = await request(app).post("/api/tableau/publier").set(...bearer(sg));
+    expect(pub.status).toBe(201);
+    expect(pub.body.reference).toContain("TABLEAU-");
+  });
+});
+
 describe("Pièces — file de vérification documentaire (RG-15)", () => {
   it("liste transverse accessible au SG/Bâtonnier, filtrable par statut ; Trésorière exclue (403)", async () => {
     expect((await request(app).get("/api/pieces").set(...bearer(tr))).status).toBe(403);
