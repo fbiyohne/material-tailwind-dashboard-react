@@ -323,6 +323,21 @@ describe("Paramètres — données de référence centralisées", () => {
   });
 });
 
+describe("Discipline enrichie — saisine, rapporteur, recours & casier", () => {
+  it("dossier avec plaignant/rapporteur, ajout d'un recours, casier par membre", async () => {
+    const av = await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: `DISC ${Date.now()}`, qualite: "AVOCAT" });
+    const d = await request(app).post("/api/discipline").set(...bearer(sg)).send({ avocatNom: "Me Disc", objet: "Manquement déontologique", plaignant: "Un confrère", rapporteur: "Me Rapporteur", membreId: av.body.id });
+    expect(d.status).toBe(201);
+    expect(d.body.plaignant).toBe("Un confrère");
+    expect(d.body.rapporteur).toBe("Me Rapporteur");
+    const maj = await request(app).patch(`/api/discipline/${d.body.id}`).set(...bearer(sg)).send({ recours: "Appel devant la Cour", dateRecours: "2026-06-20" });
+    expect(maj.body.recours).toBe("Appel devant la Cour");
+    const casier = await request(app).get(`/api/discipline?membreId=${av.body.id}`).set(...bearer(sg));
+    expect(casier.status).toBe(200);
+    expect(casier.body.some((x: any) => x.id === d.body.id)).toBe(true);
+  });
+});
+
 describe("Discipline — accès restreint (RG-13)", () => {
   it("interdit l'accès à la Trésorière (403)", async () => {
     const r = await request(app).get("/api/discipline").set(...bearer(tr));

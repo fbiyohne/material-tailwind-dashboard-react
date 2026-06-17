@@ -71,6 +71,9 @@ export const importerMembres = (membres) => api("/membres/import", { method: "PO
 export const genererAttestation = (id) => api(`/membres/${id}/attestation`, { method: "POST" });
 
 // ─── Pièces du dossier (vérification documentaire) ───────────────────────────
+// Casier disciplinaire d'un avocat (dossiers le concernant)
+export const casierDiscipline = (membreId) => api(`/discipline?membreId=${membreId}`);
+
 // Conseil de l'Ordre (composition)
 export const listerConseil = (tous) => api(`/conseil${tous ? "?tous=1" : ""}`);
 export const ajouterMembreConseil = (body) => api("/conseil", { method: "POST", body });

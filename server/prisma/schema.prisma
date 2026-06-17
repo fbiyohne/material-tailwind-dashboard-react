@@ -265,11 +265,15 @@ model DossierDisciplinaire {
   membreId        Int?
   avocatNom       String
   objet           String
+  plaignant       String? // auteur de la saisine / plainte
+  rapporteur      String? // membre instructeur désigné
   dateSaisine     DateTime
   dateConvocation DateTime?
   dateAudience    DateTime?
   decision        String?
   sanction        String?
+  recours         String? // recours formé contre la décision
+  dateRecours     DateTime?
   pieces          String[]      @default([])
   statut          StatutDossier @default(OUVERT)
   createdAt       DateTime      @default(now())

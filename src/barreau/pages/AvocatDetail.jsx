@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeftIcon, DocumentPlusIcon, PencilSquareIcon, NoSymbolIcon, TrashIcon, IdentificationIcon, BanknotesIcon, FolderIcon, KeyIcon, AcademicCapIcon } from "@heroicons/react/24/outline";
 import { ScaleIcon } from "@heroicons/react/24/outline";
-import { Badge, StatutBadge, AttestationModal, EditMembreModal, PiecesDossier, AccesActivationModal, StagePanel, useConfirm, useToast, PageHeader, Tabs, EmptyState, TableSkeleton, ErrorState } from "../components";
+import { Badge, StatutBadge, AttestationModal, EditMembreModal, PiecesDossier, AccesActivationModal, StagePanel, CasierDiscipline, useConfirm, useToast, PageHeader, Tabs, EmptyState, TableSkeleton, ErrorState } from "../components";
 import { QUALITE_LABEL, STATUT_META, infoStage } from "../data/derivations";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { formatFCFA, formatDate } from "../utils/format";
@@ -263,13 +263,10 @@ export function AvocatDetail() {
             label: "Discipline",
             icon: ScaleIcon,
             content: (
-              <Carte titre="Historique disciplinaire">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm text-gris">
-                    Les dossiers disciplinaires sont consultables dans le module dédié — accès restreint et
-                    journalisé (RG-13).
-                  </p>
-                  <Link to="/discipline" className="bpn-btn bpn-btn-ghost shrink-0">
+              <Carte titre="Casier disciplinaire">
+                <CasierDiscipline membreId={membre.id} />
+                <div className="mt-3 border-t border-grisL pt-3">
+                  <Link to="/discipline" className="bpn-btn bpn-btn-ghost">
                     <ScaleIcon className="h-4 w-4" /> Conseil de discipline
                   </Link>
                 </div>

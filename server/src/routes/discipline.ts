@@ -17,6 +17,12 @@ const journaliser = (action: string, userId?: number) =>
 disciplineRouter.get(
   "/",
   asyncH(async (req: AuthRequest, res) => {
+    // Filtre par membre = casier disciplinaire de l'avocat (sans journaliser la consultation globale).
+    const membreId = req.query.membreId ? Number(req.query.membreId) : undefined;
+    if (membreId) {
+      res.json(await prisma.dossierDisciplinaire.findMany({ where: { membreId }, orderBy: { id: "desc" } }));
+      return;
+    }
     await journaliser("Consultation du module Discipline", req.user!.id);
     res.json(await prisma.dossierDisciplinaire.findMany({ orderBy: { id: "desc" } }));
   })
@@ -42,6 +48,8 @@ disciplineRouter.get(
 const ouvrirSchema = z.object({
   avocatNom: z.string().min(1),
   objet: z.string().min(1),
+  plaignant: z.string().max(200).optional(),
+  rapporteur: z.string().max(200).optional(),
   dateSaisine: z.string().optional(),
   membreId: z.number().int().optional(),
 });
@@ -57,6 +65,8 @@ disciplineRouter.post(
         reference,
         avocatNom: data.avocatNom,
         objet: data.objet,
+        plaignant: data.plaignant,
+        rapporteur: data.rapporteur,
         dateSaisine: data.dateSaisine ? new Date(data.dateSaisine) : new Date(),
         membreId: data.membreId ?? null,
       },
@@ -68,10 +78,14 @@ disciplineRouter.post(
 
 const patchSchema = z.object({
   statut: z.enum(["OUVERT", "INSTRUCTION", "AUDIENCE", "DECISION", "CLASSE"]).optional(),
+  plaignant: z.string().max(200).optional(),
+  rapporteur: z.string().max(200).optional(),
   dateConvocation: z.string().optional(),
   dateAudience: z.string().optional(),
   decision: z.string().optional(),
   sanction: z.string().optional(),
+  recours: z.string().max(500).optional(),
+  dateRecours: z.string().optional(),
   pieces: z.array(z.string()).optional(),
 });
 
@@ -83,11 +97,15 @@ disciplineRouter.patch(
       where: { id: Number(req.params.id) },
       data: {
         statut: data.statut,
+        plaignant: data.plaignant,
+        rapporteur: data.rapporteur,
         decision: data.decision,
         sanction: data.sanction,
+        recours: data.recours,
         pieces: data.pieces,
         dateConvocation: data.dateConvocation ? new Date(data.dateConvocation) : undefined,
         dateAudience: data.dateAudience ? new Date(data.dateAudience) : undefined,
+        dateRecours: data.dateRecours ? new Date(data.dateRecours) : undefined,
       },
     });
     await journaliser(`Mise à jour du dossier ${dossier.reference}`, req.user!.id);
