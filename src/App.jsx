@@ -44,7 +44,11 @@ function AuthGate() {
 function InstallationGate({ children }) {
   const [etat, setEtat] = useState(null); // null = en cours
   useEffect(() => {
-    getEtatInstallation().then(setEtat).catch(() => setEtat({ actif: false }));
+    let actif = true; // évite un setState après démontage
+    getEtatInstallation()
+      .then((e) => actif && setEtat(e))
+      .catch(() => actif && setEtat({ actif: false }));
+    return () => { actif = false; };
   }, []);
   if (etat === null) return <Splash />;
   if (etat.actif) return <Installation />;

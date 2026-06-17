@@ -40,9 +40,12 @@ export function Installation() {
   const setT = (k) => (e) => setTarifs({ ...tarifs, [k]: Number(String(e.target.value).replace(/\D/g, "")) || 0 });
   const setS = (k) => (e) => setSmtp({ ...smtp, [k]: k === "port" ? Number(e.target.value) || 0 : e.target.value });
 
-  const adminValide = admin.nom.trim() && /\S+@\S+\.\S+/.test(admin.email) && admin.motDePasse.length >= 8 && admin.motDePasse === admin.confirme;
+  const adminValide = Boolean(admin.nom.trim() && /\S+@\S+\.\S+/.test(admin.email) && admin.motDePasse.length >= 8 && admin.motDePasse === admin.confirme);
   const identiteValide = Object.values(identite).every((v) => v.trim());
-  const peutSuivant = etape === 1 ? adminValide : etape === 2 ? identiteValide : true;
+  // Exercices : années plausibles et premier ≤ courant (sinon un champ vidé
+  // soumettrait silencieusement 0 — refusé côté serveur, mais on bloque avant).
+  const exercicesValides = Number(exercice) >= 1900 && Number(premier) >= 1900 && Number(premier) <= Number(exercice);
+  const peutSuivant = etape === 1 ? adminValide : etape === 2 ? identiteValide : etape === 3 ? exercicesValides : true;
 
   const tester = async () => {
     if (!smtp.host || !smtp.from || !/\S+@\S+\.\S+/.test(testCible)) { toast.error("Renseignez le SMTP et une adresse de test."); return; }
