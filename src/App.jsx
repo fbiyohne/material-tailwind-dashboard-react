@@ -1,4 +1,7 @@
 import { useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Installation } from "@/barreau/pages/Installation";
+import { getEtatInstallation } from "@/barreau/api/resources";
 import BarreauLayout from "@/barreau/layout/BarreauLayout";
 import EspaceAvocatLayout from "@/barreau/layout/EspaceAvocatLayout";
 import { ErrorBoundary, ToastProvider, ConfirmProvider } from "@/barreau/components";
@@ -36,6 +39,18 @@ function AuthGate() {
  * atteintes via QR code) court-circuitent l'authentification ; tout le reste
  * passe par la connexion puis le layout applicatif.
  */
+/** Sur un VPS non encore installé (INSTALL_WIZARD), affiche l'assistant.
+ *  Sur Render (assistant inactif), passe immédiatement à l'application. */
+function InstallationGate({ children }) {
+  const [etat, setEtat] = useState(null); // null = en cours
+  useEffect(() => {
+    getEtatInstallation().then(setEtat).catch(() => setEtat({ actif: false }));
+  }, []);
+  if (etat === null) return <Splash />;
+  if (etat.actif) return <Installation />;
+  return children;
+}
+
 function PublicOrApp() {
   const location = useLocation();
   const m = location.pathname.match(/^\/verifier\/([^/]+)\/(.+?)\/?$/);
@@ -46,7 +61,7 @@ function PublicOrApp() {
   // Réinitialisation publique de mot de passe (lien envoyé par e-mail).
   const r = location.pathname.match(/^\/reinitialiser\/([^/]+)\/?$/);
   if (r) return <ReinitialiserMotDePasse token={decodeURIComponent(r[1])} />;
-  return <AuthGate />;
+  return <InstallationGate><AuthGate /></InstallationGate>;
 }
 
 /**
