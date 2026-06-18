@@ -19,9 +19,9 @@ function CarteSituation({ titre, du, paye, solde, statut, valide, onPayer }) {
         </div>
       </div>
       <div className="grid grid-cols-3 gap-3 text-center">
-        <div><div className="text-[11px] uppercase tracking-wide text-gris">Dû</div><div className="mt-1 font-medium">{formatFCFA(du)}</div></div>
-        <div><div className="text-[11px] uppercase tracking-wide text-gris">Payé</div><div className="mt-1 font-medium text-vert">{paye ? formatFCFA(paye) : "—"}</div></div>
-        <div><div className="text-[11px] uppercase tracking-wide text-gris">Solde</div><div className={`mt-1 font-medium ${solde ? "text-rouge" : "text-vert"}`}>{solde ? formatFCFA(solde) : "✓ Soldé"}</div></div>
+        <div><div className="text-xs uppercase tracking-wide text-gris">Dû</div><div className="mt-1 font-medium">{formatFCFA(du)}</div></div>
+        <div><div className="text-xs uppercase tracking-wide text-gris">Payé</div><div className="mt-1 font-medium text-vert">{paye ? formatFCFA(paye) : "—"}</div></div>
+        <div><div className="text-xs uppercase tracking-wide text-gris">Solde</div><div className={`mt-1 font-medium ${solde ? "text-rouge" : "text-vert"}`}>{solde ? formatFCFA(solde) : "✓ Soldé"}</div></div>
       </div>
       {solde > 0 && onPayer && (
         <div className="mt-3 flex justify-end">
@@ -49,7 +49,7 @@ function Historique({ titre, lignes }) {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-grisL text-left text-[11px] uppercase tracking-wide text-gris">
+              <tr className="border-b border-grisL text-left text-xs uppercase tracking-wide text-gris">
                 <th className="px-4 py-2.5 font-medium">Exercice</th>
                 <th className="px-4 py-2.5 text-right font-medium">Dû</th>
                 <th className="px-4 py-2.5 text-right font-medium">Payé</th>

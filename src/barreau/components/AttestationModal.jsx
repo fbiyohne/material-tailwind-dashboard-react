@@ -53,7 +53,7 @@ export function AttestationModal({ membre, onClose }) {
         date={aujourdhui()}
         signataires={[{ role: "Le Bâtonnier", nom: "Me BIKINDOU Audrey Séverin" }]}
       >
-        <p className="text-[13px] leading-7 text-encre">
+        <p className="text-xs leading-7 text-encre">
           Le Bâtonnier de l'Ordre des Avocats du Barreau de Pointe-Noire atteste que{" "}
           <strong>Me {membre.nom}</strong> est inscrit(e) au Tableau de l'Ordre des Avocats du
           Barreau de Pointe-Noire sous le numéro <strong>{membre.num}</strong>
@@ -65,7 +65,7 @@ export function AttestationModal({ membre, onClose }) {
           ) : null}
           .
         </p>
-        <p className="mt-3 text-[13px] leading-7 text-encre">
+        <p className="mt-3 text-xs leading-7 text-encre">
           La présente attestation est délivrée à l'intéressé(e) pour servir et valoir ce que de droit.
         </p>
       </DocumentChrome>

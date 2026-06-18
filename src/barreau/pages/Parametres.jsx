@@ -86,7 +86,7 @@ function Section({ titre, description, children, action }) {
 }
 
 /** Intitulé de sous-section homogène à l'intérieur des cartes de réglages. */
-const SOUS_TITRE = "mb-2 text-[11px] font-semibold uppercase tracking-wider text-gris";
+const SOUS_TITRE = "mb-2 text-xs font-semibold uppercase tracking-wider text-gris";
 
 /** Liste de chaînes éditable (ajout/suppression) — catégories, types… */
 function ListeEditable({ valeurs, onChange, placeholder }) {
@@ -415,7 +415,7 @@ export function Parametres() {
           { key: "statut", label: "Statut", sortable: true, sortValue: (n) => (n.statut === "ENVOYE" ? (n.simulation ? 1 : 0) : 2), cell: (n) => (
             <Badge ton={n.statut === "ENVOYE" ? (n.simulation ? "or" : "vert") : "rouge"} dot={false}>{n.statut === "ENVOYE" ? (n.simulation ? "Simulé" : "Envoyé") : "Échec"}</Badge>
           ) },
-          { key: "date", label: "Date", sortable: true, sortValue: (n) => new Date(n.createdAt).getTime(), cell: (n) => <span className="font-mono text-[11px] text-gris">{formatDateTime(n.createdAt)}</span> },
+          { key: "date", label: "Date", sortable: true, sortValue: (n) => new Date(n.createdAt).getTime(), cell: (n) => <span className="font-mono text-xs text-gris">{formatDateTime(n.createdAt)}</span> },
         ]}
         rows={notif?.journal ?? []}
         density="compact"

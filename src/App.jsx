@@ -16,7 +16,7 @@ function Splash() {
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-navy-3">
       <div className="animate-pulse rounded-full bg-white p-2.5"><Sceau size={48} /></div>
       <div className="text-center">
-        <div className="text-[10px] uppercase tracking-[0.2em] text-or-2">Barreau de Pointe-Noire</div>
+        <div className="text-2xs uppercase tracking-[0.2em] text-or-2">Barreau de Pointe-Noire</div>
         <div className="mt-1 text-sm text-white/50">Chargement…</div>
       </div>
     </div>

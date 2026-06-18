@@ -117,7 +117,7 @@ export function DemandeAcces({ onRetour }) {
           Envoyer la demande <PaperAirplaneIcon className="h-4 w-4" />
         </Button>
 
-        <p className="text-center text-[11px] leading-relaxed text-white/30">
+        <p className="text-center text-xs leading-relaxed text-white/30">
           Aucun compte n'est créé automatiquement. Votre demande est examinée par le Secrétariat Général.
         </p>
       </form>

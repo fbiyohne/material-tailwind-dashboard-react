@@ -17,7 +17,7 @@ const lireBase64 = (file) => new Promise((resolve, reject) => {
 /** Bouton de téléversement (input fichier masqué). */
 function BoutonTeleverser({ onFile, label = "Téléverser", busy }) {
   return (
-    <label className={`bpn-btn bpn-btn-ghost !py-1.5 text-[11px] ${busy ? "pointer-events-none opacity-50" : "cursor-pointer"}`}>
+    <label className={`bpn-btn bpn-btn-ghost !py-1.5 text-xs ${busy ? "pointer-events-none opacity-50" : "cursor-pointer"}`}>
       <ArrowUpTrayIcon className="h-3.5 w-3.5" /> {label}
       <input type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => { onFile(e.target.files?.[0]); e.target.value = ""; }} />
     </label>
@@ -80,12 +80,12 @@ export function PiecesDossier({ membreId, qualite, peutGerer }) {
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2 text-sm text-encre">
               {TYPE_LABEL[type] ?? type}
-              {requise && <span className="text-[11px] uppercase tracking-wide text-or">requise</span>}
+              {requise && <span className="text-xs uppercase tracking-wide text-or">requise</span>}
             </div>
             {piece ? (
-              <div className="truncate text-[11px] text-gris">{piece.nomFichier}{piece.statut === "REJETEE" && piece.note ? ` · motif : ${piece.note}` : ""}</div>
+              <div className="truncate text-xs text-gris">{piece.nomFichier}{piece.statut === "REJETEE" && piece.note ? ` · motif : ${piece.note}` : ""}</div>
             ) : (
-              <div className="text-[11px] text-gris">Aucun document.</div>
+              <div className="text-xs text-gris">Aucun document.</div>
             )}
           </div>
         </div>
@@ -93,16 +93,16 @@ export function PiecesDossier({ membreId, qualite, peutGerer }) {
           {piece ? (
             <>
               <Badge ton={meta.ton}>{meta.label}</Badge>
-              <button className="bpn-btn bpn-btn-ghost !py-1.5 text-[11px]" onClick={() => voirPiece(piece.id).catch((e) => toast.error(e.message))}>
+              <button className="bpn-btn bpn-btn-ghost !py-1.5 text-xs" onClick={() => voirPiece(piece.id).catch((e) => toast.error(e.message))}>
                 <EyeIcon className="h-3.5 w-3.5" /> Voir
               </button>
               {peutGerer && piece.statut !== "VERIFIEE" && (
-                <button className="bpn-btn bpn-btn-or !py-1.5 text-[11px]" onClick={() => action(() => verifierPiece(piece.id), "Pièce vérifiée.")}>
+                <button className="bpn-btn bpn-btn-or !py-1.5 text-xs" onClick={() => action(() => verifierPiece(piece.id), "Pièce vérifiée.")}>
                   <CheckIcon className="h-3.5 w-3.5" /> Vérifier
                 </button>
               )}
               {peutGerer && piece.statut !== "REJETEE" && (
-                <button className="bpn-btn bpn-btn-ghost !py-1.5 text-[11px]" onClick={() => rejeter(piece)}>
+                <button className="bpn-btn bpn-btn-ghost !py-1.5 text-xs" onClick={() => rejeter(piece)}>
                   <XMarkIcon className="h-3.5 w-3.5" /> Rejeter
                 </button>
               )}
@@ -136,7 +136,7 @@ export function PiecesDossier({ membreId, qualite, peutGerer }) {
       </ul>
       {peutGerer && (
         <div className="flex items-center justify-between gap-3 border-t border-grisM px-4 py-2.5">
-          <span className="text-[11px] text-gris">Formats acceptés : images et PDF · 5 Mo max.</span>
+          <span className="text-xs text-gris">Formats acceptés : images et PDF · 5 Mo max.</span>
           <BoutonTeleverser onFile={(f) => televerser("AUTRE", f)} label="Ajouter une autre pièce" busy={busy} />
         </div>
       )}

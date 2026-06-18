@@ -151,7 +151,7 @@ export function Dashboard() {
               <ul className="max-h-80 divide-y divide-grisL overflow-y-auto">
                 {echeances.slice(0, MAX_LIGNES).map((e) => (
                   <li key={`${e.date}-${e.libelle}`} className="flex items-center gap-3 px-4 py-3">
-                    <span className="w-24 shrink-0 font-mono text-[11px] text-or">{dateCourteFr(e.date)}</span>
+                    <span className="w-24 shrink-0 font-mono text-xs text-or">{dateCourteFr(e.date)}</span>
                     <span className="text-sm text-encre">{e.libelle}</span>
                   </li>
                 ))}
@@ -175,7 +175,7 @@ export function Dashboard() {
               {journal.map((j, i) => (
                 <li key={j.id ?? `${j.action}-${i}`} className="px-4 py-3">
                   <div className="text-sm text-encre">{j.action}{j.cible ? ` ${j.cible}` : ""}</div>
-                  <div className="mt-0.5 flex items-center gap-2 text-[11px] text-gris">
+                  <div className="mt-0.5 flex items-center gap-2 text-xs text-gris">
                     <span className="font-mono">{formatQuand(j.quand)}</span><span>·</span><span>{j.acteur}</span>
                   </div>
                 </li>

@@ -104,7 +104,7 @@ export function Login({ onDemande, onOubli }) {
       </form>
 
       <div className="mt-6">
-        <div className="mb-2.5 text-[10px] uppercase tracking-[0.18em] text-white/30">Comptes de démonstration · mot de passe « barreau »</div>
+        <div className="mb-2.5 text-2xs uppercase tracking-[0.18em] text-white/30">Comptes de démonstration · mot de passe « barreau »</div>
         <div className="flex flex-wrap gap-2">
           {COMPTES.map((c) => {
             const actif = email === c.email;
@@ -113,7 +113,7 @@ export function Login({ onDemande, onOubli }) {
                 key={c.email}
                 type="button"
                 onClick={() => { setEmail(c.email); setPassword("barreau"); setErreur(null); }}
-                className={`rounded-full border px-3 py-1.5 text-[11px] transition ${
+                className={`rounded-full border px-3 py-1.5 text-xs transition ${
                   actif ? "border-or/60 bg-or/15 text-or-2" : "border-white/10 bg-white/[0.03] text-white/55 hover:border-or/40 hover:text-or-2"
                 }`}
               >

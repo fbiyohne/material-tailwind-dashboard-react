@@ -140,9 +140,9 @@ export function Utilisateurs() {
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                     <span className="font-medium text-encre">{d.nom}</span>
                     <span className="text-sm text-gris">{d.email}</span>
-                    <span className="text-[11px] text-gris">· {formatDate(d.createdAt)}</span>
+                    <span className="text-xs text-gris">· {formatDate(d.createdAt)}</span>
                   </div>
-                  <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] text-gris">
+                  <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-gris">
                     {d.numInscription && <span className="inline-flex items-center gap-1"><IdentificationIcon className="h-3.5 w-3.5" /> {d.numInscription}</span>}
                     {d.cabinet && <span className="inline-flex items-center gap-1"><BuildingOffice2Icon className="h-3.5 w-3.5" /> {d.cabinet}</span>}
                   </div>
@@ -172,7 +172,7 @@ export function Utilisateurs() {
               sortValue: (u) => u.nom,
               cell: (u) => (
                 <span className="font-medium text-encre">
-                  {u.nom}{u.id === courant?.id && <span className="ml-1 text-[11px] text-gris">(vous)</span>}
+                  {u.nom}{u.id === courant?.id && <span className="ml-1 text-xs text-gris">(vous)</span>}
                 </span>
               ),
             },

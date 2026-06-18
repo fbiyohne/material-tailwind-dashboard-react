@@ -25,7 +25,7 @@ export function FormField({ label, required, hint, error, full, htmlFor, classNa
         {hint && <span className="ml-1 font-normal lowercase tracking-normal text-gris/70">· {hint}</span>}
       </span>
       <div className="mt-1">{controle}</div>
-      {error && <p id={errId} role="alert" className="mt-1 text-[11px] text-rouge">{error}</p>}
+      {error && <p id={errId} role="alert" className="mt-1 text-xs text-rouge">{error}</p>}
     </label>
   );
 }

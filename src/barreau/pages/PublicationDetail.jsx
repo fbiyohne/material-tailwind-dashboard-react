@@ -102,8 +102,8 @@ export function PublicationDetail() {
           <div className="p-6">
             <div className="overflow-hidden rounded border border-grisM">
               <div className="bg-navy px-5 py-3">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-or">Barreau de Pointe-Noire</div>
-                <div className="text-[9px] text-white/60">{form.type ?? publication.type} officiel</div>
+                <div className="text-2xs font-semibold uppercase tracking-[0.15em] text-or">Barreau de Pointe-Noire</div>
+                <div className="text-2xs text-white/60">{form.type ?? publication.type} officiel</div>
               </div>
               <div className="h-[3px] bg-gradient-to-r from-or via-or-2 to-or" />
               <div className="px-6 py-5">

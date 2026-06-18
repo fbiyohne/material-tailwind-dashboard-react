@@ -185,9 +185,9 @@ export function AvocatDetail() {
                   {peutVoirFinances && droit && (
                     <Carte titre={`Droits de plaidoirie ${EXERCICE_COURANT}`}>
                       <div className="grid grid-cols-3 gap-3 text-center">
-                        <div><div className="text-[11px] uppercase tracking-wide text-gris">Dû</div><div className="mt-1 font-medium">{formatFCFA(droit.du)}</div></div>
-                        <div><div className="text-[11px] uppercase tracking-wide text-gris">Perçu</div><div className="mt-1 font-medium text-vert">{droit.paye ? formatFCFA(droit.paye) : "—"}</div></div>
-                        <div><div className="text-[11px] uppercase tracking-wide text-gris">Solde</div><div className="mt-1 font-medium text-rouge">{droit.solde ? formatFCFA(droit.solde) : "✓"}</div></div>
+                        <div><div className="text-xs uppercase tracking-wide text-gris">Dû</div><div className="mt-1 font-medium">{formatFCFA(droit.du)}</div></div>
+                        <div><div className="text-xs uppercase tracking-wide text-gris">Perçu</div><div className="mt-1 font-medium text-vert">{droit.paye ? formatFCFA(droit.paye) : "—"}</div></div>
+                        <div><div className="text-xs uppercase tracking-wide text-gris">Solde</div><div className="mt-1 font-medium text-rouge">{droit.solde ? formatFCFA(droit.solde) : "✓"}</div></div>
                       </div>
                     </Carte>
                   )}
@@ -207,7 +207,7 @@ export function AvocatDetail() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="text-left text-[11px] uppercase tracking-wide text-gris">
+                      <tr className="text-left text-xs uppercase tracking-wide text-gris">
                         <th className="pb-2">Exercice</th><th className="pb-2 text-right">Dû</th><th className="pb-2 text-right">Payé</th><th className="pb-2 text-right">Solde</th><th className="pb-2 pl-4">Statut</th>
                       </tr>
                     </thead>

@@ -105,7 +105,7 @@ export function Conseil() {
                       onMouseDown={(e) => { e.preventDefault(); choisir(m); }}
                     >
                       <span className="font-medium text-encre">Me {m.nom}</span>
-                      <span className="font-mono text-[11px] text-gris">N° {m.num}</span>
+                      <span className="font-mono text-xs text-gris">N° {m.num}</span>
                     </button>
                   </li>
                 ))}

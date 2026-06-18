@@ -72,7 +72,7 @@ export function DroitsPlaidoirie() {
             <button className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs" onClick={() => setPaiement(l)}>
               <BanknotesIcon className="h-3.5 w-3.5" /> Encaisser
             </button>
-          ) : <span className="text-[11px] text-vert">✓ Soldé</span>}
+          ) : <span className="text-xs text-vert">✓ Soldé</span>}
           {estAdmin && l.aLigne && (
             <button className="bpn-btn bpn-btn-ghost !px-2 !py-1 text-xs text-rouge" onClick={() => supprimer(l)} title="Supprimer la ligne de droit">
               <TrashIcon className="h-3.5 w-3.5" />

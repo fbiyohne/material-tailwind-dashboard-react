@@ -41,9 +41,12 @@ module.exports = withMT({
       },
       // Échelle typographique relevée pour la lisibilité / accessibilité
       // (malvoyants) : corps de texte plus généreux, sans toucher aux espacements.
-      // xs 12→13 · sm 14→15 · base 16→17 · lg 18→19.
+      // 2xs 12 (plancher micro-libellés) · xs 12→13 · sm 14→15 · base 16→17 · lg 18→19.
+      // SOURCE UNIQUE des tailles : aucune taille en pixels arbitraire (text-[Npx])
+      // ne doit subsister dans les pages — tout passe par ces jetons nommés.
       fontSize: {
-        xs: ["0.8125rem", { lineHeight: "1.15rem" }],
+        "2xs": ["0.75rem", { lineHeight: "1.05rem" }],
+        xs: ["0.8125rem", { lineHeight: "1.2rem" }],
         sm: ["0.9375rem", { lineHeight: "1.4rem" }],
         base: ["1.0625rem", { lineHeight: "1.65rem" }],
         lg: ["1.1875rem", { lineHeight: "1.75rem" }],

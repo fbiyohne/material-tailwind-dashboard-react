@@ -14,7 +14,7 @@ export function EtatImprimable({ id, titre, sousTitre, entete, lignes, totaux })
     >
       <div className="text-center">
         <div className="font-display text-xl font-bold text-navy">Barreau de Pointe-Noire</div>
-        <div className="text-[11px] uppercase tracking-wide text-gris">Ordre National des Avocats du Congo</div>
+        <div className="text-xs uppercase tracking-wide text-gris">Ordre National des Avocats du Congo</div>
       </div>
       <h3 className="mt-5 font-display text-lg font-semibold text-navy">{titre}</h3>
       {sousTitre && <p className="text-sm text-gris">{sousTitre}</p>}
@@ -45,7 +45,7 @@ export function EtatImprimable({ id, titre, sousTitre, entete, lignes, totaux })
           </tfoot>
         )}
       </table>
-      <p className="mt-6 text-right text-[11px] text-gris">
+      <p className="mt-6 text-right text-xs text-gris">
         Fait à Pointe-Noire, le {new Date().toLocaleDateString("fr-FR")} — Le Secrétariat Général
       </p>
     </div>

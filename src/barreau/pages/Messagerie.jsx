@@ -74,7 +74,7 @@ export function Messagerie() {
                       <span className="flex items-center gap-1.5 truncate text-sm font-medium text-encre">
                         <UserIcon className="h-3.5 w-3.5 shrink-0 text-or" /> {c.expediteur}
                       </span>
-                      {c.nonLus > 0 && <span className="inline-flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full bg-rouge px-1 text-[10px] font-semibold text-white">{c.nonLus}</span>}
+                      {c.nonLus > 0 && <span className="inline-flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full bg-rouge px-1 text-2xs font-semibold text-white">{c.nonLus}</span>}
                     </div>
                     <div className="mt-0.5 truncate text-xs text-gris">{c.sujet}</div>
                     {c.apercu && <div className="mt-0.5 truncate text-xs text-gris">{c.apercu.estAdministration ? "Vous : " : ""}{c.apercu.corps}</div>}

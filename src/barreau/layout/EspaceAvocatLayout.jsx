@@ -60,7 +60,7 @@ export function EspaceAvocatLayout() {
           <div className="flex items-center gap-3">
             <div className="shrink-0 rounded-full bg-white p-1.5"><Sceau size={36} /></div>
             <div>
-              <div className="text-[9px] uppercase tracking-[0.2em] text-or-2">Barreau de Pointe-Noire</div>
+              <div className="text-2xs uppercase tracking-[0.2em] text-or-2">Barreau de Pointe-Noire</div>
               <div className="font-display text-base leading-tight">Espace avocat</div>
             </div>
           </div>
@@ -88,7 +88,7 @@ export function EspaceAvocatLayout() {
             >
               <Icon className="h-4 w-4" /> {label}
               {badge === "messagerie" && nonLus > 0 && (
-                <span className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-rouge px-1 text-[10px] font-semibold text-white">{nonLus}</span>
+                <span className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-rouge px-1 text-2xs font-semibold text-white">{nonLus}</span>
               )}
             </NavLink>
           ))}

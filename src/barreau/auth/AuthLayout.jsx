@@ -56,7 +56,7 @@ export function AuthLayout({ devise, deviseAuteur, eyebrow, titre, sousTitre, ch
           )}
         </div>
 
-        <div className="relative auth-reveal text-[11px] tracking-wide text-white/35" style={delay(400)}>
+        <div className="relative auth-reveal text-xs tracking-wide text-white/35" style={delay(400)}>
           République du Congo · Secrétariat Général du Conseil de l'Ordre
         </div>
       </aside>
@@ -68,7 +68,7 @@ export function AuthLayout({ devise, deviseAuteur, eyebrow, titre, sousTitre, ch
           <div className="mb-9 flex items-center gap-3 lg:hidden">
             <div className="shrink-0 rounded-full bg-white p-1.5"><Sceau size={42} /></div>
             <div>
-              <div className="text-[8px] uppercase tracking-[0.28em] text-or-2">Ordre National des Avocats</div>
+              <div className="text-2xs uppercase tracking-[0.28em] text-or-2">Ordre National des Avocats</div>
               <div className="font-display text-lg leading-tight">Barreau de Pointe-Noire</div>
             </div>
           </div>

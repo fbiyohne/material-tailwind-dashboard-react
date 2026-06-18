@@ -71,7 +71,7 @@ export function Installation() {
     <div className="flex min-h-screen items-center justify-center bg-navy-3 p-4">
       <div className="w-full max-w-2xl overflow-hidden rounded-xl border border-grisM bg-white shadow-modal">
         <div className="bg-navy px-6 py-4">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-or">Barreau de Pointe-Noire</div>
+          <div className="text-xs font-semibold uppercase tracking-[0.2em] text-or">Barreau de Pointe-Noire</div>
           <div className="font-display text-lg text-white">Installation — étape {etape + 1}/{ETAPES.length} · {ETAPES[etape]}</div>
         </div>
         <div className="h-1 bg-grisL"><div className="h-full bg-or transition-all" style={{ width: `${((etape + 1) / ETAPES.length) * 100}%` }} /></div>
@@ -147,7 +147,7 @@ export function Installation() {
           )}
 
           {!peutSuivant && etape >= 1 && etape <= 3 && (
-            <p className="text-[11px] text-gris">Complétez les champs requis pour activer « Suivant ».</p>
+            <p className="text-xs text-gris">Complétez les champs requis pour activer « Suivant ».</p>
           )}
         </div>
 

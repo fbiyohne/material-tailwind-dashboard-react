@@ -57,7 +57,7 @@ export function EspaceScrutins() {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h3 className="font-display text-lg font-semibold text-encre">{s.titre}</h3>
-                  <div className="mt-0.5 text-[12px] text-gris">{TYPE[s.type]} · {s.nbSieges} siège(s) à pourvoir</div>
+                  <div className="mt-0.5 text-xs text-gris">{TYPE[s.type]} · {s.nbSieges} siège(s) à pourvoir</div>
                 </div>
                 {s.statut === "PUBLIE" ? <Badge ton="bleu" dot={false}>Résultats publiés</Badge>
                   : s.aDejaVote ? <Badge ton="vert" dot={false}>Vous avez voté</Badge>

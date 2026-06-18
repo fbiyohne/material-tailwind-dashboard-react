@@ -10,9 +10,9 @@ export function MessageBulle({ aDroite, etiquette, corps, date }) {
   return (
     <div className={`flex ${aDroite ? "justify-end" : "justify-start"}`}>
       <div className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-sm ${aDroite ? "bg-navy text-white" : "bg-grisL text-encre"}`}>
-        {etiquette && <div className={`mb-0.5 text-[11px] font-semibold ${aDroite ? "text-or-2" : "text-or"}`}>{etiquette}</div>}
+        {etiquette && <div className={`mb-0.5 text-xs font-semibold ${aDroite ? "text-or-2" : "text-or"}`}>{etiquette}</div>}
         <div className="whitespace-pre-line leading-relaxed">{corps}</div>
-        <div className={`mt-1 text-[10px] ${aDroite ? "text-white/60" : "text-gris"}`}>{formatDateTime(date)}</div>
+        <div className={`mt-1 text-2xs ${aDroite ? "text-white/60" : "text-gris"}`}>{formatDateTime(date)}</div>
       </div>
     </div>
   );

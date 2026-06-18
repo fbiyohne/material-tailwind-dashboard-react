@@ -74,7 +74,7 @@ export function Elections() {
                 <span className="truncate font-medium text-encre">{s.titre}</span>
                 <Badge ton={STATUT[s.statut].ton} dot={false}>{STATUT[s.statut].label}</Badge>
               </div>
-              <div className="mt-1 text-[11px] text-gris">{TYPE[s.type]} · {MODALITE[s.modalite]} · {s._count.candidats} candidat(s)</div>
+              <div className="mt-1 text-xs text-gris">{TYPE[s.type]} · {MODALITE[s.modalite]} · {s._count.candidats} candidat(s)</div>
             </button>
           ))}
         </div>
@@ -115,7 +115,7 @@ function ScrutinDetail({ detail, peutGerer, action, confirm, nomCand, setNomCand
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h3 className="font-display text-lg font-semibold text-encre">{s.titre}</h3>
-          <div className="mt-0.5 text-[12px] text-gris">{TYPE[s.type]} · {MODALITE[s.modalite]} · {s.nbSieges} siège(s) · {s._count.emargements} votant(s)</div>
+          <div className="mt-0.5 text-xs text-gris">{TYPE[s.type]} · {MODALITE[s.modalite]} · {s.nbSieges} siège(s) · {s._count.emargements} votant(s)</div>
         </div>
         <Badge ton={STATUT[s.statut].ton} dot={false}>{STATUT[s.statut].label}</Badge>
       </div>

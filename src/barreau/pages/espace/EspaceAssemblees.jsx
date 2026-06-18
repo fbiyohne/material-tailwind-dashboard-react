@@ -47,13 +47,13 @@ export function EspaceAssemblees() {
               {a.lieu && <div className="text-sm text-gris">Lieu : <span className="text-encre">{a.lieu}</span></div>}
               {a.ordreDuJour?.length > 0 && (
                 <div>
-                  <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-gris">Ordre du jour</div>
+                  <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-gris">Ordre du jour</div>
                   <ol className="list-decimal space-y-1 pl-5 text-sm text-encre">{a.ordreDuJour.map((p, i) => <li key={i}>{p}</li>)}</ol>
                 </div>
               )}
               {a.decisions?.length > 0 && (
                 <div>
-                  <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-gris">Décisions</div>
+                  <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-gris">Décisions</div>
                   <ul className="list-disc space-y-1 pl-5 text-sm text-encre">{a.decisions.map((p, i) => <li key={i}>{p}</li>)}</ul>
                 </div>
               )}

@@ -72,15 +72,15 @@ export function Pieces() {
       cell: (p) => (
         <div className="min-w-0">
           <div className="truncate font-medium text-encre">Me {p.membre?.nom ?? "—"}</div>
-          <div className="text-[11px] text-gris">N° {p.membre?.num ?? "—"} · {p.membre?.qualite ?? ""}</div>
+          <div className="text-xs text-gris">N° {p.membre?.num ?? "—"} · {p.membre?.qualite ?? ""}</div>
         </div>
       ) },
     { key: "type", label: "Pièce", sortable: true, sortValue: (p) => TYPE_LABEL[p.type] ?? p.type,
       cell: (p) => (
         <div className="min-w-0">
           <div className="text-sm text-encre">{TYPE_LABEL[p.type] ?? p.type}</div>
-          <div className="truncate text-[11px] text-gris">{p.nomFichier} · {tailleLisible(p.taille)}</div>
-          {p.statut === "REJETEE" && p.note && <div className="truncate text-[11px] text-rouge">Motif : {p.note}</div>}
+          <div className="truncate text-xs text-gris">{p.nomFichier} · {tailleLisible(p.taille)}</div>
+          {p.statut === "REJETEE" && p.note && <div className="truncate text-xs text-rouge">Motif : {p.note}</div>}
         </div>
       ) },
     { key: "createdAt", label: "Déposée", sortable: true, sortValue: (p) => p.createdAt,
@@ -129,7 +129,7 @@ export function Pieces() {
               className={`rounded-full px-3 py-1.5 text-[12.5px] font-medium transition ${filtre === f.cle ? "bg-navy text-white" : "bg-grisL text-gris hover:bg-grisM/30"}`}
             >
               {f.label}
-              <span className={`ml-1.5 rounded-full px-1.5 text-[10px] ${filtre === f.cle ? "bg-white/20" : "bg-white text-gris"}`}>{compte[f.cle] ?? 0}</span>
+              <span className={`ml-1.5 rounded-full px-1.5 text-2xs ${filtre === f.cle ? "bg-white/20" : "bg-white text-gris"}`}>{compte[f.cle] ?? 0}</span>
             </button>
           ))}
         </div>

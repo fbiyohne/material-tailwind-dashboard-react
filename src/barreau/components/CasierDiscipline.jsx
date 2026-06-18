@@ -39,7 +39,7 @@ export function CasierDiscipline({ membreId }) {
               <Badge ton={m.ton} dot={false}>{m.label}</Badge>
             </div>
             <div className="mt-0.5 text-sm text-encre">{d.objet}</div>
-            <div className="text-[11px] text-gris">
+            <div className="text-xs text-gris">
               Saisine {formatDate(d.dateSaisine)}
               {d.rapporteur ? ` · Rapporteur : ${d.rapporteur}` : ""}
               {d.sanction ? ` · Sanction : ${d.sanction}` : ""}

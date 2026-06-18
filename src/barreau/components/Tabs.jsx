@@ -65,7 +65,7 @@ export function Tabs({ tabs, defaultTab, className = "", ariaLabel = "Sections" 
               {Icon && <Icon className="h-4 w-4" />}
               {t.label}
               {t.badge != null && (
-                <span className="ml-0.5 rounded-full bg-grisL px-1.5 py-0.5 text-[11px] font-semibold text-gris">
+                <span className="ml-0.5 rounded-full bg-grisL px-1.5 py-0.5 text-xs font-semibold text-gris">
                   {t.badge}
                 </span>
               )}

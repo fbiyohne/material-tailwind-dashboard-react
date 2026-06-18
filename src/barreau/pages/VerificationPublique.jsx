@@ -30,7 +30,7 @@ export function VerificationPublique({ type, numero }) {
       <div className="mb-6 flex flex-col items-center text-center">
         <Sceau size={72} />
         <h1 className="mt-3 font-display text-xl text-white">Barreau de Pointe-Noire</h1>
-        <p className="text-[12px] uppercase tracking-[0.2em] text-or">Vérification d'authenticité</p>
+        <p className="text-xs uppercase tracking-[0.2em] text-or">Vérification d'authenticité</p>
       </div>
 
       <div className="w-full max-w-md overflow-hidden rounded-xl bg-white text-encre shadow-modal">
@@ -58,7 +58,7 @@ export function VerificationPublique({ type, numero }) {
               <Ligne label="Date de délivrance" valeur={formatDate(d.date)} />
               {d.empreinteCle && <Ligne label="Empreinte du signataire" valeur={d.empreinteCle} mono />}
             </dl>
-            <p className="border-t border-grisL px-6 py-3 text-center text-[11px] text-gris">
+            <p className="border-t border-grisL px-6 py-3 text-center text-xs text-gris">
               Signature électronique RSA-2048 / SHA-256 de l'Ordre des Avocats au Barreau de Pointe-Noire.
             </p>
           </>
@@ -79,7 +79,7 @@ export function VerificationPublique({ type, numero }) {
         )}
       </div>
 
-      <a href="/" className="mt-6 text-[12px] text-white/50 transition hover:text-white/80">Accéder à l'application</a>
+      <a href="/" className="mt-6 text-xs text-white/50 transition hover:text-white/80">Accéder à l'application</a>
     </main>
   );
 }

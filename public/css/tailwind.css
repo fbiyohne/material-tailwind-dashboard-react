@@ -64,7 +64,7 @@
 @layer components {
   /* ─── Eyebrow / titres de section ─────────────────────────── */
   .bpn-eyebrow {
-    @apply flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-[0.4em] text-or;
+    @apply flex items-center gap-2.5 text-2xs font-semibold uppercase tracking-[0.4em] text-or;
   }
   .bpn-eyebrow::before {
     content: "";
@@ -176,7 +176,7 @@
     @apply border-rouge focus:border-rouge focus:shadow-[0_0_0_3px_rgba(139,26,26,0.12)];
   }
   .bpn-label {
-    @apply text-[11px] font-medium uppercase tracking-wide text-gris;
+    @apply text-xs font-medium uppercase tracking-wide text-gris;
   }
 
   /* Champ de formulaire sur fond sombre (panneau navy du module Reçus) */

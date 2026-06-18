@@ -10,7 +10,7 @@ const fmtDateFr = (d) =>
 function FiletOr({ className = "w-64" }) {
   return (
     <div className={`relative mx-auto my-3 h-px bg-or ${className}`}>
-      <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] leading-none text-or">◆</span>
+      <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-2xs leading-none text-or">◆</span>
     </div>
   );
 }
@@ -63,7 +63,7 @@ export function QuitusDocument({ numero, membre, exercice, date }) {
   const verifUrl = `${origin}/verifier/quitus/${encodeURIComponent(numero)}`;
   const verifHost = origin.replace(/^https?:\/\//, "");
   return (
-    <div className="bpn-print-zone relative mx-auto flex w-[820px] min-h-[1160px] flex-col overflow-hidden border-2 border-or bg-white font-serif text-[13px] text-encre">
+    <div className="bpn-print-zone relative mx-auto flex w-[820px] min-h-[1160px] flex-col overflow-hidden border-2 border-or bg-white font-serif text-xs text-encre">
       {/* Double bordure intérieure */}
       <div className="pointer-events-none absolute inset-[7px] border border-or/60" />
 
@@ -84,8 +84,8 @@ export function QuitusDocument({ numero, membre, exercice, date }) {
           <div className="flex-1 text-center">
             <h1 className="font-display text-[26px] font-bold leading-tight text-navy">BARREAU DE POINTE-NOIRE</h1>
             <FiletOr className="w-60" />
-            <h2 className="text-[12px] font-semibold uppercase tracking-wide text-encre">Ordre des Avocats au Barreau de Pointe-Noire</h2>
-            <p className="mt-1 text-[12px] italic text-gris">Défendre • Conseiller • Servir la Justice</p>
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-encre">Ordre des Avocats au Barreau de Pointe-Noire</h2>
+            <p className="mt-1 text-xs italic text-gris">Défendre • Conseiller • Servir la Justice</p>
           </div>
         </div>
 
@@ -97,17 +97,17 @@ export function QuitusDocument({ numero, membre, exercice, date }) {
         </div>
 
         {/* N° + lieu/date */}
-        <div className="mt-6 flex justify-between text-[14px] font-mono text-navy">
+        <div className="mt-6 flex justify-between text-sm font-mono text-navy">
           <span>N° {numero}</span>
           <span>Pointe-Noire, le {fmtDateFr(date)}</span>
         </div>
 
         {/* Corps */}
         <div className="mt-6">
-          <h5 className="text-center text-[16px] font-bold uppercase leading-snug text-encre">
+          <h5 className="text-center text-base font-bold uppercase leading-snug text-encre">
             Le Bâtonnier de l'Ordre des Avocats<br />au Barreau de Pointe-Noire
           </h5>
-          <p className="mt-4 text-center text-[15px] italic text-encre">
+          <p className="mt-4 text-center text-sm italic text-encre">
             Atteste qu'après vérification des écritures de l'Ordre, Maître :
           </p>
 
@@ -119,11 +119,11 @@ export function QuitusDocument({ numero, membre, exercice, date }) {
           </div>
 
           <div className="mt-5 text-center leading-7">
-            <p className="text-[17px] font-bold text-encre">est à jour de toutes ses cotisations, contributions et redevances</p>
-            <p className="text-[15px] text-encre">envers l'Ordre des Avocats au Barreau de Pointe-Noire, au titre de l'exercice {exercice}.</p>
+            <p className="text-base font-bold text-encre">est à jour de toutes ses cotisations, contributions et redevances</p>
+            <p className="text-sm text-encre">envers l'Ordre des Avocats au Barreau de Pointe-Noire, au titre de l'exercice {exercice}.</p>
           </div>
 
-          <p className="mt-5 text-center text-[15px] text-encre">
+          <p className="mt-5 text-center text-sm text-encre">
             En foi de quoi, le présent quitus lui est délivré pour servir et valoir ce que de droit.
           </p>
         </div>
@@ -134,44 +134,44 @@ export function QuitusDocument({ numero, membre, exercice, date }) {
             <CalendarDaysIcon className="h-6 w-6" />
           </div>
           <div>
-            <h6 className="text-[14px] font-bold uppercase tracking-wide text-navy">Validité du présent quitus</h6>
-            <p className="mt-0.5 text-[13px] text-gris">Le présent quitus est valable pour une durée de trois (03) mois à compter de sa date de délivrance.</p>
+            <h6 className="text-sm font-bold uppercase tracking-wide text-navy">Validité du présent quitus</h6>
+            <p className="mt-0.5 text-xs text-gris">Le présent quitus est valable pour une durée de trois (03) mois à compter de sa date de délivrance.</p>
           </div>
         </div>
 
         {/* Signatures + cachet */}
         <div className="mt-6 flex items-end justify-between">
           <div className="text-center">
-            <p className="text-[13px] font-semibold text-encre">Le Trésorier de l'Ordre</p>
+            <p className="text-xs font-semibold text-encre">Le Trésorier de l'Ordre</p>
             <div className="mt-9 w-52 border-t border-dotted border-gris" />
-            <p className="mt-1 text-[12px] text-gris">Me ONDZE BOYA</p>
+            <p className="mt-1 text-xs text-gris">Me ONDZE BOYA</p>
           </div>
           <CachetBatonnier />
           <div className="text-center">
-            <p className="text-[13px] font-semibold text-encre">Le Bâtonnier</p>
+            <p className="text-xs font-semibold text-encre">Le Bâtonnier</p>
             <div className="mt-9 w-52 border-t border-dotted border-gris" />
-            <p className="mt-1 text-[12px] text-gris">Me BIKINDOU Audrey Séverin</p>
+            <p className="mt-1 text-xs text-gris">Me BIKINDOU Audrey Séverin</p>
           </div>
         </div>
 
         {/* Vérification d'authenticité (QR) */}
         <div className="mt-5 flex items-center gap-4 border-t border-grisM pt-3">
           <QRCode value={verifUrl} size={78} />
-          <div className="text-[11px] leading-relaxed text-gris">
-            <div className="text-[12px] font-semibold uppercase tracking-wide text-navy">Vérification d'authenticité</div>
+          <div className="text-xs leading-relaxed text-gris">
+            <div className="text-xs font-semibold uppercase tracking-wide text-navy">Vérification d'authenticité</div>
             Scannez ce code, ou rendez-vous sur :<br />
             <span className="font-mono text-navy">{verifHost}/verifier/quitus/{numero}</span>
           </div>
         </div>
 
         {/* Mention */}
-        <p className="mt-5 text-center text-[11px] italic text-gris">
+        <p className="mt-5 text-center text-xs italic text-gris">
           Ce document est strictement personnel et ne peut être utilisé à d'autres fins que celles pour lesquelles il est délivré.
         </p>
       </div>
 
       {/* Bandeau de contact (pied) */}
-      <div className="grid grid-cols-3 gap-4 bg-navy-2 px-10 py-4 text-[11px] leading-relaxed text-white/90">
+      <div className="grid grid-cols-3 gap-4 bg-navy-2 px-10 py-4 text-xs leading-relaxed text-white/90">
         <div>
           <span className="font-semibold text-or">Adresse</span><br />
           Immeuble du Barreau, Avenue Charles de Gaulle<br />Pointe-Noire — République du Congo

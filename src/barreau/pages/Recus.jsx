@@ -135,7 +135,7 @@ export function Recus() {
             <Champ label="Montant (FCFA)">
               <input type="number" value={montant} min={0} step={25000} onChange={(e) => setMontant(e.target.value)} className="bpn-input-dark" />
             </Champ>
-            <div className="rounded bg-white/5 px-3 py-2 text-[11px] italic text-or-2 first-letter:uppercase">
+            <div className="rounded bg-white/5 px-3 py-2 text-xs italic text-or-2 first-letter:uppercase">
               {montant > 0 ? montantEnLettresFCFA(montant) : "—"}
             </div>
             <div className="grid grid-cols-2 gap-3">

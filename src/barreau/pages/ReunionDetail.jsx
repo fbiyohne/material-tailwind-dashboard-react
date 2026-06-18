@@ -208,7 +208,7 @@ export function ReunionDetail() {
         signataire={{ role: "Le Secrétaire Général", nom: "Me KALINA-MENGA Lionel" }}
         onArchive={() => archiverDoc({ categorie: "Feuille de présence", titre: `Feuille de présence du ${dateCourte}`, reference: dateCourte, date: dateCourte })}
       >
-        <table className="w-full text-[12px]">
+        <table className="w-full text-xs">
           <thead><tr className="border-b border-navy text-left text-navy"><th className="py-1">Membre</th><th className="py-1 text-right">Émargement</th></tr></thead>
           <tbody>{[...membresConseil, "", "", ""].map((nom, i) => <tr key={i} className="border-b border-grisM"><td className="py-3">{nom}</td><td /></tr>)}</tbody>
         </table>

@@ -11,8 +11,8 @@ export function Field({ id, label, icon: Icon, error, hint, trailing, as = "inpu
   return (
     <div>
       <div className="mb-1.5 flex items-baseline justify-between">
-        <label htmlFor={id} className="text-[10px] font-medium uppercase tracking-[0.18em] text-white/45">{label}</label>
-        {hint && <span id={`${id}-hint`} className="text-[10px] lowercase tracking-normal text-white/30">{hint}</span>}
+        <label htmlFor={id} className="text-2xs font-medium uppercase tracking-[0.18em] text-white/45">{label}</label>
+        {hint && <span id={`${id}-hint`} className="text-2xs lowercase tracking-normal text-white/30">{hint}</span>}
       </div>
       <div className="relative">
         {Icon && as === "input" && (
@@ -30,7 +30,7 @@ export function Field({ id, label, icon: Icon, error, hint, trailing, as = "inpu
         {trailing && <div className="absolute right-1.5 top-1/2 -translate-y-1/2">{trailing}</div>}
       </div>
       {error && (
-        <p id={`${id}-err`} role="alert" className="mt-1.5 text-[11px] text-[#e7a39f]">{error}</p>
+        <p id={`${id}-err`} role="alert" className="mt-1.5 text-xs text-[#e7a39f]">{error}</p>
       )}
     </div>
   );

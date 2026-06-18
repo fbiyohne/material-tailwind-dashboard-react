@@ -21,10 +21,10 @@ export function DocumentChrome({
   return (
     <div className="bpn-print-zone overflow-hidden rounded border border-grisM bg-white">
       <div className="bg-navy px-5 py-3">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-or">
+        <div className="text-2xs font-semibold uppercase tracking-[0.15em] text-or">
           Barreau de Pointe-Noire
         </div>
-        <div className="text-[9px] text-white/60">
+        <div className="text-2xs text-white/60">
           Ordre National des Avocats du Congo · {org}
         </div>
       </div>
@@ -39,7 +39,7 @@ export function DocumentChrome({
         <div className="mt-8 flex items-end justify-between gap-4">
           <div className="flex items-end gap-3">
             <Sceau size={80} />
-            <div className="pb-1 text-[11px] leading-snug text-gris">
+            <div className="pb-1 text-xs leading-snug text-gris">
               Fait à Pointe-Noire,
               <br />
               le {fmtDate(date)}
@@ -48,15 +48,15 @@ export function DocumentChrome({
           <div className="flex gap-8">
             {signataires.map((s) => (
               <div key={s.role} className="text-right">
-                <div className="mb-6 text-[10px] uppercase tracking-wide text-gris">{s.role}</div>
-                <div className="border-t border-grisM pt-1 text-[11px] font-medium text-navy">{s.nom}</div>
+                <div className="mb-6 text-2xs uppercase tracking-wide text-gris">{s.role}</div>
+                <div className="border-t border-grisM pt-1 text-xs font-medium text-navy">{s.nom}</div>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      <div className="border-t border-grisM px-8 py-2 text-center text-[8px] uppercase tracking-[0.18em] text-gris">
+      <div className="border-t border-grisM px-8 py-2 text-center text-2xs uppercase tracking-[0.18em] text-gris">
         Document officiel · Ordre National des Avocats du Congo · Barreau de Pointe-Noire
       </div>
     </div>

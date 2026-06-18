@@ -120,7 +120,7 @@ export function Publications() {
                     <Badge ton={meta.ton}>{meta.label}</Badge>
                   </div>
                   <p className="mt-2 text-sm text-gris">{p.contenu}</p>
-                  <div className="mt-1 font-mono text-[11px] text-gris">{formatDate(p.date)}</div>
+                  <div className="mt-1 font-mono text-xs text-gris">{formatDate(p.date)}</div>
                 </div>
                 <div className="flex shrink-0 gap-1.5">
                   {p.statut === "a_valider" && (

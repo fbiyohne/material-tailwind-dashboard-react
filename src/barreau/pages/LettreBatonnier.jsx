@@ -123,7 +123,7 @@ export function LettreBatonnier() {
                 <Badge ton={meta.ton}>{meta.label}</Badge>
               </div>
               <p className="mt-2 min-h-[2.5rem] text-sm text-gris">
-                <span className="text-[11px] uppercase tracking-wide text-or">Thème</span>
+                <span className="text-xs uppercase tracking-wide text-or">Thème</span>
                 <br />
                 {c.theme}
               </p>
@@ -179,7 +179,7 @@ export function LettreBatonnier() {
           className="bpn-input w-full resize-y font-sans text-sm leading-7"
           aria-label={`Contenu de la lettre — ${apercu?.mois ?? ""}`}
         />
-        <div className="mt-1 text-right text-[11px] text-gris">{brouillon.length} caractères</div>
+        <div className="mt-1 text-right text-xs text-gris">{brouillon.length} caractères</div>
       </Modal>
     </div>
   );

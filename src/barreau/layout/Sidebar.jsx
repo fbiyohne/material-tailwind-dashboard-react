@@ -95,13 +95,13 @@ export function Sidebar({ open, onClose }) {
             <ScaleIcon className="h-5 w-5 text-or-2" />
           </div>
           <div className="min-w-0">
-            <div className="mb-0.5 text-[9px] font-medium uppercase tracking-[0.24em] text-or/80">
+            <div className="mb-0.5 text-2xs font-medium uppercase tracking-[0.24em] text-or/80">
               République du Congo
             </div>
-            <div className="font-display text-[15px] font-semibold leading-[1.15] text-white">
+            <div className="font-display text-sm font-semibold leading-[1.15] text-white">
               Barreau de Pointe-Noire
             </div>
-            <div className="mt-0.5 text-[11px] tracking-wide text-white/45">Secrétariat Général</div>
+            <div className="mt-0.5 text-xs tracking-wide text-white/45">Secrétariat Général</div>
           </div>
 
           <button
@@ -118,7 +118,7 @@ export function Sidebar({ open, onClose }) {
         <nav className="flex-1 overflow-y-auto py-3" aria-label="Navigation principale">
           {sections.map((section) => (
             <div key={section.label} className="px-2">
-              <div className="px-3 pb-1.5 pt-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-or/60">
+              <div className="px-3 pb-1.5 pt-4 text-2xs font-semibold uppercase tracking-[0.18em] text-or/60">
                 {section.label}
               </div>
               {section.items.map((item) => {
@@ -152,7 +152,7 @@ export function Sidebar({ open, onClose }) {
                         />
                         <span className="truncate">{item.name}</span>
                         {badges[item.path] > 0 && (
-                          <span className="ml-auto flex h-[19px] min-w-[19px] items-center justify-center rounded-full bg-rouge px-1 text-[10px] font-semibold text-white">
+                          <span className="ml-auto flex h-[19px] min-w-[19px] items-center justify-center rounded-full bg-rouge px-1 text-2xs font-semibold text-white">
                             {badges[item.path]}
                           </span>
                         )}
@@ -178,8 +178,8 @@ export function Sidebar({ open, onClose }) {
                 {initiales(user?.nom)}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="truncate text-[13px] font-medium text-white/90">{user?.nom}</div>
-                <div className="text-[10px] uppercase tracking-[0.12em] text-or/70">
+                <div className="truncate text-xs font-medium text-white/90">{user?.nom}</div>
+                <div className="text-2xs uppercase tracking-[0.12em] text-or/70">
                   {ROLE_LABEL[user?.role] ?? user?.role}
                 </div>
               </div>

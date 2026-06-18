@@ -132,7 +132,7 @@ export function DossierDetail() {
                       className="bpn-input flex-1" placeholder="Référence ou intitulé de la pièce…" />
                     <button type="button" className="bpn-btn bpn-btn-ghost shrink-0" onClick={ajouterPiece}><PlusIcon className="h-4 w-4" /> Ajouter</button>
                   </div>
-                  <p className="mt-2 text-[11px] text-gris">Pensez à « Enregistrer le dossier » pour conserver les pièces.</p>
+                  <p className="mt-2 text-xs text-gris">Pensez à « Enregistrer le dossier » pour conserver les pièces.</p>
                 </div>
               </div>
             ),
@@ -194,7 +194,7 @@ export function DossierDetail() {
           Barreau de Pointe-Noire{form.dateAudience ? <>, le <strong>{formatDate(form.dateAudience)}</strong></> : null}.
         </p>
         <p className="mt-3">Objet : {dossier.objet}.</p>
-        <p className="mt-3 text-[12px] text-gris">L'intéressé(e) pourra se faire assister du conseil de son choix.</p>
+        <p className="mt-3 text-xs text-gris">L'intéressé(e) pourra se faire assister du conseil de son choix.</p>
       </DocumentModal>
     </div>
   );

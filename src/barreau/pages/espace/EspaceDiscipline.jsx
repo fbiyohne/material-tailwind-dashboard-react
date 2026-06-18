@@ -9,7 +9,7 @@ function Ligne({ label, valeur }) {
   if (!valeur) return null;
   return (
     <div className="flex gap-2 text-sm">
-      <span className="w-32 shrink-0 text-[11px] font-semibold uppercase tracking-wider text-gris">{label}</span>
+      <span className="w-32 shrink-0 text-xs font-semibold uppercase tracking-wider text-gris">{label}</span>
       <span className="text-encre">{valeur}</span>
     </div>
   );
