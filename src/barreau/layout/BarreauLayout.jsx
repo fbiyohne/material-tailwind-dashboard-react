@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { Routes, Route, useLocation, Navigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
@@ -47,21 +47,24 @@ export function BarreauLayout() {
         />
 
         <main ref={mainRef} id="contenu-principal" tabIndex={-1} className="mx-auto max-w-container px-4 py-6 outline-none md:px-8 md:py-8">
-          <Routes>
-            {allModules.map(({ path, element, roles }) => (
-              <Route
-                key={path}
-                path={path}
-                element={
-                  aAcces({ roles }, role) ? element : <Navigate to="/" replace />
-                }
-              />
-            ))}
-            {detailRoutes.map(({ path, element }) => (
-              <Route key={path} path={path} element={element} />
-            ))}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          {/* Suspense : les pages sont chargées à la demande (code-splitting par route). */}
+          <Suspense fallback={<div className="py-16 text-center text-sm text-gris">Chargement…</div>}>
+            <Routes>
+              {allModules.map(({ path, element, roles }) => (
+                <Route
+                  key={path}
+                  path={path}
+                  element={
+                    aAcces({ roles }, role) ? element : <Navigate to="/" replace />
+                  }
+                />
+              ))}
+              {detailRoutes.map(({ path, element }) => (
+                <Route key={path} path={path} element={element} />
+              ))}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
         </main>
       </div>
 

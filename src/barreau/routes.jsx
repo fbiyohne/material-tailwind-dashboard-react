@@ -21,36 +21,37 @@ import {
   ClipboardDocumentListIcon,
   HandRaisedIcon,
 } from "@heroicons/react/24/outline";
+import { lazy } from "react";
 
-import Dashboard from "./pages/Dashboard";
-import Cotisations from "./pages/Cotisations";
-import Recus from "./pages/Recus";
-import Quitus from "./pages/Quitus";
-import Avocats from "./pages/Avocats";
-import Stagiaires from "./pages/Stagiaires";
-import Pieces from "./pages/Pieces";
-import TableauOrdre from "./pages/TableauOrdre";
-import CorpsElectoral from "./pages/CorpsElectoral";
-import Elections from "./pages/Elections";
-import Conseil from "./pages/Conseil";
-import Reunions from "./pages/Reunions";
-import Assemblees from "./pages/Assemblees";
-import Discipline from "./pages/Discipline";
-import DroitsPlaidoirie from "./pages/DroitsPlaidoirie";
-import Archives from "./pages/Archives";
-import Annuaire from "./pages/Annuaire";
-import Publications from "./pages/Publications";
-import LettreBatonnier from "./pages/LettreBatonnier";
-import Parametres from "./pages/Parametres";
-import Utilisateurs from "./pages/Utilisateurs";
-import JournalAudit from "./pages/JournalAudit";
-import Messagerie from "./pages/Messagerie";
-import Profil from "./pages/Profil";
-import AvocatDetail from "./pages/AvocatDetail";
-import DossierDetail from "./pages/DossierDetail";
-import ReunionDetail from "./pages/ReunionDetail";
-import AssembleeDetail from "./pages/AssembleeDetail";
-import PublicationDetail from "./pages/PublicationDetail";
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Cotisations = lazy(() => import("./pages/Cotisations"));
+const Recus = lazy(() => import("./pages/Recus"));
+const Quitus = lazy(() => import("./pages/Quitus"));
+const Avocats = lazy(() => import("./pages/Avocats"));
+const Stagiaires = lazy(() => import("./pages/Stagiaires"));
+const Pieces = lazy(() => import("./pages/Pieces"));
+const TableauOrdre = lazy(() => import("./pages/TableauOrdre"));
+const CorpsElectoral = lazy(() => import("./pages/CorpsElectoral"));
+const Elections = lazy(() => import("./pages/Elections"));
+const Conseil = lazy(() => import("./pages/Conseil"));
+const Reunions = lazy(() => import("./pages/Reunions"));
+const Assemblees = lazy(() => import("./pages/Assemblees"));
+const Discipline = lazy(() => import("./pages/Discipline"));
+const DroitsPlaidoirie = lazy(() => import("./pages/DroitsPlaidoirie"));
+const Archives = lazy(() => import("./pages/Archives"));
+const Annuaire = lazy(() => import("./pages/Annuaire"));
+const Publications = lazy(() => import("./pages/Publications"));
+const LettreBatonnier = lazy(() => import("./pages/LettreBatonnier"));
+const Parametres = lazy(() => import("./pages/Parametres"));
+const Utilisateurs = lazy(() => import("./pages/Utilisateurs"));
+const JournalAudit = lazy(() => import("./pages/JournalAudit"));
+const Messagerie = lazy(() => import("./pages/Messagerie"));
+const Profil = lazy(() => import("./pages/Profil"));
+const AvocatDetail = lazy(() => import("./pages/AvocatDetail"));
+const DossierDetail = lazy(() => import("./pages/DossierDetail"));
+const ReunionDetail = lazy(() => import("./pages/ReunionDetail"));
+const AssembleeDetail = lazy(() => import("./pages/AssembleeDetail"));
+const PublicationDetail = lazy(() => import("./pages/PublicationDetail"));
 
 // Groupes de rôles (RBAC). Un item sans `roles` est visible par tous.
 const INSTITUTIONNEL = ["SECRETAIRE_GENERAL", "BATONNIER", "ADMIN"]; // hors finances (RG-15)

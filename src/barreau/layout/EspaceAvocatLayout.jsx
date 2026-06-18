@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Routes, Route, Navigate, NavLink, useLocation } from "react-router-dom";
 import {
   ArrowRightOnRectangleIcon, HomeIcon, FolderIcon, BookOpenIcon,
@@ -9,15 +9,15 @@ import { useAuth } from "../auth/AuthContext";
 import { useFocusAuChangementDeRoute } from "../hooks/useFocusAuChangementDeRoute";
 import { getEspaceMessagerieNonLus } from "../api/resources";
 import { onRealtime } from "../api/realtime";
-import MaSituation from "../pages/espace/MaSituation";
-import MesDocuments from "../pages/espace/MesDocuments";
-import EspaceAnnuaire from "../pages/espace/EspaceAnnuaire";
-import EspaceAssemblees from "../pages/espace/EspaceAssemblees";
-import EspacePublications from "../pages/espace/EspacePublications";
-import EspaceArchives from "../pages/espace/EspaceArchives";
-import EspaceDiscipline from "../pages/espace/EspaceDiscipline";
-import EspaceMessagerie from "../pages/espace/EspaceMessagerie";
-import EspaceScrutins from "../pages/espace/EspaceScrutins";
+const MaSituation = lazy(() => import("../pages/espace/MaSituation"));
+const MesDocuments = lazy(() => import("../pages/espace/MesDocuments"));
+const EspaceAnnuaire = lazy(() => import("../pages/espace/EspaceAnnuaire"));
+const EspaceAssemblees = lazy(() => import("../pages/espace/EspaceAssemblees"));
+const EspacePublications = lazy(() => import("../pages/espace/EspacePublications"));
+const EspaceArchives = lazy(() => import("../pages/espace/EspaceArchives"));
+const EspaceDiscipline = lazy(() => import("../pages/espace/EspaceDiscipline"));
+const EspaceMessagerie = lazy(() => import("../pages/espace/EspaceMessagerie"));
+const EspaceScrutins = lazy(() => import("../pages/espace/EspaceScrutins"));
 
 const NAV = [
   { to: "/", label: "Ma situation", icon: HomeIcon, end: true },
@@ -96,18 +96,21 @@ export function EspaceAvocatLayout() {
       </header>
 
       <main ref={mainRef} id="contenu-principal" tabIndex={-1} className="mx-auto max-w-container px-4 py-6 outline-none md:px-8 md:py-8">
-        <Routes>
-          <Route path="/" element={<MaSituation />} />
-          <Route path="/documents" element={<MesDocuments />} />
-          <Route path="/messagerie" element={<EspaceMessagerie />} />
-          <Route path="/annuaire" element={<EspaceAnnuaire />} />
-          <Route path="/assemblees" element={<EspaceAssemblees />} />
-          <Route path="/elections" element={<EspaceScrutins />} />
-          <Route path="/publications" element={<EspacePublications />} />
-          <Route path="/archives" element={<EspaceArchives />} />
-          <Route path="/discipline" element={<EspaceDiscipline />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        {/* Suspense : pages de l'espace chargées à la demande (code-splitting). */}
+        <Suspense fallback={<div className="py-16 text-center text-sm text-gris">Chargement…</div>}>
+          <Routes>
+            <Route path="/" element={<MaSituation />} />
+            <Route path="/documents" element={<MesDocuments />} />
+            <Route path="/messagerie" element={<EspaceMessagerie />} />
+            <Route path="/annuaire" element={<EspaceAnnuaire />} />
+            <Route path="/assemblees" element={<EspaceAssemblees />} />
+            <Route path="/elections" element={<EspaceScrutins />} />
+            <Route path="/publications" element={<EspacePublications />} />
+            <Route path="/archives" element={<EspaceArchives />} />
+            <Route path="/discipline" element={<EspaceDiscipline />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
       </main>
     </div>
   );

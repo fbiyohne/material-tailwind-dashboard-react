@@ -14,6 +14,18 @@ export default defineConfig({
   resolve: {
     alias: [{ find: "@", replacement: "/src" }],
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Dépendances stables isolées dans un chunk « vendor » : mis en cache
+        // par le navigateur d'un déploiement à l'autre (changent rarement) et
+        // allègent le bundle applicatif principal.
+        manualChunks: {
+          vendor: ["react", "react-dom", "react-router-dom", "@heroicons/react"],
+        },
+      },
+    },
+  },
   server: { proxy },
   preview: { proxy },
 });
