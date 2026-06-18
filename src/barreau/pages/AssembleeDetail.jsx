@@ -36,7 +36,11 @@ export function AssembleeDetail() {
 
   useEffect(() => {
     charger();
-    getCorpsElectoral(EXERCICE_COURANT).then((d) => setElecteurs(d.stats.electeurs)).catch(() => {});
+    // L'effectif du corps électoral conditionne le calcul du quorum : en cas
+    // d'échec on alerte plutôt que de laisser un quorum faussé à 0 silencieux.
+    getCorpsElectoral(EXERCICE_COURANT)
+      .then((d) => setElecteurs(d.stats.electeurs))
+      .catch(() => toast.error("Effectif du corps électoral indisponible : le quorum affiché peut être incorrect."));
   }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (assemblee === false) {

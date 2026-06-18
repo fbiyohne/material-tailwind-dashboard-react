@@ -20,6 +20,7 @@ export function JournalAudit() {
   const [data, setData] = useState(null); // { items, total, page, pageSize }
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState(false);
+  const [nonce, setNonce] = useState(0); // incrémenté pour forcer un rechargement (réessai)
 
   // Recherche/filtre avec léger debounce ; tout changement de filtre revient en page 1.
   useEffect(() => {
@@ -32,7 +33,7 @@ export function JournalAudit() {
         .finally(() => setChargement(false));
     }, 250);
     return () => clearTimeout(t);
-  }, [q, from, to, page]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [q, from, to, page, nonce]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const resetPage = (setter) => (e) => { setter(e.target.value); setPage(1); };
 
@@ -60,7 +61,7 @@ export function JournalAudit() {
         {chargement ? (
           <div className="p-4"><TableSkeleton rows={8} cols={4} /></div>
         ) : erreur ? (
-          <div className="p-6"><ErrorState title="Indisponible" description="Le journal d'audit n'a pas pu être chargé." onRetry={() => setPage((p) => p)} /></div>
+          <div className="p-6"><ErrorState title="Indisponible" description="Le journal d'audit n'a pas pu être chargé." onRetry={() => setNonce((n) => n + 1)} /></div>
         ) : items.length === 0 ? (
           <div className="p-6"><EmptyState icon={ShieldExclamationIcon} title="Aucune entrée" description={q || from || to ? "Aucune action ne correspond à ce filtre." : "Aucune action enregistrée."} /></div>
         ) : (

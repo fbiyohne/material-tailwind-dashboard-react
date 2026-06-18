@@ -1,18 +1,25 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { MagnifyingGlassIcon, ArrowDownTrayIcon, PrinterIcon, BookOpenIcon } from "@heroicons/react/24/outline";
-import { StatutBadge, useToast, PageHeader, DataTable } from "../components";
+import { StatutBadge, PageHeader, DataTable } from "../components";
 import { exporterExcel } from "../utils/exports";
 import { listerMembres } from "../api/resources";
 
 export function Annuaire() {
-  const toast = useToast();
   const [membres, setMembres] = useState([]);
+  const [chargement, setChargement] = useState(true);
+  const [erreur, setErreur] = useState(false);
   const [mode, setMode] = useState("public"); // public | interne
   const [recherche, setRecherche] = useState("");
 
-  useEffect(() => {
-    listerMembres().then((d) => setMembres(d.items.filter((m) => m.qualite !== "stagiaire"))).catch((e) => toast.error(e.message));
-  }, [toast]);
+  const charger = useCallback(() => {
+    setChargement(true);
+    setErreur(false);
+    listerMembres()
+      .then((d) => setMembres(d.items.filter((m) => m.qualite !== "stagiaire")))
+      .catch(() => setErreur(true))
+      .finally(() => setChargement(false));
+  }, []);
+  useEffect(() => { charger(); }, [charger]);
 
   const interne = mode === "interne";
 
@@ -72,6 +79,9 @@ export function Annuaire() {
             { key: "statut", label: "Statut", sortable: true, sortValue: (m) => m.statut, cell: (m) => <StatutBadge statut={m.statut} /> },
           ]}
           rows={lignes}
+          loading={chargement}
+          error={erreur}
+          onRetry={charger}
           paginate={false}
           emptyIcon={BookOpenIcon}
           emptyTitle={recherche ? "Aucun avocat trouvé" : "Annuaire vide"}
