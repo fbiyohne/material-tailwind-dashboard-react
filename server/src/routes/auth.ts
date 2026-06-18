@@ -23,9 +23,12 @@ authRouter.post(
   loginLimiter,
   asyncH(async (req, res) => {
     const { email, password } = loginSchema.parse(req.body);
-    // Connexion insensible à la casse (gère les comptes existants stockés en casse
-    // mixte sans migration ; les nouveaux comptes sont normalisés en minuscules).
-    const user = await prisma.user.findFirst({ where: { email: { equals: email.trim(), mode: "insensitive" } } });
+    // Connexion insensible à la casse, mais DÉTERMINISTE : on privilégie le compte
+    // canonique (email en minuscules) ; repli insensible (compte le plus ancien)
+    // pour les données héritées en casse mixte. Évite de matcher un doublon au hasard.
+    const emailNorm = email.trim().toLowerCase();
+    const user = (await prisma.user.findUnique({ where: { email: emailNorm } }))
+      ?? (await prisma.user.findFirst({ where: { email: { equals: emailNorm, mode: "insensitive" } }, orderBy: { id: "asc" } }));
     if (!user || !user.actif || !(await bcrypt.compare(password, user.passwordHash))) {
       throw new HttpError(401, "Identifiants invalides");
     }
@@ -123,8 +126,10 @@ authRouter.post(
   resetLimiter,
   asyncH(async (req, res) => {
     const { email } = forgotSchema.parse(req.body);
-    // Recherche insensible à la casse (cohérence avec la connexion).
-    const user = await prisma.user.findFirst({ where: { email: { equals: email.trim(), mode: "insensitive" } } });
+    // Recherche déterministe (cohérente avec la connexion) : exact-minuscule, puis repli insensible.
+    const emailNorm = email.trim().toLowerCase();
+    const user = (await prisma.user.findUnique({ where: { email: emailNorm } }))
+      ?? (await prisma.user.findFirst({ where: { email: { equals: emailNorm, mode: "insensitive" } }, orderBy: { id: "asc" } }));
     if (user && user.actif) {
       const token = crypto.randomBytes(32).toString("hex");
       const resetExpire = new Date(Date.now() + 3_600_000); // 1 heure

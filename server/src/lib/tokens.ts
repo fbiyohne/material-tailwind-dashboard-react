@@ -37,25 +37,30 @@ export async function emettrePaire(user: User) {
 export async function rafraichir(rawRefresh: string) {
   const stocke = await prisma.refreshToken.findUnique({ where: { tokenHash: hash(rawRefresh) }, include: { user: true } });
   if (!stocke) return null;
-  // Détection de rejeu : un refresh DÉJÀ révoqué (donc déjà tourné ou déconnecté)
-  // qui resurgit signale un jeton volé/rejoué → on révoque TOUTE la famille de
-  // l'utilisateur (invalide aussi la session courante de l'attaquant).
+  // Détection de rejeu d'un refresh DÉJÀ révoqué (déjà tourné ou déconnecté).
+  // Un rejeu QUASI IMMÉDIAT (< 30 s) est presque toujours bénin — retry réseau,
+  // double soumission, requête hors-ligne rejouée — on rejette sans punir.
+  // Un rejeu TARDIF signale un jeton volé → on révoque TOUTE la famille
+  // (invalide aussi la session de l'attaquant) sans déconnecter tous les
+  // appareils sur une simple répétition légitime.
   if (stocke.revoked) {
-    await revoquerTousLesJetons(stocke.userId);
+    const FENETRE_GRACE_MS = 30_000;
+    const rejeuRecent = stocke.revokedAt != null && Date.now() - stocke.revokedAt.getTime() < FENETRE_GRACE_MS;
+    if (!rejeuRecent) await revoquerTousLesJetons(stocke.userId);
     return null;
   }
   if (stocke.expiresAt < new Date() || !stocke.user.actif) return null;
-  // Rotation : on révoque l'ancien et on en émet un nouveau.
-  await prisma.refreshToken.update({ where: { id: stocke.id }, data: { revoked: true } });
+  // Rotation : on révoque l'ancien (horodaté) et on en émet un nouveau.
+  await prisma.refreshToken.update({ where: { id: stocke.id }, data: { revoked: true, revokedAt: new Date() } });
   return emettrePaire(stocke.user);
 }
 
 /** Révoque un refresh token (déconnexion). */
 export async function revoquer(rawRefresh: string) {
-  await prisma.refreshToken.updateMany({ where: { tokenHash: hash(rawRefresh) }, data: { revoked: true } });
+  await prisma.refreshToken.updateMany({ where: { tokenHash: hash(rawRefresh) }, data: { revoked: true, revokedAt: new Date() } });
 }
 
 /** Révoque tous les refresh tokens d'un utilisateur (reset de mot de passe, désactivation). */
 export async function revoquerTousLesJetons(userId: number) {
-  await prisma.refreshToken.updateMany({ where: { userId, revoked: false }, data: { revoked: true } });
+  await prisma.refreshToken.updateMany({ where: { userId, revoked: false }, data: { revoked: true, revokedAt: new Date() } });
 }

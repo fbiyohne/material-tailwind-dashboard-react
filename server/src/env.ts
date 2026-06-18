@@ -9,17 +9,14 @@ function requis(nom: string, defaut?: string): string {
 const nodeEnv = process.env.NODE_ENV ?? "development";
 
 /**
- * Nombre de sauts de proxy de confiance (ou booléen) pour `trust proxy`.
- * Défaut 1 (un reverse-proxy). À régler selon la topologie de déploiement
- * (ex. « 2 » derrière LB + nginx) pour fiabiliser le rate-limiting par IP.
+ * NOMBRE de sauts de proxy de confiance pour `trust proxy` (défaut 1, un
+ * reverse-proxy ; « 2 » derrière LB + nginx). On n'accepte QUE des entiers :
+ * `trust proxy: true` ferait planter express-rate-limit v8
+ * (ERR_ERL_PERMISSIVE_TRUST_PROXY) à la première requête sur un endpoint limité.
  */
-function trustProxy(): number | boolean {
-  const v = process.env.TRUST_PROXY;
-  if (v === undefined || v === "") return 1;
-  if (v === "true") return true;
-  if (v === "false") return false;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : 1;
+function trustProxy(): number {
+  const n = Number(process.env.TRUST_PROXY ?? "1");
+  return Number.isInteger(n) && n >= 0 ? n : 1;
 }
 
 /**

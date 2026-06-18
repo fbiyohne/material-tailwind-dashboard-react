@@ -85,6 +85,9 @@ model RefreshToken {
   userId    Int
   expiresAt DateTime
   revoked   Boolean  @default(false)
+  // Horodatage de révocation : un rejeu juste après rotation est probablement
+  // bénin (retry réseau) ; un rejeu tardif signale un vol (révocation de la famille).
+  revokedAt DateTime?
   createdAt DateTime @default(now())
 }
 

@@ -81,7 +81,11 @@ async function nouvellePage() {
   await page.setRequestInterception(true);
   page.on("request", (req) => {
     const url = req.url();
-    if (url.startsWith("data:") || req.isNavigationRequest()) return void req.continue();
+    // Schémas non réseau (bootstrap de setContent : about:blank, data:, blob:) — OK.
+    if (!/^https?:/i.test(url)) return void req.continue();
+    // http(s) : seules les polices Google sont autorisées. Tout autre accès réseau
+    // est bloqué, qu'il s'agisse d'une sous-ressource OU d'une navigation injectée
+    // (<meta http-equiv=refresh>, iframe navigant vers un hôte externe) — pas de SSRF.
     try {
       if (HOTES_AUTORISES.has(new URL(url).hostname)) return void req.continue();
     } catch { /* URL non standard : on bloque */ }
