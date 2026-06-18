@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useToast } from "../components";
+import { useToast, FormField } from "../components";
+import { formatFCFA } from "../utils/format";
 import { installer, testerEmailInstallation } from "../api/resources";
 
 const ETAPES = ["Bienvenue", "Administrateur", "Institution", "Tarifs & exercice", "Email", "Récapitulatif"];
@@ -13,14 +14,6 @@ const IDENTITE_DEFAUT = {
 const TARIFS_DEFAUT = { avocat: 150000, stagiaire: 75000, droitsPlaidoirie: 60000 };
 // Pré-réglages Gmail (mot de passe d'application requis — pas le mot de passe du compte).
 const SMTP_DEFAUT = { host: "smtp.gmail.com", port: 587, user: "", pass: "", from: "", secure: false };
-
-const Champ = ({ label, children, hint }) => (
-  <label className="block">
-    <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-gris">{label}</span>
-    {children}
-    {hint && <span className="mt-1 block text-[11px] text-gris">{hint}</span>}
-  </label>
-);
 
 export function Installation() {
   const toast = useToast();
@@ -39,6 +32,12 @@ export function Installation() {
   const setI = (k) => (e) => setIdentite({ ...identite, [k]: e.target.value });
   const setT = (k) => (e) => setTarifs({ ...tarifs, [k]: Number(String(e.target.value).replace(/\D/g, "")) || 0 });
   const setS = (k) => (e) => setSmtp({ ...smtp, [k]: k === "port" ? Number(e.target.value) || 0 : e.target.value });
+
+  // Erreurs par champ (n'apparaissent qu'une fois le champ touché) : guident la
+  // saisie plutôt que de se contenter de désactiver « Suivant » silencieusement.
+  const emailErr = admin.email && !/\S+@\S+\.\S+/.test(admin.email) ? "Adresse email invalide." : undefined;
+  const mdpErr = admin.motDePasse && admin.motDePasse.length < 8 ? "8 caractères minimum." : undefined;
+  const confirmeErr = admin.confirme && admin.confirme !== admin.motDePasse ? "Les mots de passe ne correspondent pas." : undefined;
 
   const adminValide = Boolean(admin.nom.trim() && /\S+@\S+\.\S+/.test(admin.email) && admin.motDePasse.length >= 8 && admin.motDePasse === admin.confirme);
   const identiteValide = Object.values(identite).every((v) => v.trim());
@@ -84,31 +83,31 @@ export function Installation() {
 
           {etape === 1 && (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Champ label="Nom affiché"><input value={admin.nom} onChange={setA("nom")} className="bpn-input" placeholder="Administrateur système" /></Champ>
-              <Champ label="Email"><input type="email" value={admin.email} onChange={setA("email")} className="bpn-input" placeholder="admin@votre-barreau.cg" /></Champ>
-              <Champ label="Mot de passe" hint="8 caractères minimum"><input type="password" value={admin.motDePasse} onChange={setA("motDePasse")} className="bpn-input" /></Champ>
-              <Champ label="Confirmer le mot de passe"><input type="password" value={admin.confirme} onChange={setA("confirme")} className={`bpn-input ${admin.confirme && admin.confirme !== admin.motDePasse ? "is-invalid" : ""}`} /></Champ>
+              <FormField label="Nom affiché" required htmlFor="adm-nom"><input id="adm-nom" value={admin.nom} onChange={setA("nom")} className="bpn-input" placeholder="Administrateur système" /></FormField>
+              <FormField label="Email" required htmlFor="adm-email" error={emailErr}><input id="adm-email" type="email" value={admin.email} onChange={setA("email")} className={`bpn-input ${emailErr ? "is-invalid" : ""}`} placeholder="admin@votre-barreau.cg" /></FormField>
+              <FormField label="Mot de passe" required hint="8 caractères minimum" htmlFor="adm-mdp" error={mdpErr}><input id="adm-mdp" type="password" value={admin.motDePasse} onChange={setA("motDePasse")} className={`bpn-input ${mdpErr ? "is-invalid" : ""}`} /></FormField>
+              <FormField label="Confirmer le mot de passe" required htmlFor="adm-confirme" error={confirmeErr}><input id="adm-confirme" type="password" value={admin.confirme} onChange={setA("confirme")} className={`bpn-input ${confirmeErr ? "is-invalid" : ""}`} /></FormField>
             </div>
           )}
 
           {etape === 2 && (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Champ label="Dénomination"><input value={identite.denomination} onChange={setI("denomination")} className="bpn-input" /></Champ>
-              <Champ label="Ordre"><input value={identite.ordre} onChange={setI("ordre")} className="bpn-input" /></Champ>
-              <Champ label="Bâtonnier"><input value={identite.batonnier} onChange={setI("batonnier")} className="bpn-input" /></Champ>
-              <Champ label="Trésorière"><input value={identite.tresoriere} onChange={setI("tresoriere")} className="bpn-input" /></Champ>
-              <Champ label="Secrétaire Général"><input value={identite.secretaireGeneral} onChange={setI("secretaireGeneral")} className="bpn-input" /></Champ>
-              <Champ label="Adresse"><input value={identite.adresse} onChange={setI("adresse")} className="bpn-input" /></Champ>
+              <FormField label="Dénomination" required htmlFor="id-denomination"><input id="id-denomination" value={identite.denomination} onChange={setI("denomination")} className="bpn-input" /></FormField>
+              <FormField label="Ordre" required htmlFor="id-ordre"><input id="id-ordre" value={identite.ordre} onChange={setI("ordre")} className="bpn-input" /></FormField>
+              <FormField label="Bâtonnier" required htmlFor="id-batonnier"><input id="id-batonnier" value={identite.batonnier} onChange={setI("batonnier")} className="bpn-input" /></FormField>
+              <FormField label="Trésorière" required htmlFor="id-tresoriere"><input id="id-tresoriere" value={identite.tresoriere} onChange={setI("tresoriere")} className="bpn-input" /></FormField>
+              <FormField label="Secrétaire Général" required htmlFor="id-sg"><input id="id-sg" value={identite.secretaireGeneral} onChange={setI("secretaireGeneral")} className="bpn-input" /></FormField>
+              <FormField label="Adresse" required htmlFor="id-adresse"><input id="id-adresse" value={identite.adresse} onChange={setI("adresse")} className="bpn-input" /></FormField>
             </div>
           )}
 
           {etape === 3 && (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Champ label="Cotisation avocat (FCFA)"><input value={tarifs.avocat} onChange={setT("avocat")} className="bpn-input" inputMode="numeric" /></Champ>
-              <Champ label="Cotisation stagiaire (FCFA)"><input value={tarifs.stagiaire} onChange={setT("stagiaire")} className="bpn-input" inputMode="numeric" /></Champ>
-              <Champ label="Droit de plaidoirie (FCFA)"><input value={tarifs.droitsPlaidoirie} onChange={setT("droitsPlaidoirie")} className="bpn-input" inputMode="numeric" /></Champ>
-              <Champ label="Exercice courant"><input type="number" value={exercice} onChange={(e) => setExercice(e.target.value)} className="bpn-input" /></Champ>
-              <Champ label="Premier exercice" hint="borne basse des filtres"><input type="number" value={premier} onChange={(e) => setPremier(e.target.value)} className="bpn-input" /></Champ>
+              <FormField label="Cotisation avocat (FCFA)" htmlFor="tar-avocat"><input id="tar-avocat" value={tarifs.avocat} onChange={setT("avocat")} className="bpn-input" inputMode="numeric" /></FormField>
+              <FormField label="Cotisation stagiaire (FCFA)" htmlFor="tar-stagiaire"><input id="tar-stagiaire" value={tarifs.stagiaire} onChange={setT("stagiaire")} className="bpn-input" inputMode="numeric" /></FormField>
+              <FormField label="Droit de plaidoirie (FCFA)" htmlFor="tar-droit"><input id="tar-droit" value={tarifs.droitsPlaidoirie} onChange={setT("droitsPlaidoirie")} className="bpn-input" inputMode="numeric" /></FormField>
+              <FormField label="Exercice courant" htmlFor="ex-courant"><input id="ex-courant" type="number" value={exercice} onChange={(e) => setExercice(e.target.value)} className="bpn-input" /></FormField>
+              <FormField label="Premier exercice" hint="borne basse des filtres" htmlFor="ex-premier"><input id="ex-premier" type="number" value={premier} onChange={(e) => setPremier(e.target.value)} className="bpn-input" /></FormField>
             </div>
           )}
 
@@ -120,15 +119,17 @@ export function Installation() {
               </label>
               {emailActif && (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <Champ label="Serveur SMTP"><input value={smtp.host} onChange={setS("host")} className="bpn-input" /></Champ>
-                  <Champ label="Port"><input type="number" value={smtp.port} onChange={setS("port")} className="bpn-input" /></Champ>
-                  <Champ label="Utilisateur (adresse Gmail)"><input value={smtp.user} onChange={setS("user")} className="bpn-input" placeholder="vous@gmail.com" /></Champ>
-                  <Champ label="Mot de passe d'application" hint="Gmail : créez un « mot de passe d'application » (2FA requise)."><input type="password" value={smtp.pass} onChange={setS("pass")} className="bpn-input" /></Champ>
-                  <Champ label="Expéditeur (From)"><input value={smtp.from} onChange={setS("from")} className="bpn-input" placeholder="vous@gmail.com" /></Champ>
-                  <div className="flex items-end gap-2">
-                    <input value={testCible} onChange={(e) => setTestCible(e.target.value)} className="bpn-input" placeholder="email de test" />
-                    <button type="button" onClick={tester} disabled={enCours} className="bpn-btn bpn-btn-ghost shrink-0">Tester</button>
-                  </div>
+                  <FormField label="Serveur SMTP" htmlFor="smtp-host"><input id="smtp-host" value={smtp.host} onChange={setS("host")} className="bpn-input" /></FormField>
+                  <FormField label="Port" htmlFor="smtp-port"><input id="smtp-port" type="number" value={smtp.port} onChange={setS("port")} className="bpn-input" /></FormField>
+                  <FormField label="Utilisateur (adresse Gmail)" htmlFor="smtp-user"><input id="smtp-user" value={smtp.user} onChange={setS("user")} className="bpn-input" placeholder="vous@gmail.com" /></FormField>
+                  <FormField label="Mot de passe d'application" hint="Gmail : créez un « mot de passe d'application » (2FA requise)." htmlFor="smtp-pass"><input id="smtp-pass" type="password" value={smtp.pass} onChange={setS("pass")} className="bpn-input" /></FormField>
+                  <FormField label="Expéditeur (From)" htmlFor="smtp-from"><input id="smtp-from" value={smtp.from} onChange={setS("from")} className="bpn-input" placeholder="vous@gmail.com" /></FormField>
+                  <FormField label="Email de test" htmlFor="smtp-test">
+                    <div className="flex gap-2">
+                      <input id="smtp-test" value={testCible} onChange={(e) => setTestCible(e.target.value)} className="bpn-input" placeholder="email de test" />
+                      <button type="button" onClick={tester} disabled={enCours} className="bpn-btn bpn-btn-ghost shrink-0">Tester</button>
+                    </div>
+                  </FormField>
                 </div>
               )}
             </div>
@@ -138,11 +139,15 @@ export function Installation() {
             <div className="space-y-2 text-sm text-encre">
               <div><span className="text-gris">Administrateur :</span> {admin.nom} ({admin.email})</div>
               <div><span className="text-gris">Institution :</span> {identite.denomination}</div>
-              <div><span className="text-gris">Tarifs :</span> avocat {tarifs.avocat} · stagiaire {tarifs.stagiaire} · droit {tarifs.droitsPlaidoirie} FCFA</div>
+              <div><span className="text-gris">Tarifs :</span> avocat {formatFCFA(tarifs.avocat)} · stagiaire {formatFCFA(tarifs.stagiaire)} · droit {formatFCFA(tarifs.droitsPlaidoirie)}</div>
               <div><span className="text-gris">Exercices :</span> {premier} → {exercice}</div>
               <div><span className="text-gris">Email :</span> {emailActif && smtp.host ? `${smtp.host} (${smtp.user})` : "simulation"}</div>
               <p className="pt-2 text-xs text-gris">La base démarrera vide (seuls le compte admin et cette configuration). Action finale ci-dessous.</p>
             </div>
+          )}
+
+          {!peutSuivant && etape >= 1 && etape <= 3 && (
+            <p className="text-[11px] text-gris">Complétez les champs requis pour activer « Suivant ».</p>
           )}
         </div>
 
