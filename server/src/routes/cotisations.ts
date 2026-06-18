@@ -5,7 +5,7 @@ import { anneeDeRequete } from "../lib/requete.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { cotisationDue, montantDuAvec, statutCotisation, tarifsActuels } from "../lib/business.js";
-import { encaisser } from "../lib/encaissement.js";
+import { encaisser, gardeVersement } from "../lib/encaissement.js";
 import { envoyerEmail, envoyerSms, emailEnSimulation } from "../lib/notifications.js";
 
 export const cotisationsRouter = Router();
@@ -133,15 +133,11 @@ cotisationsRouter.post(
     const { membreId, annee, montant, mode, ref, date } = paiementSchema.parse(req.body);
     const membre = await prisma.membre.findUnique({ where: { id: membreId } });
     if (!membre) throw new HttpError(404, "Avocat introuvable");
-    // Garde anti-surpaiement / double-saisie : un versement ne peut excéder le
-    // solde restant dû (les saisies en double — double-clic, re-soumission —
-    // gonfleraient sinon « montantPaye » et fausseraient le statut « à jour »).
+    // Garde anti-surpaiement / double-saisie (message clair en amont ; la garde
+    // atomique dans encaisser couvre la concurrence).
     const tarifs = await tarifsActuels();
     const cot = await prisma.cotisation.findUnique({ where: { membreId_annee: { membreId, annee } } });
-    const du = cotisationDue(cot, tarifs, membre.qualite);
-    const restant = du - (cot?.montantPaye ?? 0);
-    if (du > 0 && restant <= 0) throw new HttpError(409, "La cotisation est déjà soldée pour cet exercice.");
-    if (montant > restant) throw new HttpError(400, `Le versement dépasse le solde restant dû (${restant.toLocaleString("fr-FR")} FCFA).`);
+    gardeVersement(cotisationDue(cot, tarifs, membre.qualite), cot?.montantPaye ?? 0, montant, "La cotisation est déjà soldée pour cet exercice.");
     const resultat = await encaisser({ membre, annee, montant, type: "cotisation", mode, ref, date: date ? new Date(date) : undefined });
     res.status(201).json(resultat);
   })

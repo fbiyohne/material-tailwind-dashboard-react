@@ -7,6 +7,17 @@ import { envoyerEmail } from "./notifications.js";
 export type TypeReglement = "cotisation" | "droit";
 
 /**
+ * Garde de versement manuel : refuse un paiement sur un solde déjà nul (409) ou
+ * supérieur au solde restant dû (400). Message clair en amont — la garde ATOMIQUE
+ * équivalente dans `encaisser` couvre, elle, la concurrence (TOCTOU).
+ */
+export function gardeVersement(du: number, dejaPaye: number, montant: number, messageSolde: string): void {
+  const restant = du - dejaPaye;
+  if (du > 0 && restant <= 0) throw new HttpError(409, messageSolde);
+  if (montant > restant) throw new HttpError(400, `Le versement dépasse le solde restant dû (${restant.toLocaleString("fr-FR")} FCFA).`);
+}
+
+/**
  * Encaissement unifié (BR-03) : enregistre un règlement, met à jour la
  * situation (cotisation ou droit de plaidoirie), émet le reçu, l'archive
  * (RG-14) et notifie l'avocat. Partagé par le paiement manuel et le paiement

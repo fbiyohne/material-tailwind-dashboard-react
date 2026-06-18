@@ -5,7 +5,7 @@ import { anneeDeRequete } from "../lib/requete.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { droitDue, statutCotisation, tarifsActuels } from "../lib/business.js";
-import { encaisser } from "../lib/encaissement.js";
+import { encaisser, gardeVersement } from "../lib/encaissement.js";
 
 export const droitsRouter = Router();
 // Données financières restreintes (RG-15) : SG, Trésorière, Admin.
@@ -74,10 +74,7 @@ droitsRouter.post(
     // Garde anti-surpaiement / double-saisie (miroir des cotisations).
     const tarifs = await tarifsActuels();
     const d = await prisma.droitPlaidoirie.findUnique({ where: { membreId_annee: { membreId, annee } } });
-    const du = droitDue(d, tarifs, membre.qualite);
-    const restant = du - (d?.montantPaye ?? 0);
-    if (du > 0 && restant <= 0) throw new HttpError(409, "Le droit de plaidoirie est déjà soldé pour cet exercice.");
-    if (montant > restant) throw new HttpError(400, `Le versement dépasse le solde restant dû (${restant.toLocaleString("fr-FR")} FCFA).`);
+    gardeVersement(droitDue(d, tarifs, membre.qualite), d?.montantPaye ?? 0, montant, "Le droit de plaidoirie est déjà soldé pour cet exercice.");
     const resultat = await encaisser({ membre, annee, montant, type: "droit", mode, ref, date: date ? new Date(date) : undefined });
     res.status(201).json(resultat);
   })
