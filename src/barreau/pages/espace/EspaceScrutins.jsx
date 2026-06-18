@@ -80,7 +80,7 @@ export function EspaceScrutins() {
                         </span>
                         {s.statut === "PUBLIE" && <span className="font-mono text-sm text-gris">{c.voix ?? 0} voix · {pct}%</span>}
                       </label>
-                      {s.statut === "PUBLIE" && <div className="mt-1 h-1.5 overflow-hidden rounded bg-grisM"><div className="h-full rounded bg-or" style={{ width: `${pct}%` }} /></div>}
+                      {s.statut === "PUBLIE" && <div role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={`${c.nom} : ${c.voix ?? 0} voix, ${pct}%`} className="mt-1 h-1.5 overflow-hidden rounded bg-grisM"><div className="h-full rounded bg-or" style={{ width: `${pct}%` }} /></div>}
                     </li>
                   );
                 })}

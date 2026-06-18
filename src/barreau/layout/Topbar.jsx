@@ -45,6 +45,14 @@ export function Topbar({ title, onOpenMenu, onAddAvocat }) {
     getAgenda().then(setEcheances).catch(() => {});
   }, []);
 
+  // Fermeture des menus déroulants au clavier (Échap), en complément du clic extérieur.
+  useEffect(() => {
+    if (!menu) return undefined;
+    const onKey = (e) => { if (e.key === "Escape") setMenu(null); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [menu]);
+
   const resultats = q.trim()
     ? membres.filter((m) => m.nom.toLowerCase().includes(q.trim().toLowerCase())).slice(0, 6)
     : [];

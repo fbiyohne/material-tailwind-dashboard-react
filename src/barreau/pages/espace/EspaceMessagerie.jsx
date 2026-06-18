@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChatBubbleLeftRightIcon, PaperAirplaneIcon, PlusIcon, BuildingLibraryIcon, UserIcon } from "@heroicons/react/24/outline";
+import { ChatBubbleLeftRightIcon, PaperAirplaneIcon, PlusIcon, BuildingLibraryIcon, UserIcon, ArrowLeftIcon } from "@heroicons/react/24/outline";
 import { Badge, Modal, PageHeader, useToast, TableSkeleton, ErrorState, EmptyState, MessageBulle } from "../../components";
 import {
   getEspaceMessagerie, getEspaceConversation, creerEspaceConversation,
@@ -83,7 +83,7 @@ function NouveauFil({ open, onClose, onCree }) {
         {cible === "confrere" && (
           <div>
             <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gris">Confrère</div>
-            <select value={destinataire} onChange={(e) => setDestinataire(e.target.value)} className="bpn-input">
+            <select aria-label="Confrère destinataire" value={destinataire} onChange={(e) => setDestinataire(e.target.value)} className="bpn-input">
               <option value="">Sélectionner un confrère…</option>
               {confreres.map((c) => <option key={c.id} value={c.id}>Me {c.nom}{c.cabinet ? ` — ${c.cabinet}` : ""}</option>)}
             </select>
@@ -92,12 +92,12 @@ function NouveauFil({ open, onClose, onCree }) {
 
         <div>
           <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gris">Objet</div>
-          <input value={sujet} onChange={(e) => setSujet(e.target.value)} placeholder="Objet du message" className="bpn-input" maxLength={160} />
+          <input aria-label="Objet du message" value={sujet} onChange={(e) => setSujet(e.target.value)} placeholder="Objet du message" className="bpn-input" maxLength={160} />
         </div>
 
         <div>
           <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gris">Message</div>
-          <textarea value={corps} onChange={(e) => setCorps(e.target.value)} rows={5} placeholder="Votre message…" className="bpn-input resize-none" maxLength={5000} />
+          <textarea aria-label="Message" value={corps} onChange={(e) => setCorps(e.target.value)} rows={5} placeholder="Votre message…" className="bpn-input resize-none" maxLength={5000} />
         </div>
       </div>
     </Modal>
@@ -165,8 +165,8 @@ export function EspaceMessagerie() {
       </PageHeader>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[20rem_1fr]">
-        {/* Liste des fils */}
-        <div className="bpn-card overflow-hidden">
+        {/* Liste des fils — sur mobile, masquée dès qu'un fil est ouvert (vue maître/détail). */}
+        <div className={`bpn-card overflow-hidden ${selId ? "hidden lg:block" : ""}`}>
           <div className="bpn-card-header">
             <span className="bpn-card-heading">Conversations</span>
             {totalNonLus > 0 && <Badge ton="rouge" dot={false}>{totalNonLus}</Badge>}
@@ -179,6 +179,7 @@ export function EspaceMessagerie() {
                 <li key={c.id}>
                   <button
                     onClick={() => ouvrir(c.id)}
+                    aria-current={selId === c.id ? "true" : undefined}
                     className={`w-full px-4 py-3 text-left transition hover:bg-grisL/40 ${selId === c.id ? "bg-grisL/60" : ""}`}
                   >
                     <div className="flex items-center justify-between gap-2">
@@ -197,8 +198,17 @@ export function EspaceMessagerie() {
           )}
         </div>
 
-        {/* Fil sélectionné */}
-        <div className="bpn-card flex min-h-[60vh] flex-col">
+        {/* Fil sélectionné — sur mobile, masqué tant qu'aucun fil n'est ouvert. */}
+        <div className={`bpn-card flex min-h-[60vh] flex-col ${selId ? "" : "hidden lg:flex"}`}>
+          {selId && (
+            <button
+              type="button"
+              onClick={() => { setSelId(null); setFil(null); }}
+              className="flex items-center gap-1.5 border-b border-grisL px-4 py-2 text-sm text-gris transition hover:text-navy lg:hidden"
+            >
+              <ArrowLeftIcon className="h-4 w-4" /> Conversations
+            </button>
+          )}
           {!selId ? (
             <div className="flex flex-1 items-center justify-center p-4">
               <EmptyState icon={ChatBubbleLeftRightIcon} title="Aucune conversation sélectionnée" description="Choisissez une conversation à gauche ou démarrez-en une nouvelle." />

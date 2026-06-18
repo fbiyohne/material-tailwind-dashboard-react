@@ -154,7 +154,7 @@ function ScrutinDetail({ detail, peutGerer, action, confirm, nomCand, setNomCand
                     )}
                   </div>
                 </div>
-                {resultatsVisibles && <div className="mt-2 h-1.5 overflow-hidden rounded bg-grisM"><div className="h-full rounded" style={{ width: `${pct}%`, backgroundColor: elu ? "var(--bpn-vert)" : "var(--bpn-or)" }} /></div>}
+                {resultatsVisibles && <div role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={`${c.nom} : ${c.voix} voix, ${pct}%`} className="mt-2 h-1.5 overflow-hidden rounded bg-grisM"><div className="h-full rounded" style={{ width: `${pct}%`, backgroundColor: elu ? "var(--bpn-vert)" : "var(--bpn-or)" }} /></div>}
               </li>
             );
           })}

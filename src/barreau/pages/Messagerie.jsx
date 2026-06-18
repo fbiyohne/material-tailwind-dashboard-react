@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChatBubbleLeftRightIcon, PaperAirplaneIcon, UserIcon } from "@heroicons/react/24/outline";
+import { ChatBubbleLeftRightIcon, PaperAirplaneIcon, UserIcon, ArrowLeftIcon } from "@heroicons/react/24/outline";
 import { Badge, PageHeader, useToast, TableSkeleton, ErrorState, EmptyState, MessageBulle } from "../components";
 import { getMessagerie, getConversationAdmin, repondreConversationAdmin } from "../api/resources";
 import { useMessagerieRealtime } from "../hooks/useMessagerieRealtime";
@@ -57,7 +57,8 @@ export function Messagerie() {
       <PageHeader eyebrow="Institutionnel" titre="Messagerie" sousTitre="Demandes et messages adressés au Secrétariat par les avocats." />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[20rem_1fr]">
-        <div className="bpn-card overflow-hidden">
+        {/* Liste — sur mobile, masquée dès qu'un fil est ouvert (vue maître/détail). */}
+        <div className={`bpn-card overflow-hidden ${selId ? "hidden lg:block" : ""}`}>
           <div className="bpn-card-header">
             <span className="bpn-card-heading">Conversations</span>
             {totalNonLus > 0 && <Badge ton="rouge" dot={false}>{totalNonLus}</Badge>}
@@ -68,7 +69,7 @@ export function Messagerie() {
             <ul className="max-h-[60vh] divide-y divide-grisL overflow-y-auto">
               {convs.map((c) => (
                 <li key={c.id}>
-                  <button onClick={() => ouvrir(c.id)} className={`w-full px-4 py-3 text-left transition hover:bg-grisL/40 ${selId === c.id ? "bg-grisL/60" : ""}`}>
+                  <button onClick={() => ouvrir(c.id)} aria-current={selId === c.id ? "true" : undefined} className={`w-full px-4 py-3 text-left transition hover:bg-grisL/40 ${selId === c.id ? "bg-grisL/60" : ""}`}>
                     <div className="flex items-center justify-between gap-2">
                       <span className="flex items-center gap-1.5 truncate text-sm font-medium text-encre">
                         <UserIcon className="h-3.5 w-3.5 shrink-0 text-or" /> {c.expediteur}
@@ -84,7 +85,16 @@ export function Messagerie() {
           )}
         </div>
 
-        <div className="bpn-card flex min-h-[60vh] flex-col">
+        <div className={`bpn-card flex min-h-[60vh] flex-col ${selId ? "" : "hidden lg:flex"}`}>
+          {selId && (
+            <button
+              type="button"
+              onClick={() => { setSelId(null); setFil(null); }}
+              className="flex items-center gap-1.5 border-b border-grisL px-4 py-2 text-sm text-gris transition hover:text-navy lg:hidden"
+            >
+              <ArrowLeftIcon className="h-4 w-4" /> Conversations
+            </button>
+          )}
           {!selId ? (
             <div className="flex flex-1 items-center justify-center p-4">
               <EmptyState icon={ChatBubbleLeftRightIcon} title="Aucune conversation sélectionnée" description="Choisissez une conversation pour la consulter et y répondre." />
