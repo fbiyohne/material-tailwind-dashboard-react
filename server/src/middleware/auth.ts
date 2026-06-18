@@ -8,6 +8,8 @@ import { HttpError } from "./error.js";
 export interface AuthUser {
   id: number;
   role: Role;
+  /** Nom affiché — dénormalisé dans le journal d'audit (traçabilité durable). */
+  nom?: string;
   /** Pour un compte de rôle AVOCAT : sa fiche Membre (sert au cloisonnement). */
   membreId?: number | null;
 }
@@ -35,7 +37,7 @@ export async function requireAuth(req: AuthRequest, _res: Response, next: NextFu
   try {
     const user = await prisma.user.findUnique({
       where: { id: payload.sub },
-      select: { id: true, role: true, actif: true, membreId: true, tokenVersion: true },
+      select: { id: true, nom: true, role: true, actif: true, membreId: true, tokenVersion: true },
     });
     if (!user || !user.actif) {
       return next(new HttpError(401, "Compte introuvable ou désactivé"));
@@ -45,7 +47,7 @@ export async function requireAuth(req: AuthRequest, _res: Response, next: NextFu
     if ((payload.tv ?? 0) !== user.tokenVersion) {
       return next(new HttpError(401, "Session expirée, veuillez vous reconnecter"));
     }
-    req.user = { id: user.id, role: user.role, membreId: user.membreId };
+    req.user = { id: user.id, role: user.role, membreId: user.membreId, nom: user.nom };
     next();
   } catch (e) {
     next(e);

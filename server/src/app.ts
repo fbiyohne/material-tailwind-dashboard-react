@@ -42,7 +42,11 @@ import { installationRouter } from "./routes/installation.js";
 
 export function creerApp() {
   const app = express();
-  app.set("trust proxy", 1);
+  // Nombre de proxys de confiance pour dériver req.ip (rate-limiting par IP).
+  // Doit correspondre à la topologie réelle : une valeur trop permissive laisse
+  // usurper l'IP via X-Forwarded-For (contournement de l'anti-brute-force).
+  // Configurable par TRUST_PROXY (défaut : 1 = un reverse-proxy unique).
+  app.set("trust proxy", env.trustProxy);
   // En mono-service (front servi par l'API), la CSP stricte de helmet bloque
   // les styles en ligne de Material Tailwind : on la désactive dans ce mode.
   app.use(helmet({ contentSecurityPolicy: env.staticDir ? false : undefined }));

@@ -51,7 +51,9 @@ export function audit(req: AuthRequest, res: Response, next: NextFunction) {
       .create({
         data: {
           action, cible, methode: req.method, chemin: req.originalUrl.split("?")[0],
-          statut: res.statusCode, userId: req.user?.id ?? null,
+          // userNom dénormalisé : l'entrée reste attribuable même après suppression
+          // du compte, et la recherche par acteur (filtre) devient effective.
+          statut: res.statusCode, userId: req.user?.id ?? null, userNom: req.user?.nom ?? null,
         },
       })
       .catch((err) => logger.warn({ err }, "Échec d'écriture du journal d'audit"));

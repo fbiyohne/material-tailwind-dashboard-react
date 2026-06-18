@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
 import { useNavigate } from "react-router-dom";
 import {
@@ -52,6 +52,21 @@ export function Topbar({ title, onOpenMenu, onAddAvocat }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [menu]);
+
+  // Navigation clavier du menu « Document » (sémantique ARIA menu / menuitem) :
+  // à l'ouverture, le focus entre sur le 1er item ; ↑/↓/Début/Fin le déplacent.
+  const docsMenuRef = useRef(null);
+  useEffect(() => {
+    if (menu === "docs") docsMenuRef.current?.querySelector('[role="menuitem"]')?.focus();
+  }, [menu]);
+  const onMenuKeyDown = (e) => {
+    const items = Array.from(e.currentTarget.querySelectorAll('[role="menuitem"]'));
+    const i = items.indexOf(document.activeElement);
+    if (e.key === "ArrowDown") { e.preventDefault(); items[(i + 1) % items.length]?.focus(); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); items[(i - 1 + items.length) % items.length]?.focus(); }
+    else if (e.key === "Home") { e.preventDefault(); items[0]?.focus(); }
+    else if (e.key === "End") { e.preventDefault(); items[items.length - 1]?.focus(); }
+  };
 
   const resultats = q.trim()
     ? membres.filter((m) => m.nom.toLowerCase().includes(q.trim().toLowerCase())).slice(0, 6)
@@ -109,10 +124,10 @@ export function Topbar({ title, onOpenMenu, onAddAvocat }) {
           <ChevronDownIcon className="hidden h-3 w-3 md:inline" />
         </button>
         {menu === "docs" && (
-          <ul className="absolute right-0 top-full z-50 mt-1 w-56 overflow-hidden rounded-lg border border-grisM bg-white py-1 shadow-card">
+          <ul ref={docsMenuRef} role="menu" aria-label="Génération de documents" onKeyDown={onMenuKeyDown} className="absolute right-0 top-full z-50 mt-1 w-56 overflow-hidden rounded-lg border border-grisM bg-white py-1 shadow-card">
             {docs.map((d) => (
-              <li key={d.to}>
-                <button className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-encre hover:bg-grisL" onClick={() => aller(d.to)}>
+              <li key={d.to} role="none">
+                <button role="menuitem" className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-encre hover:bg-grisL focus:bg-grisL focus:outline-none" onClick={() => aller(d.to)}>
                   <d.icon className="h-4 w-4 text-gris" /> {d.label}
                 </button>
               </li>

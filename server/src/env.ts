@@ -9,6 +9,20 @@ function requis(nom: string, defaut?: string): string {
 const nodeEnv = process.env.NODE_ENV ?? "development";
 
 /**
+ * Nombre de sauts de proxy de confiance (ou booléen) pour `trust proxy`.
+ * Défaut 1 (un reverse-proxy). À régler selon la topologie de déploiement
+ * (ex. « 2 » derrière LB + nginx) pour fiabiliser le rate-limiting par IP.
+ */
+function trustProxy(): number | boolean {
+  const v = process.env.TRUST_PROXY;
+  if (v === undefined || v === "") return 1;
+  if (v === "true") return true;
+  if (v === "false") return false;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 1;
+}
+
+/**
  * Secret de signature JWT. Aucun repli en production : un secret par défaut
  * permettrait la forge de jetons (élévation ADMIN). Le repli « dev-secret »
  * n'est toléré qu'en développement/test.
@@ -54,6 +68,7 @@ export const env = {
   clientOrigin: requis("CLIENT_ORIGIN", "http://localhost:5173"),
   accessTtl: requis("ACCESS_TTL", "15m"),
   refreshTtlDays: Number(requis("REFRESH_TTL_DAYS", "7")),
+  trustProxy: trustProxy(),
   // Dossier du front compilé à servir avec l'API (déploiement mono-service).
   // Vide → l'API ne sert que /api (comportement de développement).
   staticDir: process.env.STATIC_DIR ?? "",
