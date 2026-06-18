@@ -108,10 +108,10 @@ describe("Installation — parcours actif (destructif, restauré en fin)", () =>
       smtp: { host: "smtp.gmail.com", port: 587, user: "u@gmail.com", pass: "app-pass", from: "u@gmail.com", secure: false },
     });
     expect(r.status).toBe(201);
-    // L'email est stocké TEL QUEL (casse préservée) : on le retrouve avec la
-    // casse exacte saisie, et la connexion doit fonctionner avec cette même
-    // casse — régression contre un verrouillage de l'admin (cf. revue).
-    const admin = await prisma.user.findUnique({ where: { email: "Admin.Test@Barreau-PN.cg" } });
+    // L'email est normalisé en minuscules au stockage ; la connexion l'est aussi,
+    // donc une saisie à casse mixte se connecte sans souci — régression contre un
+    // verrouillage de l'admin (connexion insensible à la casse, cf. revue).
+    const admin = await prisma.user.findUnique({ where: { email: "admin.test@barreau-pn.cg" } });
     expect(admin?.role).toBe("ADMIN");
     const row = await prisma.parametres.findUnique({ where: { id: 1 } });
     const data = row?.data as Record<string, any>;

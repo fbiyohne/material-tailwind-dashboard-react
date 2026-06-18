@@ -23,7 +23,9 @@ authRouter.post(
   loginLimiter,
   asyncH(async (req, res) => {
     const { email, password } = loginSchema.parse(req.body);
-    const user = await prisma.user.findUnique({ where: { email } });
+    // Connexion insensible à la casse (gère les comptes existants stockés en casse
+    // mixte sans migration ; les nouveaux comptes sont normalisés en minuscules).
+    const user = await prisma.user.findFirst({ where: { email: { equals: email.trim(), mode: "insensitive" } } });
     if (!user || !user.actif || !(await bcrypt.compare(password, user.passwordHash))) {
       throw new HttpError(401, "Identifiants invalides");
     }
@@ -121,7 +123,8 @@ authRouter.post(
   resetLimiter,
   asyncH(async (req, res) => {
     const { email } = forgotSchema.parse(req.body);
-    const user = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });
+    // Recherche insensible à la casse (cohérence avec la connexion).
+    const user = await prisma.user.findFirst({ where: { email: { equals: email.trim(), mode: "insensitive" } } });
     if (user && user.actif) {
       const token = crypto.randomBytes(32).toString("hex");
       const resetExpire = new Date(Date.now() + 3_600_000); // 1 heure

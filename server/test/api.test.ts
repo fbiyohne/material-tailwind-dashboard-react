@@ -73,6 +73,17 @@ describe("Cycle financier — règles métier (BR-01, BR-03, RBAC)", () => {
     expect(ligne.statut).toBe("ajour");
   });
 
+  it("I2 : un second paiement sur une cotisation soldée est refusé (409)", async () => {
+    const r = await request(app).post("/api/cotisations/paiement").set(...bearer(sg)).send({ membreId, annee, montant: 150000, mode: "Espèces" });
+    expect(r.status).toBe(409); // déjà soldée après le paiement BR-03 précédent
+  });
+
+  it("I2 : un versement supérieur au solde restant dû est refusé (400)", async () => {
+    const m = await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: `OVERPAY ${Date.now()}`, qualite: "AVOCAT" });
+    const r = await request(app).post("/api/cotisations/paiement").set(...bearer(sg)).send({ membreId: m.body.id, annee, montant: 200000, mode: "Espèces" });
+    expect(r.status).toBe(400); // 200000 > 150000 dû
+  });
+
   it("RBAC : le Secrétaire Général ne peut pas valider (403)", async () => {
     const r = await request(app).post(`/api/cotisations/${membreId}/valider`).set(...bearer(sg)).send({ annee });
     expect(r.status).toBe(403);

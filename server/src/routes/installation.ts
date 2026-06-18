@@ -40,11 +40,17 @@ installationRouter.post("/", asyncH(async (req, res) => {
   if (!(await wizardActif())) throw new HttpError(409, "Application déjà installée.");
   const d = installSchema.parse(req.body);
   await prisma.$transaction(async (tx) => {
-    // Email stocké tel quel (la connexion compare sans normaliser la casse,
-    // comme la création de comptes via le module Utilisateurs) : le lowercaser
-    // ici verrouillerait un admin ayant saisi une adresse à casse mixte.
-    await tx.user.create({ data: { nom: d.admin.nom, email: d.admin.email, role: "ADMIN", passwordHash: bcrypt.hashSync(d.admin.motDePasse, 10) } });
+    // Verrou consultatif transactionnel : sérialise les installations concurrentes
+    // pour fermer la fenêtre TOCTOU. Sans lui, deux POST quasi simultanés (emails
+    // différents) passeraient tous deux la garde et créeraient deux ADMIN. Le second
+    // attend ici, puis échoue la re-vérification ci-dessous.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(4242424242)`;
+    const adminsExistants = await tx.user.count({ where: { role: "ADMIN" } });
     const row = await tx.parametres.findUnique({ where: { id: 1 } });
+    const dejaInstalle = (row?.data as { installe?: boolean } | undefined)?.installe;
+    if (adminsExistants > 0 || dejaInstalle) throw new HttpError(409, "Application déjà installée.");
+    // Email normalisé en minuscules (la connexion l'est aussi → insensible à la casse).
+    await tx.user.create({ data: { nom: d.admin.nom, email: d.admin.email.toLowerCase(), role: "ADMIN", passwordHash: bcrypt.hashSync(d.admin.motDePasse, 10) } });
     const base = (row?.data as object) ?? {};
     const data = {
       ...base,

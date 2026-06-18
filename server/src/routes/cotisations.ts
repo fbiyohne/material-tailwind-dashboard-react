@@ -133,6 +133,15 @@ cotisationsRouter.post(
     const { membreId, annee, montant, mode, ref, date } = paiementSchema.parse(req.body);
     const membre = await prisma.membre.findUnique({ where: { id: membreId } });
     if (!membre) throw new HttpError(404, "Avocat introuvable");
+    // Garde anti-surpaiement / double-saisie : un versement ne peut excéder le
+    // solde restant dû (les saisies en double — double-clic, re-soumission —
+    // gonfleraient sinon « montantPaye » et fausseraient le statut « à jour »).
+    const tarifs = await tarifsActuels();
+    const cot = await prisma.cotisation.findUnique({ where: { membreId_annee: { membreId, annee } } });
+    const du = cot?.montantDu ?? montantDuAvec(tarifs, membre.qualite);
+    const restant = du - (cot?.montantPaye ?? 0);
+    if (du > 0 && restant <= 0) throw new HttpError(409, "La cotisation est déjà soldée pour cet exercice.");
+    if (montant > restant) throw new HttpError(400, `Le versement dépasse le solde restant dû (${restant.toLocaleString("fr-FR")} FCFA).`);
     const resultat = await encaisser({ membre, annee, montant, type: "cotisation", mode, ref, date: date ? new Date(date) : undefined });
     res.status(201).json(resultat);
   })

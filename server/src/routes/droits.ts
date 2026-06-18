@@ -71,6 +71,13 @@ droitsRouter.post(
     const membre = await prisma.membre.findUnique({ where: { id: membreId } });
     if (!membre) throw new HttpError(404, "Avocat introuvable");
     if (membre.qualite !== "AVOCAT") throw new HttpError(400, "Seuls les avocats sont redevables du droit de plaidoirie");
+    // Garde anti-surpaiement / double-saisie (miroir des cotisations).
+    const tarifs = await tarifsActuels();
+    const d = await prisma.droitPlaidoirie.findUnique({ where: { membreId_annee: { membreId, annee } } });
+    const du = d?.montantDu ?? droitDuAvec(tarifs, membre.qualite);
+    const restant = du - (d?.montantPaye ?? 0);
+    if (du > 0 && restant <= 0) throw new HttpError(409, "Le droit de plaidoirie est déjà soldé pour cet exercice.");
+    if (montant > restant) throw new HttpError(400, `Le versement dépasse le solde restant dû (${restant.toLocaleString("fr-FR")} FCFA).`);
     const resultat = await encaisser({ membre, annee, montant, type: "droit", mode, ref, date: date ? new Date(date) : undefined });
     res.status(201).json(resultat);
   })

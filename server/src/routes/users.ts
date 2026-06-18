@@ -47,10 +47,12 @@ usersRouter.post(
   asyncH(async (req: AuthRequest, res) => {
     const data = creerSchema.parse(req.body);
     interdireEscaladeAdmin(req.user!.role, data.role);
-    const existe = await prisma.user.findUnique({ where: { email: data.email } });
+    // Email normalisé en minuscules : unicité et connexion insensibles à la casse.
+    const email = data.email.trim().toLowerCase();
+    const existe = await prisma.user.findFirst({ where: { email: { equals: email, mode: "insensitive" } } });
     if (existe) throw new HttpError(409, "Un compte existe déjà avec cet email");
     const user = await prisma.user.create({
-      data: { nom: data.nom, email: data.email, role: data.role, passwordHash: bcrypt.hashSync(data.password, 10) },
+      data: { nom: data.nom, email, role: data.role, passwordHash: bcrypt.hashSync(data.password, 10) },
       select: SELECT,
     });
     res.status(201).json(user);
@@ -69,6 +71,8 @@ usersRouter.patch(
   asyncH(async (req: AuthRequest, res) => {
     const id = Number(req.params.id);
     const data = patchSchema.parse(req.body);
+    // Email normalisé en minuscules (cohérence avec la création / la connexion).
+    if (data.email) data.email = data.email.trim().toLowerCase();
     // Garde-fou : ne pas se désactiver ni se rétrograder soi-même.
     if (id === req.user!.id && (data.actif === false || (data.role && data.role !== req.user!.role))) {
       throw new HttpError(400, "Vous ne pouvez pas modifier votre propre rôle ou statut");
