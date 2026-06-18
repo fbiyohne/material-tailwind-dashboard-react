@@ -4,7 +4,7 @@ import { Installation } from "@/barreau/pages/Installation";
 import { getEtatInstallation } from "@/barreau/api/resources";
 import BarreauLayout from "@/barreau/layout/BarreauLayout";
 import EspaceAvocatLayout from "@/barreau/layout/EspaceAvocatLayout";
-import { ErrorBoundary, ToastProvider, ConfirmProvider } from "@/barreau/components";
+import { ErrorBoundary, ToastProvider, ConfirmProvider, Sceau } from "@/barreau/components";
 import { AuthProvider, useAuth } from "@/barreau/auth/AuthContext";
 import { AuthShell } from "@/barreau/auth/AuthShell";
 import { ActivationCompte } from "@/barreau/auth/ActivationCompte";
@@ -13,8 +13,12 @@ import { VerificationPublique } from "@/barreau/pages/VerificationPublique";
 
 function Splash() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-navy-3 text-sm text-white/50">
-      Chargement…
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-navy-3">
+      <div className="animate-pulse rounded-full bg-white p-2.5"><Sceau size={48} /></div>
+      <div className="text-center">
+        <div className="text-[10px] uppercase tracking-[0.2em] text-or-2">Barreau de Pointe-Noire</div>
+        <div className="mt-1 text-sm text-white/50">Chargement…</div>
+      </div>
     </div>
   );
 }

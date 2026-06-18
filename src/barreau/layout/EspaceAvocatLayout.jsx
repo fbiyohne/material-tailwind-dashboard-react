@@ -6,6 +6,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { Sceau } from "../components";
 import { useAuth } from "../auth/AuthContext";
+import { useFocusAuChangementDeRoute } from "../hooks/useFocusAuChangementDeRoute";
 import { getEspaceMessagerieNonLus } from "../api/resources";
 import { onRealtime } from "../api/realtime";
 import MaSituation from "../pages/espace/MaSituation";
@@ -38,6 +39,7 @@ const NAV = [
 export function EspaceAvocatLayout() {
   const { user, logout } = useAuth();
   const location = useLocation();
+  const mainRef = useFocusAuChangementDeRoute();
   const [nonLus, setNonLus] = useState(0);
 
   // Pastille de messagerie : rafraîchie au changement de page (lecture incluse),
@@ -93,7 +95,7 @@ export function EspaceAvocatLayout() {
         </nav>
       </header>
 
-      <main className="mx-auto max-w-container px-4 py-6 md:px-8 md:py-8">
+      <main ref={mainRef} id="contenu-principal" tabIndex={-1} className="mx-auto max-w-container px-4 py-6 outline-none md:px-8 md:py-8">
         <Routes>
           <Route path="/" element={<MaSituation />} />
           <Route path="/documents" element={<MesDocuments />} />

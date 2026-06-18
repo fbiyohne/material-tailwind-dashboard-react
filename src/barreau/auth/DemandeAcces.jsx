@@ -57,7 +57,8 @@ export function DemandeAcces({ onRetour }) {
   if (succes) {
     return (
       <AuthLayout
-        devise="Le tableau de l'Ordre est le registre de l'honneur de la profession."
+        devise="Nul ne peut exercer la profession d'avocat s'il n'est inscrit au tableau d'un barreau."
+        deviseAuteur="Règlement Intérieur National"
         eyebrow="Demande envoyée"
         titre="Demande transmise"
         sousTitre="Votre demande est désormais entre les mains du Secrétariat Général."

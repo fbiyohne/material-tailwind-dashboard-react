@@ -65,6 +65,7 @@ export function Login({ onDemande, onOubli }) {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
+          autoFocus
           autoComplete="username"
           placeholder="vous@barreau-pn.cg"
         />

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PrinterIcon, TrashIcon } from "@heroicons/react/24/outline";
-import { Badge, useToast, useConfirm, PageHeader } from "../components";
+import { Badge, useToast, useConfirm, PageHeader, TableSkeleton, ErrorState } from "../components";
 import { useAuth } from "../auth/AuthContext";
 import { formatDate } from "../utils/format";
 import { infoStage } from "../data/derivations";
@@ -82,13 +82,18 @@ export function Stagiaires() {
   const { user } = useAuth();
   const estAdmin = user?.role === "ADMIN";
   const [membres, setMembres] = useState([]);
+  const [chargement, setChargement] = useState(true);
+  const [erreur, setErreur] = useState(false);
   const [filtre, setFiltre] = useState("tous");
 
   const charger = useCallback(() => {
+    setChargement(true);
+    setErreur(false);
     listerMembres({ qualite: "STAGIAIRE" })
       .then((d) => setMembres(d.items))
-      .catch((e) => toast.error(e.message));
-  }, [toast]);
+      .catch(() => setErreur(true))
+      .finally(() => setChargement(false));
+  }, []);
   useEffect(() => { charger(); }, [charger]);
 
   // Suppression définitive d'un stagiaire (cascade) — super-administrateur (ADMIN).
@@ -140,16 +145,24 @@ export function Stagiaires() {
         </button>
       </PageHeader>
 
-      <div className="bpn-no-print grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {stagiaires.map(({ membre, stage }) => (
-          <CarteStagiaire key={membre.id} membre={membre} stage={stage} onFiche={(m) => navigate(`/avocats/${m.id}`)} onSupprimer={estAdmin ? supprimer : undefined} />
-        ))}
-        {stagiaires.length === 0 && (
-          <p className="col-span-full py-10 text-center text-sm text-gris">
-            Aucun stagiaire pour ce filtre.
-          </p>
-        )}
-      </div>
+      {chargement ? (
+        <div className="bpn-no-print"><TableSkeleton rows={6} cols={3} /></div>
+      ) : erreur ? (
+        <div className="bpn-no-print bpn-card p-6">
+          <ErrorState title="Indisponible" description="La liste des stagiaires n'a pas pu être chargée." onRetry={charger} />
+        </div>
+      ) : (
+        <div className="bpn-no-print grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {stagiaires.map(({ membre, stage }) => (
+            <CarteStagiaire key={membre.id} membre={membre} stage={stage} onFiche={(m) => navigate(`/avocats/${m.id}`)} onSupprimer={estAdmin ? supprimer : undefined} />
+          ))}
+          {stagiaires.length === 0 && (
+            <p className="col-span-full py-10 text-center text-sm text-gris">
+              Aucun stagiaire pour ce filtre.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Liste imprimable (FR-ST — génération de la liste des stagiaires) */}
       <div className="bpn-print-zone hidden print:block">

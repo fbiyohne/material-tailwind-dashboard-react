@@ -6,6 +6,7 @@ import { allModules, detailRoutes, aAcces } from "../routes";
 import NotFound from "../pages/NotFound";
 import { InscriptionModal } from "../components";
 import { useAuth } from "../auth/AuthContext";
+import { useFocusAuChangementDeRoute } from "../hooks/useFocusAuChangementDeRoute";
 
 /**
  * Ossature de l'application du Secrétariat Général :
@@ -15,6 +16,7 @@ export function BarreauLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [inscription, setInscription] = useState(false);
   const location = useLocation();
+  const mainRef = useFocusAuChangementDeRoute();
   const { user } = useAuth();
   const role = user?.role;
   const peutInscrire = aAcces({ roles: ["SECRETAIRE_GENERAL", "ADMIN"] }, role);
@@ -44,7 +46,7 @@ export function BarreauLayout() {
           onAddAvocat={peutInscrire ? () => setInscription(true) : null}
         />
 
-        <main id="contenu-principal" tabIndex={-1} className="mx-auto max-w-container px-4 py-6 outline-none md:px-8 md:py-8">
+        <main ref={mainRef} id="contenu-principal" tabIndex={-1} className="mx-auto max-w-container px-4 py-6 outline-none md:px-8 md:py-8">
           <Routes>
             {allModules.map(({ path, element, roles }) => (
               <Route

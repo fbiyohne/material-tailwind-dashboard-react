@@ -107,6 +107,7 @@ export function ActivationCompte({ token }) {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
+          autoFocus
           autoComplete="new-password"
           placeholder="••••••••"
           hint="8 caractères minimum"
