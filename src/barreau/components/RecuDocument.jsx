@@ -10,7 +10,7 @@ const fmtDateFr = (d) =>
 function FiletOr({ className = "w-64" }) {
   return (
     <div className={`relative mx-auto my-3 h-px bg-or ${className}`}>
-      <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-2xs leading-none text-or">◆</span>
+      <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] leading-none text-or">◆</span>
     </div>
   );
 }
@@ -64,7 +64,7 @@ export function RecuDocument({ numero, membre, montant, exercice, mode, objet, d
   const verifHost = origin.replace(/^https?:\/\//, "");
 
   return (
-    <div className="bpn-print-zone relative mx-auto flex w-[820px] min-h-[1160px] flex-col overflow-hidden border-2 border-or bg-white font-serif text-xs text-encre">
+    <div className="bpn-print-zone relative mx-auto flex w-[820px] min-h-[1160px] flex-col overflow-hidden border-2 border-or bg-white font-serif text-[13px] text-encre">
       <div className="pointer-events-none absolute inset-[7px] border border-or/60" />
       <div className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-bl-[100%] bg-navy-2">
         <div className="absolute inset-3 rounded-bl-[100%] border-[3px] border-or/70" />
@@ -80,8 +80,8 @@ export function RecuDocument({ numero, membre, montant, exercice, mode, objet, d
           <div className="flex-1 text-center">
             <h1 className="font-display text-[26px] font-bold leading-tight text-navy">BARREAU DE POINTE-NOIRE</h1>
             <FiletOr className="w-60" />
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-encre">Trésorerie de l'Ordre des Avocats</h2>
-            <p className="mt-1 text-xs italic text-gris">Défendre • Conseiller • Servir la Justice</p>
+            <h2 className="text-[12px] font-semibold uppercase tracking-wide text-encre">Trésorerie de l'Ordre des Avocats</h2>
+            <p className="mt-1 text-[12px] italic text-gris">Défendre • Conseiller • Servir la Justice</p>
           </div>
         </div>
 
@@ -93,17 +93,17 @@ export function RecuDocument({ numero, membre, montant, exercice, mode, objet, d
         </div>
 
         {/* N° + date */}
-        <div className="mt-8 flex justify-between font-mono text-sm text-navy">
+        <div className="mt-8 flex justify-between font-mono text-[14px] text-navy">
           <span>N° {numero}</span>
           <span>Pointe-Noire, le {fmtDateFr(date)}</span>
         </div>
 
         {/* Corps */}
         <div className="mt-9">
-          <h5 className="text-center text-base font-bold uppercase leading-snug text-encre">
+          <h5 className="text-center text-[16px] font-bold uppercase leading-snug text-encre">
             La Trésorière de l'Ordre des Avocats<br />au Barreau de Pointe-Noire
           </h5>
-          <p className="mt-4 text-center text-sm italic text-encre">Reconnaît avoir reçu de Maître :</p>
+          <p className="mt-4 text-center text-[15px] italic text-encre">Reconnaît avoir reçu de Maître :</p>
 
           <div className="mt-6 space-y-4">
             <Champ label="Nom et Prénom(s)" valeur={`Me ${membre?.nom ?? ""}`} />
@@ -113,12 +113,12 @@ export function RecuDocument({ numero, membre, montant, exercice, mode, objet, d
 
           {/* Montant mis en valeur */}
           <div className="mx-auto mt-7 w-4/5 rounded-lg border-2 border-or/70 bg-or-L/40 px-6 py-4 text-center">
-            <div className="text-xs uppercase tracking-wide text-gris">Montant perçu</div>
+            <div className="text-[11px] uppercase tracking-wide text-gris">Montant perçu</div>
             <div className="font-display text-[34px] font-bold leading-tight text-navy">{formatFCFA(m)}</div>
-            <div className="mt-0.5 text-xs italic text-gris first-letter:uppercase">{montantEnLettresFCFA(m)}</div>
+            <div className="mt-0.5 text-[13px] italic text-gris first-letter:uppercase">{montantEnLettresFCFA(m)}</div>
           </div>
 
-          <p className="mt-6 text-center text-sm text-encre">
+          <p className="mt-6 text-center text-[15px] text-encre">
             En foi de quoi, le présent reçu lui est délivré pour servir et valoir ce que de droit.
           </p>
         </div>
@@ -128,8 +128,8 @@ export function RecuDocument({ numero, membre, montant, exercice, mode, objet, d
           {hasNum ? (
             <div className="flex items-center gap-4">
               <QRCode value={verifUrl} size={78} />
-              <div className="text-xs leading-relaxed text-gris">
-                <div className="text-xs font-semibold uppercase tracking-wide text-navy">Vérification</div>
+              <div className="text-[11px] leading-relaxed text-gris">
+                <div className="text-[12px] font-semibold uppercase tracking-wide text-navy">Vérification</div>
                 Scannez ce code, ou :<br />
                 <span className="font-mono text-navy">{verifHost}/verifier/recu/{numero}</span>
               </div>
@@ -139,19 +139,19 @@ export function RecuDocument({ numero, membre, montant, exercice, mode, objet, d
           )}
           <CachetTresorerie />
           <div className="text-center">
-            <p className="text-xs font-semibold text-encre">La Trésorière de l'Ordre</p>
+            <p className="text-[13px] font-semibold text-encre">La Trésorière de l'Ordre</p>
             <div className="mt-12 w-52 border-t border-dotted border-gris" />
-            <p className="mt-1 text-xs text-gris">Me ONDZE BOYA</p>
+            <p className="mt-1 text-[12px] text-gris">Me ONDZE BOYA</p>
           </div>
         </div>
 
-        <p className="mt-8 text-center text-xs italic text-gris">
+        <p className="mt-8 text-center text-[11px] italic text-gris">
           Ce reçu est strictement personnel et atteste du paiement mentionné ci-dessus.
         </p>
       </div>
 
       {/* Bandeau de contact */}
-      <div className="mt-7 grid grid-cols-3 gap-4 bg-navy-2 px-10 py-5 text-xs leading-relaxed text-white/90">
+      <div className="mt-7 grid grid-cols-3 gap-4 bg-navy-2 px-10 py-5 text-[11px] leading-relaxed text-white/90">
         <div>
           <span className="font-semibold text-or">Adresse</span><br />
           Immeuble du Barreau, Avenue Charles de Gaulle<br />Pointe-Noire — République du Congo

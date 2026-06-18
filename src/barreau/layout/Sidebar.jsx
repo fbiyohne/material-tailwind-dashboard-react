@@ -152,7 +152,7 @@ export function Sidebar({ open, onClose }) {
                         />
                         <span className="truncate">{item.name}</span>
                         {badges[item.path] > 0 && (
-                          <span className="ml-auto flex h-[19px] min-w-[19px] items-center justify-center rounded-full bg-rouge px-1 text-2xs font-semibold text-white">
+                          <span className="ml-auto flex h-[19px] min-w-[19px] items-center justify-center rounded-full bg-rouge px-1 text-2xs font-semibold leading-none text-white">
                             {badges[item.path]}
                           </span>
                         )}

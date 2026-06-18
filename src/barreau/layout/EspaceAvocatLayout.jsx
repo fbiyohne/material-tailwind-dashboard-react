@@ -88,7 +88,7 @@ export function EspaceAvocatLayout() {
             >
               <Icon className="h-4 w-4" /> {label}
               {badge === "messagerie" && nonLus > 0 && (
-                <span className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-rouge px-1 text-2xs font-semibold text-white">{nonLus}</span>
+                <span className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-rouge px-1 text-2xs font-semibold leading-none text-white">{nonLus}</span>
               )}
             </NavLink>
           ))}
