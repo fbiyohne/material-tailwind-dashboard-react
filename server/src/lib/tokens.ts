@@ -6,9 +6,14 @@ import { env } from "../env.js";
 
 const hash = (t: string) => crypto.createHash("sha256").update(t).digest("hex");
 
-/** Jeton d'accès court (JWT). */
-export function signerAccessToken(user: { id: number; role: Role }) {
-  return jwt.sign({ sub: user.id, role: user.role }, env.jwtSecret, { expiresIn: env.accessTtl } as jwt.SignOptions);
+/** Jeton d'accès court (JWT). `tv` = version de session : un changement de mot
+ *  de passe l'incrémente et invalide les jetons d'accès déjà émis (cf. requireAuth). */
+export function signerAccessToken(user: { id: number; role: Role; tokenVersion: number }) {
+  return jwt.sign(
+    { sub: user.id, role: user.role, tv: user.tokenVersion },
+    env.jwtSecret,
+    { expiresIn: env.accessTtl, algorithm: "HS256" } as jwt.SignOptions
+  );
 }
 
 /** Crée et stocke (haché) un refresh token opaque ; renvoie le jeton en clair. */
@@ -31,7 +36,15 @@ export async function emettrePaire(user: User) {
 /** Échange un refresh valide contre une nouvelle paire (rotation). */
 export async function rafraichir(rawRefresh: string) {
   const stocke = await prisma.refreshToken.findUnique({ where: { tokenHash: hash(rawRefresh) }, include: { user: true } });
-  if (!stocke || stocke.revoked || stocke.expiresAt < new Date() || !stocke.user.actif) return null;
+  if (!stocke) return null;
+  // Détection de rejeu : un refresh DÉJÀ révoqué (donc déjà tourné ou déconnecté)
+  // qui resurgit signale un jeton volé/rejoué → on révoque TOUTE la famille de
+  // l'utilisateur (invalide aussi la session courante de l'attaquant).
+  if (stocke.revoked) {
+    await revoquerTousLesJetons(stocke.userId);
+    return null;
+  }
+  if (stocke.expiresAt < new Date() || !stocke.user.actif) return null;
   // Rotation : on révoque l'ancien et on en émet un nouveau.
   await prisma.refreshToken.update({ where: { id: stocke.id }, data: { revoked: true } });
   return emettrePaire(stocke.user);

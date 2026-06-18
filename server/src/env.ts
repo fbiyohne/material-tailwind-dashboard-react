@@ -15,7 +15,13 @@ const nodeEnv = process.env.NODE_ENV ?? "development";
  */
 function secretJwt(): string {
   const s = process.env.JWT_SECRET;
-  if (s) return s;
+  if (s) {
+    // Un secret court est trivialement attaquable par force brute (forge de jetons).
+    if (nodeEnv === "production" && s.length < 32) {
+      throw new Error("JWT_SECRET trop court (32 caractères minimum requis en production).");
+    }
+    return s;
+  }
   if (nodeEnv === "production") {
     throw new Error("Variable d'environnement obligatoire en production : JWT_SECRET");
   }

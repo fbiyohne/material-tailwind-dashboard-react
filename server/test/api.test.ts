@@ -767,3 +767,36 @@ describe("Messagerie interne — symétrie des non-lus & cloisonnement", () => {
     expect((await request(app).get("/api/messagerie").set(...bearer(a.token))).status).toBe(403);
   });
 });
+
+describe("Round 3 — sécurité (anti-double-crédit & invalidation de session)", () => {
+  it("CRITICAL : deux confirmations concurrentes ne créditent qu'une fois", async () => {
+    const annee = 2027;
+    const m = await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: `DOUBLEPAY ${Date.now()}`, qualite: "AVOCAT" });
+    const id = m.body.id;
+    const init = await request(app).post("/api/paiements/initier").set(...bearer(sg)).send({ membreId: id, annee, montant: 150000, type: "cotisation", canal: "MTN" });
+    expect(init.status).toBe(201);
+    const ref = init.body.paiement.ref;
+    // Rejeu / double-clic : deux finalisations simultanées du même paiement.
+    const [a, b] = await Promise.all([
+      request(app).post(`/api/paiements/${ref}/confirmer-sandbox`).set(...bearer(sg)).send({ succes: true }),
+      request(app).post(`/api/paiements/${ref}/confirmer-sandbox`).set(...bearer(sg)).send({ succes: true }),
+    ]);
+    expect(a.status).toBe(200);
+    expect(b.status).toBe(200);
+    const cot = await request(app).get(`/api/cotisations?annee=${annee}`).set(...bearer(sg));
+    const ligne = cot.body.lignes.find((l: any) => l.membre.id === id);
+    expect(ligne.montantPaye).toBe(150000); // crédité une seule fois (pas 300000)
+    expect(ligne.statut).toBe("ajour");
+  });
+
+  it("changer son mot de passe invalide les jetons d'accès déjà émis (401)", async () => {
+    const email = `sess-${Date.now()}@barreau-pn.cg`;
+    await request(app).post("/api/users").set(...bearer(admin)).send({ nom: "Session Test", email, role: "TRESORIERE", password: "ancienpass8" });
+    const tok = (await request(app).post("/api/auth/login").send({ email, password: "ancienpass8" })).body.token;
+    expect((await request(app).get("/api/auth/me").set(...bearer(tok))).status).toBe(200);
+    const chg = await request(app).post("/api/auth/password").set(...bearer(tok)).send({ currentPassword: "ancienpass8", newPassword: "nouveaupass8" });
+    expect(chg.status).toBe(200);
+    // L'ancien jeton d'accès ne doit plus être accepté (tokenVersion incrémentée).
+    expect((await request(app).get("/api/auth/me").set(...bearer(tok))).status).toBe(401);
+  });
+});

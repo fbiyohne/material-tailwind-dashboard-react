@@ -93,10 +93,32 @@ export async function encaisser(opts: {
 export async function finaliserPaiement(paiementId: number) {
   const p = await prisma.paiement.findUnique({ where: { id: paiementId }, include: { membre: true } });
   if (!p) throw new HttpError(404, "Paiement introuvable");
-  if (p.statut === "REUSSI" && p.recuNumero) return p; // déjà encaissé
-  const { recu } = await encaisser({
-    membre: p.membre, annee: p.annee, montant: p.montant,
-    type: p.type as TypeReglement, mode: `En ligne (${p.canal})`, ref: p.ref,
+  if (p.statut === "REUSSI" && p.recuNumero) return p; // déjà encaissé (idempotent)
+
+  // Réclamation ATOMIQUE avant encaissement (anti-double-crédit) : un seul appel
+  // concurrent bascule le paiement hors de l'état « à finaliser ». Les rejeux
+  // (retry de webhook, double-clic « confirmer ») voient count === 0 et ressortent
+  // sans ré-encaisser — sinon `montantPaye` serait incrémenté deux fois et deux
+  // reçus officiels seraient émis pour un même paiement.
+  const claim = await prisma.paiement.updateMany({
+    where: { id: paiementId, statut: { in: ["INITIE", "EN_ATTENTE"] } },
+    data: { statut: "REUSSI" },
   });
-  return prisma.paiement.update({ where: { id: p.id }, data: { statut: "REUSSI", recuNumero: recu.numero } });
+  if (claim.count === 0) {
+    // Déjà réclamé/finalisé par un appel concurrent : on renvoie l'état courant.
+    return (await prisma.paiement.findUnique({ where: { id: paiementId } }))!;
+  }
+  try {
+    const { recu } = await encaisser({
+      membre: p.membre, annee: p.annee, montant: p.montant,
+      type: p.type as TypeReglement, mode: `En ligne (${p.canal})`, ref: p.ref,
+    });
+    return await prisma.paiement.update({ where: { id: p.id }, data: { recuNumero: recu.numero } });
+  } catch (e) {
+    // Échec de l'encaissement : on relâche le verrou (retour EN_ATTENTE) pour
+    // qu'un rejeu ultérieur puisse réussir, plutôt que de laisser un paiement
+    // marqué REUSSI sans reçu.
+    await prisma.paiement.update({ where: { id: p.id }, data: { statut: "EN_ATTENTE" } });
+    throw e;
+  }
 }

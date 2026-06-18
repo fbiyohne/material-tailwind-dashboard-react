@@ -26,19 +26,24 @@ export async function requireAuth(req: AuthRequest, _res: Response, next: NextFu
   if (!header?.startsWith("Bearer ")) {
     return next(new HttpError(401, "Authentification requise"));
   }
-  let payload: { sub: number; role: Role };
+  let payload: { sub: number; role: Role; tv?: number };
   try {
-    payload = jwt.verify(header.slice(7), env.jwtSecret) as unknown as { sub: number; role: Role };
+    payload = jwt.verify(header.slice(7), env.jwtSecret, { algorithms: ["HS256"] }) as unknown as { sub: number; role: Role; tv?: number };
   } catch {
     return next(new HttpError(401, "Jeton invalide ou expiré"));
   }
   try {
     const user = await prisma.user.findUnique({
       where: { id: payload.sub },
-      select: { id: true, role: true, actif: true, membreId: true },
+      select: { id: true, role: true, actif: true, membreId: true, tokenVersion: true },
     });
     if (!user || !user.actif) {
       return next(new HttpError(401, "Compte introuvable ou désactivé"));
+    }
+    // Invalidation des jetons d'accès émis avant un changement de mot de passe :
+    // la version de session du jeton doit correspondre à celle du compte.
+    if ((payload.tv ?? 0) !== user.tokenVersion) {
+      return next(new HttpError(401, "Session expirée, veuillez vous reconnecter"));
     }
     req.user = { id: user.id, role: user.role, membreId: user.membreId };
     next();
@@ -82,7 +87,7 @@ export function confinementAvocat(req: AuthRequest, _res: Response, next: NextFu
   if (!header?.startsWith("Bearer ")) return next();
   let payload: { role?: Role };
   try {
-    payload = jwt.verify(header.slice(7), env.jwtSecret) as unknown as { role?: Role };
+    payload = jwt.verify(header.slice(7), env.jwtSecret, { algorithms: ["HS256"] }) as unknown as { role?: Role };
   } catch {
     return next(); // jeton invalide : laisse requireAuth renvoyer 401
   }

@@ -60,6 +60,9 @@ model User {
   role          Role
   passwordHash  String
   actif         Boolean        @default(true)
+  // Version de session : incrémentée à chaque changement de mot de passe pour
+  // invalider les jetons d'accès (JWT) déjà émis avant leur expiration.
+  tokenVersion  Int            @default(0)
   createdAt     DateTime       @default(now())
   refreshTokens RefreshToken[]
   // Espace avocat : un compte de rôle AVOCAT est rattaché à sa fiche Membre

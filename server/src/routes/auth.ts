@@ -169,7 +169,8 @@ authRouter.post(
     }
     await prisma.user.update({
       where: { id: user.id },
-      data: { passwordHash: bcrypt.hashSync(password, 10), resetToken: null, resetExpire: null },
+      // tokenVersion++ invalide aussi les jetons d'accès déjà émis (pas seulement les refresh).
+      data: { passwordHash: bcrypt.hashSync(password, 10), resetToken: null, resetExpire: null, tokenVersion: { increment: 1 } },
     });
     await revoquerTousLesJetons(user.id);
     res.json({ ok: true });
@@ -221,7 +222,10 @@ authRouter.post(
     if (!user || !(await bcrypt.compare(currentPassword, user.passwordHash))) {
       throw new HttpError(400, "Mot de passe actuel incorrect");
     }
-    await prisma.user.update({ where: { id: user.id }, data: { passwordHash: bcrypt.hashSync(newPassword, 10) } });
+    // Changement de mot de passe = révocation de toutes les sessions (refresh + accès) :
+    // un mot de passe modifié pour reprendre la main doit déconnecter un éventuel intrus.
+    await prisma.user.update({ where: { id: user.id }, data: { passwordHash: bcrypt.hashSync(newPassword, 10), tokenVersion: { increment: 1 } } });
+    await revoquerTousLesJetons(user.id);
     res.json({ ok: true });
   })
 );
