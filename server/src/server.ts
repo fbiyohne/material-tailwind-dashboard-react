@@ -1,7 +1,11 @@
 import { creerApp } from "./app.js";
-import { env } from "./env.js";
+import { env, verifierConfigProduction } from "./env.js";
 import { logger } from "./lib/logger.js";
+import { prisma } from "./prisma.js";
 import { initRealtime } from "./lib/realtime.js";
+
+// Rend visibles, au démarrage, les secrets manquants qui dégraderaient en silence.
+verifierConfigProduction((msg) => logger.warn(msg));
 
 const server = creerApp().listen(env.port, () => {
   logger.info({ port: env.port, env: env.nodeEnv }, `API Barreau de Pointe-Noire — http://localhost:${env.port}/api`);
@@ -10,10 +14,13 @@ const server = creerApp().listen(env.port, () => {
 // Messagerie temps réel (WebSocket /ws) attachée au même serveur HTTP.
 initRealtime(server);
 
-// Arrêt propre (conteneur / SIGTERM) et journalisation des erreurs fatales.
+// Arrêt propre (conteneur / SIGTERM) : on draine aussi le pool de connexions Prisma.
 const arret = (signal: string) => {
   logger.info({ signal }, "Arrêt du serveur…");
-  server.close(() => process.exit(0));
+  server.close(async () => {
+    await prisma.$disconnect().catch(() => {});
+    process.exit(0);
+  });
 };
 process.on("SIGTERM", () => arret("SIGTERM"));
 process.on("SIGINT", () => arret("SIGINT"));

@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { logger } from "./logger.js";
 
 /**
  * Signature électronique des documents officiels — signature **asymétrique
@@ -21,10 +22,15 @@ function chargerCles(): { privateKey: string; publicKey: string } {
     if (fs.existsSync(privPath) && fs.existsSync(pubPath)) {
       return { privateKey: fs.readFileSync(privPath, "utf8"), publicKey: fs.readFileSync(pubPath, "utf8") };
     }
-  } catch {
-    /* ignore */
+  } catch (e) {
+    logger.warn({ err: e }, "Lecture des clés de signature échouée — repli sur génération.");
   }
-  // Génération (développement) et persistance.
+  // Aucune clé fournie ni persistée : on en génère (acceptable en dev). En
+  // production, c'est une MAUVAISE configuration : la clé est éphémère et tous
+  // les QR de documents émis deviendront invérifiables au prochain redémarrage.
+  if (process.env.NODE_ENV === "production") {
+    logger.error("Clés de signature absentes : génération d'une clé ÉPHÉMÈRE — les signatures/QR existants seront invalidés au redémarrage. Configurez SIGNATURE_PRIVATE_KEY/SIGNATURE_PUBLIC_KEY ou SIGNATURE_KEY_DIR.");
+  }
   const { privateKey, publicKey } = crypto.generateKeyPairSync("rsa", {
     modulusLength: 2048,
     publicKeyEncoding: { type: "spki", format: "pem" },
@@ -34,8 +40,8 @@ function chargerCles(): { privateKey: string; publicKey: string } {
     fs.mkdirSync(keyDir, { recursive: true });
     fs.writeFileSync(privPath, privateKey, { mode: 0o600 });
     fs.writeFileSync(pubPath, publicKey);
-  } catch {
-    /* lecture seule : on garde les clés en mémoire */
+  } catch (e) {
+    logger.warn({ err: e }, "Persistance des clés de signature impossible (FS en lecture seule) — clés gardées en mémoire.");
   }
   return { privateKey, publicKey };
 }

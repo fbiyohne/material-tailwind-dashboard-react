@@ -28,6 +28,24 @@ function secretJwt(): string {
   return "dev-secret";
 }
 
+/**
+ * Avertit au démarrage des configurations qui, absentes, dégradent SILENCIEUSEMENT
+ * en production (échec à l'usage plutôt qu'au boot). N'interrompt pas le démarrage —
+ * un déploiement peut légitimement tourner en simulation — mais rend le défaut visible.
+ */
+export function verifierConfigProduction(avertir: (msg: string) => void): void {
+  if (nodeEnv !== "production") return;
+  if (process.env.PAYMENT_PROVIDER && !process.env.PAYMENT_WEBHOOK_SECRET) {
+    avertir("PAYMENT_PROVIDER défini mais PAYMENT_WEBHOOK_SECRET absent : tous les webhooks de paiement seront rejetés.");
+  }
+  if (!process.env.SIGNATURE_PRIVATE_KEY && !process.env.SIGNATURE_KEY_DIR) {
+    avertir("Clés de signature non configurées : une clé éphémère sera générée et invalidera les QR émis à chaque redémarrage.");
+  }
+  if (!process.env.SMTP_HOST && !process.env.SMTP_URL) {
+    avertir("SMTP non configuré : les notifications email resteront en simulation.");
+  }
+}
+
 export const env = {
   nodeEnv,
   databaseUrl: requis("DATABASE_URL"),
