@@ -1,12 +1,7 @@
 /** Gabarits HTML des documents officiels (rendus en PDF par Puppeteer). */
 
-import { montantEnLettresFCFA } from "./montantEnLettres.js";
-
 const fmtDate = (d: Date | string) =>
   new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
-
-const fmtFCFA = (n: number) =>
-  `${Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ")} FCFA`;
 
 /** Sceau officiel (SVG) — balance entourée de la dénomination. */
 const SCEAU = `
@@ -80,7 +75,7 @@ export function documentHtml({ org, title, reference, bodyHtml, signataire, date
 }
 
 const liste = (items: string[]) =>
-  `<ol style="margin:6px 0 0 18px">${items.map((p) => `<li style="margin:2px 0">${p}</li>`).join("")}</ol>`;
+  `<ol style="margin:6px 0 0 18px">${items.map((p) => `<li style="margin:2px 0">${escapeHtml(p)}</li>`).join("")}</ol>`;
 
 const QUALITE_TABLEAU: Record<string, string> = { AVOCAT: "Avocats", STAGIAIRE: "Avocats stagiaires", HONORAIRE: "Avocats honoraires" };
 const MENTION_STATUT: Record<string, string> = { SUSPENDU: "Suspendu", OMIS: "Omis" };
@@ -94,8 +89,8 @@ export function tableauOrdreHtml(sections: { qualite: string; membres: any[] }[]
         <th style="padding:5px 6px;width:42px">N°</th><th style="padding:5px 6px">Nom</th><th style="padding:5px 6px">Cabinet</th><th style="padding:5px 6px;width:120px">Inscription</th></tr></thead>
       <tbody>${s.membres.map((m) => `<tr style="border-bottom:1px solid #E0DBD0">
         <td style="padding:5px 6px;font-family:'DM Mono',monospace;color:#C4990A">${m.rang}</td>
-        <td style="padding:5px 6px"><b>Me ${m.nom}</b>${MENTION_STATUT[m.statut] ? ` <span style="font-size:9px;color:#b3261e">(${MENTION_STATUT[m.statut]})</span>` : ""}</td>
-        <td style="padding:5px 6px;color:#7A756A">${m.cabinet ?? "—"}</td>
+        <td style="padding:5px 6px"><b>Me ${escapeHtml(m.nom)}</b>${MENTION_STATUT[m.statut] ? ` <span style="font-size:9px;color:#b3261e">(${MENTION_STATUT[m.statut]})</span>` : ""}</td>
+        <td style="padding:5px 6px;color:#7A756A">${m.cabinet ? escapeHtml(m.cabinet) : "—"}</td>
         <td style="padding:5px 6px;color:#7A756A">${m.dateInscription ? fmtDate(m.dateInscription) : "—"}</td></tr>`).join("")}</tbody>
     </table>`;
   return documentHtml({
@@ -115,7 +110,7 @@ export function attestationHtml(membre: { nom: string; num: number; dateInscript
     title: "Attestation d'inscription",
     reference: `N° ${numero}`,
     bodyHtml: `
-      <p>Le Bâtonnier de l'Ordre des Avocats du Barreau de Pointe-Noire atteste que <b>Me ${membre.nom}</b> est inscrit(e) au Tableau de l'Ordre des Avocats du Barreau de Pointe-Noire sous le numéro <b>${membre.num}</b>${depuis}.</p>
+      <p>Le Bâtonnier de l'Ordre des Avocats du Barreau de Pointe-Noire atteste que <b>Me ${escapeHtml(membre.nom)}</b> est inscrit(e) au Tableau de l'Ordre des Avocats du Barreau de Pointe-Noire sous le numéro <b>${membre.num}</b>${depuis}.</p>
       <p style="margin-top:12px">La présente attestation est délivrée à l'intéressé(e) pour servir et valoir ce que de droit.</p>`,
     signataire: { role: "Le Bâtonnier", nom: "Me BIKINDOU Audrey Séverin" },
     date,
@@ -128,7 +123,7 @@ export function convocationReunionHtml(reunion: any): string {
     title: "Convocation",
     reference: `Réunion du ${fmtDate(reunion.date)}`,
     bodyHtml: `
-      <p>Le Bâtonnier a l'honneur de convier Mesdames et Messieurs les membres du Conseil de l'Ordre à la réunion qui se tiendra le <b>${fmtDate(reunion.date)}</b>${reunion.heure ? ` à <b>${reunion.heure}</b>` : ""}, au <b>${reunion.lieu ?? "—"}</b>.</p>
+      <p>Le Bâtonnier a l'honneur de convier Mesdames et Messieurs les membres du Conseil de l'Ordre à la réunion qui se tiendra le <b>${fmtDate(reunion.date)}</b>${reunion.heure ? ` à <b>${escapeHtml(reunion.heure)}</b>` : ""}, au <b>${escapeHtml(reunion.lieu ?? "—")}</b>.</p>
       <p style="margin-top:10px"><b>Ordre du jour :</b></p>${liste(reunion.ordreDuJour ?? [])}`,
     signataire: { role: "Le Bâtonnier", nom: "Me BIKINDOU Audrey Séverin" },
     date: reunion.date,
@@ -162,7 +157,7 @@ export function convocationAgHtml(a: any): string {
     title: "Convocation à l'Assemblée Générale",
     reference: `${a.type} du ${fmtDate(a.date)}`,
     bodyHtml: `
-      <p>Le Bâtonnier convoque l'ensemble des membres du corps électoral à l'<b>${type}</b> qui se tiendra le <b>${fmtDate(a.date)}</b>, au <b>${a.lieu ?? "—"}</b>.</p>
+      <p>Le Bâtonnier convoque l'ensemble des membres du corps électoral à l'<b>${type}</b> qui se tiendra le <b>${fmtDate(a.date)}</b>, au <b>${escapeHtml(a.lieu ?? "—")}</b>.</p>
       <p style="margin-top:10px"><b>Ordre du jour :</b></p>${liste(a.ordreDuJour ?? [])}`,
     signataire: { role: "Le Bâtonnier", nom: "Me BIKINDOU Audrey Séverin" },
     date: a.date,
@@ -170,7 +165,7 @@ export function convocationAgHtml(a: any): string {
 }
 
 export function convocationDisciplineHtml(d: any): string {
-  const qui = d.avocatNom === "Confidentiel" ? "l'avocat concerné" : `Me ${d.avocatNom}`;
+  const qui = d.avocatNom === "Confidentiel" ? "l'avocat concerné" : `Me ${escapeHtml(d.avocatNom)}`;
   const quand = d.dateAudience ? `, le <b>${fmtDate(d.dateAudience)}</b>` : "";
   return documentHtml({
     org: "Conseil de discipline",
@@ -178,7 +173,7 @@ export function convocationDisciplineHtml(d: any): string {
     reference: `Dossier N° ${d.reference}`,
     bodyHtml: `
       <p>Dans le cadre du dossier disciplinaire <b>N° ${d.reference}</b>, <b>${qui}</b> est invité(e) à comparaître devant le Conseil de discipline de l'Ordre des Avocats du Barreau de Pointe-Noire${quand}.</p>
-      <p style="margin-top:10px">Objet : ${d.objet}.</p>
+      <p style="margin-top:10px">Objet : ${escapeHtml(d.objet ?? "—")}.</p>
       <p style="margin-top:10px;font-size:12px;color:#7A756A">L'intéressé(e) pourra se faire assister du conseil de son choix et consulter le dossier au Secrétariat de l'Ordre.</p>`,
     signataire: { role: "Le Bâtonnier, Président du Conseil de discipline", nom: "Me BIKINDOU Audrey Séverin" },
     date: new Date(),
@@ -208,7 +203,7 @@ export function pvReunionHtml(reunion: any): string {
     title: "Procès-verbal de réunion",
     reference: `Réunion du ${fmtDate(reunion.date)}`,
     bodyHtml: `
-      <p>L'an ${new Date(reunion.date).getFullYear()}, le <b>${fmtDate(reunion.date)}</b>${reunion.heure ? ` à <b>${reunion.heure}</b>` : ""}, le Conseil de l'Ordre des Avocats du Barreau de Pointe-Noire s'est réuni${reunion.lieu ? ` au <b>${reunion.lieu}</b>` : ""}.</p>
+      <p>L'an ${new Date(reunion.date).getFullYear()}, le <b>${fmtDate(reunion.date)}</b>${reunion.heure ? ` à <b>${escapeHtml(reunion.heure)}</b>` : ""}, le Conseil de l'Ordre des Avocats du Barreau de Pointe-Noire s'est réuni${reunion.lieu ? ` au <b>${escapeHtml(reunion.lieu)}</b>` : ""}.</p>
       ${odj}
       <p style="margin:14px 0 4px"><b>Délibérations :</b></p>
       ${paragraphes(reunion.pv)}`,
@@ -229,7 +224,7 @@ export function pvAssembleeHtml(a: any): string {
     title: "Procès-verbal d'Assemblée Générale",
     reference: `${a.type} du ${fmtDate(a.date)}`,
     bodyHtml: `
-      <p>L'an ${new Date(a.date).getFullYear()}, le <b>${fmtDate(a.date)}</b>, les membres du Barreau de Pointe-Noire se sont réunis en <b>${type}</b>${a.lieu ? ` au <b>${a.lieu}</b>` : ""}.</p>
+      <p>L'an ${new Date(a.date).getFullYear()}, le <b>${fmtDate(a.date)}</b>, les membres du Barreau de Pointe-Noire se sont réunis en <b>${type}</b>${a.lieu ? ` au <b>${escapeHtml(a.lieu)}</b>` : ""}.</p>
       ${quorum}
       <p style="margin:14px 0 4px"><b>Délibérations :</b></p>
       ${paragraphes(a.pv)}
@@ -241,7 +236,7 @@ export function pvAssembleeHtml(a: any): string {
 
 /** Décision disciplinaire (CDC §2.11 / §6 — PDF sécurisé). */
 export function decisionDisciplineHtml(d: any): string {
-  const qui = d.avocatNom === "Confidentiel" ? "l'avocat concerné" : `Me ${d.avocatNom}`;
+  const qui = d.avocatNom === "Confidentiel" ? "l'avocat concerné" : `Me ${escapeHtml(d.avocatNom)}`;
   const sanction = d.sanction
     ? `<div class="montant"><b>${escapeHtml(d.sanction)}</b><i>Sanction prononcée</i></div>`
     : "";
@@ -257,39 +252,5 @@ export function decisionDisciplineHtml(d: any): string {
       ${sanction}`,
     signataire: { role: "Le Bâtonnier, Président du Conseil de discipline", nom: "Me BIKINDOU Audrey Séverin" },
     date: new Date(),
-  });
-}
-
-export function recuHtml(recu: any, membre: { nom: string }): string {
-  return documentHtml({
-    org: "Trésorerie Générale",
-    title: `Reçu N° ${recu.numero}`,
-    bodyHtml: `
-      <div class="row"><span class="l">Reçu de Me</span><span><b>${membre.nom}</b></span></div>
-      <div class="montant"><b>${fmtFCFA(recu.montant)}</b><i>Arrêté à la somme de ${montantEnLettresFCFA(recu.montant)}.</i></div>
-      <div class="row"><span class="l">Pour</span><span>Cotisation ordinale ${recu.annee}</span></div>
-      <div class="row"><span class="l">Mode de paiement</span><span>${recu.mode ?? "—"}</span></div>`,
-    signataire: { role: "La Trésorière", nom: "Me ONDZE BOYA" },
-    date: recu.date,
-  });
-}
-
-export function quitusHtml(quitus: any, membre: { nom: string }, signature?: string): string {
-  const blocSignature = signature
-    ? `<div style="margin-top:16px;border-top:1px dashed #E0DBD0;padding-top:8px;font-size:8.5px;color:#7A756A">
-         <b style="color:#1A3A6B">Signature numérique RSA-2048 / SHA-256</b> — vérifiable via la clé publique du Barreau (/api/signatures/cle-publique).<br>
-         <span style="font-family:'DM Mono',monospace;color:#1A3A6B;word-break:break-all">${signature}</span>
-       </div>`
-    : "";
-  return documentHtml({
-    org: "Conseil de l'Ordre",
-    title: "Quitus de cotisation",
-    reference: `N° ${quitus.numero}`,
-    bodyHtml: `
-      <p>Le Conseil de l'Ordre des Avocats du Barreau de Pointe-Noire certifie que <b>Me ${membre.nom}</b>, avocat inscrit au tableau, est <b>entièrement à jour</b> de ses cotisations ordinales au titre de l'exercice <b>${quitus.annee}</b>.</p>
-      <p style="margin-top:12px">En foi de quoi le présent quitus lui est délivré pour servir et valoir ce que de droit.</p>
-      ${blocSignature}`,
-    signataire: { role: "La Trésorière", nom: "Me ONDZE BOYA" },
-    date: quitus.dateEmission,
   });
 }

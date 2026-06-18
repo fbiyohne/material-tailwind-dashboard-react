@@ -1,4 +1,5 @@
 import { Router } from "express";
+import rateLimit from "express-rate-limit";
 import { prisma } from "../prisma.js";
 import { asyncH } from "../middleware/error.js";
 import { signerDocument, quitusPayload, recuPayload, empreinteCle } from "../lib/signature.js";
@@ -10,6 +11,17 @@ import { signerDocument, quitusPayload, recuPayload, empreinteCle } from "../lib
  * RSA-SHA256 du Barreau est jointe (empreinte de clé publique = `empreinteCle`).
  */
 export const verificationRouter = Router();
+
+// Les numéros sont séquentiels (R-AAAA-NNN / Q-AAAA-NNN) et la réponse divulgue
+// le nom du bénéficiaire (et le montant pour les reçus) : un limiteur dédié borne
+// l'énumération massive du registre depuis cet endpoint public (le scan d'un QR
+// légitime ne vérifie qu'un numéro connu à la fois).
+const verifLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, limit: 60, standardHeaders: true, legacyHeaders: false,
+  message: { erreur: "Trop de vérifications, réessayez plus tard." },
+  skip: () => process.env.NODE_ENV === "test",
+});
+verificationRouter.use(verifLimiter);
 
 const fmt = (d: Date | string) => new Date(d).toISOString().slice(0, 10);
 

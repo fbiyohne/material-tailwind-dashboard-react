@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
-import { requireAuth, requireRole } from "../middleware/auth.js";
+import { requireAuth, requireRole, type AuthRequest } from "../middleware/auth.js";
 import { genererArticleLettre, iaDisponible } from "../lib/ia.js";
 
 export const publicationsRouter = Router();
@@ -48,9 +48,9 @@ publicationsRouter.patch("/:id", requireRole("SECRETAIRE_GENERAL"), asyncH(async
 const statutSchema = z.object({ statut: z.enum(["BROUILLON", "A_VALIDER", "VALIDE", "PUBLIE"]) });
 
 /** Workflow de validation : transition réservée SG/Bâtonnier ; VALIDE requiert le Bâtonnier. */
-publicationsRouter.post("/:id/statut", requireRole("SECRETAIRE_GENERAL", "BATONNIER"), asyncH(async (req, res) => {
+publicationsRouter.post("/:id/statut", requireRole("SECRETAIRE_GENERAL", "BATONNIER"), asyncH(async (req: AuthRequest, res) => {
   const { statut } = statutSchema.parse(req.body);
-  const role = (req as any).user?.role;
+  const role = req.user?.role;
   if (statut === "VALIDE" && role !== "BATONNIER" && role !== "ADMIN") {
     throw new HttpError(403, "Seul le Bâtonnier peut valider une publication");
   }

@@ -69,9 +69,30 @@ async function getNavigateur(): Promise<Browser> {
   return navigateur;
 }
 
+// Hôtes externes autorisés au rendu (polices Google uniquement). Toute autre
+// ressource réseau est bloquée : défense en profondeur contre une injection HTML
+// dans un champ libre (ex. nom = `<img src=http://evil/…>`) qui déclencherait
+// sinon une requête sortante côté serveur (SSRF aveugle) via `networkidle0`.
+const HOTES_AUTORISES = new Set(["fonts.googleapis.com", "fonts.gstatic.com"]);
+
+/** Nouvelle page Chromium avec interception des ressources externes non autorisées. */
+async function nouvellePage() {
+  const page = await (await getNavigateur()).newPage();
+  await page.setRequestInterception(true);
+  page.on("request", (req) => {
+    const url = req.url();
+    if (url.startsWith("data:") || req.isNavigationRequest()) return void req.continue();
+    try {
+      if (HOTES_AUTORISES.has(new URL(url).hostname)) return void req.continue();
+    } catch { /* URL non standard : on bloque */ }
+    return void req.abort();
+  });
+  return page;
+}
+
 /** Convertit un document HTML en PDF A4 (qualité vectorielle). */
 export async function htmlVersPdf(html: string): Promise<Buffer> {
-  const page = await (await getNavigateur()).newPage();
+  const page = await nouvellePage();
   try {
     // « networkidle0 » est accepté à l'exécution par setContent (attente du
     // chargement complet des ressources) ; les typings de cette version le
@@ -101,7 +122,7 @@ export async function envoyerPdf(res: Response, html: string, filename: string):
  * propre cadre). Sert la reproduction vectorielle des composants à l'écran.
  */
 export async function envoyerDocumentPdf(res: Response, html: string, filename: string): Promise<void> {
-  const page = await (await getNavigateur()).newPage();
+  const page = await nouvellePage();
   try {
     await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 2 });
     await page.setContent(html, { waitUntil: "networkidle0" } as unknown as Parameters<typeof page.setContent>[1]);

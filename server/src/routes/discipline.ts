@@ -17,9 +17,12 @@ const journaliser = (action: string, userId?: number) =>
 disciplineRouter.get(
   "/",
   asyncH(async (req: AuthRequest, res) => {
-    // Filtre par membre = casier disciplinaire de l'avocat (sans journaliser la consultation globale).
+    // Filtre par membre = consultation du casier disciplinaire d'un avocat :
+    // journalisée au même titre que les autres accès (RG-13 — la lecture ciblée
+    // du casier est la vue la plus sensible, elle doit être tracée).
     const membreId = req.query.membreId ? Number(req.query.membreId) : undefined;
     if (membreId) {
+      await journaliser(`Consultation du casier disciplinaire (membre #${membreId})`, req.user!.id);
       res.json(await prisma.dossierDisciplinaire.findMany({ where: { membreId }, orderBy: { id: "desc" } }));
       return;
     }
