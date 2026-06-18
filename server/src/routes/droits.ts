@@ -4,7 +4,7 @@ import { prisma } from "../prisma.js";
 import { anneeDeRequete } from "../lib/requete.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
-import { droitDuAvec, statutCotisation, tarifsActuels } from "../lib/business.js";
+import { droitDue, statutCotisation, tarifsActuels } from "../lib/business.js";
 import { encaisser } from "../lib/encaissement.js";
 
 export const droitsRouter = Router();
@@ -28,7 +28,7 @@ droitsRouter.get(
     let totPaye = 0;
     const lignes = membres.map((m) => {
       const d = m.droitsPlaidoirie[0];
-      const du = d?.montantDu ?? droitDuAvec(tarifs, m.qualite);
+      const du = droitDue(d, tarifs, m.qualite);
       const paye = Math.min(du, d?.montantPaye ?? 0);
       totDu += du;
       totPaye += paye;
@@ -74,7 +74,7 @@ droitsRouter.post(
     // Garde anti-surpaiement / double-saisie (miroir des cotisations).
     const tarifs = await tarifsActuels();
     const d = await prisma.droitPlaidoirie.findUnique({ where: { membreId_annee: { membreId, annee } } });
-    const du = d?.montantDu ?? droitDuAvec(tarifs, membre.qualite);
+    const du = droitDue(d, tarifs, membre.qualite);
     const restant = du - (d?.montantPaye ?? 0);
     if (du > 0 && restant <= 0) throw new HttpError(409, "Le droit de plaidoirie est déjà soldé pour cet exercice.");
     if (montant > restant) throw new HttpError(400, `Le versement dépasse le solde restant dû (${restant.toLocaleString("fr-FR")} FCFA).`);

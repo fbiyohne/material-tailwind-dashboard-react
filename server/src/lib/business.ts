@@ -51,6 +51,21 @@ export function droitDuAvec(tarifs: Tarifs, qualite: Qualite): number {
   return qualite === "AVOCAT" ? tarifs.droitPlaidoirie : 0;
 }
 
+/**
+ * Cotisation due EFFECTIVE : une ligne réellement persistée (avec son montant dû
+ * figé à l'époque) prime sur le barème en vigueur ; sinon on calcule d'après la
+ * qualité et les tarifs courants. Source unique de cette règle, autrefois recopiée
+ * dans cotisations/dashboard/espace — la centraliser évite les divergences d'argent.
+ */
+export function cotisationDue(ligne: { montantDu: number } | null | undefined, tarifs: Tarifs, qualite: Qualite): number {
+  return ligne?.montantDu ?? montantDuAvec(tarifs, qualite);
+}
+
+/** Droit de plaidoirie dû EFFECTIF : ligne réelle prioritaire, sinon barème (miroir de cotisationDue). */
+export function droitDue(ligne: { montantDu: number } | null | undefined, tarifs: Tarifs, qualite: Qualite): number {
+  return ligne?.montantDu ?? droitDuAvec(tarifs, qualite);
+}
+
 export type StatutCotisation = "ajour" | "partiel" | "retard" | "exonere";
 
 /** Statut dérivé d'une cotisation (BR-07/08). */

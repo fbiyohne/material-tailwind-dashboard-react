@@ -4,7 +4,7 @@ import { prisma } from "../prisma.js";
 import { anneeDeRequete } from "../lib/requete.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
-import { montantDuAvec, statutCotisation, tarifsActuels } from "../lib/business.js";
+import { cotisationDue, montantDuAvec, statutCotisation, tarifsActuels } from "../lib/business.js";
 import { encaisser } from "../lib/encaissement.js";
 import { envoyerEmail, envoyerSms, emailEnSimulation } from "../lib/notifications.js";
 
@@ -24,7 +24,7 @@ cotisationsRouter.post(
     ]);
     const cibles = membres.filter((m) => {
       const c = m.cotisations[0];
-      const du = c?.montantDu ?? montantDuAvec(tarifs, m.qualite);
+      const du = cotisationDue(c, tarifs, m.qualite);
       const st = statutCotisation(du, c?.montantPaye ?? 0);
       return (st === "retard" || st === "partiel") && m.email;
     });
@@ -32,7 +32,7 @@ cotisationsRouter.post(
     let envoyes = 0;
     for (const m of cibles) {
       const c = m.cotisations[0];
-      const du = c?.montantDu ?? montantDuAvec(tarifs, m.qualite);
+      const du = cotisationDue(c, tarifs, m.qualite);
       const solde = du - (c?.montantPaye ?? 0);
       await envoyerEmail({
         to: m.email!,
@@ -68,7 +68,7 @@ cotisationsRouter.get(
     ]);
     const lignes = membres.map((m) => {
       const c = m.cotisations[0];
-      const du = c?.montantDu ?? montantDuAvec(tarifs, m.qualite);
+      const du = cotisationDue(c, tarifs, m.qualite);
       const paye = c?.montantPaye ?? 0;
       return {
         membre: { id: m.id, num: m.num, nom: m.nom, qualite: m.qualite, cabinet: m.cabinet },
@@ -138,7 +138,7 @@ cotisationsRouter.post(
     // gonfleraient sinon « montantPaye » et fausseraient le statut « à jour »).
     const tarifs = await tarifsActuels();
     const cot = await prisma.cotisation.findUnique({ where: { membreId_annee: { membreId, annee } } });
-    const du = cot?.montantDu ?? montantDuAvec(tarifs, membre.qualite);
+    const du = cotisationDue(cot, tarifs, membre.qualite);
     const restant = du - (cot?.montantPaye ?? 0);
     if (du > 0 && restant <= 0) throw new HttpError(409, "La cotisation est déjà soldée pour cet exercice.");
     if (montant > restant) throw new HttpError(400, `Le versement dépasse le solde restant dû (${restant.toLocaleString("fr-FR")} FCFA).`);

@@ -50,16 +50,26 @@ async function envoyer(path, { method = "GET", body, auth = true } = {}) {
   return fetch(`${BASE}${path}`, { method, headers, body: body !== undefined ? JSON.stringify(body) : undefined });
 }
 
-export async function api(path, opts = {}) {
-  let res = await envoyer(path, opts);
-
-  // Tentative de rafraîchissement sur 401 (hors routes d'auth).
-  if (res.status === 401 && opts.auth !== false && !path.startsWith("/auth/")) {
+/**
+ * Exécute une requête et, sur 401, rafraîchit le jeton UNE seule fois avant de
+ * réessayer. La promesse de rafraîchissement est partagée entre appels concurrents
+ * (`refreshing`). Renvoie la Response finale ; le 401 résiduel est traité par l'appelant.
+ * Source unique de cette logique (api + téléchargements de fichiers protégés).
+ */
+async function avecRafraichissement(faireRequete, tenterRefresh = true) {
+  let res = await faireRequete();
+  if (res.status === 401 && tenterRefresh) {
     refreshing = refreshing ?? rafraichir();
     const ok = await refreshing;
     refreshing = null;
-    if (ok) res = await envoyer(path, opts);
+    if (ok) res = await faireRequete();
   }
+  return res;
+}
+
+export async function api(path, opts = {}) {
+  // Pas de rafraîchissement pour les routes d'auth ni les requêtes non authentifiées.
+  const res = await avecRafraichissement(() => envoyer(path, opts), opts.auth !== false && !path.startsWith("/auth/"));
 
   if (res.status === 401) {
     clearSession();
@@ -91,13 +101,7 @@ export async function telechargerPdf(path, filename) {
     if (token) headers.Authorization = `Bearer ${token}`;
     return fetch(`${BASE}${path}`, { headers });
   };
-  let res = await charger();
-  if (res.status === 401) {
-    refreshing = refreshing ?? rafraichir();
-    const ok = await refreshing;
-    refreshing = null;
-    if (ok) res = await charger();
-  }
+  const res = await avecRafraichissement(charger);
   if (!res.ok) {
     onglet?.close();
     if (res.status === 401) { clearSession(); onUnauthorized?.(); }
@@ -133,13 +137,7 @@ export async function ouvrirFichierAuth(path) {
     if (token) headers.Authorization = `Bearer ${token}`;
     return fetch(`${BASE}${path}`, { headers });
   };
-  let res = await charger();
-  if (res.status === 401) {
-    refreshing = refreshing ?? rafraichir();
-    const ok = await refreshing;
-    refreshing = null;
-    if (ok) res = await charger();
-  }
+  const res = await avecRafraichissement(charger);
   if (!res.ok) {
     onglet?.close();
     if (res.status === 401) { clearSession(); onUnauthorized?.(); }

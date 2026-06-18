@@ -3,7 +3,7 @@ import { prisma } from "../prisma.js";
 import { anneeDeRequete } from "../lib/requete.js";
 import { asyncH } from "../middleware/error.js";
 import { requireAuth, type AuthRequest } from "../middleware/auth.js";
-import { montantDuAvec, statutCotisation, tarifsActuels } from "../lib/business.js";
+import { cotisationDue, statutCotisation, tarifsActuels } from "../lib/business.js";
 
 export const dashboardRouter = Router();
 dashboardRouter.use(requireAuth);
@@ -28,7 +28,7 @@ dashboardRouter.get(
     for (const m of membres) {
       if (m.qualite === "AVOCAT") inscrits += 1;
       if (m.qualite === "STAGIAIRE") stagiaires += 1;
-      const montantDuM = m.cotisations[0]?.montantDu ?? montantDuAvec(tarifs, m.qualite);
+      const montantDuM = cotisationDue(m.cotisations[0], tarifs, m.qualite);
       const paye = m.cotisations[0]?.montantPaye ?? 0;
       du += montantDuM;
       payees += paye;

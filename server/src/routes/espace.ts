@@ -4,7 +4,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireAvocat, type AuthRequest } from "../middleware/auth.js";
-import { montantDuAvec, droitDuAvec, statutCotisation, tarifsActuels, eligibiliteElectorale } from "../lib/business.js";
+import { cotisationDue, droitDue, statutCotisation, tarifsActuels, eligibiliteElectorale } from "../lib/business.js";
 import { finaliserPaiement } from "../lib/encaissement.js";
 import { CANAUX, modeSandbox, nouvelleReference, initierPaiement } from "../lib/paiement.js";
 import QRCode from "qrcode";
@@ -52,11 +52,11 @@ espaceRouter.get(
     if (!membre) throw new HttpError(404, "Fiche introuvable");
 
     const cot = membre.cotisations.find((c) => c.annee === annee);
-    const cotDu = cot?.montantDu ?? montantDuAvec(tarifs, membre.qualite);
+    const cotDu = cotisationDue(cot, tarifs, membre.qualite);
     const cotPaye = cot?.montantPaye ?? 0;
     const droit = membre.droitsPlaidoirie.find((d) => d.annee === annee);
     const estAvocat = membre.qualite === "AVOCAT";
-    const droitDu = estAvocat ? droit?.montantDu ?? droitDuAvec(tarifs, membre.qualite) : 0;
+    const droitDu = estAvocat ? droitDue(droit, tarifs, membre.qualite) : 0;
     const droitPaye = droit?.montantPaye ?? 0;
 
     res.json({
@@ -112,11 +112,11 @@ async function soldeDe(membreId: number, type: "cotisation" | "droit", annee: nu
   }
   if (type === "droit") {
     const d = await prisma.droitPlaidoirie.findUnique({ where: { membreId_annee: { membreId, annee } } });
-    const du = d?.montantDu ?? droitDuAvec(tarifs, membre.qualite);
+    const du = droitDue(d, tarifs, membre.qualite);
     return { membre, du, paye: d?.montantPaye ?? 0, solde: Math.max(0, du - (d?.montantPaye ?? 0)) };
   }
   const c = await prisma.cotisation.findUnique({ where: { membreId_annee: { membreId, annee } } });
-  const du = c?.montantDu ?? montantDuAvec(tarifs, membre.qualite);
+  const du = cotisationDue(c, tarifs, membre.qualite);
   return { membre, du, paye: c?.montantPaye ?? 0, solde: Math.max(0, du - (c?.montantPaye ?? 0)) };
 }
 
