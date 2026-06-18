@@ -20,8 +20,10 @@ export async function encaisser(opts: {
   mode?: string | null;
   ref?: string | null;
   date?: Date;
+  /** Paiement passerelle à finaliser ATOMIQUEMENT dans la même transaction. */
+  paiementId?: number | null;
 }) {
-  const { membre, annee, montant, type } = opts;
+  const { membre, annee, montant, type, paiementId } = opts;
   const dateP = opts.date ?? new Date();
   const mode = opts.mode ?? undefined;
   const ref = opts.ref ?? undefined;
@@ -35,24 +37,42 @@ export async function encaisser(opts: {
   // l'on rejoue la transaction — le numéro est recalculé à partir des lignes déjà
   // committées, jamais perdu.
   const MAX_TENTATIVES = 5;
-  let resultat;
+  let resultat: { cotisation?: unknown; droit?: unknown; recu: { numero: string } } | null = null;
   for (let tentative = 1; ; tentative++) {
     const numero = await prochainNumeroRecu(annee);
     try {
       resultat = await prisma.$transaction(async (tx) => {
+        // Finalisation passerelle DANS la même transaction que l'encaissement :
+        // réclamation atomique du paiement (statut → REUSSI) AVANT tout incrément.
+        // Le perdant d'une course (rejeu de webhook, double-clic) voit count 0 et
+        // n'encaisse pas → ni double crédit, ni état REUSSI-sans-reçu intermédiaire.
+        if (paiementId != null) {
+          const claim = await tx.paiement.updateMany({
+            where: { id: paiementId, statut: { in: ["INITIE", "EN_ATTENTE"] } },
+            data: { statut: "REUSSI" },
+          });
+          if (claim.count === 0) return null;
+        }
         let situation;
+        let montantPaye: number;
+        let montantDu: number;
         if (estDroit) {
-          situation = await tx.droitPlaidoirie.upsert({
+          const d = await tx.droitPlaidoirie.upsert({
             where: { membreId_annee: { membreId: membre.id, annee } },
             create: { membreId: membre.id, annee, montantDu: droitDuAvec(tarifs, membre.qualite), montantPaye: montant, datePaiement: dateP, mode, ref },
             update: { montantPaye: { increment: montant }, datePaiement: dateP, mode, ref },
           });
+          situation = d;
+          montantPaye = d.montantPaye;
+          montantDu = d.montantDu;
         } else {
           const cot = await tx.cotisation.upsert({
             where: { membreId_annee: { membreId: membre.id, annee } },
             create: { membreId: membre.id, annee, montantDu: montantDuAvec(tarifs, membre.qualite), montantPaye: montant, datePaiement: dateP, mode, ref },
             update: { montantPaye: { increment: montant }, datePaiement: dateP, mode, ref },
           });
+          montantPaye = cot.montantPaye;
+          montantDu = cot.montantDu;
           // Règlement intégral = validation Trésorière (BR-01) : dès que la
           // cotisation est soldée, l'avocat est marqué « validé » et devient
           // immédiatement éligible au quitus — le reçu officiel émis fait foi,
@@ -61,8 +81,20 @@ export async function encaisser(opts: {
             ? await tx.cotisation.update({ where: { membreId_annee: { membreId: membre.id, annee } }, data: { valideTresoriere: true } })
             : cot;
         }
+        // Garde anti-surpaiement ATOMIQUE : l'incrément et cette vérification sont
+        // dans la même transaction sérialisée par le verrou de ligne — ferme la
+        // fenêtre TOCTOU des gardes de route (deux versements concurrents ne
+        // peuvent plus faire dépasser le montant dû).
+        if (montantDu > 0 && montantPaye > montantDu) {
+          throw new HttpError(400, "Le versement dépasse le solde restant dû.");
+        }
         const recu = await tx.recu.create({ data: { numero, membreId: membre.id, montant, annee, date: dateP, mode, ref, objet } });
         await tx.archive.create({ data: { categorie: "Reçu de paiement", titre: `Reçu N° ${numero} — Me ${membre.nom}`, reference: numero, date: dateP, membreNom: membre.nom } });
+        // Reçu lié au paiement dans la MÊME transaction : statut REUSSI et
+        // recuNumero sont committés ensemble (jamais REUSSI sans reçu).
+        if (paiementId != null) {
+          await tx.paiement.update({ where: { id: paiementId }, data: { recuNumero: numero } });
+        }
         return estDroit ? { droit: situation, recu } : { cotisation: situation, recu };
       });
       break;
@@ -72,6 +104,9 @@ export async function encaisser(opts: {
       if (!collisionNumero) throw e;
     }
   }
+
+  // Paiement déjà finalisé par un appel concurrent : rien n'a été encaissé.
+  if (!resultat) return null;
 
   const numero = resultat.recu.numero;
   if (membre.email) {
@@ -95,30 +130,14 @@ export async function finaliserPaiement(paiementId: number) {
   if (!p) throw new HttpError(404, "Paiement introuvable");
   if (p.statut === "REUSSI" && p.recuNumero) return p; // déjà encaissé (idempotent)
 
-  // Réclamation ATOMIQUE avant encaissement (anti-double-crédit) : un seul appel
-  // concurrent bascule le paiement hors de l'état « à finaliser ». Les rejeux
-  // (retry de webhook, double-clic « confirmer ») voient count === 0 et ressortent
-  // sans ré-encaisser — sinon `montantPaye` serait incrémenté deux fois et deux
-  // reçus officiels seraient émis pour un même paiement.
-  const claim = await prisma.paiement.updateMany({
-    where: { id: paiementId, statut: { in: ["INITIE", "EN_ATTENTE"] } },
-    data: { statut: "REUSSI" },
+  // L'encaissement réclame le paiement ET pose statut + recuNumero DANS sa propre
+  // transaction (atomique) : aucune fenêtre de double-crédit ni d'état incohérent
+  // « REUSSI sans reçu ». En cas d'échec, la transaction est annulée intégralement,
+  // le paiement reste réclamable et un rejeu réessaie proprement.
+  await encaisser({
+    membre: p.membre, annee: p.annee, montant: p.montant,
+    type: p.type as TypeReglement, mode: `En ligne (${p.canal})`, ref: p.ref,
+    paiementId: p.id,
   });
-  if (claim.count === 0) {
-    // Déjà réclamé/finalisé par un appel concurrent : on renvoie l'état courant.
-    return (await prisma.paiement.findUnique({ where: { id: paiementId } }))!;
-  }
-  try {
-    const { recu } = await encaisser({
-      membre: p.membre, annee: p.annee, montant: p.montant,
-      type: p.type as TypeReglement, mode: `En ligne (${p.canal})`, ref: p.ref,
-    });
-    return await prisma.paiement.update({ where: { id: p.id }, data: { recuNumero: recu.numero } });
-  } catch (e) {
-    // Échec de l'encaissement : on relâche le verrou (retour EN_ATTENTE) pour
-    // qu'un rejeu ultérieur puisse réussir, plutôt que de laisser un paiement
-    // marqué REUSSI sans reçu.
-    await prisma.paiement.update({ where: { id: p.id }, data: { statut: "EN_ATTENTE" } });
-    throw e;
-  }
+  return (await prisma.paiement.findUnique({ where: { id: paiementId } }))!;
 }
