@@ -81,7 +81,7 @@ export function PublicationDetail() {
         <div className="bpn-card">
           <div className="bpn-card-header">
             <span className="bpn-card-heading">Rédaction</span>
-            <button className="bpn-btn bpn-btn-primary !px-3 !py-1 text-xs" onClick={enregistrer}><CheckIcon className="h-3.5 w-3.5" /> Enregistrer</button>
+            <button className="bpn-btn bpn-btn-primary bpn-btn-sm" onClick={enregistrer}><CheckIcon className="h-3.5 w-3.5" /> Enregistrer</button>
           </div>
           <div className="space-y-3 p-4">
             <FormField label="Titre">

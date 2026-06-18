@@ -118,6 +118,11 @@
   .bpn-btn {
     @apply inline-flex items-center gap-1.5 rounded border border-transparent px-4 py-2 text-sm font-medium transition-all duration-150;
   }
+  /* Variante compacte (actions secondaires en ligne, cartes, en-têtes) — remplace
+     les surcharges ad hoc « !px-3 !py-1 text-xs » disséminées dans les pages. */
+  .bpn-btn-sm {
+    @apply px-3 py-1 text-xs;
+  }
   .bpn-btn-primary {
     @apply bg-navy text-white hover:bg-navy-2;
   }

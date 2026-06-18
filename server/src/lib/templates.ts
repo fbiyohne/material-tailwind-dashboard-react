@@ -1,7 +1,6 @@
 /** Gabarits HTML des documents officiels (rendus en PDF par Puppeteer). */
 
-const fmtDate = (d: Date | string) =>
-  new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
+import { esc as escapeHtml, fmtDateFr as fmtDate } from "./documentsCommun.js";
 
 /** Sceau officiel (SVG) — balance entourée de la dénomination. */
 const SCEAU = `
@@ -188,10 +187,6 @@ const paragraphes = (texte?: string | null) =>
     .filter(Boolean)
     .map((bloc) => `<p style="margin:0 0 10px">${escapeHtml(bloc).replace(/\n/g, "<br>")}</p>`)
     .join("") || '<p style="color:#7A756A">— Procès-verbal non encore rédigé —</p>';
-
-function escapeHtml(s: string): string {
-  return s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]!));
-}
 
 /** Procès-verbal de réunion du Conseil de l'Ordre (CDC §2.9 / §6). */
 export function pvReunionHtml(reunion: any): string {

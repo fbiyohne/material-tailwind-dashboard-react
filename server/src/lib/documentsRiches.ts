@@ -7,15 +7,7 @@
  * ⚠️ À garder synchronisé avec les composants React correspondants.
  */
 import { montantEnLettresFCFA } from "./montantEnLettres.js";
-
-const fmtDateFr = (d?: Date | string | null) =>
-  d ? new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" }) : "—";
-
-const fmtFCFA = (n: number) =>
-  `${Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ")} FCFA`;
-
-const esc = (s: unknown) =>
-  String(s ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]!));
+import { esc, fmtFCFA, fmtDateFr } from "./documentsCommun.js";
 
 /** Sceau officiel (balance entourée de la dénomination) — identique au composant Sceau. */
 const sceau = (size: number) => `

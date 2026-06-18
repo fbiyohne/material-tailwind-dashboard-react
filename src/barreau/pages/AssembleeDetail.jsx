@@ -152,7 +152,7 @@ export function AssembleeDetail() {
             label: "Quorum",
             icon: UserGroupIcon,
             content: (
-              <Carte titre="Quorum" action={<button className="bpn-btn bpn-btn-primary !px-3 !py-1 text-xs" onClick={sauverQuorum}>Enregistrer</button>}>
+              <Carte titre="Quorum" action={<button className="bpn-btn bpn-btn-primary bpn-btn-sm" onClick={sauverQuorum}>Enregistrer</button>}>
                 <div className="space-y-3">
                   <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
                     <div><span className="text-gris">Corps électoral : </span><span className="font-medium">{electeurs}</span></div>
@@ -195,8 +195,8 @@ export function AssembleeDetail() {
             content: (
               <Carte titre="Procès-verbal" action={
                 <div className="flex gap-2">
-                  <button className="bpn-btn bpn-btn-ghost !px-3 !py-1 text-xs" onClick={telechargerPv}><ArrowDownTrayIcon className="h-3.5 w-3.5" /> PDF</button>
-                  <button className="bpn-btn bpn-btn-or !px-3 !py-1 text-xs" onClick={sauverPv}><CheckIcon className="h-3.5 w-3.5" /> Enregistrer &amp; archiver</button>
+                  <button className="bpn-btn bpn-btn-ghost bpn-btn-sm" onClick={telechargerPv}><ArrowDownTrayIcon className="h-3.5 w-3.5" /> PDF</button>
+                  <button className="bpn-btn bpn-btn-or bpn-btn-sm" onClick={sauverPv}><CheckIcon className="h-3.5 w-3.5" /> Enregistrer &amp; archiver</button>
                 </div>
               }>
                 <textarea rows={7} value={pv} onChange={(e) => setPv(e.target.value)} className="bpn-input" placeholder="Rédiger le procès-verbal de l'assemblée…" />
