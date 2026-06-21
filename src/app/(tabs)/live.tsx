@@ -1,13 +1,14 @@
 import { FlashList } from '@shopify/flash-list';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { Image } from 'expo-image';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, View } from 'react-native';
-import { catalogRepo, epgRepo } from '@/data';
+import { Pressable, ScrollView, View } from 'react-native';
+import { catalogRepo, epgRepo, favoritesRepo, progressRepo } from '@/data';
 import type { Category, Channel } from '@/domain/models';
 import { useSessionStore } from '@/state/sessionStore';
 import { useTheme } from '@/ui/ThemeProvider';
-import { AppText, Chip, ListRow, Screen } from '@/ui/components';
+import { AppText, Chip, FavoriteButton, ListRow, Screen } from '@/ui/components';
 
 export default function LiveScreen() {
   const { t } = useTranslation();
@@ -19,6 +20,8 @@ export default function LiveScreen() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [selected, setSelected] = useState<string | undefined>(undefined);
   const [channels, setChannels] = useState<Channel[]>([]);
+  const [recent, setRecent] = useState<Channel[]>([]);
+  const [favorites, setFavorites] = useState<Channel[]>([]);
 
   useEffect(() => {
     if (!profileId) return;
@@ -30,29 +33,57 @@ export default function LiveScreen() {
     void catalogRepo.getChannels(profileId, selected).then(setChannels);
   }, [profileId, selected]);
 
+  // Refresh recents/favorites every time the screen regains focus.
+  const refreshShelves = useCallback(async () => {
+    if (!profileId) return;
+    const recentIds = await progressRepo.getRecentChannelIds(profileId, 12);
+    const recents = await Promise.all(recentIds.map((id) => catalogRepo.getChannelById(id)));
+    setRecent(recents.filter((c): c is Channel => c !== null));
+
+    const favRefs = await favoritesRepo.listFavorites(profileId, 'live');
+    const favs = await Promise.all(favRefs.map((f) => catalogRepo.getChannelById(f.itemId)));
+    setFavorites(favs.filter((c): c is Channel => c !== null));
+  }, [profileId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void refreshShelves();
+    }, [refreshShelves]),
+  );
+
   const openChannel = useCallback(
     (channel: Channel) => {
       if (!provider) return;
-      const url = provider.buildLiveUrl(channel.streamId);
-      router.push({ pathname: '/player', params: { url, title: channel.name } });
+      router.push({
+        pathname: '/player',
+        params: {
+          url: provider.buildLiveUrl(channel.streamId),
+          title: channel.name,
+          itemId: channel.id,
+          kind: 'live',
+        },
+      });
     },
     [provider, router],
   );
 
-  return (
-    <Screen padded={false} edges={['top']}>
-      <View style={{ paddingHorizontal: theme.space.xl, paddingTop: theme.space.lg }}>
-        <AppText variant="display">{t('live.title')}</AppText>
-      </View>
+  const Header = (
+    <View>
+      <AppText variant="display" style={{ paddingTop: theme.space.lg }}>
+        {t('live.title')}
+      </AppText>
+
+      {recent.length > 0 ? (
+        <ChannelShelf title={t('live.recents')} channels={recent} onPress={openChannel} />
+      ) : null}
+      {favorites.length > 0 ? (
+        <ChannelShelf title={t('live.favorites')} channels={favorites} onPress={openChannel} />
+      ) : null}
 
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{
-          gap: theme.space.sm,
-          paddingHorizontal: theme.space.xl,
-          paddingVertical: theme.space.md,
-        }}>
+        contentContainerStyle={{ gap: theme.space.sm, paddingVertical: theme.space.md }}>
         <Chip
           label={t('common.all')}
           selected={selected === undefined}
@@ -69,27 +100,84 @@ export default function LiveScreen() {
           />
         ))}
       </ScrollView>
+    </View>
+  );
 
+  return (
+    <Screen padded={false} edges={['top']}>
       <View style={{ flex: 1, paddingHorizontal: theme.space.lg }}>
-        {channels.length === 0 ? (
-          <AppText variant="body" muted style={{ padding: theme.space.lg }}>
-            {t('live.noChannels')}
-          </AppText>
-        ) : (
-          <FlashList
-            data={channels}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <ChannelRow
-                channel={item}
-                profileId={profileId}
-                onPress={() => openChannel(item)}
-              />
-            )}
-          />
-        )}
+        <FlashList
+          data={channels}
+          keyExtractor={(item) => item.id}
+          ListHeaderComponent={Header}
+          ListEmptyComponent={
+            <AppText variant="body" muted style={{ padding: theme.space.lg }}>
+              {t('live.noChannels')}
+            </AppText>
+          }
+          renderItem={({ item }) => (
+            <ChannelRow
+              channel={item}
+              profileId={profileId}
+              onPress={() => openChannel(item)}
+            />
+          )}
+        />
       </View>
     </Screen>
+  );
+}
+
+function ChannelShelf({
+  title,
+  channels,
+  onPress,
+}: {
+  title: string;
+  channels: Channel[];
+  onPress: (c: Channel) => void;
+}) {
+  const theme = useTheme();
+  return (
+    <View style={{ gap: theme.space.sm, marginTop: theme.space.md }}>
+      <AppText variant="heading">{title}</AppText>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ gap: theme.space.md }}>
+        {channels.map((c) => (
+          <Pressable key={c.id} onPress={() => onPress(c)} style={{ width: 92 }}>
+            <View
+              style={{
+                width: 92,
+                height: 64,
+                borderRadius: theme.radius.md,
+                backgroundColor: theme.colors.surface,
+                borderWidth: 1,
+                borderColor: theme.colors.border,
+                alignItems: 'center',
+                justifyContent: 'center',
+                overflow: 'hidden',
+              }}>
+              {c.logoUrl ? (
+                <Image
+                  source={{ uri: c.logoUrl }}
+                  style={{ width: '80%', height: '80%' }}
+                  contentFit="contain"
+                />
+              ) : (
+                <AppText variant="caption" muted>
+                  {c.number ? String(c.number) : '—'}
+                </AppText>
+              )}
+            </View>
+            <AppText variant="caption" numberOfLines={1} style={{ marginTop: theme.space.xs }}>
+              {c.name}
+            </AppText>
+          </Pressable>
+        ))}
+      </ScrollView>
+    </View>
   );
 }
 
@@ -127,6 +215,7 @@ function ChannelRow({
       imageUrl={channel.logoUrl}
       leadingBadge={channel.number ? String(channel.number) : null}
       onPress={onPress}
+      trailing={<FavoriteButton profileId={profileId} itemId={channel.id} kind="live" />}
     />
   );
 }

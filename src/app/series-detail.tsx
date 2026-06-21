@@ -5,14 +5,19 @@ import { ActivityIndicator, ScrollView, View } from 'react-native';
 import type { SeriesDetail } from '@/domain/models';
 import { useSessionStore } from '@/state/sessionStore';
 import { useTheme } from '@/ui/ThemeProvider';
-import { AppText, Card, ListRow, Screen } from '@/ui/components';
+import { AppText, Card, FavoriteButton, ListRow, Screen } from '@/ui/components';
 
 export default function SeriesDetailScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const router = useRouter();
   const provider = useSessionStore((s) => s.provider);
-  const { seriesId, name } = useLocalSearchParams<{ seriesId: string; name?: string }>();
+  const profileId = useSessionStore((s) => s.activeProfileId);
+  const { seriesId, name, id } = useLocalSearchParams<{
+    seriesId: string;
+    name?: string;
+    id?: string;
+  }>();
 
   const [detail, setDetail] = useState<SeriesDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -37,7 +42,14 @@ export default function SeriesDetailScreen() {
   return (
     <Screen padded={false} edges={['top']}>
       <ScrollView contentContainerStyle={{ padding: theme.space.xl, gap: theme.space.lg }}>
-        <AppText variant="display">{name ?? ''}</AppText>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.space.sm }}>
+          <AppText variant="display" style={{ flex: 1 }}>
+            {name ?? ''}
+          </AppText>
+          {id ? (
+            <FavoriteButton profileId={profileId} itemId={id} kind="series" size={24} />
+          ) : null}
+        </View>
 
         {loading ? (
           <ActivityIndicator color={theme.colors.accent} />
@@ -58,7 +70,7 @@ export default function SeriesDetailScreen() {
                       const url = provider.buildEpisodeUrl(ep.streamId, ep.containerExt);
                       router.push({
                         pathname: '/player',
-                        params: { url, title: ep.title },
+                        params: { url, title: ep.title, itemId: ep.id, kind: 'series' },
                       });
                     }}
                   />

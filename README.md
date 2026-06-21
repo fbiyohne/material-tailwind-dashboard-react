@@ -81,9 +81,13 @@ Foundation (the *socle*) is in place and verified (typecheck + lint + unit tests
   virtualized list + now/next EPG) → **Movies** & **Series** (+ series detail) →
   **global Search** (FTS5) → **Settings** (theme, language, profile switch/refresh/remove)
   → full-screen **player** (react-native-video).
+- ✅ Favorites, recents & **resume / continue-watching**: heart toggles on
+  channels/movies/series; the player records progress and seeks back to it; Live
+  shows Récents + Favoris shelves and Movies shows a "Reprendre" shelf with
+  progress bars.
 
-Next: V1 polish — favorites/recent, resume & continue-watching, EPG grid,
-parental control, and the TV (react-native-tvos) build pass.
+Next: V1 polish — full EPG grid, parental control (PIN), category curation
+(pin/hide/lock/reorder), and the TV (react-native-tvos) build pass.
 
 ## Develop
 

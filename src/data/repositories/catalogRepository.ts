@@ -263,6 +263,11 @@ export async function getSeriesById(id: string): Promise<Series | null> {
   return (rows[0] as Series | undefined) ?? null;
 }
 
+export async function getEpisodeById(id: string): Promise<Episode | null> {
+  const rows = await getDb().select().from(episodes).where(eq(episodes.id, id)).limit(1);
+  return (rows[0] as Episode | undefined) ?? null;
+}
+
 export async function getEpisodesForSeries(seriesId: string): Promise<Episode[]> {
   const rows = await getDb()
     .select()

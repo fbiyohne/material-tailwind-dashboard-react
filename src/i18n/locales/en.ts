@@ -58,10 +58,13 @@ export const en = {
     noChannels: 'No channels in this category.',
     now: 'Now',
     next: 'Next',
+    recents: 'Recent',
+    favorites: 'Favorites',
   },
   catalog: {
     noItems: 'Nothing here yet.',
     notSupported: 'This provider does not expose this content.',
+    resume: 'Continue watching',
   },
   seriesDetail: {
     season: 'Season {{n}}',

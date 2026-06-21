@@ -2,6 +2,7 @@ export { AppText } from './AppText';
 export { Button } from './Button';
 export { Card } from './Card';
 export { Chip } from './Chip';
+export { FavoriteButton } from './FavoriteButton';
 export { ListRow } from './ListRow';
 export { PosterCard } from './PosterCard';
 export { Screen } from './Screen';

@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { useTheme } from '@/ui/ThemeProvider';
@@ -10,10 +11,22 @@ interface PosterCardProps {
   subtitle?: string | null;
   width: number;
   onPress?: () => void;
+  /** Overlay node pinned top-right (e.g. a favorite button). */
+  topRight?: ReactNode;
+  /** Resume progress 0..1, drawn as a bar along the bottom of the poster. */
+  progress?: number;
 }
 
 /** Focusable poster tile for VOD / series grids. */
-export function PosterCard({ title, posterUrl, subtitle, width, onPress }: PosterCardProps) {
+export function PosterCard({
+  title,
+  posterUrl,
+  subtitle,
+  width,
+  onPress,
+  topRight,
+  progress,
+}: PosterCardProps) {
   const theme = useTheme();
   const [focused, setFocused] = useState(false);
   const { colors, radius, space, focus } = theme;
@@ -54,6 +67,32 @@ export function PosterCard({ title, posterUrl, subtitle, width, onPress }: Poste
             </AppText>
           </View>
         )}
+
+        {topRight ? (
+          <View style={{ position: 'absolute', top: space.xs, right: space.xs }}>
+            {topRight}
+          </View>
+        ) : null}
+
+        {progress != null && progress > 0 ? (
+          <View
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: 3,
+              backgroundColor: 'rgba(0,0,0,0.5)',
+            }}>
+            <View
+              style={{
+                width: `${Math.min(100, Math.round(progress * 100))}%`,
+                height: '100%',
+                backgroundColor: colors.accent,
+              }}
+            />
+          </View>
+        ) : null}
       </View>
       <AppText variant="caption" numberOfLines={1} style={{ marginTop: space.xs }}>
         {title}

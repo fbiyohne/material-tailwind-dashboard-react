@@ -41,7 +41,12 @@ export default function SearchScreen() {
       if (channel) {
         router.push({
           pathname: '/player',
-          params: { url: provider.buildLiveUrl(channel.streamId), title: channel.name },
+          params: {
+            url: provider.buildLiveUrl(channel.streamId),
+            title: channel.name,
+            itemId: channel.id,
+            kind: 'live',
+          },
         });
       }
     } else if (hit.kind === 'movie') {
@@ -52,6 +57,8 @@ export default function SearchScreen() {
           params: {
             url: provider.buildMovieUrl(movie.streamId, movie.containerExt),
             title: movie.name,
+            itemId: movie.id,
+            kind: 'movie',
           },
         });
       }

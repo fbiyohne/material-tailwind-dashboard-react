@@ -7,7 +7,7 @@ import { catalogRepo } from '@/data';
 import type { Category, Series } from '@/domain/models';
 import { useSessionStore } from '@/state/sessionStore';
 import { useTheme } from '@/ui/ThemeProvider';
-import { AppText, Chip, PosterCard, Screen } from '@/ui/components';
+import { AppText, Chip, FavoriteButton, PosterCard, Screen } from '@/ui/components';
 
 const COLUMNS = 3;
 
@@ -83,10 +83,19 @@ export default function SeriesScreen() {
                   posterUrl={item.posterUrl}
                   subtitle={item.year ? String(item.year) : null}
                   width={tileWidth}
+                  topRight={
+                    <FavoriteButton
+                      profileId={profileId}
+                      itemId={item.id}
+                      kind="series"
+                      overlay
+                      size={14}
+                    />
+                  }
                   onPress={() =>
                     router.push({
                       pathname: '/series-detail',
-                      params: { seriesId: item.seriesId, name: item.name },
+                      params: { seriesId: item.seriesId, name: item.name, id: item.id },
                     })
                   }
                 />

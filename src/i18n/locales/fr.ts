@@ -60,10 +60,13 @@ export const fr: TranslationSchema = {
     noChannels: 'Aucune chaîne dans cette catégorie.',
     now: 'Maintenant',
     next: 'Ensuite',
+    recents: 'Récents',
+    favorites: 'Favoris',
   },
   catalog: {
     noItems: 'Rien pour le moment.',
     notSupported: "Ce fournisseur n'expose pas ce contenu.",
+    resume: 'Reprendre',
   },
   seriesDetail: {
     season: 'Saison {{n}}',
