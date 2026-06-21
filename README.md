@@ -1,187 +1,100 @@
-# [Material Tailwind Dashboard React](http://demos.creative-tim.com/material-tailwind-dashboard-react/#/?ref=readme-mtdr) [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social&logo=twitter)](https://twitter.com/intent/tweet?url=https://www.creative-tim.com/product/material-tailwind-dashboard-react&text=Check%20Material%20Tailwind%20Dashboard%20React%20made%20by%20@CreativeTim%20#webdesign%20#kit%20#materialdesign%20#react%20#materialtailwind%20#tailwindcss%20https://www.creative-tim.com/product/material-tailwind-dashboard-react)
+# CreaticTV
 
-![version](https://img.shields.io/badge/version-2.1.0-blue.svg) [![GitHub issues open](https://img.shields.io/github/issues/creativetimofficial/material-tailwind-dashboard-react.svg)](https://github.com/creativetimofficial/material-tailwind-dashboard-react/issues?q=is%3Aopen+is%3Aissue) [![GitHub issues closed](https://img.shields.io/github/issues-closed-raw/creativetimofficial/material-tailwind-dashboard-react.svg)](https://github.com/creativetimofficial/material-tailwind-dashboard-react/issues?q=is%3Aissue+is%3Aclosed)
+A cross-platform IPTV **client** (player) built with React Native + Expo. Mobile-first
+(iOS + Android, touch), with Android TV / Apple TV as a second target on the same base.
 
-![Image](https://s3.amazonaws.com/creativetim_bucket/products/488/original/material-tailwind-dashboard-react.jpg)
+> **CreaticTV is a media player only.** It ships with **no** channels, playlists, or
+> streams, and is not a content provider. You connect your **own** provider using
+> credentials you already have (Xtream Codes account, or an M3U playlist + XMLTV EPG).
+> Your credentials are **encrypted and stored on this device** and are only ever sent
+> to your provider — never to us (there is no backend) or any third party.
 
-Material Tailwind Dashboard React is our newest free Material Tailwind Admin Template based on Tailwind CSS and React. If you’re a developer looking to create an admin dashboard that is developer-friendly, rich with features, and highly customisable, here is your match. Our innovative Material Tailwind, Tailwind CSS & React dashboard comes with a beautiful design inspired by Google's Material Design and it will help you create stunning websites & web apps to delight your clients.
+## Why this exists
 
-**Fully Coded Elements**
+Inspired functionally by StreamVault and IPTV Smarters Pro, but aiming to surpass them on
+four axes:
 
-Material Tailwind Dashboard React is built with over 40 frontend individual elements coming from @material-tailwind/react, like buttons, inputs, navbars, nav tabs, cards, or alerts, giving you the freedom of choosing and combining. All components can take variations in color, which you can easily modify using props and tailwind css classnames. You will save a lot of time going from prototyping to full-functional code because all elements are implemented.
+1. **Coverage** — iOS + Android with a thumb-first touch UX (not a transposed D-pad), TV second.
+2. **Distinct visual identity** — a tokenized design system, not the generic dark-tile grid.
+3. **On-device intelligence** — provider-data sanitation (dedup, dead-stream purge), TMDB
+   enrichment, smart EPG matching, natural-language search.
+4. **Server-less multi-device continuity** — via the user's own cloud (iCloud / Drive).
 
-This free Material Tailwind, Tailwind CSS & React Dashboard is coming with prebuilt design blocks, so the development process is seamless, switching from our pages to the real website is very easy to be done.
+## Hard constraints
 
-View [all components here](https://www.material-tailwind.com/docs/react/button).
+- **Zero backend.** 100% client. Compatibility comes from open standards providers already
+  expose: Xtream Codes API, M3U/M3U8 playlists, XMLTV EPG.
+- **No bundled content.** The user supplies everything.
+- **Encrypted, local-only credentials.**
 
-**Documentation built by Developers**
+## Tech stack (Expo SDK 56)
 
-Each element is well presented in very complex documentation.
+| Concern | Choice |
+| --- | --- |
+| Framework | Expo SDK 56 · React Native 0.85 · React 19.2 (New Architecture) |
+| Navigation | Expo Router (file-based, typed routes) |
+| TV build | react-native-tvos + `@react-native-tvos/config-tv` |
+| Video | react-native-video (Media3/ExoPlayer on Android, AVPlayer on iOS) |
+| Local DB | op-sqlite (JSI, FTS5) + Drizzle ORM (typed queries) |
+| Encrypted KV | react-native-mmkv (key sealed in Keychain/Keystore via expo-secure-store) |
+| Lists | @shopify/flash-list v2 |
+| State | Zustand |
+| i18n | i18next (FR + EN) |
+| Tooling | TypeScript (strict) · ESLint (eslint-config-expo) · Jest |
 
-You can read more about the [documentation here](https://www.material-tailwind.com/docs/react/installation).
+Minimum targets: **iOS 16.4+ / Android 8 (API 26)+**.
 
-**Example Pages**
-
-If you want to get inspiration or just show something directly to your clients, you can jump-start your development with our pre-built example pages. You will be able to quickly set up the basic structure for your web project.
-
-View [example pages here](https://demos.creative-tim.com/material-tailwind-dashboard-react/#/dashboard/home).
-
-**HELPFUL LINKS**
-
-- View [Github Repository](https://github.com/creativetimofficial/material-tailwind-dashboard-react)
-- Check [FAQ Page](https://www.creative-tim.com/faq)
-
-#### Special thanks
-
-During the development of this dashboard, we have used many existing resources from awesome developers. We want to thank them for providing their tools open source:
-
-- [Material Tailwind](https://material-tailwind.com/) - Material Tailwind is an easy to use components library for Tailwind CSS and Material Design.
-- [Hero Icons](https://heroicons.com/) - Beautiful hand-crafted SVG icons.
-- [Apex Charts](https://apexcharts.com/) - Modern & Interactive open-source Charts.
-- [Nepcha Analytics](https://nepcha.com?ref=readme) for the analytics tool. Nepcha is already integrated with Material Tailwind Dashboard React. You can use it to gain insights into your sources of traffic.
-
-Let us know your thoughts below. And good luck with development!
-
-## Table of Contents
-
-- [Versions](#versions)
-- [Demo](#demo)
-- [Quick Start](#quick-start)
-- [Deploy](#deploy)
-- [Documentation](#documentation)
-- [File Structure](#file-structure)
-- [Browser Support](#browser-support)
-- [Resources](#resources)
-- [Reporting Issues](#reporting-issues)
-- [Technical Support or Questions](#technical-support-or-questions)
-- [Licensing](#licensing)
-- [Useful Links](#useful-links)
-
-## Versions
-
-[<img src="https://raw.githubusercontent.com/creativetimofficial/public-assets/master/logos/react-logo.jpg?raw=true" width="60" height="60" />](https://www.creative-tim.com/product/material-tailwind-dashboard-react?ref=readme-mtdr)
-
-| React |
-| ----- |
-
-| [![Material Tailwind Dashboard React](https://s3.amazonaws.com/creativetim_bucket/products/488/thumb/material-tailwind-dashboard-react.jpg)](http://demos.creative-tim.com/material-tailwind-dashboard-react/#/?ref=readme-mtdr)
-
-## Demo
-
-- [Dashboard page](https://demos.creative-tim.com/material-tailwind-dashboard-react/#/dashboard/home?ref=readme-mtdr)
-- [Profile page](https://demos.creative-tim.com/material-tailwind-dashboard-react/#/dashboard/profile?ref=readme-mtdr)
-- [Tables page](https://demos.creative-tim.com/material-tailwind-dashboard-react/#/dashboard/tables?ref=readme-mtdr)
-- [Notifications page](https://demos.creative-tim.com/material-tailwind-dashboard-react/#/dashboard/notifications?ref=readme-mtdr)
-- [Sign in page](https://demos.creative-tim.com/material-tailwind-dashboard-react/#/auth/sign-in?ref=readme-mtdr)
-- [Sign up page](https://demos.creative-tim.com/material-tailwind-dashboard-react/#/auth/sign-up?ref=readme-mtdr)
-
-[View More](https://demos.creative-tim.com/material-tailwind-dashboard-react/#/?ref=readme-mtdr).
-
-## Quick start
-
-Quick start options:
-
-- Download from [Creative Tim](https://www.creative-tim.com/product/material-tailwind-dashboard-react?ref=readme-mtdr).
-
-## Deploy
-
-:rocket: You can deploy your own version of the template to Genezio with one click:
-
-[![Deploy to Genezio](https://raw.githubusercontent.com/Genez-io/graphics/main/svg/deploy-button.svg)](https://app.genez.io/start/deploy?repository=https://github.com/creativetimofficial/material-tailwind-dashboard-react&utm_source=github&utm_medium=referral&utm_campaign=github-creativetim&utm_term=deploy-project&utm_content=button-head)
-
-## Terminal Commands
-
-1. Download and Install NodeJs LTS version from [NodeJs Official Page](https://nodejs.org/en/download/).
-2. Navigate to the root ./ directory of the product and run `npm install` or `yarn install` or `pnpm install` to install our local dependencies.
-
-## Documentation
-
-The documentation for the Material Tailwind Dashboard React is hosted at our [website](https://material-tailwind.com/?ref=readme-mtdr).
-
-### What's included
-
-Within the download you'll find the following directories and files:
+## Architecture (layered)
 
 ```
-material-tailwind-dashboard-react
-    ├── public
-    │   ├── css
-    │   └── img
-    ├── src
-    │   ├── configs
-    │   ├── context
-    │   ├── data
-    │   ├── layouts
-    │   ├── pages
-    │   ├── widgets
-    │   ├── App.jsx
-    │   ├── main.jsx
-    │   └── routes.jsx
-    ├── .gitignore
-    ├── CHANGELOG.md
-    ├── index.html
-    ├── ISSUE_TEMPLATE.md
-    ├── jsconfig.json
-    ├── LICENSE
-    ├── package.json
-    ├── postcsss.config.cjs
-    ├── prettier.config.cjs
-    ├── README.md
-    ├── tailwind.config.cjs
-    └── vite.config.js
+src/
+  app/          Expo Router routes — screens only, provider-agnostic
+  domain/       pure TS models (Channel, Movie, Series, EpgEntry, Profile…)
+  providers/    THE abstraction: ContentProvider + XtreamProvider + M3uProvider
+  data/         SQLite (schema, db, repositories, FTS5) + encrypted MMKV stores
+  sync/         catalog import orchestrator (provider → normalize → SQLite, progress)
+  services/     on-device intelligence (V2: dedup, health-check, TMDB, NL search)
+  state/        Zustand stores
+  ui/tokens/    design tokens (single source of truth; placeholder palette for now)
+  lib/          parsers (M3U, XMLTV), resilient HTTP, encoding/hash utils
+  i18n/         FR + EN
 ```
 
-## Browser Support
+**The contract:** every screen depends only on `ContentProvider`. It never knows whether
+the active source is Xtream or M3U. Adding a new source = one new class + one `case` in the
+factory; nothing upstream changes. This is the technical meaning of "works with all providers".
 
-At present, we officially aim to support the last two versions of the following browsers:
+## Status
 
-<img src="https://s3.amazonaws.com/creativetim_bucket/github/browser/chrome.png" width="64" height="64"> <img src="https://s3.amazonaws.com/creativetim_bucket/github/browser/firefox.png" width="64" height="64"> <img src="https://s3.amazonaws.com/creativetim_bucket/github/browser/edge.png" width="64" height="64"> <img src="https://s3.amazonaws.com/creativetim_bucket/github/browser/safari.png" width="64" height="64"> <img src="https://s3.amazonaws.com/creativetim_bucket/github/browser/opera.png" width="64" height="64">
+Foundation (the *socle*) is in place and verified (typecheck + lint + unit tests green):
 
-## Resources
+- ✅ Provider abstraction with Xtream + M3U implementations
+- ✅ M3U and XMLTV parsers (unit-tested)
+- ✅ SQLite schema + indexes + FTS5, bulk-insert repositories
+- ✅ Encrypted credential storage
+- ✅ Catalog import pipeline with progress events
 
-- [Live Preview](https://demos.creative-tim.com/material-tailwind-dashboard-react/#/dashboard/home?ref=readme-mtdr)
-- [Download Page](https://www.creative-tim.com/product/material-tailwind-dashboard-react?ref=readme-mtdr)
-- Documentation is [here](https://material-tailwind.com/?ref=readme-mtdr)
-- [License Agreement](https://www.creative-tim.com/license?ref=readme-mtdr)
-- [Support](https://www.creative-tim.com/contact-us?ref=readme-mtdr)
-- Issues: [Github Issues Page](https://github.com/creativetimofficial/material-tailwind-dashboard-react/issues)
-- [Nepcha Analytics](https://nepcha.com?ref=readme) - Analytics tool for your website
+Next: choose the visual direction (2–3 concepts), then build the MVP screens
+(onboarding → live TV → favorites/recent → global search → settings/profiles → player).
 
-## Reporting Issues
+The design tokens in `src/ui/tokens` are a **neutral placeholder** — the distinctive art
+direction is chosen deliberately before any production UI is styled.
 
-We use GitHub Issues as the official bug tracker for the Material Tailwind Dashboard React. Here are some advices for our users that want to report an issue:
+## Develop
 
-1. Make sure that you are using the latest version of the Material Tailwind Dashboard React. Check the CHANGELOG from your dashboard on our [website](https://www.creative-tim.com/product/material-tailwind-dashboard-react?ref=readme-mtdr).
-2. Providing us reproducible steps for the issue will shorten the time it takes for it to be fixed.
-3. Some issues may be browser specific, so specifying in what browser you encountered the issue might help.
+```bash
+npm install
+npx expo prebuild        # generates native projects (dev build required — not Expo Go)
+npm run ios | npm run android
 
-## Technical Support or Questions
+npm run typecheck        # tsc --noEmit
+npm run lint             # eslint
+npm test                 # jest
+```
 
-If you have questions or need help integrating the product please [contact us](https://www.creative-tim.com/contact-us?ref=readme-mtdr) instead of opening an issue.
+> A native **dev build** is required (op-sqlite, MMKV, react-native-video are native modules).
+> Expo Go will not work.
 
-## Licensing
+## License
 
-- Copyright 2023 [Creative Tim](https://www.creative-tim.com?ref=readme-mtdr)
-- Creative Tim [license](https://www.creative-tim.com/license?ref=readme-mtdr)
-
-## Useful Links
-
-- [More products](https://www.creative-tim.com/templates?ref=readme-mtdr) from Creative Tim
-
-- [Tutorials](https://www.youtube.com/channel/UCVyTG4sCw-rOvB9oHkzZD1w)
-
-- [Freebies](https://www.creative-tim.com/bootstrap-themes/free?ref=readme-mtdr) from Creative Tim
-
-- [Affiliate Program](https://www.creative-tim.com/affiliates/new?ref=readme-mtdr) (earn money)
-
-##### Social Media
-
-Twitter: <https://twitter.com/CreativeTim>
-
-Facebook: <https://www.facebook.com/CreativeTim>
-
-Dribbble: <https://dribbble.com/creativetim>
-
-Google+: <https://plus.google.com/+CreativetimPage>
-
-Instagram: <https://instagram.com/creativetimofficial>
+MIT — see [LICENSE](./LICENSE).
