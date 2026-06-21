@@ -312,6 +312,55 @@ export async function getEpisodeById(id: string): Promise<Episode | null> {
   return (rows[0] as Episode | undefined) ?? null;
 }
 
+export async function deleteChannelsByIds(ids: readonly string[]): Promise<void> {
+  if (ids.length === 0) return;
+  const db = getRawDb();
+  const CH = 400;
+  for (let i = 0; i < ids.length; i += CH) {
+    const slice = ids.slice(i, i + CH);
+    const placeholders = slice.map(() => '?').join(',');
+    await db.execute(`DELETE FROM channels WHERE id IN (${placeholders});`, slice as Scalar[]);
+  }
+}
+
+export async function getMoviesMissingArt(
+  profileId: string,
+  limit: number,
+): Promise<Movie[]> {
+  const rows = await getDb()
+    .select()
+    .from(movies)
+    .where(and(eq(movies.profileId, profileId), isNull(movies.posterUrl)))
+    .limit(limit);
+  return rows as Movie[];
+}
+
+export async function getSeriesMissingArt(
+  profileId: string,
+  limit: number,
+): Promise<Series[]> {
+  const rows = await getDb()
+    .select()
+    .from(series)
+    .where(and(eq(series.profileId, profileId), isNull(series.posterUrl)))
+    .limit(limit);
+  return rows as Series[];
+}
+
+export async function updateMovieArt(
+  id: string,
+  patch: Partial<{ posterUrl: string; tmdbId: string; rating: number }>,
+): Promise<void> {
+  await getDb().update(movies).set(patch).where(eq(movies.id, id));
+}
+
+export async function updateSeriesArt(
+  id: string,
+  patch: Partial<{ posterUrl: string; tmdbId: string; rating: number }>,
+): Promise<void> {
+  await getDb().update(series).set(patch).where(eq(series.id, id));
+}
+
 export async function getEpisodesForSeries(seriesId: string): Promise<Episode[]> {
   const rows = await getDb()
     .select()

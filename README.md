@@ -102,9 +102,13 @@ Foundation (the *socle*) is in place and verified (typecheck + lint + unit tests
   > not delivered by `useTVEventHandler`, so direct digit-to-channel zapping needs
   > a small native key listener. We ship the reliable on-screen channel jump
   > meanwhile. Build a TV dev client with `EXPO_TV=1 npx expo prebuild`.
+- ✅ **On-device intelligence** (`/maintenance`): de-duplication (collapse channel
+  variants, keep best quality), bounded stream **health check** (probe + review +
+  purge dead), and **TMDB enrichment** (posters/ratings for items missing art,
+  using the user's own API key). Bounded concurrency to stay polite; pure
+  helpers unit-tested.
 
-Next: V2 differentiators — on-device intelligence (dedup, dead-stream health
-check, TMDB enrichment, natural-language search), catch-up/archive, and
+Next: V2 — natural-language search, catch-up/archive (scrubbable timeline), and
 server-less cloud sync (iCloud / Drive).
 
 ## Develop

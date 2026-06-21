@@ -149,6 +149,16 @@ export default function SettingsScreen() {
           />
         </View>
 
+        {/* On-device intelligence */}
+        <View style={{ gap: theme.space.sm }}>
+          <AppText variant="heading">{t('maintenance.title')}</AppText>
+          <Button
+            title={t('maintenance.open')}
+            variant="secondary"
+            onPress={() => router.push('/maintenance')}
+          />
+        </View>
+
         {/* Parental control */}
         <View style={{ gap: theme.space.sm }}>
           <AppText variant="heading">{t('parental.title')}</AppText>

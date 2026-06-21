@@ -10,6 +10,7 @@ const KEYS = {
   locale: 'settings:locale',
   themeName: 'settings:themeName',
   parentalPinHash: 'settings:parentalPinHash',
+  tmdbApiKey: 'settings:tmdbApiKey',
   hasAcceptedDisclaimer: 'settings:hasAcceptedDisclaimer',
 } as const;
 
@@ -37,6 +38,16 @@ export function getThemeName(): string | null {
 
 export function setThemeName(name: string): void {
   getSettingsStore().set(KEYS.themeName, name);
+}
+
+export function getTmdbApiKey(): string | null {
+  return getSettingsStore().getString(KEYS.tmdbApiKey) ?? null;
+}
+
+export function setTmdbApiKey(key: string | null): void {
+  const store = getSettingsStore();
+  if (key == null || key.length === 0) store.remove(KEYS.tmdbApiKey);
+  else store.set(KEYS.tmdbApiKey, key);
 }
 
 export function getParentalPinHash(): string | null {
