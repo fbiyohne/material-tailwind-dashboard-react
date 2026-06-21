@@ -51,6 +51,28 @@ export async function toggleFavorite(
   return true;
 }
 
+export interface FavoriteRecord {
+  id: string;
+  profileId: string;
+  itemId: string;
+  kind: StreamKind;
+  createdAt: number;
+}
+
+/** Export every favorite (for cloud snapshot). */
+export async function exportAll(): Promise<FavoriteRecord[]> {
+  return (await getDb().select().from(favorites)) as FavoriteRecord[];
+}
+
+/** Import favorites from a snapshot, keeping any that already exist. */
+export async function importMany(rows: readonly FavoriteRecord[]): Promise<void> {
+  if (rows.length === 0) return;
+  await getDb()
+    .insert(favorites)
+    .values(rows as FavoriteRecord[])
+    .onConflictDoNothing();
+}
+
 export async function listFavorites(
   profileId: string,
   kind?: StreamKind,

@@ -110,6 +110,47 @@ export async function getRecentChannelIds(
   return rows.map((r) => r.itemId);
 }
 
+export interface ProgressRecord {
+  id: string;
+  profileId: string;
+  itemId: string;
+  kind: StreamKind;
+  positionSecs: number;
+  durationSecs: number | null;
+  updatedAt: number;
+}
+
+/** Export all progress (for cloud snapshot). */
+export async function exportAll(): Promise<ProgressRecord[]> {
+  return (await getDb().select().from(playbackProgress)) as ProgressRecord[];
+}
+
+/**
+ * Import progress from a snapshot, keeping the newer record per item so a fresh
+ * watch on this device isn't clobbered by an older backup.
+ */
+export async function importMany(rows: readonly ProgressRecord[]): Promise<void> {
+  for (const r of rows) {
+    const existing = await getDb()
+      .select({ updatedAt: playbackProgress.updatedAt })
+      .from(playbackProgress)
+      .where(eq(playbackProgress.id, r.id))
+      .limit(1);
+    if (existing[0] && existing[0].updatedAt >= r.updatedAt) continue;
+    await getDb()
+      .insert(playbackProgress)
+      .values(r)
+      .onConflictDoUpdate({
+        target: playbackProgress.id,
+        set: {
+          positionSecs: r.positionSecs,
+          durationSecs: r.durationSecs,
+          updatedAt: r.updatedAt,
+        },
+      });
+  }
+}
+
 export async function removeProgress(profileId: string, itemId: string): Promise<void> {
   await getDb()
     .delete(playbackProgress)

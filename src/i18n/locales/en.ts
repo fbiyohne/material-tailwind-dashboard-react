@@ -103,6 +103,15 @@ export const en = {
     resultPurged: '{{n}} channels removed.',
     resultEnrich: '{{enriched}} of {{processed}} enriched.',
   },
+  sync: {
+    title: 'Cross-device sync',
+    open: 'Backup & restore',
+    intro: 'Move your profiles, favorites and continue-watching between devices via your own cloud (iCloud Drive, Google Drive, Files). No server, nothing sent to us — the catalog re-downloads per device.',
+    warning: 'The backup file contains your provider credentials. Keep it in a private location.',
+    export: 'Export backup…',
+    import: 'Import backup…',
+    imported: 'Restored {{profiles}} profiles, {{favorites}} favorites, {{progress}} resume points.',
+  },
   parental: {
     title: 'Parental control',
     setPin: 'Set a PIN (min. 4 digits)',

@@ -105,6 +105,15 @@ export const fr: TranslationSchema = {
     resultPurged: '{{n}} chaînes supprimées.',
     resultEnrich: '{{enriched}} sur {{processed}} enrichis.',
   },
+  sync: {
+    title: 'Synchronisation multi-appareils',
+    open: 'Sauvegarde & restauration',
+    intro: "Transférez vos profils, favoris et reprises de lecture entre appareils via votre propre cloud (iCloud Drive, Google Drive, Fichiers). Aucun serveur, rien ne nous est transmis — le catalogue se re-télécharge sur chaque appareil.",
+    warning: 'Le fichier de sauvegarde contient vos identifiants fournisseur. Conservez-le dans un emplacement privé.',
+    export: 'Exporter la sauvegarde…',
+    import: 'Importer une sauvegarde…',
+    imported: '{{profiles}} profils, {{favorites}} favoris, {{progress}} reprises restaurés.',
+  },
   parental: {
     title: 'Contrôle parental',
     setPin: 'Définir un code (min. 4 chiffres)',

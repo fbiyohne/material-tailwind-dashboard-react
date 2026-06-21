@@ -113,8 +113,15 @@ Foundation (the *socle*) is in place and verified (typecheck + lint + unit tests
   so results play) or the catalog FTS accordingly, showing the interpreted intent
   as chips. Parser is pure and unit-tested.
 
-Next: V2 — catch-up/archive (scrubbable timeline) and server-less cloud sync
-(iCloud / Drive) for cross-device continuity.
+- ✅ **Server-less cross-device sync** (`/sync`): export a JSON snapshot of
+  profiles (+credentials), favorites, watch progress and settings to the user's
+  own cloud via the OS share sheet (iCloud Drive / Google Drive / Files), and
+  import it back on another device. Profile ids are preserved, so favorites and
+  continue-watching re-align once the catalog re-downloads. No backend; the
+  catalog itself is never part of the snapshot.
+
+Next: V2 — catch-up/archive (scrubbable timeline); plus polish (adult filtering
+in search, EPG-based smart enrichment, optional snapshot encryption).
 
 ## Develop
 

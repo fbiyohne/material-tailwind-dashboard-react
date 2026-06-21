@@ -159,6 +159,16 @@ export default function SettingsScreen() {
           />
         </View>
 
+        {/* Cloud sync / backup */}
+        <View style={{ gap: theme.space.sm }}>
+          <AppText variant="heading">{t('sync.title')}</AppText>
+          <Button
+            title={t('sync.open')}
+            variant="secondary"
+            onPress={() => router.push('/sync')}
+          />
+        </View>
+
         {/* Parental control */}
         <View style={{ gap: theme.space.sm }}>
           <AppText variant="heading">{t('parental.title')}</AppText>
