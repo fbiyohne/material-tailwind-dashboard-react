@@ -81,6 +81,7 @@ export default function Onboarding() {
           <Button
             title={t('disclaimer.accept')}
             fullWidth
+            hasTVPreferredFocus
             onPress={() => {
               setAcceptedDisclaimer(true);
               setAccepted(true);

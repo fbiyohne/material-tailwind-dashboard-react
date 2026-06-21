@@ -77,6 +77,10 @@ export const en = {
     hide: 'Hide',
     lock: 'Lock',
   },
+  tv: {
+    jump: 'Go to channel #',
+    jumpPlaceholder: 'Channel number',
+  },
   parental: {
     title: 'Parental control',
     setPin: 'Set a PIN (min. 4 digits)',

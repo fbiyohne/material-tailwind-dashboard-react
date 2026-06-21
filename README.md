@@ -93,9 +93,19 @@ Foundation (the *socle*) is in place and verified (typecheck + lint + unit tests
   session is unlocked (session-scoped, never persisted).
 - ✅ **Category curation** (`/categories`): pin / hide / lock / reorder per kind;
   lists honor it (hidden excluded, pinned first); curation survives re-imports.
+- ✅ **TV pass** (react-native-tvos): the active theme auto-scales for distance
+  viewing (larger type/spacing, stronger focus ring); focusable primitives carry
+  D-pad focus + `hasTVPreferredFocus`; on-screen channel jump on Live. TV config
+  validated with `EXPO_TV=1`.
 
-Next: V1 polish — the TV (react-native-tvos) build pass (D-pad focus, numeric
-channel entry), then V2 differentiators (on-device intelligence, catch-up, cloud sync).
+  > **Known RNTV rough edge (flagged, not hidden):** raw remote *number keys* are
+  > not delivered by `useTVEventHandler`, so direct digit-to-channel zapping needs
+  > a small native key listener. We ship the reliable on-screen channel jump
+  > meanwhile. Build a TV dev client with `EXPO_TV=1 npx expo prebuild`.
+
+Next: V2 differentiators — on-device intelligence (dedup, dead-stream health
+check, TMDB enrichment, natural-language search), catch-up/archive, and
+server-less cloud sync (iCloud / Drive).
 
 ## Develop
 

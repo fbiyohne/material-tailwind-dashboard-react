@@ -79,6 +79,10 @@ export const fr: TranslationSchema = {
     hide: 'Cacher',
     lock: 'Verrouiller',
   },
+  tv: {
+    jump: 'Aller à la chaîne n°',
+    jumpPlaceholder: 'Numéro de chaîne',
+  },
   parental: {
     title: 'Contrôle parental',
     setPin: 'Définir un code (min. 4 chiffres)',

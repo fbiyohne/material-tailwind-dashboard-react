@@ -6,6 +6,7 @@ import {
   View,
   type PressableProps,
 } from 'react-native';
+import { tvFocusProps } from '@/lib/tv';
 import { useTheme } from '@/ui/ThemeProvider';
 import { AppText } from './AppText';
 
@@ -16,6 +17,8 @@ interface ButtonProps extends Omit<PressableProps, 'style'> {
   variant?: Variant;
   loading?: boolean;
   fullWidth?: boolean;
+  /** Request initial D-pad focus on TV. */
+  hasTVPreferredFocus?: boolean;
 }
 
 /**
@@ -28,6 +31,7 @@ export function Button({
   loading,
   fullWidth,
   disabled,
+  hasTVPreferredFocus,
   ...rest
 }: ButtonProps) {
   const theme = useTheme();
@@ -48,6 +52,7 @@ export function Button({
       disabled={disabled || loading}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
+      {...tvFocusProps(hasTVPreferredFocus)}
       style={({ pressed }) => [
         styles.base,
         {

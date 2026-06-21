@@ -43,7 +43,7 @@ export default function UnlockScreen() {
             onSubmitEditing={submit}
           />
         </Card>
-        <Button title={t('parental.unlock')} fullWidth onPress={submit} />
+        <Button title={t('parental.unlock')} fullWidth hasTVPreferredFocus onPress={submit} />
         <Button title={t('common.cancel')} variant="ghost" onPress={() => router.back()} />
       </View>
     </Screen>

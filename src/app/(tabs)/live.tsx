@@ -6,16 +6,19 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 import { catalogRepo, epgRepo, favoritesRepo, progressRepo } from '@/data';
 import type { Category, Channel } from '@/domain/models';
+import { isTV } from '@/lib/tv';
 import { useParentalStore } from '@/state/parentalStore';
 import { useSessionStore } from '@/state/sessionStore';
 import { useTheme } from '@/ui/ThemeProvider';
 import {
   AppText,
   Button,
+  Card,
   CategoryChips,
   FavoriteButton,
   ListRow,
   Screen,
+  TextField,
 } from '@/ui/components';
 
 export default function LiveScreen() {
@@ -31,6 +34,8 @@ export default function LiveScreen() {
   const [channels, setChannels] = useState<Channel[]>([]);
   const [recent, setRecent] = useState<Channel[]>([]);
   const [favorites, setFavorites] = useState<Channel[]>([]);
+  const [jumpOpen, setJumpOpen] = useState(false);
+  const [jumpValue, setJumpValue] = useState('');
 
   useEffect(() => {
     if (!profileId) return;
@@ -76,6 +81,14 @@ export default function LiveScreen() {
     [provider, router],
   );
 
+  function doJump() {
+    const n = Number.parseInt(jumpValue, 10);
+    const match = channels.find((c) => c.number === n);
+    if (match) openChannel(match);
+    setJumpOpen(false);
+    setJumpValue('');
+  }
+
   const Header = (
     <View>
       <View
@@ -84,10 +97,31 @@ export default function LiveScreen() {
           alignItems: 'center',
           justifyContent: 'space-between',
           paddingTop: theme.space.lg,
+          gap: theme.space.sm,
         }}>
         <AppText variant="display">{t('live.title')}</AppText>
-        <Button title={t('guide.title')} variant="ghost" onPress={() => router.push('/guide')} />
+        <View style={{ flexDirection: 'row', gap: theme.space.sm }}>
+          {isTV ? (
+            <Button title={t('tv.jump')} variant="ghost" onPress={() => setJumpOpen((o) => !o)} />
+          ) : null}
+          <Button title={t('guide.title')} variant="ghost" onPress={() => router.push('/guide')} />
+        </View>
       </View>
+
+      {jumpOpen ? (
+        <Card style={{ marginTop: theme.space.sm }}>
+          <TextField
+            label={t('tv.jump')}
+            value={jumpValue}
+            onChangeText={setJumpValue}
+            keyboardType="number-pad"
+            placeholder={t('tv.jumpPlaceholder')}
+            autoFocus
+            onSubmitEditing={doJump}
+          />
+          <Button title={t('common.search')} onPress={doJump} hasTVPreferredFocus />
+        </Card>
+      ) : null}
 
       {recent.length > 0 ? (
         <ChannelShelf title={t('live.recents')} channels={recent} onPress={openChannel} />
