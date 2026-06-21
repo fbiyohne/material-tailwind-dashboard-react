@@ -71,6 +71,8 @@
     "typescript": "~6.0.3"
   },
   "scripts": {
+    "setup": "node ./scripts/check-node.mjs && npm install && npx expo prebuild",
+    "check-node": "node ./scripts/check-node.mjs",
     "start": "expo start --dev-client",
     "android": "expo run:android",
     "ios": "expo run:ios",
@@ -78,6 +80,9 @@
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "test": "jest"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "private": true
 }
