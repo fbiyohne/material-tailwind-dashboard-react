@@ -55,7 +55,7 @@ src/
   sync/         catalog import orchestrator (provider → normalize → SQLite, progress)
   services/     on-device intelligence (V2: dedup, health-check, TMDB, NL search)
   state/        Zustand stores
-  ui/tokens/    design tokens (single source of truth; placeholder palette for now)
+  ui/           theme system: token contract + 3 selectable themes + ThemeProvider
   lib/          parsers (M3U, XMLTV), resilient HTTP, encoding/hash utils
   i18n/         FR + EN
 ```
@@ -73,12 +73,13 @@ Foundation (the *socle*) is in place and verified (typecheck + lint + unit tests
 - ✅ SQLite schema + indexes + FTS5, bulk-insert repositories
 - ✅ Encrypted credential storage
 - ✅ Catalog import pipeline with progress events
+- ✅ Tokenized theme system with **three selectable, persisted themes**:
+  **Éditorial** (calm cinephile), **Control Room** (broadcast-HUD), **Soft Depth** (tactile).
+  Components style only from `useTheme()`; switching re-skins the whole app from one source.
 
-Next: choose the visual direction (2–3 concepts), then build the MVP screens
-(onboarding → live TV → favorites/recent → global search → settings/profiles → player).
-
-The design tokens in `src/ui/tokens` are a **neutral placeholder** — the distinctive art
-direction is chosen deliberately before any production UI is styled.
+Next: build the MVP screens
+(onboarding → live TV → favorites/recent → global search → settings/profiles → player),
+each rendered through the active theme.
 
 ## Develop
 

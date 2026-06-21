@@ -8,6 +8,7 @@ import { getSettingsStore } from './secureStorage';
 const KEYS = {
   activeProfileId: 'settings:activeProfileId',
   locale: 'settings:locale',
+  themeName: 'settings:themeName',
   parentalPinHash: 'settings:parentalPinHash',
   hasAcceptedDisclaimer: 'settings:hasAcceptedDisclaimer',
 } as const;
@@ -28,6 +29,14 @@ export function getLocale(): string | null {
 
 export function setLocale(locale: string): void {
   getSettingsStore().set(KEYS.locale, locale);
+}
+
+export function getThemeName(): string | null {
+  return getSettingsStore().getString(KEYS.themeName) ?? null;
+}
+
+export function setThemeName(name: string): void {
+  getSettingsStore().set(KEYS.themeName, name);
 }
 
 export function getParentalPinHash(): string | null {

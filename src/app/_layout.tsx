@@ -6,11 +6,29 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { initI18n } from '@/i18n';
 import { useSessionStore } from '@/state/sessionStore';
-import { colors } from '@/ui/tokens';
+import { useThemeStore } from '@/state/themeStore';
+import { ThemeProvider, useTheme } from '@/ui/ThemeProvider';
+import { defaultTheme } from '@/ui/themes';
+
+function ThemedStack() {
+  const theme = useTheme();
+  return (
+    <>
+      <StatusBar style="light" />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: theme.colors.bg },
+        }}
+      />
+    </>
+  );
+}
 
 export default function RootLayout() {
   const bootstrap = useSessionStore((s) => s.bootstrap);
   const ready = useSessionStore((s) => s.ready);
+  const hydrateTheme = useThemeStore((s) => s.hydrate);
   const [booted, setBooted] = useState(false);
 
   useEffect(() => {
@@ -18,23 +36,24 @@ export default function RootLayout() {
     (async () => {
       await bootstrap(); // encrypted stores + DB migrations + restore profile
       initI18n(); // safe to read settings now
+      hydrateTheme(); // restore the saved theme preference
       if (!cancelled) setBooted(true);
     })();
     return () => {
       cancelled = true;
     };
-  }, [bootstrap]);
+  }, [bootstrap, hydrateTheme]);
 
   if (!ready || !booted) {
     return (
       <View
         style={{
           flex: 1,
-          backgroundColor: colors.bg,
+          backgroundColor: defaultTheme.colors.bg,
           alignItems: 'center',
           justifyContent: 'center',
         }}>
-        <ActivityIndicator color={colors.accent} />
+        <ActivityIndicator color={defaultTheme.colors.accent} />
       </View>
     );
   }
@@ -42,13 +61,9 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <StatusBar style="light" />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: colors.bg },
-          }}
-        />
+        <ThemeProvider>
+          <ThemedStack />
+        </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
