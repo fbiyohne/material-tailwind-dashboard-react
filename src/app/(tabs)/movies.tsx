@@ -5,9 +5,16 @@ import { useTranslation } from 'react-i18next';
 import { ScrollView, useWindowDimensions, View } from 'react-native';
 import { catalogRepo, progressRepo } from '@/data';
 import type { Category, Movie } from '@/domain/models';
+import { useParentalStore } from '@/state/parentalStore';
 import { useSessionStore } from '@/state/sessionStore';
 import { useTheme } from '@/ui/ThemeProvider';
-import { AppText, Chip, FavoriteButton, PosterCard, Screen } from '@/ui/components';
+import {
+  AppText,
+  CategoryChips,
+  FavoriteButton,
+  PosterCard,
+  Screen,
+} from '@/ui/components';
 
 const COLUMNS = 3;
 
@@ -28,6 +35,7 @@ export default function MoviesScreen() {
   const { width } = useWindowDimensions();
   const profileId = useSessionStore((s) => s.activeProfileId);
   const provider = useSessionStore((s) => s.provider);
+  const unlocked = useParentalStore((s) => s.unlocked);
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [selected, setSelected] = useState<string | undefined>(undefined);
@@ -41,8 +49,8 @@ export default function MoviesScreen() {
 
   useEffect(() => {
     if (!profileId) return;
-    void catalogRepo.getMovies(profileId, selected).then(setMovies);
-  }, [profileId, selected]);
+    void catalogRepo.getMovies(profileId, selected, unlocked).then(setMovies);
+  }, [profileId, selected, unlocked]);
 
   const refreshResume = useCallback(async () => {
     if (!profileId || !provider) return;
@@ -125,26 +133,12 @@ export default function MoviesScreen() {
         </View>
       ) : null}
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: theme.space.sm, paddingVertical: theme.space.md }}>
-        <Chip
-          label={t('common.all')}
-          selected={selected === undefined}
-          accent={theme.colors.movies}
-          onPress={() => setSelected(undefined)}
-        />
-        {categories.map((c) => (
-          <Chip
-            key={c.id}
-            label={c.name}
-            selected={selected === c.id}
-            accent={theme.colors.movies}
-            onPress={() => setSelected(c.id)}
-          />
-        ))}
-      </ScrollView>
+      <CategoryChips
+        categories={categories}
+        selected={selected}
+        onSelect={setSelected}
+        accent={theme.colors.movies}
+      />
     </View>
   );
 

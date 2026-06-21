@@ -11,9 +11,10 @@ import {
 } from 'react-native';
 import { catalogRepo, epgRepo } from '@/data';
 import type { Category, Channel, EpgEntry } from '@/domain/models';
+import { useParentalStore } from '@/state/parentalStore';
 import { useSessionStore } from '@/state/sessionStore';
 import { useTheme } from '@/ui/ThemeProvider';
-import { AppText, Chip, Screen } from '@/ui/components';
+import { AppText, CategoryChips, Screen } from '@/ui/components';
 
 const HOUR_W = 200; // px per hour
 const PX_PER_MIN = HOUR_W / 60;
@@ -34,6 +35,7 @@ export default function GuideScreen() {
   const router = useRouter();
   const profileId = useSessionStore((s) => s.activeProfileId);
   const provider = useSessionStore((s) => s.provider);
+  const unlocked = useParentalStore((s) => s.unlocked);
 
   // Capture the mount time once; the window is derived purely from it.
   const [nowBase] = useState(() => Math.floor(Date.now() / 1000));
@@ -57,8 +59,8 @@ export default function GuideScreen() {
 
   useEffect(() => {
     if (!profileId) return;
-    void catalogRepo.getChannels(profileId, selected).then(setChannels);
-  }, [profileId, selected]);
+    void catalogRepo.getChannels(profileId, selected, unlocked).then(setChannels);
+  }, [profileId, selected, unlocked]);
 
   useEffect(() => {
     if (!profileId) return;
@@ -107,26 +109,12 @@ export default function GuideScreen() {
             {t('guide.title')}
           </AppText>
         </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: theme.space.sm }}>
-          <Chip
-            label={t('common.all')}
-            selected={selected === undefined}
-            accent={theme.colors.live}
-            onPress={() => setSelected(undefined)}
-          />
-          {categories.map((c) => (
-            <Chip
-              key={c.id}
-              label={c.name}
-              selected={selected === c.id}
-              accent={theme.colors.live}
-              onPress={() => setSelected(c.id)}
-            />
-          ))}
-        </ScrollView>
+        <CategoryChips
+          categories={categories}
+          selected={selected}
+          onSelect={setSelected}
+          accent={theme.colors.live}
+        />
       </View>
 
       <View

@@ -1,6 +1,7 @@
 export { AppText } from './AppText';
 export { Button } from './Button';
 export { Card } from './Card';
+export { CategoryChips } from './CategoryChips';
 export { Chip } from './Chip';
 export { FavoriteButton } from './FavoriteButton';
 export { ListRow } from './ListRow';

@@ -1,12 +1,14 @@
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 import { setLocale } from '@/data/kv/settings';
 import i18n from '@/i18n';
+import { useParentalStore } from '@/state/parentalStore';
 import { useSessionStore } from '@/state/sessionStore';
 import { useThemeStore } from '@/state/themeStore';
 import { useTheme } from '@/ui/ThemeProvider';
-import { AppText, Button, Card, Chip, Screen } from '@/ui/components';
+import { AppText, Button, Card, Chip, Screen, TextField } from '@/ui/components';
 import { themes } from '@/ui/themes';
 import type { ThemeName } from '@/ui/tokens/contract';
 
@@ -26,9 +28,22 @@ export default function SettingsScreen() {
   const switchProfile = useSessionStore((s) => s.switchProfile);
   const removeProfile = useSessionStore((s) => s.removeProfile);
 
+  const hasPin = useParentalStore((s) => s.hasPin);
+  const unlocked = useParentalStore((s) => s.unlocked);
+  const setPin = useParentalStore((s) => s.setPin);
+  const removePin = useParentalStore((s) => s.removePin);
+  const lock = useParentalStore((s) => s.lock);
+  const [pinInput, setPinInput] = useState('');
+
   function changeLang(lng: string) {
     setLocale(lng);
     void i18n.changeLanguage(lng);
+  }
+
+  async function savePin() {
+    if (pinInput.trim().length < 4) return;
+    await setPin(pinInput.trim());
+    setPinInput('');
   }
 
   async function onRemove(id: string) {
@@ -122,6 +137,45 @@ export default function SettingsScreen() {
             title={t('settings.addProvider')}
             onPress={() => router.push('/onboarding')}
           />
+        </View>
+
+        {/* Category curation */}
+        <View style={{ gap: theme.space.sm }}>
+          <AppText variant="heading">{t('categories.title')}</AppText>
+          <Button
+            title={t('categories.manage')}
+            variant="secondary"
+            onPress={() => router.push('/categories')}
+          />
+        </View>
+
+        {/* Parental control */}
+        <View style={{ gap: theme.space.sm }}>
+          <AppText variant="heading">{t('parental.title')}</AppText>
+          <Card>
+            <TextField
+              label={hasPin ? t('parental.changePin') : t('parental.setPin')}
+              value={pinInput}
+              onChangeText={setPinInput}
+              keyboardType="number-pad"
+              secureTextEntry
+              maxLength={8}
+              placeholder="••••"
+            />
+            <View style={{ flexDirection: 'row', gap: theme.space.sm, flexWrap: 'wrap' }}>
+              <Button title={t('parental.save')} onPress={() => void savePin()} />
+              {hasPin ? (
+                <Button
+                  title={t('parental.removePin')}
+                  variant="ghost"
+                  onPress={removePin}
+                />
+              ) : null}
+              {hasPin && unlocked ? (
+                <Button title={t('parental.lockNow')} variant="ghost" onPress={lock} />
+              ) : null}
+            </View>
+          </Card>
         </View>
 
         {/* About */}

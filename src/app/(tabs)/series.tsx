@@ -2,12 +2,19 @@ import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, useWindowDimensions, View } from 'react-native';
+import { useWindowDimensions, View } from 'react-native';
 import { catalogRepo } from '@/data';
 import type { Category, Series } from '@/domain/models';
+import { useParentalStore } from '@/state/parentalStore';
 import { useSessionStore } from '@/state/sessionStore';
 import { useTheme } from '@/ui/ThemeProvider';
-import { AppText, Chip, FavoriteButton, PosterCard, Screen } from '@/ui/components';
+import {
+  AppText,
+  CategoryChips,
+  FavoriteButton,
+  PosterCard,
+  Screen,
+} from '@/ui/components';
 
 const COLUMNS = 3;
 
@@ -17,6 +24,7 @@ export default function SeriesScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const profileId = useSessionStore((s) => s.activeProfileId);
+  const unlocked = useParentalStore((s) => s.unlocked);
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [selected, setSelected] = useState<string | undefined>(undefined);
@@ -29,8 +37,8 @@ export default function SeriesScreen() {
 
   useEffect(() => {
     if (!profileId) return;
-    void catalogRepo.getSeries(profileId, selected).then(setSeries);
-  }, [profileId, selected]);
+    void catalogRepo.getSeries(profileId, selected, unlocked).then(setSeries);
+  }, [profileId, selected, unlocked]);
 
   const gap = theme.space.md;
   const tileWidth = (width - theme.space.lg * 2 - gap * (COLUMNS - 1)) / COLUMNS;
@@ -41,30 +49,14 @@ export default function SeriesScreen() {
         <AppText variant="display">{t('tabs.series')}</AppText>
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{
-          gap: theme.space.sm,
-          paddingHorizontal: theme.space.xl,
-          paddingVertical: theme.space.md,
-        }}>
-        <Chip
-          label={t('common.all')}
-          selected={selected === undefined}
+      <View style={{ paddingHorizontal: theme.space.lg }}>
+        <CategoryChips
+          categories={categories}
+          selected={selected}
+          onSelect={setSelected}
           accent={theme.colors.series}
-          onPress={() => setSelected(undefined)}
         />
-        {categories.map((c) => (
-          <Chip
-            key={c.id}
-            label={c.name}
-            selected={selected === c.id}
-            accent={theme.colors.series}
-            onPress={() => setSelected(c.id)}
-          />
-        ))}
-      </ScrollView>
+      </View>
 
       <View style={{ flex: 1, paddingHorizontal: theme.space.lg }}>
         {series.length === 0 ? (

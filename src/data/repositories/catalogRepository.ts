@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull, type SQL } from 'drizzle-orm';
 import type { Scalar } from '@op-engineering/op-sqlite';
 import type {
   Category,
@@ -32,6 +32,23 @@ export async function replaceCategories(
   items: readonly Category[],
 ): Promise<void> {
   const db = getRawDb();
+  // Preserve user curation (pin/hide/lock/order) across re-imports — category
+  // ids are deterministic, so we re-apply prior flags to matching ids.
+  const prior = new Map(
+    (
+      await getDb()
+        .select({
+          id: categories.id,
+          isHidden: categories.isHidden,
+          isLocked: categories.isLocked,
+          isPinned: categories.isPinned,
+          sortOrder: categories.sortOrder,
+        })
+        .from(categories)
+        .where(and(eq(categories.profileId, profileId), eq(categories.kind, kind)))
+    ).map((r) => [r.id, r] as const),
+  );
+
   await db.execute(`DELETE FROM categories WHERE profile_id = ? AND kind = ?;`, [
     profileId,
     kind,
@@ -40,16 +57,19 @@ export async function replaceCategories(
     `INSERT OR REPLACE INTO categories
        (id, profile_id, kind, name, sort_order, is_hidden, is_locked, is_pinned)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?);`,
-    items.map((c) => [
-      c.id,
-      c.profileId,
-      c.kind,
-      c.name,
-      c.order,
-      b(c.isHidden),
-      b(c.isLocked),
-      b(c.isPinned),
-    ]),
+    items.map((c) => {
+      const kept = prior.get(c.id);
+      return [
+        c.id,
+        c.profileId,
+        c.kind,
+        c.name,
+        kept ? kept.sortOrder : c.order,
+        b(kept ? kept.isHidden : c.isHidden),
+        b(kept ? kept.isLocked : c.isLocked),
+        b(kept ? kept.isPinned : c.isPinned),
+      ];
+    }),
   );
 }
 
@@ -197,29 +217,32 @@ export async function rebuildSearchIndex(profileId: string): Promise<void> {
 export async function getCategories(
   profileId: string,
   kind: StreamKind,
+  options: { includeHidden?: boolean } = {},
 ): Promise<Category[]> {
+  const conditions: SQL[] = [eq(categories.profileId, profileId), eq(categories.kind, kind)];
+  if (!options.includeHidden) conditions.push(eq(categories.isHidden, false));
   const rows = await getDb()
     .select()
     .from(categories)
-    .where(and(eq(categories.profileId, profileId), eq(categories.kind, kind)))
-    .orderBy(asc(categories.sortOrder));
+    .where(and(...conditions))
+    // Pinned first, then the curated order.
+    .orderBy(desc(categories.isPinned), asc(categories.sortOrder), asc(categories.name));
   return rows.map((r) => ({ ...r, order: r.sortOrder })) as unknown as Category[];
 }
 
 export async function getChannels(
   profileId: string,
   categoryId?: string,
+  includeAdult = false,
 ): Promise<Channel[]> {
-  const where =
-    categoryId === undefined
-      ? eq(channels.profileId, profileId)
-      : categoryId === null
-        ? and(eq(channels.profileId, profileId), isNull(channels.categoryId))
-        : and(eq(channels.profileId, profileId), eq(channels.categoryId, categoryId));
+  const conditions: SQL[] = [eq(channels.profileId, profileId)];
+  if (categoryId === null) conditions.push(isNull(channels.categoryId));
+  else if (categoryId !== undefined) conditions.push(eq(channels.categoryId, categoryId));
+  if (!includeAdult) conditions.push(eq(channels.isAdult, false));
   const rows = await getDb()
     .select()
     .from(channels)
-    .where(where)
+    .where(and(...conditions))
     .orderBy(asc(channels.name));
   return rows as Channel[];
 }
@@ -227,25 +250,46 @@ export async function getChannels(
 export async function getMovies(
   profileId: string,
   categoryId?: string,
+  includeAdult = false,
 ): Promise<Movie[]> {
-  const where =
-    categoryId === undefined
-      ? eq(movies.profileId, profileId)
-      : and(eq(movies.profileId, profileId), eq(movies.categoryId, categoryId));
-  const rows = await getDb().select().from(movies).where(where).orderBy(asc(movies.name));
+  const conditions: SQL[] = [eq(movies.profileId, profileId)];
+  if (categoryId !== undefined) conditions.push(eq(movies.categoryId, categoryId));
+  if (!includeAdult) conditions.push(eq(movies.isAdult, false));
+  const rows = await getDb()
+    .select()
+    .from(movies)
+    .where(and(...conditions))
+    .orderBy(asc(movies.name));
   return rows as Movie[];
 }
 
 export async function getSeries(
   profileId: string,
   categoryId?: string,
+  includeAdult = false,
 ): Promise<Series[]> {
-  const where =
-    categoryId === undefined
-      ? eq(series.profileId, profileId)
-      : and(eq(series.profileId, profileId), eq(series.categoryId, categoryId));
-  const rows = await getDb().select().from(series).where(where).orderBy(asc(series.name));
+  const conditions: SQL[] = [eq(series.profileId, profileId)];
+  if (categoryId !== undefined) conditions.push(eq(series.categoryId, categoryId));
+  if (!includeAdult) conditions.push(eq(series.isAdult, false));
+  const rows = await getDb()
+    .select()
+    .from(series)
+    .where(and(...conditions))
+    .orderBy(asc(series.name));
   return rows as Series[];
+}
+
+/** Update a category's curation flags / order (pin, hide, lock, reorder). */
+export async function updateCategoryCuration(
+  id: string,
+  patch: Partial<{
+    isHidden: boolean;
+    isLocked: boolean;
+    isPinned: boolean;
+    sortOrder: number;
+  }>,
+): Promise<void> {
+  await getDb().update(categories).set(patch).where(eq(categories.id, id));
 }
 
 export async function getChannelById(id: string): Promise<Channel | null> {

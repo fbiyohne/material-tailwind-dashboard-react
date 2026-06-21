@@ -6,9 +6,17 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 import { catalogRepo, epgRepo, favoritesRepo, progressRepo } from '@/data';
 import type { Category, Channel } from '@/domain/models';
+import { useParentalStore } from '@/state/parentalStore';
 import { useSessionStore } from '@/state/sessionStore';
 import { useTheme } from '@/ui/ThemeProvider';
-import { AppText, Button, Chip, FavoriteButton, ListRow, Screen } from '@/ui/components';
+import {
+  AppText,
+  Button,
+  CategoryChips,
+  FavoriteButton,
+  ListRow,
+  Screen,
+} from '@/ui/components';
 
 export default function LiveScreen() {
   const { t } = useTranslation();
@@ -16,6 +24,7 @@ export default function LiveScreen() {
   const router = useRouter();
   const profileId = useSessionStore((s) => s.activeProfileId);
   const provider = useSessionStore((s) => s.provider);
+  const unlocked = useParentalStore((s) => s.unlocked);
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [selected, setSelected] = useState<string | undefined>(undefined);
@@ -30,8 +39,8 @@ export default function LiveScreen() {
 
   useEffect(() => {
     if (!profileId) return;
-    void catalogRepo.getChannels(profileId, selected).then(setChannels);
-  }, [profileId, selected]);
+    void catalogRepo.getChannels(profileId, selected, unlocked).then(setChannels);
+  }, [profileId, selected, unlocked]);
 
   // Refresh recents/favorites every time the screen regains focus.
   const refreshShelves = useCallback(async () => {
@@ -87,26 +96,12 @@ export default function LiveScreen() {
         <ChannelShelf title={t('live.favorites')} channels={favorites} onPress={openChannel} />
       ) : null}
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: theme.space.sm, paddingVertical: theme.space.md }}>
-        <Chip
-          label={t('common.all')}
-          selected={selected === undefined}
-          accent={theme.colors.live}
-          onPress={() => setSelected(undefined)}
-        />
-        {categories.map((c) => (
-          <Chip
-            key={c.id}
-            label={c.name}
-            selected={selected === c.id}
-            accent={theme.colors.live}
-            onPress={() => setSelected(c.id)}
-          />
-        ))}
-      </ScrollView>
+      <CategoryChips
+        categories={categories}
+        selected={selected}
+        onSelect={setSelected}
+        accent={theme.colors.live}
+      />
     </View>
   );
 

@@ -5,6 +5,7 @@ import { ActivityIndicator, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { initI18n } from '@/i18n';
+import { useParentalStore } from '@/state/parentalStore';
 import { useSessionStore } from '@/state/sessionStore';
 import { useThemeStore } from '@/state/themeStore';
 import { ThemeProvider, useTheme } from '@/ui/ThemeProvider';
@@ -29,6 +30,7 @@ export default function RootLayout() {
   const bootstrap = useSessionStore((s) => s.bootstrap);
   const ready = useSessionStore((s) => s.ready);
   const hydrateTheme = useThemeStore((s) => s.hydrate);
+  const hydrateParental = useParentalStore((s) => s.hydrate);
   const [booted, setBooted] = useState(false);
 
   useEffect(() => {
@@ -37,12 +39,13 @@ export default function RootLayout() {
       await bootstrap(); // encrypted stores + DB migrations + restore profile
       initI18n(); // safe to read settings now
       hydrateTheme(); // restore the saved theme preference
+      hydrateParental(); // know whether a PIN is configured
       if (!cancelled) setBooted(true);
     })();
     return () => {
       cancelled = true;
     };
-  }, [bootstrap, hydrateTheme]);
+  }, [bootstrap, hydrateTheme, hydrateParental]);
 
   if (!ready || !booted) {
     return (

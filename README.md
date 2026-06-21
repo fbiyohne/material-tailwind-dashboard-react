@@ -88,9 +88,14 @@ Foundation (the *socle*) is in place and verified (typecheck + lint + unit tests
 - ✅ **EPG grid** (`/guide`): scrollable 24h timeline with a synchronized channel
   column, "now" line, category filter, and tap-to-watch — one windowed query
   feeds the whole grid; rows are virtualized.
+- ✅ **Parental control**: salted-SHA-256 PIN (hash in the encrypted store);
+  locked categories prompt for the PIN; adult-flagged content is hidden until the
+  session is unlocked (session-scoped, never persisted).
+- ✅ **Category curation** (`/categories`): pin / hide / lock / reorder per kind;
+  lists honor it (hidden excluded, pinned first); curation survives re-imports.
 
-Next: V1 polish — parental control (PIN), category curation
-(pin/hide/lock/reorder), and the TV (react-native-tvos) build pass.
+Next: V1 polish — the TV (react-native-tvos) build pass (D-pad focus, numeric
+channel entry), then V2 differentiators (on-device intelligence, catch-up, cloud sync).
 
 ## Develop
 
