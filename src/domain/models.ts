@@ -39,6 +39,8 @@ export interface Channel {
   /** LCN / channel number when the provider supplies one. */
   readonly number: number | null;
   readonly isAdult: boolean;
+  /** Days of catch-up/archive available for this channel (0/null = none). */
+  readonly catchupDays: number | null;
   readonly addedAt: number;
 }
 

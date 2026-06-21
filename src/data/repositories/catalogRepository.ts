@@ -80,8 +80,8 @@ export async function replaceChannels(
   await getRawDb().execute(`DELETE FROM channels WHERE profile_id = ?;`, [profileId]);
   await batchInsert(
     `INSERT OR REPLACE INTO channels
-       (id, profile_id, category_id, name, stream_id, logo_url, epg_channel_id, number, is_adult, added_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+       (id, profile_id, category_id, name, stream_id, logo_url, epg_channel_id, number, is_adult, catchup_days, added_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
     items.map((c) => [
       c.id,
       c.profileId,
@@ -92,6 +92,7 @@ export async function replaceChannels(
       c.epgChannelId,
       c.number,
       b(c.isAdult),
+      c.catchupDays,
       c.addedAt,
     ]),
   );

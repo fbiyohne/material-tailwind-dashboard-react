@@ -75,17 +75,36 @@ export default function GuideScreen() {
     });
   }, [profileId, windowStart, windowEnd]);
 
-  function play(channel: Channel) {
+  /** A past programme on a catch-up channel, still inside its archive window. */
+  function canCatchup(channel: Channel, p: EpgEntry): boolean {
+    return (
+      p.end <= nowBase &&
+      channel.catchupDays != null &&
+      p.start >= nowBase - channel.catchupDays * 86_400
+    );
+  }
+
+  function playProgramme(channel: Channel, p: EpgEntry) {
     if (!provider) return;
-    router.push({
-      pathname: '/player',
-      params: {
-        url: provider.buildLiveUrl(channel.streamId),
-        title: channel.name,
-        itemId: channel.id,
-        kind: 'live',
-      },
-    });
+    if (canCatchup(channel, p)) {
+      router.push({
+        pathname: '/player',
+        params: {
+          url: provider.buildCatchupUrl(channel.streamId, p.start, (p.end - p.start) / 60),
+          title: p.title,
+        },
+      });
+    } else {
+      router.push({
+        pathname: '/player',
+        params: {
+          url: provider.buildLiveUrl(channel.streamId),
+          title: channel.name,
+          itemId: channel.id,
+          kind: 'live',
+        },
+      });
+    }
   }
 
   // Body vertical scroll drives the (non-interactive) label column.
@@ -223,10 +242,11 @@ export default function GuideScreen() {
                       const left = ((p.start - windowStart) / 60) * PX_PER_MIN;
                       const width = ((p.end - p.start) / 60) * PX_PER_MIN - 2;
                       if (width <= 0) return null;
+                      const replay = canCatchup(item, p);
                       return (
                         <Pressable
                           key={p.id}
-                          onPress={() => play(item)}
+                          onPress={() => playProgramme(item, p)}
                           style={{
                             position: 'absolute',
                             left,
@@ -236,11 +256,12 @@ export default function GuideScreen() {
                             backgroundColor: theme.colors.surface,
                             borderRadius: theme.radius.sm,
                             borderWidth: 1,
-                            borderColor: theme.colors.border,
+                            borderColor: replay ? theme.colors.accent : theme.colors.border,
                             padding: theme.space.xs,
                             justifyContent: 'center',
                           }}>
                           <AppText variant="caption" numberOfLines={1}>
+                            {replay ? '⟲ ' : ''}
                             {p.title}
                           </AppText>
                           <AppText variant="mono" muted numberOfLines={1}>

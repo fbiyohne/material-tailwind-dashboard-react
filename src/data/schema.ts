@@ -46,6 +46,7 @@ export const channels = sqliteTable(
     epgChannelId: text('epg_channel_id'),
     number: integer('number'),
     isAdult: integer('is_adult', { mode: 'boolean' }).notNull().default(false),
+    catchupDays: integer('catchup_days'),
     addedAt: integer('added_at').notNull(),
   },
   (t) => [

@@ -119,9 +119,13 @@ Foundation (the *socle*) is in place and verified (typecheck + lint + unit tests
   import it back on another device. Profile ids are preserved, so favorites and
   continue-watching re-align once the catalog re-downloads. No backend; the
   catalog itself is never part of the snapshot.
+- ✅ **Catch-up / archive**: channels carry their archive window (`catchupDays`,
+  from Xtream `tv_archive` or M3U `catchup-days`); past programmes inside the
+  window are replayable straight from the **EPG grid** (marked ⟲), streamed via
+  the provider's timeshift URL — the player gives the scrubbable timeline.
 
-Next: V2 — catch-up/archive (scrubbable timeline); plus polish (adult filtering
-in search, EPG-based smart enrichment, optional snapshot encryption).
+Next: polish — adult filtering in search, EPG-based smart enrichment, optional
+snapshot encryption, PiP / multi-view.
 
 ## Develop
 

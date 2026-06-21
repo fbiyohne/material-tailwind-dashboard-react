@@ -25,6 +25,8 @@ export interface XtreamLiveStream {
   readonly num?: number;
   readonly added?: string;
   readonly is_adult?: string | number;
+  readonly tv_archive?: string | number;
+  readonly tv_archive_duration?: string | number;
 }
 
 export interface XtreamVodStream {

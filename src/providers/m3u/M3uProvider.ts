@@ -100,6 +100,7 @@ export class M3uProvider implements ContentProvider {
         epgChannelId: e.tvgId,
         number: e.channelNumber,
         isAdult: ADULT_RE.test(group) || ADULT_RE.test(e.name),
+        catchupDays: e.catchupDays,
         addedAt: now,
       };
     });
@@ -139,6 +140,14 @@ export class M3uProvider implements ContentProvider {
   buildLiveUrl(streamId: string): string {
     // streamId is already the playable URL.
     return streamId;
+  }
+
+  buildCatchupUrl(streamId: string, start: number, _durationMin: number): string {
+    // Best-effort: most M3U/Xtream playlists accept ?utc=<start>&lutc=<now>.
+    // Providers using a custom catchup-source template aren't covered here.
+    const now = Math.floor(Date.now() / 1000);
+    const sep = streamId.includes('?') ? '&' : '?';
+    return `${streamId}${sep}utc=${start}&lutc=${now}`;
   }
   buildMovieUrl(streamId: string): string {
     return streamId;

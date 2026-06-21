@@ -20,6 +20,8 @@ export interface M3uEntry {
   readonly groupTitle: string | null;
   /** `tvg-chno` channel number, parsed when present. */
   readonly channelNumber: number | null;
+  /** Catch-up window in days (`catchup-days` / `tvg-rec` / `timeshift`). */
+  readonly catchupDays: number | null;
 }
 
 interface ExtInf {
@@ -87,6 +89,9 @@ export function parseM3u(content: string): M3uEntry[] {
         tvgLogo: attrs['tvg-logo'] ?? null,
         groupTitle: groupTitle ?? null,
         channelNumber: toNumberOrNull(attrs['tvg-chno'] ?? attrs['channel-number']),
+        catchupDays: toNumberOrNull(
+          attrs['catchup-days'] ?? attrs['tvg-rec'] ?? attrs['timeshift'],
+        ),
       });
       pending = null;
       groupOverride = null;

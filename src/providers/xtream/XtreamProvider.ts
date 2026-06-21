@@ -7,11 +7,7 @@ import type {
   Series,
   SeriesDetail,
 } from '@/domain/models';
-import type {
-  ProviderSession,
-  StreamUrlOptions,
-  XtreamConfig,
-} from '@/domain/provider-config';
+import type { ProviderSession, XtreamConfig } from '@/domain/provider-config';
 import { decodeBase64Utf8 } from '@/lib/encoding';
 import { httpJson, httpText } from '@/lib/net/http';
 import type { ContentProvider } from '@/providers/ContentProvider';
@@ -124,6 +120,10 @@ export class XtreamProvider implements ContentProvider {
       epgChannelId: s.epg_channel_id || null,
       number: toNum(s.num ?? null),
       isAdult: s.is_adult === '1' || s.is_adult === 1,
+      catchupDays:
+        s.tv_archive === '1' || s.tv_archive === 1
+          ? toNum(s.tv_archive_duration ?? null)
+          : null,
       addedAt: epochOrNow(s.added),
     }));
   }
@@ -250,23 +250,22 @@ export class XtreamProvider implements ContentProvider {
     }
   }
 
-  buildLiveUrl(streamId: string, options?: StreamUrlOptions): string {
-    if (options?.catchup) {
-      const { start, durationMin } = options.catchup;
-      const ts = new Date(start * 1000)
-        .toISOString()
-        .replace(/[-:T]/g, '')
-        .slice(0, 12)
-        .replace(/(\d{8})(\d{4})/, '$1:$2'); // YYYYMMDD:HHMM (provider format varies)
-      return `${this.base}/streaming/timeshift.php?username=${encodeURIComponent(
-        this.user,
-      )}&password=${encodeURIComponent(
-        this.pass,
-      )}&stream=${streamId}&start=${ts}&duration=${durationMin}`;
-    }
+  buildLiveUrl(streamId: string): string {
     return `${this.base}/live/${encodeURIComponent(this.user)}/${encodeURIComponent(
       this.pass,
     )}/${streamId}.m3u8`;
+  }
+
+  buildCatchupUrl(streamId: string, start: number, durationMin: number): string {
+    // Standard Xtream timeshift path: /timeshift/U/P/<minutes>/<Y-m-d:H-i>/<id>.ts
+    const d = new Date(start * 1000);
+    const p = (n: number) => String(n).padStart(2, '0');
+    const ts = `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}:${p(
+      d.getUTCHours(),
+    )}-${p(d.getUTCMinutes())}`;
+    return `${this.base}/timeshift/${encodeURIComponent(this.user)}/${encodeURIComponent(
+      this.pass,
+    )}/${Math.max(1, Math.round(durationMin))}/${ts}/${streamId}.ts`;
   }
 
   buildMovieUrl(streamId: string, containerExt: string | null): string {

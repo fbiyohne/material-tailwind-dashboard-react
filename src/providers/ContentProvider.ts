@@ -62,6 +62,11 @@ export interface ContentProvider {
   // --- Playback -------------------------------------------------------------
   /** Build a playable URL for a live channel. */
   buildLiveUrl(streamId: string, options?: StreamUrlOptions): string;
+  /**
+   * Build a catch-up/archive URL for a past programme on a channel.
+   * `start` is epoch seconds, `durationMin` the programme length in minutes.
+   */
+  buildCatchupUrl(streamId: string, start: number, durationMin: number): string;
   /** Build a playable URL for a movie. */
   buildMovieUrl(streamId: string, containerExt: string | null): string;
   /** Build a playable URL for an episode. */

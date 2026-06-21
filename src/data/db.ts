@@ -66,6 +66,7 @@ const DDL = [
     epg_channel_id TEXT,
     number INTEGER,
     is_adult INTEGER NOT NULL DEFAULT 0,
+    catchup_days INTEGER,
     added_at INTEGER NOT NULL
   );`,
   `CREATE INDEX IF NOT EXISTS idx_channels_profile_cat ON channels (profile_id, category_id);`,
@@ -155,6 +156,10 @@ const DDL = [
   );`,
 ];
 
+// Additive column migrations for DBs created before a column existed. SQLite has
+// no "ADD COLUMN IF NOT EXISTS", so we run each and ignore "duplicate column".
+const ALTERS = [`ALTER TABLE channels ADD COLUMN catchup_days INTEGER;`];
+
 let migrated = false;
 
 /** Create tables, indexes and the FTS5 virtual table. Idempotent. */
@@ -163,6 +168,13 @@ export async function runMigrations(): Promise<void> {
   const db = getRawDb();
   for (const statement of DDL) {
     await db.execute(statement);
+  }
+  for (const statement of ALTERS) {
+    try {
+      await db.execute(statement);
+    } catch {
+      // column already exists — ignore
+    }
   }
   migrated = true;
 }
