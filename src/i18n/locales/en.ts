@@ -66,6 +66,10 @@ export const en = {
     notSupported: 'This provider does not expose this content.',
     resume: 'Continue watching',
   },
+  guide: {
+    title: 'Guide',
+    noData: 'No guide data for this provider.',
+  },
   seriesDetail: {
     season: 'Season {{n}}',
     play: 'Play',

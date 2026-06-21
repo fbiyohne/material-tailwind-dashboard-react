@@ -85,8 +85,11 @@ Foundation (the *socle*) is in place and verified (typecheck + lint + unit tests
   channels/movies/series; the player records progress and seeks back to it; Live
   shows Récents + Favoris shelves and Movies shows a "Reprendre" shelf with
   progress bars.
+- ✅ **EPG grid** (`/guide`): scrollable 24h timeline with a synchronized channel
+  column, "now" line, category filter, and tap-to-watch — one windowed query
+  feeds the whole grid; rows are virtualized.
 
-Next: V1 polish — full EPG grid, parental control (PIN), category curation
+Next: V1 polish — parental control (PIN), category curation
 (pin/hide/lock/reorder), and the TV (react-native-tvos) build pass.
 
 ## Develop

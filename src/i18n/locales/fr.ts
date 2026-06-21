@@ -68,6 +68,10 @@ export const fr: TranslationSchema = {
     notSupported: "Ce fournisseur n'expose pas ce contenu.",
     resume: 'Reprendre',
   },
+  guide: {
+    title: 'Guide',
+    noData: 'Aucun guide pour ce fournisseur.',
+  },
   seriesDetail: {
     season: 'Saison {{n}}',
     play: 'Lire',

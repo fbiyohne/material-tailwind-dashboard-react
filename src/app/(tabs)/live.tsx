@@ -8,7 +8,7 @@ import { catalogRepo, epgRepo, favoritesRepo, progressRepo } from '@/data';
 import type { Category, Channel } from '@/domain/models';
 import { useSessionStore } from '@/state/sessionStore';
 import { useTheme } from '@/ui/ThemeProvider';
-import { AppText, Chip, FavoriteButton, ListRow, Screen } from '@/ui/components';
+import { AppText, Button, Chip, FavoriteButton, ListRow, Screen } from '@/ui/components';
 
 export default function LiveScreen() {
   const { t } = useTranslation();
@@ -69,9 +69,16 @@ export default function LiveScreen() {
 
   const Header = (
     <View>
-      <AppText variant="display" style={{ paddingTop: theme.space.lg }}>
-        {t('live.title')}
-      </AppText>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingTop: theme.space.lg,
+        }}>
+        <AppText variant="display">{t('live.title')}</AppText>
+        <Button title={t('guide.title')} variant="ghost" onPress={() => router.push('/guide')} />
+      </View>
 
       {recent.length > 0 ? (
         <ChannelShelf title={t('live.recents')} channels={recent} onPress={openChannel} />
