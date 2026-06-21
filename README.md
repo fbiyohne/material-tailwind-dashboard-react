@@ -107,9 +107,14 @@ Foundation (the *socle*) is in place and verified (typecheck + lint + unit tests
   purge dead), and **TMDB enrichment** (posters/ratings for items missing art,
   using the user's own API key). Bounded concurrency to stay polite; pure
   helpers unit-tested.
+- ✅ **Natural-language search** (on-device, FR + EN, no LLM): the Search tab
+  parses queries like « les matchs de foot ce soir » into a time window + content
+  kind + topic keywords, then searches the **EPG programmes** (joined to channels
+  so results play) or the catalog FTS accordingly, showing the interpreted intent
+  as chips. Parser is pure and unit-tested.
 
-Next: V2 — natural-language search, catch-up/archive (scrubbable timeline), and
-server-less cloud sync (iCloud / Drive).
+Next: V2 — catch-up/archive (scrubbable timeline) and server-less cloud sync
+(iCloud / Drive) for cross-device continuity.
 
 ## Develop
 
