@@ -76,10 +76,14 @@ Foundation (the *socle*) is in place and verified (typecheck + lint + unit tests
 - ✅ Tokenized theme system with **three selectable, persisted themes**:
   **Éditorial** (calm cinephile), **Control Room** (broadcast-HUD), **Soft Depth** (tactile).
   Components style only from `useTheme()`; switching re-skins the whole app from one source.
+- ✅ MVP screens (all theme-driven, Expo Router): disclaimer + **onboarding**
+  (Xtream/M3U with live validation) → **import progress** → **Live TV** (categories +
+  virtualized list + now/next EPG) → **Movies** & **Series** (+ series detail) →
+  **global Search** (FTS5) → **Settings** (theme, language, profile switch/refresh/remove)
+  → full-screen **player** (react-native-video).
 
-Next: build the MVP screens
-(onboarding → live TV → favorites/recent → global search → settings/profiles → player),
-each rendered through the active theme.
+Next: V1 polish — favorites/recent, resume & continue-watching, EPG grid,
+parental control, and the TV (react-native-tvos) build pass.
 
 ## Develop
 
