@@ -1,13 +1,16 @@
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { setAcceptedDisclaimer, hasAcceptedDisclaimer } from '@/data/kv/settings';
 import type { ProviderConfig, ProviderKind } from '@/domain/provider-config';
 import { createProvider, ProviderError } from '@/providers';
 import { useSessionStore } from '@/state/sessionStore';
 import { useTheme } from '@/ui/ThemeProvider';
-import { AppText, Button, Card, Chip, Screen, TextField } from '@/ui/components';
+import { AppText, Button, Card, Screen, TextField } from '@/ui/components';
+
+const PROVIDER_KINDS = ['xtream', 'm3u'] as const;
 
 export default function Onboarding() {
   const { t } = useTranslation();
@@ -71,13 +74,25 @@ export default function Onboarding() {
   if (!accepted) {
     return (
       <Screen>
-        <View style={{ flex: 1, justifyContent: 'center', gap: theme.space.lg }}>
-          <AppText variant="display">{t('disclaimer.title')}</AppText>
-          <Card elevated>
-            <AppText variant="body" muted style={{ lineHeight: 22 }}>
+        <View style={{ flex: 1, justifyContent: 'center', gap: theme.space.xl }}>
+          <View style={{ alignItems: 'center', gap: theme.space.md }}>
+            <Image
+              source={require('../../assets/images/icon.png')}
+              style={{ width: 80, height: 80, borderRadius: 22 }}
+              contentFit="cover"
+            />
+            <AppText variant="display" center style={{ letterSpacing: -0.5 }}>
+              CreaticTV
+            </AppText>
+          </View>
+
+          <Card elevated style={{ gap: theme.space.md }}>
+            <AppText variant="heading">{t('disclaimer.title')}</AppText>
+            <AppText variant="body" muted style={{ lineHeight: 23 }}>
               {t('disclaimer.body')}
             </AppText>
           </Card>
+
           <Button
             title={t('disclaimer.accept')}
             fullWidth
@@ -95,19 +110,48 @@ export default function Onboarding() {
   return (
     <Screen padded={false}>
       <ScrollView contentContainerStyle={{ padding: theme.space.xl, gap: theme.space.lg }}>
-        <AppText variant="display">{t('onboarding.addProvider')}</AppText>
+        <View style={{ alignItems: 'center', gap: theme.space.sm }}>
+          <Image
+            source={require('../../assets/images/icon.png')}
+            style={{ width: 56, height: 56, borderRadius: 16 }}
+            contentFit="cover"
+          />
+          <AppText variant="display" center>
+            {t('onboarding.addProvider')}
+          </AppText>
+        </View>
 
-        <View style={{ flexDirection: 'row', gap: theme.space.sm }}>
-          <Chip
-            label={t('onboarding.xtream')}
-            selected={kind === 'xtream'}
-            onPress={() => setKind('xtream')}
-          />
-          <Chip
-            label={t('onboarding.m3u')}
-            selected={kind === 'm3u'}
-            onPress={() => setKind('m3u')}
-          />
+        {/* Segmented source selector. */}
+        <View
+          style={{
+            flexDirection: 'row',
+            backgroundColor: theme.colors.surface,
+            borderRadius: theme.radius.pill,
+            borderWidth: 1,
+            borderColor: theme.colors.border,
+            padding: 4,
+          }}>
+          {PROVIDER_KINDS.map((k) => {
+            const active = kind === k;
+            return (
+              <Pressable
+                key={k}
+                onPress={() => setKind(k)}
+                style={{
+                  flex: 1,
+                  paddingVertical: theme.space.sm + 2,
+                  borderRadius: theme.radius.pill,
+                  alignItems: 'center',
+                  backgroundColor: active ? theme.colors.accent : 'transparent',
+                }}>
+                <AppText
+                  variant="caption"
+                  style={{ color: active ? theme.colors.bg : theme.colors.textMuted }}>
+                  {t(k === 'xtream' ? 'onboarding.xtream' : 'onboarding.m3u')}
+                </AppText>
+              </Pressable>
+            );
+          })}
         </View>
 
         <Card>
