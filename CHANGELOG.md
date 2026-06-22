@@ -1,40 +1,29 @@
 # Change Log
 
-## [2.1.0] 2023-11-14
-- Upgrade to Material Tailwind `v2`
+## [0.1.0] — Foundation (socle)
 
-## [2.0.1] 2023-03-29
+CreaticTV is born. This repository previously held an unrelated Vite web dashboard, which
+has been removed and replaced with a from-scratch React Native + Expo IPTV client.
 
-- Add nepcha scripts
+### Added
 
-## [2.0.0] 2022-11-02
+- Expo SDK 56 scaffold (React Native 0.85, React 19.2, New Architecture), TypeScript strict,
+  ESLint (eslint-config-expo), Jest.
+- App identity: `CreaticTV`, bundle id `com.creatic.creatictv`, iOS 16.4+ / Android 8+,
+  cleartext traffic + ATS exception (IPTV streams are frequently HTTP), TV config plugin.
+- **Provider abstraction** (`ContentProvider`) with two implementations: `XtreamProvider`
+  (full `player_api.php` + short EPG + XMLTV + playback URLs) and `M3uProvider`
+  (M3U/M3U8 parsing + group-title categories + separate XMLTV).
+- **Parsers** for M3U and XMLTV, with unit tests.
+- **Data layer**: op-sqlite + Drizzle schema, indexes, FTS5 search, chunked bulk-insert
+  repositories, now/next EPG queries.
+- **Encrypted storage**: MMKV with its AES-256 key sealed in the Keychain/Keystore via
+  expo-secure-store; credentials never stored in clear text.
+- **Sync orchestrator**: catalog import pipeline (provider → normalize → SQLite) with
+  progress events and cancellation.
+- Zustand session store, i18next (FR + EN), tokenized design-system placeholder.
+- Mandatory client-only disclaimer surfaced in-app and in the README.
 
-- Update the entire structure
-- Migration to vite
-- Migration to React 18
-- Migration to React Router DOM 6
-- Migration to @material-tailwind/react latest version
-- Migration from chart.js to apexcharts
-- Add global context support
+### Verified
 
-## [1.1.0] 2021-06-10
-
-### New Features
-
-- Add the download button
-
-### Bug Fixing
-
-- Fix the dropdown of admin navbar
-
-## [1.0.0] 2021-06-08
-
-### Original Release
-
-- Started project from [Material Tailwind Dashboard React](https://www.creative-tim.com/product/material-tailwind-dashboard-react?ref=changelog-mtdr)
-- Updated all dependencies from [Material Tailwind Dashboard React](https://www.creative-tim.com/product/material-tailwind-dashboard-react?ref=changelog-mtdr) and those dependencies that were not working with the new React v17+ API, were deleted and/or replaced
-
-### Warning
-
-_Warnings might appear while doing a clean npm install - they do not affect the UI or the functionality of the product, and they appear because of NodeJS and not from the product itself._
-_This product was designed and developed using NodeJS version 14.16.0 LTS, so please make sure to have a compatible version of NodeJS._
+- `tsc --noEmit`, `eslint`, and `jest` (14 tests) all pass.
