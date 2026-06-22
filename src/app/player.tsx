@@ -93,6 +93,7 @@ export default function PlayerScreen() {
   const [current, setCurrent] = useState(0);
   const [duration, setDuration] = useState(0);
   const [controlsShown, setControlsShown] = useState(true);
+  const [retryKey, setRetryKey] = useState(0);
 
   // Resolve resume point (and record a recent for live channels).
   useEffect(() => {
@@ -141,6 +142,20 @@ export default function PlayerScreen() {
     };
   }, [controlsShown, paused, errored, loading]);
 
+  // Give up on a stream that never loads (dead URL / unsupported codec) so the
+  // user gets an actionable error instead of an endless spinner.
+  useEffect(() => {
+    if (!loading || errored) return;
+    const id = setTimeout(() => setErrored(true), 20000);
+    return () => clearTimeout(id);
+  }, [loading, errored, retryKey]);
+
+  const retry = useCallback(() => {
+    setErrored(false);
+    setLoading(true);
+    setRetryKey((k) => k + 1);
+  }, []);
+
   const bumpControls = useCallback(() => setControlsShown(true), []);
   const toggleControls = useCallback(() => setControlsShown((v) => !v), []);
 
@@ -168,6 +183,7 @@ export default function PlayerScreen() {
     <View style={styles.root}>
       {url ? (
         <Video
+          key={retryKey}
           ref={videoRef}
           source={{ uri: url }}
           style={StyleSheet.absoluteFill}
@@ -222,13 +238,18 @@ export default function PlayerScreen() {
         </View>
       ) : null}
 
-      {/* Error state. */}
+      {/* Error state (interactive — offers a retry). */}
       {errored ? (
-        <View style={styles.center} pointerEvents="none">
+        <View style={styles.center}>
           <View style={styles.errorBadge}>
             <AppText variant="heading" style={{ color: '#fff', fontSize: 16 }}>
               {t('player.error')}
             </AppText>
+            <Pressable onPress={retry} hitSlop={8} style={styles.retryBtn}>
+              <AppText variant="caption" style={{ color: '#fff', letterSpacing: 0.5 }}>
+                {t('common.retry')}
+              </AppText>
+            </Pressable>
           </View>
         </View>
       ) : null}
@@ -360,12 +381,21 @@ const styles = StyleSheet.create({
   },
   dimText: { color: 'rgba(255,255,255,0.85)', marginTop: 10 },
   errorBadge: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
     borderRadius: 14,
     backgroundColor: 'rgba(0,0,0,0.6)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.12)',
+  },
+  retryBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 18,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
   },
   topScrim: {
     position: 'absolute',
