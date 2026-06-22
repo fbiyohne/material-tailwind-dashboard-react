@@ -1,4 +1,3 @@
-import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -8,7 +7,7 @@ import type { ProviderConfig, ProviderKind } from '@/domain/provider-config';
 import { createProvider, ProviderError } from '@/providers';
 import { useSessionStore } from '@/state/sessionStore';
 import { useTheme } from '@/ui/ThemeProvider';
-import { AppText, Button, Card, Screen, TextField } from '@/ui/components';
+import { AppText, Button, Card, Screen, TextField, Wordmark } from '@/ui/components';
 
 const PROVIDER_KINDS = ['xtream', 'm3u'] as const;
 
@@ -75,15 +74,8 @@ export default function Onboarding() {
     return (
       <Screen>
         <View style={{ flex: 1, justifyContent: 'center', gap: theme.space.xl }}>
-          <View style={{ alignItems: 'center', gap: theme.space.md }}>
-            <Image
-              source={require('../../assets/images/icon.png')}
-              style={{ width: 80, height: 80, borderRadius: 22 }}
-              contentFit="cover"
-            />
-            <AppText variant="display" center style={{ letterSpacing: -0.5 }}>
-              CreaticTV
-            </AppText>
+          <View style={{ alignItems: 'center' }}>
+            <Wordmark size={42} />
           </View>
 
           <Card elevated style={{ gap: theme.space.md }}>
@@ -110,12 +102,8 @@ export default function Onboarding() {
   return (
     <Screen padded={false}>
       <ScrollView contentContainerStyle={{ padding: theme.space.xl, gap: theme.space.lg }}>
-        <View style={{ alignItems: 'center', gap: theme.space.sm }}>
-          <Image
-            source={require('../../assets/images/icon.png')}
-            style={{ width: 56, height: 56, borderRadius: 16 }}
-            contentFit="cover"
-          />
+        <View style={{ alignItems: 'center', gap: theme.space.md }}>
+          <Wordmark size={26} />
           <AppText variant="display" center>
             {t('onboarding.addProvider')}
           </AppText>

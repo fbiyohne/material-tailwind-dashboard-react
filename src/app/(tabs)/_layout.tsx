@@ -1,19 +1,28 @@
+import { Feather } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { View, type ColorValue } from 'react-native';
+import type { ColorValue } from 'react-native';
 import { useTheme } from '@/ui/ThemeProvider';
+import { fonts } from '@/ui/tokens/fonts';
 
-/** Bottom tab navigator, themed. A small dot stands in for icons until the
- *  final iconography is chosen with the visual direction. */
+type FeatherName = keyof typeof Feather.glyphMap;
+
+function TabIcon({
+  name,
+  color,
+  focused,
+}: {
+  name: FeatherName;
+  color: ColorValue;
+  focused: boolean;
+}) {
+  return <Feather name={name} size={focused ? 23 : 21} color={color} />;
+}
+
+/** Bottom tab navigator, themed, with line iconography. */
 export default function TabsLayout() {
   const { t } = useTranslation();
   const theme = useTheme();
-
-  const dot = (color: ColorValue) => (
-    <View
-      style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: color }}
-    />
-  );
 
   return (
     <Tabs
@@ -24,41 +33,61 @@ export default function TabsLayout() {
         tabBarStyle: {
           backgroundColor: theme.colors.surface,
           borderTopColor: theme.colors.border,
+          borderTopWidth: 1,
+          height: 62,
+          paddingTop: 8,
+          paddingBottom: 8,
         },
+        tabBarLabelStyle: {
+          fontFamily: fonts.interMedium,
+          fontSize: 11,
+          letterSpacing: 0.2,
+        },
+        tabBarItemStyle: { paddingTop: 2 },
       }}>
       <Tabs.Screen
         name="live"
         options={{
           title: t('tabs.live'),
-          tabBarIcon: ({ color }) => dot(color),
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon name="radio" color={color} focused={focused} />
+          ),
         }}
       />
       <Tabs.Screen
         name="movies"
         options={{
           title: t('tabs.movies'),
-          tabBarIcon: ({ color }) => dot(color),
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon name="film" color={color} focused={focused} />
+          ),
         }}
       />
       <Tabs.Screen
         name="series"
         options={{
           title: t('tabs.series'),
-          tabBarIcon: ({ color }) => dot(color),
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon name="tv" color={color} focused={focused} />
+          ),
         }}
       />
       <Tabs.Screen
         name="search"
         options={{
           title: t('tabs.search'),
-          tabBarIcon: ({ color }) => dot(color),
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon name="search" color={color} focused={focused} />
+          ),
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: t('tabs.settings'),
-          tabBarIcon: ({ color }) => dot(color),
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon name="settings" color={color} focused={focused} />
+          ),
         }}
       />
     </Tabs>
