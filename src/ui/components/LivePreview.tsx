@@ -19,6 +19,8 @@ export function LivePreview({ channel, streamUrl, onFullscreen, paused }: LivePr
   const theme = useTheme();
   const [loading, setLoading] = useState(true);
   const [errored, setErrored] = useState(false);
+  // Muted by default so selecting channels never blasts audio; user opts in.
+  const [muted, setMuted] = useState(true);
 
   return (
     <View
@@ -37,6 +39,7 @@ export function LivePreview({ channel, streamUrl, onFullscreen, paused }: LivePr
             source={{ uri: streamUrl }}
             style={StyleSheet.absoluteFill}
             paused={paused}
+            muted={muted}
             resizeMode="contain"
             onLoadStart={() => {
               setLoading(true);
@@ -75,6 +78,15 @@ export function LivePreview({ channel, streamUrl, onFullscreen, paused }: LivePr
             accessibilityRole="button"
             accessibilityLabel="Plein écran"
           />
+          {/* Mute toggle sits above the tap layer so it takes the tap itself. */}
+          <Pressable
+            style={styles.muteBtn}
+            hitSlop={10}
+            onPress={() => setMuted((m) => !m)}
+            accessibilityRole="button"
+            accessibilityLabel={muted ? 'Activer le son' : 'Couper le son'}>
+            <Feather name={muted ? 'volume-x' : 'volume-2'} size={16} color="#fff" />
+          </Pressable>
         </>
       ) : (
         <View style={[styles.center, { padding: theme.space.lg }]} pointerEvents="none">
@@ -111,4 +123,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.55)',
   },
   barText: { flex: 1, color: '#fff' },
+  muteBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.55)',
+  },
 });

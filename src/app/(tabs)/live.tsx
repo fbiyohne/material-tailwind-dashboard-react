@@ -71,7 +71,13 @@ export default function LiveScreen() {
     if (!profileId) return;
     const recentIds = await progressRepo.getRecentChannelIds(profileId, 12);
     const recents = await Promise.all(recentIds.map((id) => catalogRepo.getChannelById(id)));
-    setRecent(recents.filter((c): c is Channel => c !== null));
+    const recentChannels = recents.filter((c): c is Channel => c !== null);
+    setRecent(recentChannels);
+    // Auto-load the last-watched channel into the (muted) preview on focus,
+    // unless the user already picked something this session.
+    if (recentChannels[0]) {
+      setSelectedChannel((cur) => cur ?? recentChannels[0]);
+    }
 
     const favRefs = await favoritesRepo.listFavorites(profileId, 'live');
     const favs = await Promise.all(favRefs.map((f) => catalogRepo.getChannelById(f.itemId)));
