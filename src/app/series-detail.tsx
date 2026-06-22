@@ -1,3 +1,5 @@
+import { Feather } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -74,31 +76,91 @@ export default function SeriesDetailScreen() {
               ))}
             </Card>
           </View>
-        ) : detail && detail.seasons.length > 0 ? (
-          detail.seasons.map((season) => (
-            <View key={season.season} style={{ gap: theme.space.sm }}>
-              <AppText variant="heading">
-                {t('seriesDetail.season', { n: season.season })}
-              </AppText>
-              <Card>
-                {season.episodes.map((ep) => (
-                  <ListRow
-                    key={ep.id}
-                    title={ep.title}
-                    leadingBadge={String(ep.episode)}
-                    onPress={() => {
-                      if (!provider) return;
-                      const url = provider.buildEpisodeUrl(ep.streamId, ep.containerExt);
-                      router.push({
-                        pathname: '/player',
-                        params: { url, title: ep.title, itemId: ep.id, kind: 'series' },
-                      });
-                    }}
-                  />
-                ))}
-              </Card>
+        ) : detail ? (
+          <>
+            {/* Hero: poster + metadata + synopsis. */}
+            <View style={{ flexDirection: 'row', gap: theme.space.md }}>
+              {detail.series.posterUrl ? (
+                <Image
+                  source={{ uri: detail.series.posterUrl }}
+                  style={{
+                    width: 110,
+                    height: 165,
+                    borderRadius: theme.radius.md,
+                    backgroundColor: theme.colors.surface,
+                  }}
+                  contentFit="cover"
+                  transition={150}
+                />
+              ) : null}
+              <View style={{ flex: 1, gap: theme.space.xs }}>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: theme.space.md,
+                    flexWrap: 'wrap',
+                  }}>
+                  {detail.series.year ? (
+                    <AppText variant="caption" muted>
+                      {detail.series.year}
+                    </AppText>
+                  ) : null}
+                  {detail.series.rating ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                      <Feather name="star" size={12} color={theme.colors.accent} />
+                      <AppText variant="caption" muted>
+                        {detail.series.rating.toFixed(1)}
+                      </AppText>
+                    </View>
+                  ) : null}
+                </View>
+                {detail.cast ? (
+                  <AppText variant="caption" muted numberOfLines={2}>
+                    {detail.cast}
+                  </AppText>
+                ) : null}
+                {detail.plot ? (
+                  <AppText
+                    variant="body"
+                    muted
+                    numberOfLines={6}
+                    style={{ lineHeight: 21 }}>
+                    {detail.plot}
+                  </AppText>
+                ) : null}
+              </View>
             </View>
-          ))
+
+            {detail.seasons.length > 0 ? (
+              detail.seasons.map((season) => (
+                <View key={season.season} style={{ gap: theme.space.sm }}>
+                  <AppText variant="heading">
+                    {t('seriesDetail.season', { n: season.season })}
+                  </AppText>
+                  <Card>
+                    {season.episodes.map((ep) => (
+                      <ListRow
+                        key={ep.id}
+                        title={ep.title}
+                        leadingBadge={String(ep.episode)}
+                        onPress={() => {
+                          if (!provider) return;
+                          const url = provider.buildEpisodeUrl(ep.streamId, ep.containerExt);
+                          router.push({
+                            pathname: '/player',
+                            params: { url, title: ep.title, itemId: ep.id, kind: 'series' },
+                          });
+                        }}
+                      />
+                    ))}
+                  </Card>
+                </View>
+              ))
+            ) : (
+              <EmptyState icon="film" title={t('catalog.noItems')} />
+            )}
+          </>
         ) : (
           <EmptyState icon="film" title={t('catalog.noItems')} />
         )}
