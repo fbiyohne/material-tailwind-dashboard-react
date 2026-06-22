@@ -42,6 +42,14 @@ export default function SeriesScreen() {
 
   const gap = theme.space.md;
   const tileWidth = (width - theme.space.lg * 2 - gap * (COLUMNS - 1)) / COLUMNS;
+  const heroWidth = width - theme.space.lg * 2;
+  const featured = selected === undefined ? series[0] : undefined;
+
+  const openSeries = (item: Series) =>
+    router.push({
+      pathname: '/series-detail',
+      params: { seriesId: item.seriesId, name: item.name, id: item.id },
+    });
 
   return (
     <Screen padded={false} edges={['top']}>
@@ -65,9 +73,24 @@ export default function SeriesScreen() {
           </AppText>
         ) : (
           <FlashList
-            data={series}
+            data={featured ? series.slice(1) : series}
             numColumns={COLUMNS}
             keyExtractor={(item) => item.id}
+            ListHeaderComponent={
+              featured ? (
+                <View style={{ paddingBottom: gap }}>
+                  <PosterCard
+                    title={featured.name}
+                    posterUrl={featured.posterUrl}
+                    subtitle={featured.year ? String(featured.year) : null}
+                    width={heroWidth}
+                    ratio={0.56}
+                    overlayTitle
+                    onPress={() => openSeries(featured)}
+                  />
+                </View>
+              ) : null
+            }
             renderItem={({ item }) => (
               <View style={{ paddingRight: gap, paddingBottom: gap }}>
                 <PosterCard
@@ -84,12 +107,7 @@ export default function SeriesScreen() {
                       size={14}
                     />
                   }
-                  onPress={() =>
-                    router.push({
-                      pathname: '/series-detail',
-                      params: { seriesId: item.seriesId, name: item.name, id: item.id },
-                    })
-                  }
+                  onPress={() => openSeries(item)}
                 />
               </View>
             )}

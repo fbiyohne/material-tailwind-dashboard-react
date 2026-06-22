@@ -1,4 +1,4 @@
-import { fontFamilies } from '../tokens/fonts';
+import { fonts } from '../tokens/fonts';
 import type { Theme } from '../tokens/contract';
 
 /**
@@ -10,10 +10,10 @@ export const softDepthTheme: Theme = {
   name: 'softDepth',
   label: 'Soft Depth',
   colors: {
-    bg: '#0E0B1A',
-    surface: '#1B1530',
-    surfaceElevated: '#271E45',
-    border: '#352B57',
+    bg: '#0A0816',
+    surface: '#211A3A',
+    surfaceElevated: '#2F2552',
+    border: '#3F3366',
     text: '#F2EEFF',
     textMuted: '#A99FC8',
     accent: '#7C5CFF',
@@ -28,12 +28,31 @@ export const softDepthTheme: Theme = {
   space: { xs: 4, sm: 10, md: 16, lg: 22, xl: 30, xxl: 44 },
   radius: { sm: 10, md: 16, lg: 24, pill: 999 },
   typography: {
-    display: { fontFamily: fontFamilies.sans, fontSize: 30, fontWeight: '800' },
-    title: { fontFamily: fontFamilies.sans, fontSize: 23, fontWeight: '700' },
-    heading: { fontFamily: fontFamilies.sans, fontSize: 18, fontWeight: '700' },
-    body: { fontFamily: fontFamilies.sans, fontSize: 15, fontWeight: '500' },
-    caption: { fontFamily: fontFamilies.sans, fontSize: 12, fontWeight: '500' },
-    mono: { fontFamily: fontFamilies.mono, fontSize: 13, fontWeight: '500' },
+    display: {
+      fontFamily: fonts.nunitoExtraBold,
+      fontSize: 31,
+      fontWeight: 'normal',
+      letterSpacing: -0.2,
+    },
+    title: {
+      fontFamily: fonts.nunitoExtraBold,
+      fontSize: 23,
+      fontWeight: 'normal',
+      letterSpacing: -0.1,
+    },
+    heading: {
+      fontFamily: fonts.nunitoBold,
+      fontSize: 18,
+      fontWeight: 'normal',
+    },
+    body: { fontFamily: fonts.nunitoMedium, fontSize: 15, fontWeight: 'normal' },
+    caption: {
+      fontFamily: fonts.nunitoBold,
+      fontSize: 12,
+      fontWeight: 'normal',
+      letterSpacing: 0.2,
+    },
+    mono: { fontFamily: fonts.jetMonoMedium, fontSize: 13, fontWeight: 'normal' },
   },
   shadow: {
     card: {

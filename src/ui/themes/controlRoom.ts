@@ -1,4 +1,4 @@
-import { fontFamilies } from '../tokens/fonts';
+import { fonts } from '../tokens/fonts';
 import type { Theme } from '../tokens/contract';
 
 /**
@@ -10,10 +10,10 @@ export const controlRoomTheme: Theme = {
   name: 'controlRoom',
   label: 'Control Room',
   colors: {
-    bg: '#0B1014',
-    surface: '#0E1A20',
-    surfaceElevated: '#12252E',
-    border: '#1C3A44',
+    bg: '#080C0F',
+    surface: '#10202A',
+    surfaceElevated: '#163039',
+    border: '#214651',
     text: '#E6F1F2',
     textMuted: '#7FA0A6',
     accent: '#2EE6C5',
@@ -28,17 +28,36 @@ export const controlRoomTheme: Theme = {
   space: { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 },
   radius: { sm: 3, md: 6, lg: 10, pill: 4 },
   typography: {
-    display: { fontFamily: fontFamilies.sans, fontSize: 30, fontWeight: '800' },
-    title: { fontFamily: fontFamilies.sans, fontSize: 22, fontWeight: '700' },
-    heading: { fontFamily: fontFamilies.sans, fontSize: 18, fontWeight: '600' },
-    body: { fontFamily: fontFamilies.sans, fontSize: 14, fontWeight: '400' },
+    display: {
+      fontFamily: fonts.spaceGroteskBold,
+      fontSize: 30,
+      fontWeight: 'normal',
+      letterSpacing: 0.4,
+    },
+    title: {
+      fontFamily: fonts.spaceGroteskBold,
+      fontSize: 22,
+      fontWeight: 'normal',
+      letterSpacing: 0.3,
+    },
+    heading: {
+      fontFamily: fonts.spaceGroteskMedium,
+      fontSize: 18,
+      fontWeight: 'normal',
+      letterSpacing: 0.2,
+    },
+    body: { fontFamily: fonts.interRegular, fontSize: 14, fontWeight: 'normal' },
     caption: {
-      fontFamily: fontFamilies.mono,
+      fontFamily: fonts.jetMonoMedium,
       fontSize: 11,
-      fontWeight: '500',
+      fontWeight: 'normal',
       letterSpacing: 0.5,
     },
-    mono: { fontFamily: fontFamilies.mono, fontSize: 13, fontWeight: '600' },
+    mono: {
+      fontFamily: fonts.jetMonoSemiBold,
+      fontSize: 13,
+      fontWeight: 'normal',
+    },
   },
   shadow: {
     card: {

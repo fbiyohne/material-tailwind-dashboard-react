@@ -15,6 +15,23 @@ interface PosterCardProps {
   topRight?: ReactNode;
   /** Resume progress 0..1, drawn as a bar along the bottom of the poster. */
   progress?: number;
+  /** Render the title over a scrim inside the poster instead of below it. */
+  overlayTitle?: boolean;
+  /** Poster aspect ratio (height = width * ratio). Default 1.5 (2:3). */
+  ratio?: number;
+}
+
+/** A soft bottom-up scrim that keeps overlaid text legible on any poster. */
+function Scrim() {
+  return (
+    <View
+      pointerEvents="none"
+      style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '60%' }}>
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.18)' }} />
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.42)' }} />
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.72)' }} />
+    </View>
+  );
 }
 
 /** Focusable poster tile for VOD / series grids. */
@@ -26,6 +43,8 @@ export function PosterCard({
   onPress,
   topRight,
   progress,
+  overlayTitle,
+  ratio = 1.5,
 }: PosterCardProps) {
   const theme = useTheme();
   const [focused, setFocused] = useState(false);
@@ -44,14 +63,15 @@ export function PosterCard({
         style={[
           {
             width,
-            height: width * 1.5,
-            borderRadius: radius.md,
+            height: width * ratio,
+            borderRadius: radius.lg,
             overflow: 'hidden',
             backgroundColor: colors.surface,
             borderWidth: focused ? focus.ringWidth : 1,
             borderColor: focused ? focus.ringColor : colors.border,
           },
-          focused && theme.shadow.focus,
+          // Resting depth so posters feel like physical cards.
+          focused ? theme.shadow.focus : theme.shadow.card,
         ]}>
         {posterUrl ? (
           <Image
@@ -61,16 +81,43 @@ export function PosterCard({
             transition={150}
           />
         ) : (
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: space.sm }}>
+          <View
+            style={{
+              flex: 1,
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: space.sm,
+            }}>
             <AppText variant="caption" muted center numberOfLines={3}>
               {title}
             </AppText>
           </View>
         )}
 
+        {overlayTitle ? <Scrim /> : null}
+
         {topRight ? (
-          <View style={{ position: 'absolute', top: space.xs, right: space.xs }}>
+          <View style={{ position: 'absolute', top: space.sm, right: space.sm }}>
             {topRight}
+          </View>
+        ) : null}
+
+        {overlayTitle ? (
+          <View
+            style={{
+              position: 'absolute',
+              left: space.sm,
+              right: space.sm,
+              bottom: progress != null && progress > 0 ? space.sm + 4 : space.sm,
+            }}>
+            <AppText variant="heading" numberOfLines={2} style={{ fontSize: 15 }}>
+              {title}
+            </AppText>
+            {subtitle ? (
+              <AppText variant="caption" muted numberOfLines={1}>
+                {subtitle}
+              </AppText>
+            ) : null}
           </View>
         ) : null}
 
@@ -94,13 +141,21 @@ export function PosterCard({
           </View>
         ) : null}
       </View>
-      <AppText variant="caption" numberOfLines={1} style={{ marginTop: space.xs }}>
-        {title}
-      </AppText>
-      {subtitle ? (
-        <AppText variant="caption" muted numberOfLines={1}>
-          {subtitle}
-        </AppText>
+
+      {!overlayTitle ? (
+        <>
+          <AppText
+            variant="caption"
+            numberOfLines={1}
+            style={{ marginTop: space.sm, color: colors.text }}>
+            {title}
+          </AppText>
+          {subtitle ? (
+            <AppText variant="caption" muted numberOfLines={1}>
+              {subtitle}
+            </AppText>
+          ) : null}
+        </>
       ) : null}
     </Pressable>
   );

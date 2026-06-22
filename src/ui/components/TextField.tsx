@@ -8,7 +8,7 @@ interface TextFieldProps extends TextInputProps {
   error?: string | null;
 }
 
-/** Themed labeled text input with focus ring. */
+/** Themed labeled text input with focus ring + lift. */
 export function TextField({ label, error, style, ...rest }: TextFieldProps) {
   const theme = useTheme();
   const [focused, setFocused] = useState(false);
@@ -16,7 +16,10 @@ export function TextField({ label, error, style, ...rest }: TextFieldProps) {
 
   return (
     <View style={styles.wrap}>
-      <AppText variant="caption" muted>
+      <AppText
+        variant="caption"
+        muted
+        style={{ textTransform: 'uppercase', letterSpacing: 0.6 }}>
         {label}
       </AppText>
       <TextInput
@@ -26,13 +29,19 @@ export function TextField({ label, error, style, ...rest }: TextFieldProps) {
         style={[
           {
             color: colors.text,
-            backgroundColor: colors.surface,
+            // Lift the surface on focus so the active field stands out.
+            backgroundColor: focused ? colors.surfaceElevated : colors.surface,
             borderRadius: radius.md,
             borderWidth: focused ? focus.ringWidth : 1,
-            borderColor: error ? colors.danger : focused ? focus.ringColor : colors.border,
+            borderColor: error
+              ? colors.danger
+              : focused
+                ? focus.ringColor
+                : colors.border,
             paddingHorizontal: space.md,
             paddingVertical: space.md,
             fontSize: typography.body.fontSize,
+            fontFamily: typography.body.fontFamily,
           },
           style,
         ]}

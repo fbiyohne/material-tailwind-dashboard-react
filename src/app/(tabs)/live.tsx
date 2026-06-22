@@ -217,6 +217,15 @@ function ChannelShelf({
   );
 }
 
+/** Pull a trailing quality tag — "(1080p)", "FHD", "4K"… — off the channel name. */
+function splitQuality(name: string): { title: string; quality: string | null } {
+  const m = name.match(/\s*[([]?\b(\d{3,4}p|U?FHD|UHD|HD|SD|4K)\b[)\]]?\s*$/i);
+  if (m) {
+    return { title: name.slice(0, m.index).trim() || name, quality: m[1].toUpperCase() };
+  }
+  return { title: name, quality: null };
+}
+
 function ChannelRow({
   channel,
   profileId,
@@ -227,6 +236,7 @@ function ChannelRow({
   onPress: () => void;
 }) {
   const { t } = useTranslation();
+  const theme = useTheme();
   const [nowTitle, setNowTitle] = useState<string | null>(null);
 
   useEffect(() => {
@@ -244,12 +254,16 @@ function ChannelRow({
     };
   }, [profileId, channel.epgChannelId]);
 
+  const { title, quality } = splitQuality(channel.name);
+
   return (
     <ListRow
-      title={channel.name}
+      title={title}
       subtitle={nowTitle ? `${t('live.now')} · ${nowTitle}` : null}
+      dotColor={nowTitle ? theme.colors.live : null}
       imageUrl={channel.logoUrl}
       leadingBadge={channel.number ? String(channel.number) : null}
+      badge={quality}
       onPress={onPress}
       trailing={<FavoriteButton profileId={profileId} itemId={channel.id} kind="live" />}
     />

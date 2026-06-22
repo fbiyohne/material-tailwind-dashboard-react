@@ -62,10 +62,12 @@ export function Button({
           paddingHorizontal: space.lg,
           borderWidth: focused ? focus.ringWidth : variant === 'ghost' ? 1 : 0,
           borderColor: focused ? focus.ringColor : colors.border,
-          opacity: disabled ? 0.5 : pressed ? 0.85 : 1,
-          transform: [{ scale: focused ? focus.scale : 1 }],
+          opacity: disabled ? 0.45 : pressed ? 0.9 : 1,
+          transform: [{ scale: focused ? focus.scale : pressed ? 0.97 : 1 }],
           alignSelf: fullWidth ? 'stretch' : 'flex-start',
         },
+        // Resting depth on the solid primary button (premium lift).
+        variant === 'primary' && !focused && styles.primaryShadow,
         focused && theme.shadow.focus,
       ]}
       {...rest}>
@@ -73,7 +75,7 @@ export function Button({
         {loading ? (
           <ActivityIndicator color={fg} />
         ) : (
-          <AppText variant="body" style={{ color: fg, fontWeight: '600' }}>
+          <AppText variant="heading" style={{ color: fg, fontSize: 15 }}>
             {title}
           </AppText>
         )}
@@ -85,4 +87,11 @@ export function Button({
 const styles = StyleSheet.create({
   base: { alignItems: 'center', justifyContent: 'center' },
   content: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  primaryShadow: {
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
 });

@@ -1,4 +1,4 @@
-import { fontFamilies } from '../tokens/fonts';
+import { fonts } from '../tokens/fonts';
 import type { Theme } from '../tokens/contract';
 
 /**
@@ -10,10 +10,10 @@ export const editorialTheme: Theme = {
   name: 'editorial',
   label: 'Éditorial',
   colors: {
-    bg: '#0E0D0B',
-    surface: '#17150F',
-    surfaceElevated: '#211E16',
-    border: '#332E22',
+    bg: '#0C0B09',
+    surface: '#1C1913',
+    surfaceElevated: '#28241A',
+    border: '#3D3729',
     text: '#F4EFE6',
     textMuted: '#B3A892',
     accent: '#E0A536',
@@ -28,17 +28,32 @@ export const editorialTheme: Theme = {
   space: { xs: 4, sm: 8, md: 14, lg: 20, xl: 28, xxl: 40 },
   radius: { sm: 4, md: 8, lg: 14, pill: 999 },
   typography: {
-    display: { fontFamily: fontFamilies.serif, fontSize: 34, fontWeight: '700' },
-    title: { fontFamily: fontFamilies.serif, fontSize: 26, fontWeight: '700' },
-    heading: { fontFamily: fontFamilies.sans, fontSize: 19, fontWeight: '600' },
-    body: { fontFamily: fontFamilies.sans, fontSize: 15, fontWeight: '400' },
-    caption: {
-      fontFamily: fontFamilies.sans,
-      fontSize: 12,
-      fontWeight: '400',
-      letterSpacing: 0.3,
+    display: {
+      fontFamily: fonts.frauncesBold,
+      fontSize: 36,
+      fontWeight: 'normal',
+      letterSpacing: -0.5,
     },
-    mono: { fontFamily: fontFamilies.mono, fontSize: 13, fontWeight: '400' },
+    title: {
+      fontFamily: fonts.frauncesSemiBold,
+      fontSize: 26,
+      fontWeight: 'normal',
+      letterSpacing: -0.3,
+    },
+    heading: {
+      fontFamily: fonts.interSemiBold,
+      fontSize: 18,
+      fontWeight: 'normal',
+      letterSpacing: -0.1,
+    },
+    body: { fontFamily: fonts.interRegular, fontSize: 15, fontWeight: 'normal' },
+    caption: {
+      fontFamily: fonts.interMedium,
+      fontSize: 12,
+      fontWeight: 'normal',
+      letterSpacing: 0.4,
+    },
+    mono: { fontFamily: fonts.jetMonoMedium, fontSize: 13, fontWeight: 'normal' },
   },
   shadow: {
     card: {

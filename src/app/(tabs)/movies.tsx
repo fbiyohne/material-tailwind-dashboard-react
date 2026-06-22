@@ -95,12 +95,44 @@ export default function MoviesScreen() {
 
   const gap = theme.space.md;
   const tileWidth = (width - theme.space.lg * 2 - gap * (COLUMNS - 1)) / COLUMNS;
+  const heroWidth = width - theme.space.lg * 2;
+  const featured = selected === undefined ? movies[0] : undefined;
+
+  const playMovie = useCallback(
+    (m: Movie) => {
+      if (!provider) return;
+      router.push({
+        pathname: '/player',
+        params: {
+          url: provider.buildMovieUrl(m.streamId, m.containerExt),
+          title: m.name,
+          itemId: m.id,
+          kind: 'movie',
+        },
+      });
+    },
+    [provider, router],
+  );
 
   const Header = (
     <View>
       <AppText variant="display" style={{ paddingTop: theme.space.lg }}>
         {t('tabs.movies')}
       </AppText>
+
+      {featured ? (
+        <View style={{ marginTop: theme.space.md }}>
+          <PosterCard
+            title={featured.name}
+            posterUrl={featured.posterUrl}
+            subtitle={featured.year ? String(featured.year) : null}
+            width={heroWidth}
+            ratio={0.56}
+            overlayTitle
+            onPress={() => playMovie(featured)}
+          />
+        </View>
+      ) : null}
 
       {resume.length > 0 ? (
         <View style={{ gap: theme.space.sm, marginTop: theme.space.md }}>
@@ -146,7 +178,7 @@ export default function MoviesScreen() {
     <Screen padded={false} edges={['top']}>
       <View style={{ flex: 1, paddingHorizontal: theme.space.lg }}>
         <FlashList
-          data={movies}
+          data={featured ? movies.slice(1) : movies}
           numColumns={COLUMNS}
           keyExtractor={(item) => item.id}
           ListHeaderComponent={Header}
@@ -171,18 +203,7 @@ export default function MoviesScreen() {
                     size={14}
                   />
                 }
-                onPress={() => {
-                  if (!provider) return;
-                  router.push({
-                    pathname: '/player',
-                    params: {
-                      url: provider.buildMovieUrl(item.streamId, item.containerExt),
-                      title: item.name,
-                      itemId: item.id,
-                      kind: 'movie',
-                    },
-                  });
-                }}
+                onPress={() => playMovie(item)}
               />
             </View>
           )}
