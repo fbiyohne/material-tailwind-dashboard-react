@@ -1,9 +1,9 @@
 import { FlashList } from '@shopify/flash-list';
-import { useFocusEffect, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
 import { catalogRepo, epgRepo, favoritesRepo, progressRepo } from '@/data';
 import type { Category, Channel } from '@/domain/models';
 import { isTV } from '@/lib/tv';
@@ -18,6 +18,8 @@ import {
   EmptyState,
   FavoriteButton,
   ListRow,
+  LivePreview,
+  NowNextStrip,
   Screen,
   TextField,
 } from '@/ui/components';
@@ -26,17 +28,23 @@ export default function LiveScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const router = useRouter();
+  const { width, height } = useWindowDimensions();
+  const isWide = width > height;
   const profileId = useSessionStore((s) => s.activeProfileId);
   const provider = useSessionStore((s) => s.provider);
   const unlocked = useParentalStore((s) => s.unlocked);
 
   const [categories, setCategories] = useState<Category[]>([]);
-  const [selected, setSelected] = useState<string | undefined>(undefined);
+  const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [recent, setRecent] = useState<Channel[]>([]);
   const [favorites, setFavorites] = useState<Channel[]>([]);
   const [jumpOpen, setJumpOpen] = useState(false);
   const [jumpValue, setJumpValue] = useState('');
+
+  const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewPaused, setPreviewPaused] = useState(false);
 
   useEffect(() => {
     if (!profileId) return;
@@ -45,8 +53,18 @@ export default function LiveScreen() {
 
   useEffect(() => {
     if (!profileId) return;
-    void catalogRepo.getChannels(profileId, selected, unlocked).then(setChannels);
-  }, [profileId, selected, unlocked]);
+    void catalogRepo.getChannels(profileId, selectedCategory, unlocked).then(setChannels);
+  }, [profileId, selectedCategory, unlocked]);
+
+  // Debounce the preview source so fast zapping doesn't reload on every tap.
+  useEffect(() => {
+    if (!selectedChannel || !provider) return;
+    const channel = selectedChannel;
+    const id = setTimeout(() => {
+      setPreviewUrl(provider.buildLiveUrl(channel.streamId));
+    }, 400);
+    return () => clearTimeout(id);
+  }, [selectedChannel, provider]);
 
   // Refresh recents/favorites every time the screen regains focus.
   const refreshShelves = useCallback(async () => {
@@ -62,7 +80,9 @@ export default function LiveScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      setPreviewPaused(false);
       void refreshShelves();
+      return () => setPreviewPaused(true);
     }, [refreshShelves]),
   );
 
@@ -89,6 +109,27 @@ export default function LiveScreen() {
     setJumpOpen(false);
     setJumpValue('');
   }
+
+  const renderChannel = ({ item }: { item: Channel }) => (
+    <ChannelRow
+      channel={item}
+      profileId={profileId}
+      onPress={() => setSelectedChannel(item)}
+      onLongPress={() => openChannel(item)}
+    />
+  );
+
+  const previewBlock = (
+    <View style={{ gap: theme.space.xs }}>
+      <LivePreview
+        channel={selectedChannel}
+        streamUrl={previewUrl}
+        paused={previewPaused}
+        onFullscreen={() => selectedChannel && openChannel(selectedChannel)}
+      />
+      <NowNextStrip profileId={profileId} channel={selectedChannel} />
+    </View>
+  );
 
   const Header = (
     <View>
@@ -125,16 +166,20 @@ export default function LiveScreen() {
       ) : null}
 
       {recent.length > 0 ? (
-        <ChannelShelf title={t('live.recents')} channels={recent} onPress={openChannel} />
+        <ChannelShelf title={t('live.recents')} channels={recent} onPress={setSelectedChannel} />
       ) : null}
       {favorites.length > 0 ? (
-        <ChannelShelf title={t('live.favorites')} channels={favorites} onPress={openChannel} />
+        <ChannelShelf
+          title={t('live.favorites')}
+          channels={favorites}
+          onPress={setSelectedChannel}
+        />
       ) : null}
 
       <CategoryChips
         categories={categories}
-        selected={selected}
-        onSelect={setSelected}
+        selected={selectedCategory}
+        onSelect={setSelectedCategory}
         accent={theme.colors.live}
       />
     </View>
@@ -142,21 +187,35 @@ export default function LiveScreen() {
 
   return (
     <Screen padded={false} edges={['top']}>
-      <View style={{ flex: 1, paddingHorizontal: theme.space.lg }}>
-        <FlashList
-          data={channels}
-          keyExtractor={(item) => item.id}
-          ListHeaderComponent={Header}
-          ListEmptyComponent={<EmptyState icon="radio" title={t('live.noChannels')} />}
-          renderItem={({ item }) => (
-            <ChannelRow
-              channel={item}
-              profileId={profileId}
-              onPress={() => openChannel(item)}
+      {isWide ? (
+        <View style={{ flex: 1, flexDirection: 'row' }}>
+          <View style={{ flex: 4, paddingHorizontal: theme.space.lg }}>
+            <FlashList
+              data={channels}
+              keyExtractor={(item) => item.id}
+              ListHeaderComponent={Header}
+              ListEmptyComponent={<EmptyState icon="radio" title={t('live.noChannels')} />}
+              renderItem={renderChannel}
             />
-          )}
-        />
-      </View>
+          </View>
+          <View style={{ flex: 6, padding: theme.space.lg }}>{previewBlock}</View>
+        </View>
+      ) : (
+        <View style={{ flex: 1, paddingHorizontal: theme.space.lg }}>
+          <FlashList
+            data={channels}
+            keyExtractor={(item) => item.id}
+            ListHeaderComponent={
+              <View>
+                {previewBlock}
+                {Header}
+              </View>
+            }
+            ListEmptyComponent={<EmptyState icon="radio" title={t('live.noChannels')} />}
+            renderItem={renderChannel}
+          />
+        </View>
+      )}
     </Screen>
   );
 }
@@ -237,10 +296,12 @@ function ChannelRow({
   channel,
   profileId,
   onPress,
+  onLongPress,
 }: {
   channel: Channel;
   profileId: string | null;
   onPress: () => void;
+  onLongPress?: () => void;
 }) {
   const { t } = useTranslation();
   const theme = useTheme();
@@ -272,6 +333,7 @@ function ChannelRow({
       leadingBadge={channel.number ? String(channel.number) : null}
       badge={quality}
       onPress={onPress}
+      onLongPress={onLongPress}
       trailing={<FavoriteButton profileId={profileId} itemId={channel.id} kind="live" />}
     />
   );

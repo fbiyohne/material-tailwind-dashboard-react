@@ -18,6 +18,7 @@ interface ListRowProps {
   dotColor?: string | null;
   trailing?: ReactNode;
   onPress?: () => void;
+  onLongPress?: () => void;
 }
 
 /** Generic focusable list row for channels / catalog items. */
@@ -30,6 +31,7 @@ export function ListRow({
   dotColor,
   trailing,
   onPress,
+  onLongPress,
 }: ListRowProps) {
   const theme = useTheme();
   const [focused, setFocused] = useState(false);
@@ -38,6 +40,7 @@ export function ListRow({
   return (
     <Pressable
       onPress={onPress}
+      onLongPress={onLongPress}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
       style={({ pressed }) => ({
