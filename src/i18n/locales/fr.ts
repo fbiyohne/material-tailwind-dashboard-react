@@ -146,6 +146,7 @@ export const fr: TranslationSchema = {
     refresh: 'Actualiser le catalogue',
     remove: 'Supprimer',
     language: 'Langue',
+    tools: 'Outils',
     about: 'À propos',
     disclaimer: 'CreaticTV est un lecteur uniquement. Aucun contenu fourni.',
   },

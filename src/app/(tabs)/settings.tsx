@@ -1,19 +1,73 @@
+import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { setLocale } from '@/data/kv/settings';
 import i18n from '@/i18n';
 import { useParentalStore } from '@/state/parentalStore';
 import { useSessionStore } from '@/state/sessionStore';
 import { useThemeStore } from '@/state/themeStore';
 import { useTheme } from '@/ui/ThemeProvider';
-import { AppText, Button, Card, Chip, Screen, TextField } from '@/ui/components';
+import { AppText, Button, Card, Chip, Screen, TextField, Wordmark } from '@/ui/components';
 import { themes } from '@/ui/themes';
 import type { ThemeName } from '@/ui/tokens/contract';
 
 const THEME_OPTIONS: readonly ThemeName[] = ['editorial', 'controlRoom', 'softDepth'];
 const LANGS = ['fr', 'en'] as const;
+
+type FeatherName = keyof typeof Feather.glyphMap;
+
+/** Uppercase tracked section eyebrow. */
+function Section({ label, children }: { label: string; children: ReactNode }) {
+  const theme = useTheme();
+  return (
+    <View style={{ gap: theme.space.sm }}>
+      <AppText
+        variant="caption"
+        muted
+        style={{ textTransform: 'uppercase', letterSpacing: 0.8 }}>
+        {label}
+      </AppText>
+      {children}
+    </View>
+  );
+}
+
+/** A tappable navigation row: icon + label + chevron. */
+function LinkRow({
+  icon,
+  label,
+  onPress,
+  last,
+}: {
+  icon: FeatherName;
+  label: string;
+  onPress: () => void;
+  last?: boolean;
+}) {
+  const theme = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => ({
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: theme.space.md,
+        paddingVertical: theme.space.md,
+        borderBottomWidth: last ? 0 : 1,
+        borderBottomColor: theme.colors.border,
+        opacity: pressed ? 0.65 : 1,
+      })}>
+      <Feather name={icon} size={19} color={theme.colors.accent} />
+      <AppText variant="body" style={{ flex: 1 }}>
+        {label}
+      </AppText>
+      <Feather name="chevron-right" size={19} color={theme.colors.textMuted} />
+    </Pressable>
+  );
+}
 
 export default function SettingsScreen() {
   const { t } = useTranslation();
@@ -55,12 +109,10 @@ export default function SettingsScreen() {
 
   return (
     <Screen padded={false} edges={['top']}>
-      <ScrollView contentContainerStyle={{ padding: theme.space.xl, gap: theme.space.xl }}>
+      <ScrollView contentContainerStyle={{ padding: theme.space.xl, gap: theme.space.lg }}>
         <AppText variant="display">{t('settings.title')}</AppText>
 
-        {/* Appearance */}
-        <View style={{ gap: theme.space.sm }}>
-          <AppText variant="heading">{t('settings.appearance')}</AppText>
+        <Section label={t('settings.appearance')}>
           <View style={{ flexDirection: 'row', gap: theme.space.sm, flexWrap: 'wrap' }}>
             {THEME_OPTIONS.map((name) => (
               <Chip
@@ -72,11 +124,9 @@ export default function SettingsScreen() {
               />
             ))}
           </View>
-        </View>
+        </Section>
 
-        {/* Language */}
-        <View style={{ gap: theme.space.sm }}>
-          <AppText variant="heading">{t('settings.language')}</AppText>
+        <Section label={t('settings.language')}>
           <View style={{ flexDirection: 'row', gap: theme.space.sm }}>
             {LANGS.map((lng) => (
               <Chip
@@ -87,11 +137,9 @@ export default function SettingsScreen() {
               />
             ))}
           </View>
-        </View>
+        </Section>
 
-        {/* Providers */}
-        <View style={{ gap: theme.space.sm }}>
-          <AppText variant="heading">{t('settings.profiles')}</AppText>
+        <Section label={t('settings.profiles')}>
           {profiles.map((p) => {
             const active = p.id === activeProfileId;
             return (
@@ -137,41 +185,30 @@ export default function SettingsScreen() {
             title={t('settings.addProvider')}
             onPress={() => router.push('/onboarding')}
           />
-        </View>
+        </Section>
 
-        {/* Category curation */}
-        <View style={{ gap: theme.space.sm }}>
-          <AppText variant="heading">{t('categories.title')}</AppText>
-          <Button
-            title={t('categories.manage')}
-            variant="secondary"
-            onPress={() => router.push('/categories')}
-          />
-        </View>
+        <Section label={t('settings.tools')}>
+          <Card style={{ paddingVertical: 0 }}>
+            <LinkRow
+              icon="sliders"
+              label={t('categories.manage')}
+              onPress={() => router.push('/categories')}
+            />
+            <LinkRow
+              icon="zap"
+              label={t('maintenance.open')}
+              onPress={() => router.push('/maintenance')}
+            />
+            <LinkRow
+              icon="upload-cloud"
+              label={t('sync.open')}
+              onPress={() => router.push('/sync')}
+              last
+            />
+          </Card>
+        </Section>
 
-        {/* On-device intelligence */}
-        <View style={{ gap: theme.space.sm }}>
-          <AppText variant="heading">{t('maintenance.title')}</AppText>
-          <Button
-            title={t('maintenance.open')}
-            variant="secondary"
-            onPress={() => router.push('/maintenance')}
-          />
-        </View>
-
-        {/* Cloud sync / backup */}
-        <View style={{ gap: theme.space.sm }}>
-          <AppText variant="heading">{t('sync.title')}</AppText>
-          <Button
-            title={t('sync.open')}
-            variant="secondary"
-            onPress={() => router.push('/sync')}
-          />
-        </View>
-
-        {/* Parental control */}
-        <View style={{ gap: theme.space.sm }}>
-          <AppText variant="heading">{t('parental.title')}</AppText>
+        <Section label={t('parental.title')}>
           <Card>
             <TextField
               label={hasPin ? t('parental.changePin') : t('parental.setPin')}
@@ -196,15 +233,14 @@ export default function SettingsScreen() {
               ) : null}
             </View>
           </Card>
-        </View>
+        </Section>
 
-        {/* About */}
-        <View style={{ gap: theme.space.sm }}>
-          <AppText variant="heading">{t('settings.about')}</AppText>
-          <AppText variant="caption" muted>
+        <Section label={t('settings.about')}>
+          <Wordmark size={22} />
+          <AppText variant="caption" muted style={{ lineHeight: 18 }}>
             {t('settings.disclaimer')}
           </AppText>
-        </View>
+        </Section>
       </ScrollView>
     </Screen>
   );

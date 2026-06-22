@@ -144,6 +144,7 @@ export const en = {
     refresh: 'Refresh catalog',
     remove: 'Remove',
     language: 'Language',
+    tools: 'Tools',
     about: 'About',
     disclaimer: 'CreaticTV is a player only. No content is provided.',
   },
