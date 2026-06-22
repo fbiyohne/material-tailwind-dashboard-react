@@ -121,12 +121,16 @@ export default function LiveScreen() {
 
   const previewBlock = (
     <View style={{ gap: theme.space.xs }}>
-      <LivePreview
-        channel={selectedChannel}
-        streamUrl={previewUrl}
-        paused={previewPaused}
-        onFullscreen={() => selectedChannel && openChannel(selectedChannel)}
-      />
+      {/* Full width in landscape; compact and centered in portrait so the
+          channel list stays visible. */}
+      <View style={isWide ? undefined : { width: '68%', alignSelf: 'center' }}>
+        <LivePreview
+          channel={selectedChannel}
+          streamUrl={previewUrl}
+          paused={previewPaused}
+          onFullscreen={() => selectedChannel && openChannel(selectedChannel)}
+        />
+      </View>
       <NowNextStrip profileId={profileId} channel={selectedChannel} />
     </View>
   );
