@@ -175,39 +175,49 @@ function ChannelShelf({
 }) {
   const theme = useTheme();
   return (
-    <View style={{ gap: theme.space.sm, marginTop: theme.space.md }}>
+    <View style={{ gap: theme.space.sm, marginTop: theme.space.lg }}>
       <AppText variant="heading">{title}</AppText>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: theme.space.md }}>
+        contentContainerStyle={{ gap: theme.space.md, paddingVertical: 2 }}>
         {channels.map((c) => (
-          <Pressable key={c.id} onPress={() => onPress(c)} style={{ width: 92 }}>
+          <Pressable
+            key={c.id}
+            onPress={() => onPress(c)}
+            style={({ pressed }) => ({ width: 108, opacity: pressed ? 0.85 : 1 })}>
             <View
-              style={{
-                width: 92,
-                height: 64,
-                borderRadius: theme.radius.md,
-                backgroundColor: theme.colors.surface,
-                borderWidth: 1,
-                borderColor: theme.colors.border,
-                alignItems: 'center',
-                justifyContent: 'center',
-                overflow: 'hidden',
-              }}>
+              style={[
+                {
+                  width: 108,
+                  height: 72,
+                  borderRadius: theme.radius.lg,
+                  backgroundColor: theme.colors.surface,
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'hidden',
+                  padding: theme.space.sm,
+                },
+                theme.shadow.card,
+              ]}>
               {c.logoUrl ? (
                 <Image
                   source={{ uri: c.logoUrl }}
-                  style={{ width: '80%', height: '80%' }}
+                  style={{ width: '100%', height: '100%' }}
                   contentFit="contain"
                 />
               ) : (
-                <AppText variant="caption" muted>
+                <AppText variant="title" muted style={{ fontSize: 22 }}>
                   {c.number ? String(c.number) : '—'}
                 </AppText>
               )}
             </View>
-            <AppText variant="caption" numberOfLines={1} style={{ marginTop: theme.space.xs }}>
+            <AppText
+              variant="caption"
+              numberOfLines={1}
+              style={{ marginTop: theme.space.xs + 2, color: theme.colors.text }}>
               {c.name}
             </AppText>
           </Pressable>
