@@ -32,7 +32,7 @@ export function LivePreview({ channel, streamUrl, onFullscreen, paused }: LivePr
         borderColor: theme.colors.border,
       }}>
       {streamUrl ? (
-        <Pressable style={StyleSheet.absoluteFill} onPress={onFullscreen}>
+        <>
           <Video
             source={{ uri: streamUrl }}
             style={StyleSheet.absoluteFill}
@@ -67,7 +67,15 @@ export function LivePreview({ channel, streamUrl, onFullscreen, paused }: LivePr
             </AppText>
             <Feather name="maximize" size={16} color="#fff" />
           </View>
-        </Pressable>
+          {/* Transparent tap layer ON TOP — Video swallows touches on Android,
+              so the full-screen target must overlay it, not wrap it. */}
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={onFullscreen}
+            accessibilityRole="button"
+            accessibilityLabel="Plein écran"
+          />
+        </>
       ) : (
         <View style={[styles.center, { padding: theme.space.lg }]} pointerEvents="none">
           <Feather name="play-circle" size={30} color={theme.colors.textMuted} />
