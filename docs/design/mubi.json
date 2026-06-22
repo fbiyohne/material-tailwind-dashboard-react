@@ -1,0 +1,62 @@
+{
+  "source": "https://mubi.com",
+  "capturedViewport": "1440x900",
+  "designMap": {
+    "colors": {
+      "imageGround": "#0B0B0E",
+      "paper": "#FFFFFF",
+      "ink": "#212121",
+      "textMuted": "#7D7D7D",
+      "accent": "#001489",
+      "overImageText": "#FFFFFF"
+    },
+    "type": {
+      "family": "Riforma (Swiss grotesque) — single family, all roles",
+      "display": { "size": "50px", "lineHeight": "70px", "weight": 500, "case": "uppercase", "tracking": "wide" },
+      "body": { "size": "18px", "lineHeight": "24px", "weight": 700 },
+      "pairing": "none — differentiation is by size, case and tracking, not by family"
+    },
+    "layout": {
+      "hero": "full-bleed film still, edge-to-edge, type laid directly over it",
+      "container": "~1425px, body padding 0",
+      "grid": "4 columns, 30px gap",
+      "alignment": "left, large"
+    },
+    "shape": {
+      "radii": "2px (essentially square)",
+      "shadows": "none meaningful (one ~3% artifact)",
+      "borders": "hairline"
+    },
+    "signature": "A frame of cinema is the hero. White uppercase type sits directly on a full-bleed film still; the only brand intrusions are the wordmark, the tracked headline, and one deep-blue button."
+  },
+  "tasteDNA": [
+    {
+      "name": "Cinema is the hero",
+      "trigger": "The landing page needs a hero.",
+      "decision": "Use an actual full-bleed film still with type laid over it, not an illustration, gradient or product shot.",
+      "reason": "MUBI sells cinema, so the most persuasive asset is a frame of cinema itself; the design recedes so the medium does the talking.",
+      "evidence": "Hero is a dusk film still edge-to-edge; the headline sits in white directly on the image with no card or scrim box."
+    },
+    {
+      "name": "One voice, no pairing",
+      "trigger": "Choosing typefaces.",
+      "decision": "One grotesque (Riforma) for every role — display, nav, body, button — separated only by size, case and tracking.",
+      "reason": "A single typographic voice reads as authored editorial confidence; a second family would dilute it.",
+      "evidence": "Extractor found a single family; h1 50px/weight 500 and body 18px/weight 700 are the same Riforma."
+    },
+    {
+      "name": "Refuse ornament (Restraint)",
+      "trigger": "Where to add visual interest.",
+      "decision": "Keep corners square (2px) and surfaces flat (no elevation); spend nothing on chrome.",
+      "reason": "Sharp, flat surfaces keep all attention on imagery and type; rounding and shadows would compete with the film stills.",
+      "evidence": "Top radius value is 2px; box-shadow is effectively absent across the page."
+    },
+    {
+      "name": "Exactly one colour",
+      "trigger": "Accent usage.",
+      "decision": "Reserve a single saturated colour (#001489) for the one primary action only.",
+      "reason": "One unmissable coloured object against monochrome and imagery makes the call-to-action impossible to miss.",
+      "evidence": "Accent candidates are led by rgb(0,20,137); the sign-up button is the only saturated element in the viewport."
+    }
+  ]
+}
