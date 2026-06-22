@@ -18,11 +18,11 @@ export function Wordmark({ size = 30, stacked = false }: WordmarkProps) {
   const tag = (
     <Text
       style={{
-        fontFamily: fonts.interSemiBold,
-        fontSize: Math.round(size * 0.42),
+        fontFamily: fonts.interBold,
+        fontSize: Math.round(size * 0.58),
         color: theme.colors.accent,
-        letterSpacing: Math.max(2, size * 0.12),
-        marginBottom: stacked ? 0 : Math.round(size * 0.12),
+        letterSpacing: Math.max(2, size * 0.1),
+        marginBottom: stacked ? 0 : Math.round(size * 0.1),
       }}>
       IPTV
     </Text>

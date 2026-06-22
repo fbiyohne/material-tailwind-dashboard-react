@@ -321,19 +321,10 @@ export default function PlayerScreen() {
           </View>
         ) : null}
 
-        {/* Bottom scrim + timeline / live badge. */}
+        {/* Bottom scrim + timeline (VOD only; live has no scrubber/badge). */}
         <View style={styles.bottomScrim} pointerEvents="box-none">
           <SafeAreaView edges={['bottom']} pointerEvents="box-none">
-            {isLive ? (
-              <View style={styles.liveRow}>
-                <View style={[styles.liveDot, { backgroundColor: theme.colors.danger }]} />
-                <AppText
-                  variant="caption"
-                  style={{ color: '#fff', letterSpacing: 1.5, fontSize: 12 }}>
-                  LIVE
-                </AppText>
-              </View>
-            ) : (
+            {isLive ? null : (
               <View style={styles.timeline}>
                 <AppText variant="mono" style={styles.timeText}>
                   {fmt(current)}
