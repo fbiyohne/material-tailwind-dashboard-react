@@ -11,6 +11,7 @@ import { useTheme } from '@/ui/ThemeProvider';
 import {
   AppText,
   CategoryChips,
+  EmptyState,
   FavoriteButton,
   PosterCard,
   Screen,
@@ -183,9 +184,10 @@ export default function MoviesScreen() {
           keyExtractor={(item) => item.id}
           ListHeaderComponent={Header}
           ListEmptyComponent={
-            <AppText variant="body" muted style={{ padding: theme.space.lg }}>
-              {categories.length === 0 ? t('catalog.notSupported') : t('catalog.noItems')}
-            </AppText>
+            <EmptyState
+              icon="film"
+              title={categories.length === 0 ? t('catalog.notSupported') : t('catalog.noItems')}
+            />
           }
           renderItem={({ item }) => (
             <View style={{ paddingRight: gap, paddingBottom: gap }}>

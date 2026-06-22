@@ -14,7 +14,7 @@ import type { Category, Channel, EpgEntry } from '@/domain/models';
 import { useParentalStore } from '@/state/parentalStore';
 import { useSessionStore } from '@/state/sessionStore';
 import { useTheme } from '@/ui/ThemeProvider';
-import { AppText, CategoryChips, Screen } from '@/ui/components';
+import { AppText, CategoryChips, HeaderBar, Screen } from '@/ui/components';
 
 const HOUR_W = 200; // px per hour
 const PX_PER_MIN = HOUR_W / 60;
@@ -120,14 +120,7 @@ export default function GuideScreen() {
   return (
     <Screen padded={false} edges={['top']}>
       <View style={{ padding: theme.space.lg, gap: theme.space.sm }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.space.md }}>
-          <Pressable onPress={() => router.back()} hitSlop={8}>
-            <AppText variant="heading">‹</AppText>
-          </Pressable>
-          <AppText variant="display" style={{ flex: 1 }}>
-            {t('guide.title')}
-          </AppText>
-        </View>
+        <HeaderBar title={t('guide.title')} variant="display" />
         <CategoryChips
           categories={categories}
           selected={selected}

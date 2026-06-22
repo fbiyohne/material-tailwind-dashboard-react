@@ -11,6 +11,7 @@ import { useTheme } from '@/ui/ThemeProvider';
 import {
   AppText,
   CategoryChips,
+  EmptyState,
   FavoriteButton,
   PosterCard,
   Screen,
@@ -68,9 +69,10 @@ export default function SeriesScreen() {
 
       <View style={{ flex: 1, paddingHorizontal: theme.space.lg }}>
         {series.length === 0 ? (
-          <AppText variant="body" muted style={{ padding: theme.space.lg }}>
-            {categories.length === 0 ? t('catalog.notSupported') : t('catalog.noItems')}
-          </AppText>
+          <EmptyState
+            icon="tv"
+            title={categories.length === 0 ? t('catalog.notSupported') : t('catalog.noItems')}
+          />
         ) : (
           <FlashList
             data={featured ? series.slice(1) : series}

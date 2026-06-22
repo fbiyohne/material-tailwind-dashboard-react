@@ -5,7 +5,7 @@ import { View } from 'react-native';
 import { importCatalog, type SyncProgress } from '@/sync';
 import { useSessionStore } from '@/state/sessionStore';
 import { useTheme } from '@/ui/ThemeProvider';
-import { AppText, Button, Card, Screen } from '@/ui/components';
+import { AppText, Button, Card, ProgressBar, Screen } from '@/ui/components';
 
 const PHASE_KEYS: Record<SyncProgress['phase'], string> = {
   authenticating: 'importing.authenticating',
@@ -56,7 +56,6 @@ export default function ImportScreen() {
     return () => controller.abort();
   }, [provider, attempt, router, refreshProfiles]);
 
-  const pct = Math.round(progress.progress * 100);
   const label = t(PHASE_KEYS[progress.phase]);
 
   return (
@@ -67,21 +66,11 @@ export default function ImportScreen() {
         <Card elevated>
           <AppText variant="heading">{failed ? t('importing.error') : label}</AppText>
 
-          <View
-            style={{
-              height: 8,
-              borderRadius: theme.radius.pill,
-              backgroundColor: theme.colors.surface,
-              overflow: 'hidden',
-              marginVertical: theme.space.sm,
-            }}>
-            <View
-              style={{
-                width: `${failed ? 100 : pct}%`,
-                height: '100%',
-                borderRadius: theme.radius.pill,
-                backgroundColor: failed ? theme.colors.danger : theme.colors.accent,
-              }}
+          <View style={{ marginVertical: theme.space.sm }}>
+            <ProgressBar
+              progress={progress.progress}
+              showPercent={!failed}
+              error={!!failed}
             />
           </View>
 
@@ -89,11 +78,11 @@ export default function ImportScreen() {
             <AppText variant="caption" color="danger">
               {failed}
             </AppText>
-          ) : (
+          ) : progress.detail ? (
             <AppText variant="caption" muted>
-              {progress.detail ? `${progress.detail} · ${pct}%` : `${pct}%`}
+              {progress.detail}
             </AppText>
-          )}
+          ) : null}
         </Card>
 
         {failed ? (

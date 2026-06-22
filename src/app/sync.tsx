@@ -1,7 +1,6 @@
-import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, View } from 'react-native';
+import { ScrollView } from 'react-native';
 import { getLocale } from '@/data/kv/settings';
 import i18n from '@/i18n';
 import {
@@ -13,14 +12,13 @@ import { useParentalStore } from '@/state/parentalStore';
 import { useSessionStore } from '@/state/sessionStore';
 import { useThemeStore } from '@/state/themeStore';
 import { useTheme } from '@/ui/ThemeProvider';
-import { AppText, Button, Card, Screen } from '@/ui/components';
+import { AppText, Button, Card, HeaderBar, Screen } from '@/ui/components';
 
 type Busy = 'export' | 'import' | null;
 
 export default function SyncScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
-  const router = useRouter();
 
   const [busy, setBusy] = useState<Busy>(null);
   const [result, setResult] = useState<string | null>(null);
@@ -74,14 +72,7 @@ export default function SyncScreen() {
   return (
     <Screen padded={false} edges={['top']}>
       <ScrollView contentContainerStyle={{ padding: theme.space.xl, gap: theme.space.lg }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.space.md }}>
-          <Pressable onPress={() => router.back()} hitSlop={8}>
-            <AppText variant="heading">‹</AppText>
-          </Pressable>
-          <AppText variant="display" style={{ flex: 1 }}>
-            {t('sync.title')}
-          </AppText>
-        </View>
+        <HeaderBar title={t('sync.title')} variant="display" />
 
         <AppText variant="caption" muted>
           {t('sync.intro')}

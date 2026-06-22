@@ -1,5 +1,5 @@
+import { Feather } from '@expo/vector-icons';
 import { FlashList } from '@shopify/flash-list';
-import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
@@ -7,14 +7,13 @@ import { catalogRepo } from '@/data';
 import type { Category, StreamKind } from '@/domain/models';
 import { useSessionStore } from '@/state/sessionStore';
 import { useTheme } from '@/ui/ThemeProvider';
-import { AppText, Chip, Screen } from '@/ui/components';
+import { AppText, Chip, EmptyState, HeaderBar, Screen } from '@/ui/components';
 
 const KINDS: readonly StreamKind[] = ['live', 'movie', 'series'];
 
 export default function CategoriesScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
-  const router = useRouter();
   const profileId = useSessionStore((s) => s.activeProfileId);
 
   const [kind, setKind] = useState<StreamKind>('live');
@@ -57,14 +56,7 @@ export default function CategoriesScreen() {
   return (
     <Screen padded={false} edges={['top']}>
       <View style={{ padding: theme.space.lg, gap: theme.space.md }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.space.md }}>
-          <Pressable onPress={() => router.back()} hitSlop={8}>
-            <AppText variant="heading">‹</AppText>
-          </Pressable>
-          <AppText variant="display" style={{ flex: 1 }}>
-            {t('categories.title')}
-          </AppText>
-        </View>
+        <HeaderBar title={t('categories.title')} variant="display" />
         <View style={{ flexDirection: 'row', gap: theme.space.sm }}>
           {KINDS.map((k) => (
             <Chip
@@ -96,15 +88,17 @@ export default function CategoriesScreen() {
                     {item.name}
                   </AppText>
                 </View>
-                <Pressable onPress={() => move(index, -1)} hitSlop={6}>
-                  <AppText variant="heading" muted>
-                    ↑
-                  </AppText>
+                <Pressable
+                  onPress={() => move(index, -1)}
+                  hitSlop={8}
+                  style={{ padding: 4 }}>
+                  <Feather name="chevron-up" size={22} color={theme.colors.textMuted} />
                 </Pressable>
-                <Pressable onPress={() => move(index, 1)} hitSlop={6}>
-                  <AppText variant="heading" muted>
-                    ↓
-                  </AppText>
+                <Pressable
+                  onPress={() => move(index, 1)}
+                  hitSlop={8}
+                  style={{ padding: 4 }}>
+                  <Feather name="chevron-down" size={22} color={theme.colors.textMuted} />
                 </Pressable>
               </View>
               <View style={{ flexDirection: 'row', gap: theme.space.sm, flexWrap: 'wrap' }}>
@@ -127,11 +121,7 @@ export default function CategoriesScreen() {
               </View>
             </View>
           )}
-          ListEmptyComponent={
-            <AppText variant="body" muted style={{ padding: theme.space.lg }}>
-              {t('catalog.noItems')}
-            </AppText>
-          }
+          ListEmptyComponent={<EmptyState icon="folder" title={t('catalog.noItems')} />}
         />
       </View>
     </Screen>

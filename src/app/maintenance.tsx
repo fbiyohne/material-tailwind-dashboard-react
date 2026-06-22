@@ -1,7 +1,6 @@
-import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { getTmdbApiKey, setTmdbApiKey } from '@/data/kv/settings';
 import {
   deduplicateChannels,
@@ -11,14 +10,21 @@ import {
 } from '@/services';
 import { useSessionStore } from '@/state/sessionStore';
 import { useTheme } from '@/ui/ThemeProvider';
-import { AppText, Button, Card, Screen, TextField } from '@/ui/components';
+import {
+  AppText,
+  Button,
+  Card,
+  HeaderBar,
+  ProgressBar,
+  Screen,
+  TextField,
+} from '@/ui/components';
 
 type Task = 'dedup' | 'health' | 'enrich' | null;
 
 export default function MaintenanceScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
-  const router = useRouter();
   const profileId = useSessionStore((s) => s.activeProfileId);
   const provider = useSessionStore((s) => s.provider);
 
@@ -102,34 +108,17 @@ export default function MaintenanceScreen() {
   return (
     <Screen padded={false} edges={['top']}>
       <ScrollView contentContainerStyle={{ padding: theme.space.xl, gap: theme.space.lg }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.space.md }}>
-          <Pressable onPress={() => router.back()} hitSlop={8}>
-            <AppText variant="heading">‹</AppText>
-          </Pressable>
-          <AppText variant="display" style={{ flex: 1 }}>
-            {t('maintenance.title')}
-          </AppText>
-        </View>
+        <HeaderBar title={t('maintenance.title')} variant="display" />
         <AppText variant="caption" muted>
           {t('maintenance.intro')}
         </AppText>
 
         {busy ? (
-          <View
-            style={{
-              height: 6,
-              borderRadius: theme.radius.pill,
-              backgroundColor: theme.colors.surface,
-              overflow: 'hidden',
-            }}>
-            <View
-              style={{
-                width: `${Math.round(progress * 100)}%`,
-                height: '100%',
-                backgroundColor: theme.colors.accent,
-              }}
-            />
-          </View>
+          <ProgressBar
+            progress={progress}
+            label={task ? t(`maintenance.${task}`) : null}
+            showPercent
+          />
         ) : null}
 
         {result ? (

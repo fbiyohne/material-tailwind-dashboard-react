@@ -1,11 +1,20 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import type { SeriesDetail } from '@/domain/models';
 import { useSessionStore } from '@/state/sessionStore';
 import { useTheme } from '@/ui/ThemeProvider';
-import { AppText, Card, FavoriteButton, ListRow, Screen } from '@/ui/components';
+import {
+  AppText,
+  Card,
+  EmptyState,
+  FavoriteButton,
+  HeaderBar,
+  ListRow,
+  Screen,
+  Skeleton,
+} from '@/ui/components';
 
 export default function SeriesDetailScreen() {
   const { t } = useTranslation();
@@ -42,17 +51,29 @@ export default function SeriesDetailScreen() {
   return (
     <Screen padded={false} edges={['top']}>
       <ScrollView contentContainerStyle={{ padding: theme.space.xl, gap: theme.space.lg }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.space.sm }}>
-          <AppText variant="display" style={{ flex: 1 }}>
-            {name ?? ''}
-          </AppText>
-          {id ? (
-            <FavoriteButton profileId={profileId} itemId={id} kind="series" size={24} />
-          ) : null}
-        </View>
+        <HeaderBar
+          title={name ?? ''}
+          variant="display"
+          right={
+            id ? (
+              <FavoriteButton profileId={profileId} itemId={id} kind="series" size={24} />
+            ) : undefined
+          }
+        />
 
         {loading ? (
-          <ActivityIndicator color={theme.colors.accent} />
+          <View style={{ gap: theme.space.md }}>
+            <Skeleton width={130} height={22} />
+            <Card>
+              {[0, 1, 2, 3].map((i) => (
+                <Skeleton
+                  key={i}
+                  height={40}
+                  style={{ marginBottom: i < 3 ? theme.space.sm : 0 }}
+                />
+              ))}
+            </Card>
+          </View>
         ) : detail && detail.seasons.length > 0 ? (
           detail.seasons.map((season) => (
             <View key={season.season} style={{ gap: theme.space.sm }}>
@@ -63,7 +84,7 @@ export default function SeriesDetailScreen() {
                 {season.episodes.map((ep) => (
                   <ListRow
                     key={ep.id}
-                    title={`${ep.episode}. ${ep.title}`}
+                    title={ep.title}
                     leadingBadge={String(ep.episode)}
                     onPress={() => {
                       if (!provider) return;
@@ -79,9 +100,7 @@ export default function SeriesDetailScreen() {
             </View>
           ))
         ) : (
-          <AppText variant="body" muted>
-            {t('catalog.noItems')}
-          </AppText>
+          <EmptyState icon="film" title={t('catalog.noItems')} />
         )}
       </ScrollView>
     </Screen>

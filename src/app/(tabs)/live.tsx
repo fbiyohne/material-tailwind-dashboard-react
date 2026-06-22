@@ -15,6 +15,7 @@ import {
   Button,
   Card,
   CategoryChips,
+  EmptyState,
   FavoriteButton,
   ListRow,
   Screen,
@@ -146,11 +147,7 @@ export default function LiveScreen() {
           data={channels}
           keyExtractor={(item) => item.id}
           ListHeaderComponent={Header}
-          ListEmptyComponent={
-            <AppText variant="body" muted style={{ padding: theme.space.lg }}>
-              {t('live.noChannels')}
-            </AppText>
-          }
+          ListEmptyComponent={<EmptyState icon="radio" title={t('live.noChannels')} />}
           renderItem={({ item }) => (
             <ChannelRow
               channel={item}
