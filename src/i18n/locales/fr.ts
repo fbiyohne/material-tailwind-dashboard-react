@@ -134,6 +134,8 @@ export const fr: TranslationSchema = {
     placeholder: 'Chaînes, films, séries…',
     noResults: 'Aucun résultat.',
     hint: 'Tapez pour chercher dans tout votre catalogue.',
+    nlHint: "Par titre, ou en langage naturel — « le foot ce soir », « films d'action ».",
+    examples: 'Exemples',
   },
   settings: {
     title: 'Réglages',

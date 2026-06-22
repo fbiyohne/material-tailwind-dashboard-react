@@ -132,6 +132,8 @@ export const en = {
     placeholder: 'Search channels, movies, series…',
     noResults: 'No results.',
     hint: 'Type to search your whole catalog.',
+    nlHint: 'By title, or in plain language — "football tonight", "action movies".',
+    examples: 'Examples',
   },
   settings: {
     title: 'Settings',

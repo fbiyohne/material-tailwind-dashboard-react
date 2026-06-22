@@ -1,3 +1,4 @@
+import { Feather } from '@expo/vector-icons';
 import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -9,7 +10,10 @@ import type { SearchHit } from '@/data/repositories/searchRepository';
 import { parseNlQuery } from '@/services/nlSearch';
 import { useSessionStore } from '@/state/sessionStore';
 import { useTheme } from '@/ui/ThemeProvider';
-import { AppText, Chip, ListRow, Screen, TextField } from '@/ui/components';
+import { AppText, Chip, EmptyState, ListRow, Screen, TextField } from '@/ui/components';
+
+const EXAMPLES_FR = ['le foot ce soir', "films d'action", 'actualités', 'séries comédie'];
+const EXAMPLES_EN = ['football tonight', 'action movies', 'news', 'comedy series'];
 
 const pad = (n: number) => String(n).padStart(2, '0');
 const hhmm = (epoch: number) => {
@@ -18,9 +22,10 @@ const hhmm = (epoch: number) => {
 };
 
 export default function SearchScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const theme = useTheme();
   const router = useRouter();
+  const examples = i18n.language?.startsWith('fr') ? EXAMPLES_FR : EXAMPLES_EN;
   const profileId = useSessionStore((s) => s.activeProfileId);
   const provider = useSessionStore((s) => s.provider);
 
@@ -139,10 +144,33 @@ export default function SearchScreen() {
         ) : null}
 
         <View style={{ flex: 1 }}>
-          {empty ? (
-            <AppText variant="body" muted style={{ paddingVertical: theme.space.md }}>
-              {query.trim().length >= 2 ? t('search.noResults') : t('search.hint')}
-            </AppText>
+          {query.trim().length < 2 ? (
+            <View style={{ gap: theme.space.md, paddingTop: theme.space.sm }}>
+              <View
+                style={{
+                  alignItems: 'center',
+                  gap: theme.space.sm,
+                  paddingVertical: theme.space.md,
+                }}>
+                <Feather name="search" size={28} color={theme.colors.textMuted} />
+                <AppText variant="body" muted center style={{ maxWidth: 320, lineHeight: 21 }}>
+                  {t('search.nlHint')}
+                </AppText>
+              </View>
+              <AppText
+                variant="caption"
+                muted
+                style={{ textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                {t('search.examples')}
+              </AppText>
+              <View style={{ flexDirection: 'row', gap: theme.space.sm, flexWrap: 'wrap' }}>
+                {examples.map((ex) => (
+                  <Chip key={ex} label={ex} onPress={() => setQuery(ex)} />
+                ))}
+              </View>
+            </View>
+          ) : empty ? (
+            <EmptyState icon="search" title={t('search.noResults')} />
           ) : mode === 'epg' ? (
             <FlashList
               data={programmes}
