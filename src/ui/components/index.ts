@@ -8,6 +8,7 @@ export { FavoriteButton } from './FavoriteButton';
 export { HeaderBar } from './HeaderBar';
 export { ListRow } from './ListRow';
 export { LivePreview } from './LivePreview';
+export { NowHero } from './NowHero';
 export { NowNextStrip } from './NowNextStrip';
 export { PosterCard } from './PosterCard';
 export { ProgressBar } from './ProgressBar';
