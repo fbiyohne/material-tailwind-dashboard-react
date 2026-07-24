@@ -1,15 +1,13 @@
-# Blueprint Render — déploiement DÉMO mono-service du Barreau de Pointe-Noire.
+# Blueprint Render — service web du Barreau de Pointe-Noire.
 # Un seul service web sert l'API Express ET le front React compilé (même origine,
-# pas de CORS) + une base PostgreSQL gérée. Voir docs/DEPLOIEMENT-RENDER.md.
+# pas de CORS). La base PostgreSQL est HÉBERGÉE HORS RENDER (serveur Docker aaPanel) :
+# DATABASE_URL est renseignée manuellement dans le dashboard Render, pas ici.
+# Voir docs/DEPLOIEMENT-RENDER.md.
 #
-# ⚠️ Démo : PostgreSQL « free » est supprimée après 90 jours, le service web
-# s'endort après ~15 min d'inactivité, et chaque déploiement relance le seed
-# (réinitialise les données). Ne pas utiliser pour des données réelles.
-
-databases:
-  - name: barreau-pn-db
-    databaseName: barreau_pn
-    plan: free
+# ⚠️ Le service web « free » s'endort après ~15 min d'inactivité.
+# Les données sont persistées sur la base externe : le build n'exécute PLUS le seed
+# (qui est destructif — cf. server/prisma/seed.ts). Seules les migrations sont
+# appliquées à chaque déploiement (idempotentes et non destructives).
 
 services:
   - type: web
@@ -21,14 +19,17 @@ services:
     # Chrome est téléchargé au build par @puppeteer/browsers dans un dossier du
     # projet (persistant au runtime) → génération PDF (reçus, quitus,
     # attestations…) opérationnelle. Le serveur le localise via PUPPETEER_CACHE_DIR.
+    # ⚠️ PAS de « npm run seed » ici : le seed réinitialise TOUTES les tables
+    # (server/prisma/seed.ts) et effacerait les données de production à chaque
+    # déploiement. Le seed initial a été lancé une seule fois, manuellement.
+    # Seul prisma:deploy (migrations idempotentes) tourne au build.
     buildCommand: >-
       npm install --include=dev &&
       npm run build &&
       npm install --prefix server --include=dev &&
       (cd server && npx @puppeteer/browsers install chrome@stable --path /opt/render/project/src/.cache/puppeteer) &&
       npm run prisma:generate --prefix server &&
-      npm run prisma:deploy --prefix server &&
-      npm run seed --prefix server
+      npm run prisma:deploy --prefix server
     startCommand: npm start --prefix server
     healthCheckPath: /api/health
     envVars:
@@ -38,10 +39,12 @@ services:
       # dossier server/ au démarrage → ../dist.
       - key: STATIC_DIR
         value: ../dist
+      # Base PostgreSQL externe (serveur Docker aaPanel). La valeur contient un
+      # mot de passe : elle N'EST PAS versionnée ici. À renseigner dans le
+      # dashboard Render (Environment) — sync:false empêche Render de la gérer
+      # via ce blueprint et de la remettre à zéro.
       - key: DATABASE_URL
-        fromDatabase:
-          name: barreau-pn-db
-          property: connectionString
+        sync: false
       - key: JWT_SECRET
         generateValue: true
       # Emplacement du Chrome téléchargé au build (sous le projet → persiste au

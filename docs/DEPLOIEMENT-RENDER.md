@@ -5,8 +5,16 @@ quelques minutes. Pensé pour **montrer une démo** (au Conseil de l'Ordre, à l
 Trésorière…), **pas pour la production**.
 
 L'architecture est **mono-service** : un seul service web Render sert à la fois
-l'API Express et le front React compilé (même origine, pas de CORS), avec une
-base **PostgreSQL gérée**. Tout est décrit dans [`render.yaml`](../render.yaml).
+l'API Express et le front React compilé (même origine, pas de CORS). La base
+**PostgreSQL est hébergée hors Render** (serveur Docker aaPanel `panel.creatic.cg`,
+port `35436`) et **persiste les données** ; sa chaîne de connexion est fournie via
+la variable `DATABASE_URL` renseignée dans le dashboard Render. Tout le reste est
+décrit dans [`render.yaml`](../render.yaml).
+
+> **Persistance** : le seed (`server/prisma/seed.ts`) est **destructif** (il vide
+> toutes les tables). Il a été exécuté **une seule fois** à l'initialisation et a
+> été **retiré du `buildCommand`**. Les déploiements n'appliquent plus que les
+> migrations (`prisma migrate deploy`), qui sont non destructives.
 
 ---
 
@@ -15,8 +23,6 @@ base **PostgreSQL gérée**. Tout est décrit dans [`render.yaml`](../render.yam
 | Limite | Conséquence |
 |---|---|
 | Le service **s'endort** après ~15 min d'inactivité | 1er chargement lent (~30-50 s), puis rapide |
-| PostgreSQL gratuit **supprimé après 90 jours** | La démo cesse de fonctionner ; à recréer |
-| Le **seed se relance à chaque déploiement** | Les données sont **réinitialisées** (démo, pas de persistance réelle) |
 | Build plus long (~2-3 min de plus) | Chrome (~150 Mo) est téléchargé au build pour la génération PDF |
 | RAM limitée (512 Mo) | La génération PDF (qui lance Chrome) peut être lente, voire échouer sous forte charge |
 
@@ -39,12 +45,19 @@ sur `/usr/bin/chromium`).
    `claude/file-context-analysis-ixq8w3`).
 2. Créer un compte sur **https://render.com** (connexion via GitHub).
 3. **New ▸ Blueprint**, sélectionner ce dépôt et la branche. Render lit
-   `render.yaml` et propose de créer **la base + le service web** : *Apply*.
-4. Attendre la fin du build (installe les dépendances, compile le front, applique
-   les migrations, charge les données de démo). Suivre les logs dans l'onglet
-   *Logs*.
-5. Ouvrir l'URL fournie (`https://barreau-pn.onrender.com` ou similaire).
+   `render.yaml` et propose de créer **le service web** : *Apply*.
+4. **Renseigner `DATABASE_URL`** dans le dashboard du service (*Environment*) avec
+   la chaîne de connexion de la base externe (voir la note ci-dessous). Cette
+   variable est en `sync: false` : Render ne la gère pas via le blueprint.
+5. Attendre la fin du build (installe les dépendances, compile le front, applique
+   les migrations). Suivre les logs dans l'onglet *Logs*.
+6. Ouvrir l'URL fournie (`https://barreau-pn.onrender.com` ou similaire).
    Vérification rapide : `…/api/health` doit répondre `{"ok":true}`.
+
+> **`DATABASE_URL`** — format :
+> `postgresql://barreau_pn:<mot_de_passe>@panel.creatic.cg:35436/barreau_pn?schema=public`
+> Le mot de passe n'est **jamais** versionné dans le dépôt ; il se saisit
+> uniquement dans le dashboard Render.
 
 ---
 
@@ -67,8 +80,9 @@ Email/SMS sont en **simulation**, les paiements en **sandbox**.
 ## Mettre à jour la démo
 
 Pousser un nouveau commit sur la branche déployée : Render redéploie
-automatiquement (et **réinitialise les données** via le seed). Pour redéployer à
-la main : bouton *Manual Deploy* dans le tableau de bord du service.
+automatiquement. Les **données sont conservées** (base externe, plus de seed au
+build) ; seules les migrations éventuelles sont appliquées. Pour redéployer à la
+main : bouton *Manual Deploy* dans le tableau de bord du service.
 
 ---
 
