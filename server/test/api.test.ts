@@ -471,6 +471,7 @@ describe("Conseil de l'Ordre — composition (SG)", () => {
   it("ajout, mise à jour, clôture de mandat (filtre actif / historique)", async () => {
     const m = await request(app).post("/api/conseil").set(...bearer(sg)).send({ nom: "Me Test Conseil", fonction: "Membre du Conseil" });
     expect(m.status).toBe(201);
+    expect(m.body.role).toBe("membre"); // rôle par défaut
     expect((await request(app).get("/api/conseil").set(...bearer(sg))).body.some((x: any) => x.id === m.body.id)).toBe(true);
     const maj = await request(app).patch(`/api/conseil/${m.body.id}`).set(...bearer(sg)).send({ actif: false });
     expect(maj.body.actif).toBe(false);
@@ -478,6 +479,34 @@ describe("Conseil de l'Ordre — composition (SG)", () => {
     expect((await request(app).get("/api/conseil").set(...bearer(sg))).body.some((x: any) => x.id === m.body.id)).toBe(false);
     expect((await request(app).get("/api/conseil?tous=1").set(...bearer(sg))).body.some((x: any) => x.id === m.body.id)).toBe(true);
     expect((await request(app).delete(`/api/conseil/${m.body.id}`).set(...bearer(sg))).status).toBe(204);
+  });
+
+  it("rôle bureau + sigle ; le sigle est effacé si le rôle n'est plus bureau", async () => {
+    const m = await request(app).post("/api/conseil").set(...bearer(sg))
+      .send({ nom: "Me Bureau Test", fonction: "Secrétaire Général", role: "bureau", sigle: "SGO" });
+    expect(m.status).toBe(201);
+    expect(m.body.role).toBe("bureau");
+    expect(m.body.sigle).toBe("SGO");
+    // repasse en simple membre → le sigle n'a plus de sens et doit être vidé
+    const maj = await request(app).patch(`/api/conseil/${m.body.id}`).set(...bearer(sg)).send({ role: "membre" });
+    expect(maj.body.role).toBe("membre");
+    expect(maj.body.sigle).toBeNull();
+    await request(app).delete(`/api/conseil/${m.body.id}`).set(...bearer(sg));
+  });
+
+  it("sortie motivée : motif + date conservés, siège en historique, rétablissement", async () => {
+    const m = await request(app).post("/api/conseil").set(...bearer(sg)).send({ nom: "Me Sortie Test", fonction: "Membre du Conseil" });
+    const sortie = await request(app).patch(`/api/conseil/${m.body.id}`).set(...bearer(sg))
+      .send({ actif: false, motifSortie: "Démission", mandatFin: "2026-07-24" });
+    expect(sortie.body.actif).toBe(false);
+    expect(sortie.body.motifSortie).toBe("Démission");
+    expect(sortie.body.mandatFin).not.toBeNull();
+    // rétablissement : redevient actif, motif et date de sortie effacés
+    const ret = await request(app).patch(`/api/conseil/${m.body.id}`).set(...bearer(sg)).send({ actif: true, motifSortie: null, mandatFin: null });
+    expect(ret.body.actif).toBe(true);
+    expect(ret.body.motifSortie).toBeNull();
+    expect(ret.body.mandatFin).toBeNull();
+    await request(app).delete(`/api/conseil/${m.body.id}`).set(...bearer(sg));
   });
 });
 
