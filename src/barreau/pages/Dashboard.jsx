@@ -131,6 +131,7 @@ export function Dashboard() {
   const parQualite = demo ? Object.entries(demo.parQualite).map(([k, n]) => ({ label: QUALITE_LABEL[k] ?? k, valeur: n, accent: "navy" })) : [];
   const parStatut = demo ? Object.entries(demo.parStatut).map(([k, n]) => ({ label: STATUT_LABEL[k] ?? k, valeur: n, accent: k === "INSCRIT" ? "vert" : k === "RADIE" || k === "SUSPENDU" ? "rouge" : "or" })) : [];
   const parDecennie = demo ? demo.parDecennie.map((d) => ({ label: `Années ${d.decennie}`, valeur: d.n, accent: "or" })) : [];
+  const topCabinets = demo?.topCabinets ? demo.topCabinets.map((c) => ({ label: c.nom, valeur: c.effectif, accent: "vert" })) : [];
   const pariteConnue = demo ? demo.parite.H + demo.parite.F : 0;
   const pctF = pariteConnue ? Math.round((demo.parite.F * 100) / pariteConnue) : 0;
   const pctH = pariteConnue ? 100 - pctF : 0;
@@ -192,6 +193,11 @@ export function Dashboard() {
           <CarteRepartition titre="Situation des inscrits" lignes={parStatut} />
           <CarteRepartition titre="Parité" sousTitre={pariteConnue ? `${pctH}% H · ${pctF}% F` : "non renseigné"} lignes={parParite} />
           <CarteRepartition titre="Inscriptions par décennie" sousTitre="ancienneté au serment" lignes={parDecennie} />
+          {topCabinets.length > 0 && (
+            <div className="md:col-span-2">
+              <CarteRepartition titre="Principaux cabinets" sousTitre="par effectif · personnes morales" lignes={topCabinets} />
+            </div>
+          )}
         </div>
       )}
 

@@ -34,6 +34,7 @@ import { tableauRouter } from "./routes/tableau.js";
 import { scrutinsRouter } from "./routes/scrutins.js";
 import { signaturesRouter } from "./routes/signatures.js";
 import { conseilRouter } from "./routes/conseil.js";
+import { cabinetsRouter } from "./routes/cabinets.js";
 import { calendrierEditorialRouter } from "./routes/calendrierEditorial.js";
 import { verificationRouter } from "./routes/verification.js";
 import { espaceRouter } from "./routes/espace.js";
@@ -111,6 +112,7 @@ export function creerApp() {
   app.use("/api/scrutins", scrutinsRouter);
   app.use("/api/signatures", signaturesRouter);
   app.use("/api/conseil", conseilRouter);
+  app.use("/api/cabinets", cabinetsRouter);
   app.use("/api/calendrier-editorial", calendrierEditorialRouter);
   app.use("/api/espace", espaceRouter); // espace avocat (rôle AVOCAT, cloisonné)
   app.use("/api/messagerie", messagerieRouter); // messagerie — côté administration

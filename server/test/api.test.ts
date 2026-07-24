@@ -488,6 +488,37 @@ describe("Membres — sexe & démographie du tableau de bord", () => {
   });
 });
 
+describe("Personnes morales — cabinets (SG)", () => {
+  it("création, rattachement de membre (effectif), convention/titulaire, retrait/rétablissement", async () => {
+    const av = await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: `CAB Membre ${Date.now()}`, qualite: "AVOCAT" });
+    const membreId = av.body.id;
+    const c = await request(app).post("/api/cabinets").set(...bearer(sg)).send({ nom: `Cabinet Test ${Date.now()}`, forme: "Association d'avocats" });
+    expect(c.status).toBe(201);
+    expect(c.body.effectif).toBe(0);
+    const cid = c.body.id;
+    // rattachement → effectif = 1 (membre INSCRIT)
+    const att = await request(app).post(`/api/cabinets/${cid}/membres/${membreId}`).set(...bearer(sg));
+    expect(att.body.effectif).toBe(1);
+    expect(att.body.membres.some((m: any) => m.id === membreId)).toBe(true);
+    // convention + titulaire
+    const maj = await request(app).patch(`/api/cabinets/${cid}`).set(...bearer(sg)).send({ conventionDeposee: true, titulaireId: membreId });
+    expect(maj.body.conventionDeposee).toBe(true);
+    expect(maj.body.titulaire.id).toBe(membreId);
+    // retrait puis rétablissement
+    expect((await request(app).patch(`/api/cabinets/${cid}`).set(...bearer(sg)).send({ statut: "retiré", motifRetrait: "Test" })).body.statut).toBe("retiré");
+    expect((await request(app).patch(`/api/cabinets/${cid}`).set(...bearer(sg)).send({ statut: "actif", motifRetrait: null })).body.statut).toBe("actif");
+    // détachement puis suppression
+    await request(app).delete(`/api/cabinets/${cid}/membres/${membreId}`).set(...bearer(sg));
+    expect((await request(app).delete(`/api/cabinets/${cid}`).set(...bearer(sg))).status).toBe(204);
+    await request(app).delete(`/api/membres/${membreId}`).set(...bearer(admin));
+  });
+
+  it("lecture réservée à SG/Bâtonnier ; création réservée au SG", async () => {
+    expect((await request(app).get("/api/cabinets").set(...bearer(tr))).status).toBe(403);
+    expect((await request(app).post("/api/cabinets").set(...bearer(bat)).send({ nom: "X" })).status).toBe(403);
+  });
+});
+
 describe("Conseil de l'Ordre — composition (SG)", () => {
   it("ajout, mise à jour, clôture de mandat (filtre actif / historique)", async () => {
     const m = await request(app).post("/api/conseil").set(...bearer(sg)).send({ nom: "Me Test Conseil", fonction: "Membre du Conseil" });

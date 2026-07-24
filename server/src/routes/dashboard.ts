@@ -13,10 +13,18 @@ dashboardRouter.get(
   "/",
   asyncH(async (req, res) => {
     const annee = anneeDeRequete(req);
-    const [tarifs, membres] = await Promise.all([
+    const [tarifs, membres, cabinets] = await Promise.all([
       tarifsActuels(),
       prisma.membre.findMany({ include: { cotisations: { where: { annee } } } }),
+      prisma.cabinet.findMany({ where: { statut: "actif" }, include: { membres: { select: { statut: true } } } }),
     ]);
+
+    // Principaux cabinets par effectif actif (personnes morales).
+    const topCabinets = cabinets
+      .map((c) => ({ nom: c.nom, effectif: c.membres.filter((m) => m.statut === "INSCRIT").length }))
+      .filter((c) => c.effectif > 0)
+      .sort((a, b) => b.effectif - a.effectif)
+      .slice(0, 8);
 
     let inscrits = 0;
     let stagiaires = 0;
@@ -63,7 +71,7 @@ dashboardRouter.get(
     res.json({
       annee,
       membres: { inscrits, stagiaires, aJour, enRetard },
-      demographie: { parQualite, parStatut, parDecennie, parite, total: membres.length },
+      demographie: { parQualite, parStatut, parDecennie, parite, topCabinets, total: membres.length },
       ...(voitFinances ? { finances: { payees, impayees: du - payees, solde: du - payees } } : {}),
     });
   })

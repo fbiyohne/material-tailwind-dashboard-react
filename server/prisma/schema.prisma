@@ -126,7 +126,32 @@ model Membre {
   conversations   ConversationParticipant[] // fils de messagerie auxquels le membre participe
   messagesEnvoyes Message[]                  // messages dont le membre est l'auteur
   compte      User?                  // compte d'accès à l'espace avocat (1-1, optionnel)
+  // Personne morale (cabinet) : rattachement structuré. Le champ texte `cabinet`
+  // est conservé pour l'historique/import ; `cabinetLie` est la relation exploitée.
+  cabinetId       Int?
+  cabinetLie      Cabinet?  @relation("CabinetMembres", fields: [cabinetId], references: [id])
+  cabinetsDiriges Cabinet[] @relation("CabinetTitulaire")
   createdAt   DateTime               @default(now())
+}
+
+/// Personne morale (cabinet, société ou association d'avocats). Regroupe des
+/// membres, porte un titulaire, et — si sa convention est déposée à l'Ordre —
+/// figure dans la section « personnes morales » du tableau, numérotée par ancienneté.
+model Cabinet {
+  id                Int       @id @default(autoincrement())
+  nom               String
+  forme             String? // Cabinet individuel, Société civile professionnelle, Association d'avocats…
+  adresse           String?
+  tel               String?
+  email             String?
+  conventionDeposee Boolean   @default(false)
+  statut            String    @default("actif") // « actif » | « retiré »
+  dateRetrait       DateTime?
+  motifRetrait      String?
+  titulaireId       Int?
+  titulaire         Membre?   @relation("CabinetTitulaire", fields: [titulaireId], references: [id])
+  membres           Membre[]  @relation("CabinetMembres")
+  createdAt         DateTime  @default(now())
 }
 
 /// Rapport / évaluation périodique de stage d'un avocat stagiaire.

@@ -20,6 +20,7 @@ import {
   ShieldCheckIcon,
   ClipboardDocumentListIcon,
   HandRaisedIcon,
+  BuildingOffice2Icon,
 } from "@heroicons/react/24/outline";
 import { lazy } from "react";
 
@@ -29,6 +30,7 @@ const Recus = lazy(() => import("./pages/Recus"));
 const Quitus = lazy(() => import("./pages/Quitus"));
 const Avocats = lazy(() => import("./pages/Avocats"));
 const Stagiaires = lazy(() => import("./pages/Stagiaires"));
+const Cabinets = lazy(() => import("./pages/Cabinets"));
 const Pieces = lazy(() => import("./pages/Pieces"));
 const TableauOrdre = lazy(() => import("./pages/TableauOrdre"));
 const CorpsElectoral = lazy(() => import("./pages/CorpsElectoral"));
@@ -75,6 +77,7 @@ export const navSections = [
     items: [
       { name: "Avocats inscrits", path: "/avocats", icon: UsersIcon, roles: INSTITUTIONNEL, element: <Avocats /> },
       { name: "Avocats stagiaires", path: "/stagiaires", icon: AcademicCapIcon, roles: INSTITUTIONNEL, element: <Stagiaires /> },
+      { name: "Personnes morales", path: "/cabinets", icon: BuildingOffice2Icon, roles: INSTITUTIONNEL, element: <Cabinets /> },
       { name: "Tableau de l'Ordre", path: "/tableau", icon: ClipboardDocumentListIcon, roles: INSTITUTIONNEL, element: <TableauOrdre /> },
       { name: "Vérification des pièces", path: "/pieces", icon: ShieldCheckIcon, roles: INSTITUTIONNEL, element: <Pieces /> },
       { name: "Corps électoral", path: "/corps-electoral", icon: CheckBadgeIcon, roles: INSTITUTIONNEL, element: <CorpsElectoral /> },

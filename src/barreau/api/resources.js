@@ -75,6 +75,15 @@ export const genererAttestation = (id) => api(`/membres/${id}/attestation`, { me
 // Casier disciplinaire d'un avocat (dossiers le concernant)
 export const casierDiscipline = (membreId) => api(`/discipline?membreId=${membreId}`);
 
+// Personnes morales (cabinets)
+export const listerCabinets = () => api("/cabinets");
+export const ajouterCabinet = (body) => api("/cabinets", { method: "POST", body });
+export const majCabinet = (id, body) => api(`/cabinets/${id}`, { method: "PATCH", body });
+export const supprimerCabinet = (id) => api(`/cabinets/${id}`, { method: "DELETE" });
+export const rattacherMembreCabinet = (id, membreId) => api(`/cabinets/${id}/membres/${membreId}`, { method: "POST" });
+export const detacherMembreCabinet = (id, membreId) => api(`/cabinets/${id}/membres/${membreId}`, { method: "DELETE" });
+export const purgerCabinets = () => api("/cabinets/purge", { method: "POST" });
+
 // Conseil de l'Ordre (composition)
 export const listerConseil = (tous) => api(`/conseil${tous ? "?tous=1" : ""}`);
 export const ajouterMembreConseil = (body) => api("/conseil", { method: "POST", body });
