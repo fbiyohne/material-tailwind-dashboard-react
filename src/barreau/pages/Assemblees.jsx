@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { PlusIcon, ArrowRightIcon, BuildingLibraryIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { Badge, Modal, EmptyState, ErrorState, Skeleton, useToast, useConfirm, PageHeader, FormField } from "../components";
 import { formatDate } from "../utils/format";
+import { useAuth } from "../auth/AuthContext";
 import { listerAssemblees, creerAssemblee as apiCreerAssemblee, supprimerAssemblee } from "../api/resources";
 
 const TYPE_LABEL = { AGO: "Assemblée Générale Ordinaire", AGE: "Assemblée Générale Extraordinaire" };
@@ -43,6 +44,9 @@ export function Assemblees() {
   const navigate = useNavigate();
   const toast = useToast();
   const confirm = useConfirm();
+  const { user } = useAuth();
+  // Création/suppression réservées au SG (POST/DELETE assemblées).
+  const peutGerer = ["SECRETAIRE_GENERAL", "ADMIN"].includes(user?.role);
   const [assemblees, setAssemblees] = useState([]);
   const [creer, setCreer] = useState(false);
   const [chargement, setChargement] = useState(true);
@@ -70,7 +74,7 @@ export function Assemblees() {
   return (
     <div className="space-y-5">
       <PageHeader eyebrow="Institutionnel" titre="Assemblées générales" sousTitre="AGO et AGE — convocation du corps électoral, suivi du quorum et décisions.">
-        <button className="bpn-btn bpn-btn-or" onClick={() => setCreer(true)}><PlusIcon className="h-4 w-4" /> Nouvelle assemblée</button>
+        {peutGerer && <button className="bpn-btn bpn-btn-or" onClick={() => setCreer(true)}><PlusIcon className="h-4 w-4" /> Nouvelle assemblée</button>}
       </PageHeader>
 
       {chargement ? (
@@ -92,7 +96,7 @@ export function Assemblees() {
             icon={BuildingLibraryIcon}
             title="Aucune assemblée générale"
             description="Créez une AGO ou une AGE pour convoquer le corps électoral, suivre le quorum et consigner les décisions."
-            action={<button className="bpn-btn bpn-btn-or" onClick={() => setCreer(true)}><PlusIcon className="h-4 w-4" /> Nouvelle assemblée</button>}
+            action={peutGerer ? <button className="bpn-btn bpn-btn-or" onClick={() => setCreer(true)}><PlusIcon className="h-4 w-4" /> Nouvelle assemblée</button> : undefined}
           />
         </div>
       ) : (
@@ -116,7 +120,7 @@ export function Assemblees() {
               </div>
               <div className="flex shrink-0 items-center gap-1">
                 {/* Une assemblée « tenue » (PV archivé) n'est pas supprimable — pas de bouton. */}
-                {a.statut !== "tenue" && (
+                {peutGerer && a.statut !== "tenue" && (
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); supprimer(a); }}

@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeftIcon, CalendarDaysIcon, MapPinIcon, CheckIcon, ArrowDownTrayIcon, TrashIcon, ListBulletIcon, UserGroupIcon, DocumentTextIcon } from "@heroicons/react/24/outline";
 import { Badge, DocumentModal, useToast, useConfirm, PageHeader, Tabs, ErrorState, TableSkeleton } from "../components";
 import { formatDate } from "../utils/format";
+import { useAuth } from "../auth/AuthContext";
 import { getReunion, majReunion, archiverDoc, telechargerPvReunionPdf, getConseil, supprimerReunion } from "../api/resources";
 
 /** Libellé d'émargement d'un membre du Conseil — sert aussi de clé de présence. */
@@ -25,6 +26,9 @@ export function ReunionDetail() {
   const navigate = useNavigate();
   const toast = useToast();
   const confirm = useConfirm();
+  const { user } = useAuth();
+  // Édition (ODJ, présences, PV) et suppression = SG (writes serveur réservés au SG).
+  const peutGerer = ["SECRETAIRE_GENERAL", "ADMIN"].includes(user?.role);
   const [reunion, setReunion] = useState(null);
   const [conseil, setConseil] = useState([]);
   const [odj, setOdj] = useState("");
@@ -134,7 +138,7 @@ export function ReunionDetail() {
       >
         <button className="bpn-btn bpn-btn-ghost" onClick={() => setConvocation(true)}>Convocation</button>
         <button className="bpn-btn bpn-btn-ghost" onClick={() => setFeuille(true)}>Feuille de présence</button>
-        {reunion.statut !== "tenue" && (
+        {peutGerer && reunion.statut !== "tenue" && (
           <button className="bpn-btn bpn-btn-ghost text-rouge" onClick={supprimer}><TrashIcon className="h-4 w-4" /> Supprimer</button>
         )}
       </PageHeader>
@@ -146,7 +150,7 @@ export function ReunionDetail() {
             label: "Ordre du jour",
             icon: ListBulletIcon,
             content: (
-              <Carte titre="Ordre du jour" action={<button className="bpn-btn bpn-btn-primary bpn-btn-sm" onClick={sauverOdj}>Enregistrer</button>}>
+              <Carte titre="Ordre du jour" action={peutGerer ? <button className="bpn-btn bpn-btn-primary bpn-btn-sm" onClick={sauverOdj}>Enregistrer</button> : undefined}>
                 <textarea rows={6} value={odj} onChange={(e) => setOdj(e.target.value)} className="bpn-input" placeholder="Un point par ligne…" />
               </Carte>
             ),
@@ -157,7 +161,7 @@ export function ReunionDetail() {
             icon: UserGroupIcon,
             badge: `${nbPresents}/${membresConseil.length}`,
             content: (
-              <Carte titre={`Présences (${nbPresents}/${membresConseil.length})`} action={<button className="bpn-btn bpn-btn-primary bpn-btn-sm" onClick={sauverPresences}>Enregistrer</button>}>
+              <Carte titre={`Présences (${nbPresents}/${membresConseil.length})`} action={peutGerer ? <button className="bpn-btn bpn-btn-primary bpn-btn-sm" onClick={sauverPresences}>Enregistrer</button> : undefined}>
                 <ul className="space-y-2">
                   {membresConseil.map((nom) => (
                     <li key={nom}>
@@ -176,12 +180,12 @@ export function ReunionDetail() {
             label: "Procès-verbal",
             icon: DocumentTextIcon,
             content: (
-              <Carte titre="Procès-verbal" action={
+              <Carte titre="Procès-verbal" action={peutGerer ? (
                 <div className="flex gap-2">
                   <button className="bpn-btn bpn-btn-ghost bpn-btn-sm" onClick={telechargerPv}><ArrowDownTrayIcon className="h-3.5 w-3.5" /> PDF</button>
                   <button className="bpn-btn bpn-btn-or bpn-btn-sm" onClick={sauverPv}><CheckIcon className="h-3.5 w-3.5" /> Enregistrer &amp; archiver</button>
                 </div>
-              }>
+              ) : undefined}>
                 <textarea rows={8} value={pv} onChange={(e) => setPv(e.target.value)} className="bpn-input" placeholder="Rédiger le procès-verbal de la réunion…" />
               </Carte>
             ),

@@ -51,6 +51,10 @@ export function Quitus() {
   const confirm = useConfirm();
   const { user } = useAuth();
   const estAdmin = user?.role === "ADMIN";
+  // La génération/archivage du quitus est réservée au SG (POST /quitus) : on ne
+  // propose le bouton qu'aux rôles autorisés (la Trésorière consulte le registre).
+  const peutGenerer = ["SECRETAIRE_GENERAL", "ADMIN"].includes(user?.role);
+  const [generation, setGeneration] = useState(false);
   const [exercice, setExercice] = useState(EXERCICE_COURANT);
   const [eligibles, setEligibles] = useState([]);
   const [registre, setRegistre] = useState([]);
@@ -100,7 +104,8 @@ export function Quitus() {
   }, [succes, registre, exercice]);
 
   const generer = async () => {
-    if (!membreActif) return;
+    if (!membreActif || generation) return; // garde anti double-clic
+    setGeneration(true);
     try {
       const q = await genererQuitus(membreActif.id, exercice);
       setSucces(q);
@@ -110,6 +115,8 @@ export function Quitus() {
       await telechargerDocumentPdf(() => telechargerQuitusPdf(q.id, q.numero), `Quitus-${q.numero}`);
     } catch (e) {
       toast.error(e.message);
+    } finally {
+      setGeneration(false);
     }
   };
 
@@ -187,9 +194,11 @@ export function Quitus() {
               <span className="mb-1 block text-xs uppercase tracking-wide text-white/55">N° automatique</span>
               <input value={numero} readOnly className="bpn-input-dark opacity-70" />
             </label>
-            <button type="button" onClick={generer} disabled={!membreActif} className="bpn-btn bpn-btn-or w-full justify-center !py-2.5">
-              <DocumentCheckIcon className="h-4 w-4" /> Générer &amp; archiver
-            </button>
+            {peutGenerer && (
+              <button type="button" onClick={generer} disabled={!membreActif || generation} className="bpn-btn bpn-btn-or w-full justify-center !py-2.5">
+                <DocumentCheckIcon className="h-4 w-4" /> {generation ? "Génération…" : "Générer & archiver"}
+              </button>
+            )}
             <button type="button" onClick={() => succes && telechargerDocumentPdf(() => telechargerQuitusPdf(succes.id, succes.numero), `Quitus-${succes.numero}`).catch((e) => toast.error(e.message))} disabled={!succes} title={succes ? "" : "Générez d'abord le quitus"} className="bpn-btn bpn-btn-ghost w-full justify-center border-white/20 text-white/70 hover:bg-white/10 hover:text-white disabled:opacity-40">
               <ArrowDownTrayIcon className="h-4 w-4" /> Télécharger PDF
             </button>

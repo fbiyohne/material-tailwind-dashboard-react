@@ -210,6 +210,8 @@ export const genererArticleLettre = (mois, theme) =>
 
 // ─── Calendrier éditorial (Lettre du Bâtonnier) ──────────────────────────
 export const getCalendrierEditorial = () => api("/calendrier-editorial");
+export const majArticleLettre = (mois, data) =>
+  api(`/calendrier-editorial/${encodeURIComponent(mois)}`, { method: "PATCH", body: data });
 
 // ─── Archives / Paramètres ───────────────────────────────────────────────
 export const listerArchives = (params = {}) => api(`/archives?${new URLSearchParams(params).toString()}`);

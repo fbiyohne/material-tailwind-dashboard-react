@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { SparklesIcon, DocumentTextIcon, CheckIcon, ArrowDownTrayIcon, PaperAirplaneIcon, CalendarDaysIcon } from "@heroicons/react/24/outline";
 import { Badge, Modal, PageHeader, EmptyState, ErrorState, Skeleton, useToast } from "../components";
 import { genererBrouillonArticle } from "../data/publications";
-import { archiverDoc, genererArticleLettre, getCalendrierEditorial } from "../api/resources";
+import { archiverDoc, genererArticleLettre, getCalendrierEditorial, majArticleLettre } from "../api/resources";
 
 const STATUT_META = {
   publie: { label: "Publié", ton: "vert" },
@@ -23,7 +23,19 @@ export function LettreBatonnier() {
   const charger = () => {
     setChargementCal(true);
     setErreur(false);
-    getCalendrierEditorial().then(setCalendrier).catch(() => setErreur(true)).finally(() => setChargementCal(false));
+    getCalendrierEditorial()
+      .then((entrees) => {
+        setCalendrier(entrees);
+        // Hydratation des articles déjà rédigés/publiés (persistés côté serveur)
+        // pour qu'ils survivent au rechargement et soient partagés entre postes.
+        const articles = {};
+        for (const e of entrees) {
+          if (e.texte) articles[e.mois] = { texte: e.texte, simule: e.simule ?? true, statut: e.statut };
+        }
+        setArticlesLettre(articles);
+      })
+      .catch(() => setErreur(true))
+      .finally(() => setChargementCal(false));
   };
   useEffect(() => { charger(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -50,16 +62,28 @@ export function LettreBatonnier() {
       resultat = { texte: genererBrouillonArticle(mois, theme), simule: true, statut: "redige" };
     }
     setArticlesLettre((prev) => ({ ...prev, [mois]: resultat }));
+    // Persistance du projet dès sa génération (survit au rechargement).
+    try { await majArticleLettre(mois, { texte: resultat.texte, statut: "redige", simule: resultat.simule }); }
+    catch (e) { toast.error(`Article généré mais non enregistré : ${e.message}`); }
     archiverDoc({ categorie: "Lettre du Bâtonnier", titre: `Projet d'article — ${mois}`, reference: mois, date: new Date().toISOString().slice(0, 10) }).catch(() => {});
     setChargement(null);
     ouvrirEditeur(mois, resultat);
   };
 
   /** Enregistre les modifications du Bâtonnier ; `publier` marque l'article publié. */
-  const enregistrer = (publier = false) => {
+  const enregistrer = async (publier = false) => {
     if (!apercu) return;
     const statut = publier ? "publie" : apercu.statut ?? "redige";
+    // Persistance serveur d'abord : on ne met à jour l'état local et le calendrier
+    // qu'en cas de succès, pour éviter d'afficher un état non enregistré.
+    try {
+      await majArticleLettre(apercu.mois, { texte: brouillon, statut, simule: apercu.simule });
+    } catch (e) {
+      toast.error(e.message);
+      return;
+    }
     setArticlesLettre((prev) => ({ ...prev, [apercu.mois]: { texte: brouillon, simule: apercu.simule, statut } }));
+    setCalendrier((prev) => prev.map((c) => (c.mois === apercu.mois ? { ...c, statut } : c)));
     setApercu((a) => (a ? { ...a, statut } : a));
     archiverDoc({
       categorie: "Lettre du Bâtonnier",

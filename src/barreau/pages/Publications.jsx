@@ -5,6 +5,7 @@ import { Badge, Modal, EmptyState, ErrorState, Skeleton, useToast, useConfirm, P
 import { formatDate } from "../utils/format";
 import { STATUT_PUBLICATION_META } from "../data/publications";
 import { typesPublication } from "../data/config";
+import { useAuth } from "../auth/AuthContext";
 import { listerPublications, creerPublication as apiCreerPublication, changerStatutPublication as apiChangerStatut, supprimerPublication } from "../api/resources";
 
 function NouvellePublicationModal({ open, onClose, onCreated }) {
@@ -49,6 +50,11 @@ export function Publications() {
   const navigate = useNavigate();
   const toast = useToast();
   const confirm = useConfirm();
+  const { user } = useAuth();
+  // Rédaction/suppression = SG (POST/DELETE) ; validation = Bâtonnier (transition
+  // VALIDE) ; la diffusion (PUBLIE) est ouverte au SG comme au Bâtonnier.
+  const peutGerer = ["SECRETAIRE_GENERAL", "ADMIN"].includes(user?.role);
+  const peutValider = ["BATONNIER", "ADMIN"].includes(user?.role);
   const [publications, setPublications] = useState([]);
   const [creer, setCreer] = useState(false);
   const [chargement, setChargement] = useState(true);
@@ -79,9 +85,11 @@ export function Publications() {
   return (
     <div className="space-y-5">
       <PageHeader eyebrow="Documents" titre="Publications institutionnelles" sousTitre="Avis et communiqués — validation par le Bâtonnier avant diffusion.">
-        <button className="bpn-btn bpn-btn-or" onClick={() => setCreer(true)}>
-          <PlusIcon className="h-4 w-4" /> Nouvelle publication
-        </button>
+        {peutGerer && (
+          <button className="bpn-btn bpn-btn-or" onClick={() => setCreer(true)}>
+            <PlusIcon className="h-4 w-4" /> Nouvelle publication
+          </button>
+        )}
       </PageHeader>
 
       {chargement ? (
@@ -103,7 +111,7 @@ export function Publications() {
             icon={MegaphoneIcon}
             title="Aucune publication"
             description="Rédigez un avis ou un communiqué ; il sera soumis à la validation du Bâtonnier avant diffusion."
-            action={<button className="bpn-btn bpn-btn-or" onClick={() => setCreer(true)}><PlusIcon className="h-4 w-4" /> Nouvelle publication</button>}
+            action={peutGerer ? <button className="bpn-btn bpn-btn-or" onClick={() => setCreer(true)}><PlusIcon className="h-4 w-4" /> Nouvelle publication</button> : undefined}
           />
         </div>
       ) : (
@@ -123,7 +131,7 @@ export function Publications() {
                   <div className="mt-1 font-mono text-xs text-gris">{formatDate(p.date)}</div>
                 </div>
                 <div className="flex shrink-0 gap-1.5">
-                  {p.statut === "a_valider" && (
+                  {p.statut === "a_valider" && peutValider && (
                     <button className="bpn-btn bpn-btn-primary !py-1.5 text-xs"
                       onClick={() => changerStatutPublication(p.id, "valide")}>
                       Valider (Bâtonnier)
@@ -138,7 +146,7 @@ export function Publications() {
                   <button className="bpn-btn bpn-btn-ghost !py-1.5 text-xs" onClick={() => navigate(`/publications/${p.id}`)}>
                     Ouvrir
                   </button>
-                  {p.statut !== "publie" && (
+                  {peutGerer && p.statut !== "publie" && (
                     <button className="bpn-btn bpn-btn-ghost !py-1.5 text-xs text-rouge" onClick={() => supprimer(p)} title="Supprimer">
                       <TrashIcon className="h-3.5 w-3.5" />
                     </button>

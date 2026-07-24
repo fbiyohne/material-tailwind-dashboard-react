@@ -117,7 +117,9 @@ export function Avocats() {
       cell: (m) => (
         <div className="flex items-center justify-end gap-1.5">
           <button type="button" onClick={() => navigate(`/avocats/${m.id}`)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs">Fiche</button>
-          <button type="button" onClick={() => setAttestation(m)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs">Attestation</button>
+          {peutImporter && (
+            <button type="button" onClick={() => setAttestation(m)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs">Attestation</button>
+          )}
           {estAdmin && (
             <button type="button" onClick={() => supprimer(m)} className="bpn-btn bpn-btn-ghost !px-2 !py-1 text-xs text-rouge" title="Supprimer définitivement">
               <TrashIcon className="h-3.5 w-3.5" />

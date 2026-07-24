@@ -10,6 +10,7 @@ import { getCorpsElectoral } from "../api/resources";
 const MOTIF_LABEL = {
   cotisation: { label: "Cotisations non à jour", ton: "rouge" },
   statut: { label: "Suspension / radiation / omission", ton: "gris" },
+  autre: { label: "Honoraire / autre motif", ton: "or" },
 };
 
 const COLONNES_ELECTEURS = [
@@ -34,7 +35,7 @@ const COLONNES_CSV = [
 
 export function CorpsElectoral() {
   const [exercice, setExercice] = useState(EXERCICE_COURANT);
-  const [data, setData] = useState({ electeurs: [], exclusCotisation: [], exclusStatut: [] });
+  const [data, setData] = useState({ electeurs: [], exclusCotisation: [], exclusStatut: [], exclusAutre: [] });
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState(false);
 
@@ -48,11 +49,12 @@ export function CorpsElectoral() {
   }, [exercice]);
   useEffect(() => { charger(); }, [charger]);
 
-  const { electeurs, exclusCotisation, exclusStatut } = data;
+  const { electeurs, exclusCotisation, exclusStatut, exclusAutre = [] } = data;
   const electeursNum = electeurs.map((m, i) => ({ ...m, _num: i + 1 }));
   const exclusions = [
     ...exclusCotisation.map((m) => ({ ...m, _key: `c-${m.id}`, motif: "cotisation" })),
     ...exclusStatut.map((m) => ({ ...m, _key: `s-${m.id}`, motif: "statut" })),
+    ...exclusAutre.map((m) => ({ ...m, _key: `a-${m.id}`, motif: "autre" })),
   ];
 
   const exporterXlsx = () => {
@@ -70,10 +72,11 @@ export function CorpsElectoral() {
       </PageHeader>
 
       {/* Statistiques (FR-CE) */}
-      <div className="bpn-no-print grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="bpn-no-print grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Électeurs qualifiés" value={electeurs.length} sub="aptes à voter" accent="vert" />
         <StatCard label="Exclus — cotisations" value={exclusCotisation.length} sub="non à jour" accent="rouge" />
         <StatCard label="Exclus — statut" value={exclusStatut.length} sub="suspendu / radié / omis" accent="gris" />
+        <StatCard label="Exclus — honoraires / autre" value={exclusAutre.length} sub="non électeurs" accent="or" />
       </div>
 
       <Tabs
@@ -126,7 +129,7 @@ export function CorpsElectoral() {
             id: "exclusions",
             label: "Exclusions",
             icon: NoSymbolIcon,
-            badge: exclusCotisation.length + exclusStatut.length || null,
+            badge: exclusions.length || null,
             content: (
               <div className="bpn-card">
                 <div className="bpn-card-header">

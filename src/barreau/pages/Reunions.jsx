@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { PlusIcon, CalendarDaysIcon, MapPinIcon, ArrowRightIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { Badge, Modal, EmptyState, ErrorState, Skeleton, useToast, useConfirm, PageHeader, FormField } from "../components";
 import { formatDate } from "../utils/format";
+import { useAuth } from "../auth/AuthContext";
 import { listerReunions, creerReunion as apiCreerReunion, supprimerReunion } from "../api/resources";
 
 function NouvelleReunionModal({ open, onClose, onCreated }) {
@@ -39,6 +40,10 @@ export function Reunions() {
   const navigate = useNavigate();
   const toast = useToast();
   const confirm = useConfirm();
+  const { user } = useAuth();
+  // Création/suppression réservées au SG (POST/DELETE réunions) : le Bâtonnier
+  // consulte réunions, convocations et PV mais ne les crée/supprime pas.
+  const peutGerer = ["SECRETAIRE_GENERAL", "ADMIN"].includes(user?.role);
   const [reunions, setReunions] = useState([]);
   const [creer, setCreer] = useState(false);
   const [chargement, setChargement] = useState(true);
@@ -66,7 +71,7 @@ export function Reunions() {
   return (
     <div className="space-y-5">
       <PageHeader eyebrow="Institutionnel" titre="Réunions du Conseil de l'Ordre" sousTitre="Planification, convocations, feuilles de présence et procès-verbaux.">
-        <button className="bpn-btn bpn-btn-or" onClick={() => setCreer(true)}><PlusIcon className="h-4 w-4" /> Nouvelle réunion</button>
+        {peutGerer && <button className="bpn-btn bpn-btn-or" onClick={() => setCreer(true)}><PlusIcon className="h-4 w-4" /> Nouvelle réunion</button>}
       </PageHeader>
 
       {chargement ? (
@@ -88,7 +93,7 @@ export function Reunions() {
             icon={CalendarDaysIcon}
             title="Aucune réunion planifiée"
             description="Planifiez une réunion du Conseil de l'Ordre pour générer convocations, feuilles de présence et procès-verbaux."
-            action={<button className="bpn-btn bpn-btn-or" onClick={() => setCreer(true)}><PlusIcon className="h-4 w-4" /> Nouvelle réunion</button>}
+            action={peutGerer ? <button className="bpn-btn bpn-btn-or" onClick={() => setCreer(true)}><PlusIcon className="h-4 w-4" /> Nouvelle réunion</button> : undefined}
           />
         </div>
       ) : (
@@ -115,7 +120,7 @@ export function Reunions() {
               </div>
               <div className="flex shrink-0 items-center gap-1">
                 {/* Une réunion « tenue » (avec PV) n'est pas supprimable — pas de bouton. */}
-                {r.statut !== "tenue" && (
+                {peutGerer && r.statut !== "tenue" && (
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); supprimer(r); }}

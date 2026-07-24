@@ -70,6 +70,9 @@ export function Cotisations() {
   const confirm = useConfirm();
   const { user } = useAuth();
   const estAdmin = user?.role === "ADMIN";
+  // La validation manuelle de situation est l'acte de la Trésorière (US-07,
+  // POST /cotisations/:id/valider) : le SG ne voit pas le bouton (il obtiendrait 403).
+  const peutValider = ["TRESORIERE", "ADMIN"].includes(user?.role);
   const [params, setParams] = useSearchParams();
   const exercice = Number(params.get("exercice")) || EXERCICE_COURANT;
   const filtre = params.get("statut") || "tous";
@@ -231,12 +234,12 @@ export function Cotisations() {
             </>
           )}
           {l.statut === "ajour" && (l.valideTresoriere ? (
-            <button type="button" title="Validé — cliquer pour annuler" onClick={() => validerSituation(l)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs text-vert">
+            <button type="button" disabled={!peutValider} title={peutValider ? "Validé — cliquer pour annuler" : "Validé par la Trésorière"} onClick={() => peutValider && validerSituation(l)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs text-vert disabled:opacity-70">
               <CheckCircleIcon className="h-3.5 w-3.5" /> Validé
             </button>
-          ) : (
+          ) : peutValider ? (
             <button type="button" title="Valider la situation (Trésorière)" onClick={() => validerSituation(l)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs">Valider</button>
-          ))}
+          ) : null)}
           <button type="button" onClick={() => setHistorique(l.membre.id)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs">Historique</button>
           {estAdmin && l.aLigne && (
             <button type="button" onClick={() => supprimer(l)} className="bpn-btn bpn-btn-ghost !px-2 !py-1 text-xs text-rouge" title="Supprimer la ligne de cotisation">
@@ -247,7 +250,7 @@ export function Cotisations() {
       ),
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  ], [exercice, estAdmin]);
+  ], [exercice, estAdmin, peutValider]);
 
   /** Colonnes CSV pour l'export sélection */
   const colonnesCsv = [

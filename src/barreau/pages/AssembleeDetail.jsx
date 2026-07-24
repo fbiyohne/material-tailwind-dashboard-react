@@ -4,6 +4,7 @@ import { ArrowLeftIcon, PlusIcon, CheckIcon, ArrowDownTrayIcon, TrashIcon, ListB
 import { Badge, DocumentModal, useToast, useConfirm, PageHeader, Tabs, ErrorState, TableSkeleton } from "../components";
 import { formatDate } from "../utils/format";
 import { EXERCICE_COURANT } from "../data/dashboard-data";
+import { useAuth } from "../auth/AuthContext";
 import { getAssemblee, majAssemblee, getCorpsElectoral, archiverDoc, telechargerPvAgPdf, supprimerAssemblee } from "../api/resources";
 
 const TYPE_LABEL = { AGO: "Assemblée Générale Ordinaire", AGE: "Assemblée Générale Extraordinaire" };
@@ -22,6 +23,9 @@ export function AssembleeDetail() {
   const navigate = useNavigate();
   const toast = useToast();
   const confirm = useConfirm();
+  const { user } = useAuth();
+  // Quorum, décisions, PV et suppression = SG (writes serveur réservés au SG).
+  const peutGerer = ["SECRETAIRE_GENERAL", "ADMIN"].includes(user?.role);
   const [assemblee, setAssemblee] = useState(null);
   const [electeurs, setElecteurs] = useState(0);
   const [present, setPresent] = useState(0);
@@ -84,6 +88,7 @@ export function AssembleeDetail() {
     try {
       await majAssemblee(assemblee.id, { pv, statut: "tenue" });
       await archiverDoc({ categorie: "Procès-verbal (AG)", titre: `PV ${assemblee.type} du ${dateCourte}`, reference: dateCourte, date: dateCourte });
+      setAssemblee({ ...assemblee, statut: "tenue" });
       toast.success("Procès-verbal enregistré et archivé.");
     } catch (e) {
       toast.error(e.message);
@@ -93,6 +98,7 @@ export function AssembleeDetail() {
     try {
       await majAssemblee(assemblee.id, { pv, statut: "tenue" });
       await telechargerPvAgPdf(assemblee.id);
+      setAssemblee({ ...assemblee, statut: "tenue" });
       toast.success("Procès-verbal enregistré, archivé et téléchargé (PDF).");
     } catch (e) {
       toast.error(e.message);
@@ -128,7 +134,7 @@ export function AssembleeDetail() {
         }
       >
         <button className="bpn-btn bpn-btn-ghost" onClick={() => setConvocation(true)}>Convocation</button>
-        {assemblee.statut !== "tenue" && (
+        {peutGerer && assemblee.statut !== "tenue" && (
           <button className="bpn-btn bpn-btn-ghost text-rouge" onClick={supprimer}><TrashIcon className="h-4 w-4" /> Supprimer</button>
         )}
       </PageHeader>
@@ -152,7 +158,7 @@ export function AssembleeDetail() {
             label: "Quorum",
             icon: UserGroupIcon,
             content: (
-              <Carte titre="Quorum" action={<button className="bpn-btn bpn-btn-primary bpn-btn-sm" onClick={sauverQuorum}>Enregistrer</button>}>
+              <Carte titre="Quorum" action={peutGerer ? <button className="bpn-btn bpn-btn-primary bpn-btn-sm" onClick={sauverQuorum}>Enregistrer</button> : undefined}>
                 <div className="space-y-3">
                   <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
                     <div><span className="text-gris">Corps électoral : </span><span className="font-medium">{electeurs}</span></div>
@@ -174,10 +180,12 @@ export function AssembleeDetail() {
             badge: (assemblee.decisions ?? []).length || null,
             content: (
               <Carte titre="Décisions">
-                <div className="mb-3 flex gap-2">
-                  <input value={nouvelleDecision} onChange={(e) => setNouvelleDecision(e.target.value)} className="bpn-input flex-1" placeholder="Ajouter une décision adoptée…" onKeyDown={(e) => e.key === "Enter" && ajouterDecision()} />
-                  <button className="bpn-btn bpn-btn-or" onClick={ajouterDecision}><PlusIcon className="h-4 w-4" /> Ajouter</button>
-                </div>
+                {peutGerer && (
+                  <div className="mb-3 flex gap-2">
+                    <input value={nouvelleDecision} onChange={(e) => setNouvelleDecision(e.target.value)} className="bpn-input flex-1" placeholder="Ajouter une décision adoptée…" onKeyDown={(e) => e.key === "Enter" && ajouterDecision()} />
+                    <button className="bpn-btn bpn-btn-or" onClick={ajouterDecision}><PlusIcon className="h-4 w-4" /> Ajouter</button>
+                  </div>
+                )}
                 {(assemblee.decisions ?? []).length === 0 ? (
                   <p className="py-3 text-center text-sm text-gris">Aucune décision enregistrée.</p>
                 ) : (
@@ -193,12 +201,12 @@ export function AssembleeDetail() {
             label: "Procès-verbal",
             icon: DocumentTextIcon,
             content: (
-              <Carte titre="Procès-verbal" action={
+              <Carte titre="Procès-verbal" action={peutGerer ? (
                 <div className="flex gap-2">
                   <button className="bpn-btn bpn-btn-ghost bpn-btn-sm" onClick={telechargerPv}><ArrowDownTrayIcon className="h-3.5 w-3.5" /> PDF</button>
                   <button className="bpn-btn bpn-btn-or bpn-btn-sm" onClick={sauverPv}><CheckIcon className="h-3.5 w-3.5" /> Enregistrer &amp; archiver</button>
                 </div>
-              }>
+              ) : undefined}>
                 <textarea rows={7} value={pv} onChange={(e) => setPv(e.target.value)} className="bpn-input" placeholder="Rédiger le procès-verbal de l'assemblée…" />
               </Carte>
             ),

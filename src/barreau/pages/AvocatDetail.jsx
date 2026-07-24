@@ -38,6 +38,10 @@ export function AvocatDetail() {
   const peutVoirFinances = FINANCES.includes(user?.role);
   const estAdmin = user?.role === "ADMIN";
   const peutGererAcces = ["SECRETAIRE_GENERAL", "ADMIN"].includes(user?.role);
+  // Modification, attestation et radiation sont réservées au SG côté serveur
+  // (PATCH /membres/:id, /attestation, /radier) : on ne les propose pas au
+  // Bâtonnier, qui peut consulter la fiche mais pas la muter.
+  const peutGererFiche = peutGererAcces;
   const [membre, setMembre] = useState(null);
   const [droit, setDroit] = useState(null); // ligne de droits réelle (rôles finances)
   const [attestation, setAttestation] = useState(null);
@@ -103,14 +107,16 @@ export function AvocatDetail() {
           </span>
         }
       >
-        <button className="bpn-btn bpn-btn-ghost" onClick={() => setEdition(true)}><PencilSquareIcon className="h-4 w-4" /> Modifier</button>
+        {peutGererFiche && (
+          <button className="bpn-btn bpn-btn-ghost" onClick={() => setEdition(true)}><PencilSquareIcon className="h-4 w-4" /> Modifier</button>
+        )}
         {peutGererAcces && (
           <button className="bpn-btn bpn-btn-ghost" onClick={creerAcces} title="Ouvrir l'accès à l'espace avocat"><KeyIcon className="h-4 w-4" /> Accès espace</button>
         )}
-        {membre.qualite !== "stagiaire" && (
+        {peutGererFiche && membre.qualite !== "stagiaire" && (
           <button className="bpn-btn bpn-btn-primary" onClick={() => setAttestation(membre)}><DocumentPlusIcon className="h-4 w-4" /> Attestation</button>
         )}
-        {membre.statut !== "radie" && (
+        {peutGererFiche && membre.statut !== "radie" && (
           <button className="bpn-btn bpn-btn-ghost text-rouge hover:!bg-rougeL hover:!text-rouge" onClick={async () => {
             const ok = await confirm({ title: "Radier cet avocat ?", message: `Me ${membre.nom} sera radié(e) du tableau et exclu(e) du corps électoral.`, confirmLabel: "Radier", danger: true });
             if (ok) { try { await radierMembre(membre.id); toast.success(`Me ${membre.nom} a été radié(e).`); charger(); } catch (e) { toast.error(e.message); } }
@@ -154,13 +160,16 @@ export function AvocatDetail() {
                   <Ligne label="RCCM" value={membre.rccm} />
                   <Ligne label="CNSS" value={membre.cnss} />
                   {membre.observations && <Ligne label="Observations" value={membre.observations} />}
-                  {stage && (
+                  {membre.qualite === "stagiaire" && (
                     <>
-                      <Ligne label="Prestation de serment" value={formatDate(stage.debut)} />
-                      <Ligne label="Maître de stage" value={stage.maitreStage} />
+                      {/* Affiché même sans date de serment (stage null) : « — » signale
+                          une prestation de serment encore à renseigner, plutôt que de
+                          masquer silencieusement le bloc stage. */}
+                      <Ligne label="Prestation de serment" value={stage ? formatDate(stage.debut) : "—"} />
+                      <Ligne label="Maître de stage" value={stage?.maitreStage ?? "—"} />
                       <div className="pt-3">
-                        <div className="mb-1 flex justify-between text-xs"><span className="text-gris">Progression du stage</span><span className="font-mono text-or">{stage.progression}%</span></div>
-                        <div className="h-2 overflow-hidden rounded bg-grisM"><div className="h-full rounded bg-or" style={{ width: `${stage.progression}%` }} /></div>
+                        <div className="mb-1 flex justify-between text-xs"><span className="text-gris">Progression du stage</span><span className="font-mono text-or">{stage?.progression ?? 0}%</span></div>
+                        <div className="h-2 overflow-hidden rounded bg-grisM"><div className="h-full rounded bg-or" style={{ width: `${stage?.progression ?? 0}%` }} /></div>
                       </div>
                     </>
                   )}

@@ -56,14 +56,18 @@ export function DossierDetail() {
       });
       setEnregistre(true);
       toast.success("Dossier mis à jour.");
+      return true;
     } catch (e) {
       toast.error(e.message);
+      return false;
     }
   };
 
   const telechargerDecision = async () => {
+    // On ne génère le PDF que si l'enregistrement a réussi : sinon le document
+    // refléterait un état non persisté (décision/sanction perdues au rechargement).
+    if (!(await enregistrer())) return;
     try {
-      await enregistrer();
       await telechargerDecisionDisciplinePdf(dossier.id);
       toast.success("Décision générée, archivée et téléchargée (PDF).");
     } catch (e) {

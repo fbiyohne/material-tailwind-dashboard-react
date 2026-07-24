@@ -73,6 +73,10 @@ export function Utilisateurs() {
   };
   // Suppression définitive d'un compte — réservée au super-administrateur (ADMIN).
   const estAdmin = courant?.role === "ADMIN";
+  // Anti-escalade (miroir serveur) : seul un ADMIN peut agir sur un compte ADMIN
+  // (changement de rôle, mot de passe, désactivation). On verrouille donc ces
+  // actions dans l'UI pour un SG plutôt que de le laisser buter sur un 403.
+  const geleAdmin = (u) => !estAdmin && u.role === "ADMIN";
   const supprimer = async (u) => {
     const ok = await confirm({
       title: "Supprimer le compte",
@@ -194,9 +198,9 @@ export function Utilisateurs() {
                   <select
                     value={u.role}
                     onChange={(e) => changerRole(u, e.target.value)}
-                    disabled={u.id === courant?.id}
+                    disabled={u.id === courant?.id || geleAdmin(u)}
                     className="bpn-input !w-auto !py-1 text-xs disabled:opacity-60"
-                    title={u.id === courant?.id ? "Vous ne pouvez pas changer votre propre rôle" : ""}
+                    title={u.id === courant?.id ? "Vous ne pouvez pas changer votre propre rôle" : geleAdmin(u) ? "Seul un administrateur peut agir sur un compte administrateur" : ""}
                   >
                     {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
                   </select>
@@ -215,14 +219,16 @@ export function Utilisateurs() {
               align: "right",
               cell: (u) => (
                 <div className="flex justify-end gap-2">
-                  <button className="bpn-btn bpn-btn-ghost !px-2 !py-1 text-xs" onClick={() => setMotDePasse({ id: u.id, nom: u.nom, password: "" })}>
-                    <KeyIcon className="h-3.5 w-3.5" /> Mot de passe
-                  </button>
+                  {!geleAdmin(u) && (
+                    <button className="bpn-btn bpn-btn-ghost !px-2 !py-1 text-xs" onClick={() => setMotDePasse({ id: u.id, nom: u.nom, password: "" })}>
+                      <KeyIcon className="h-3.5 w-3.5" /> Mot de passe
+                    </button>
+                  )}
                   <button
                     className="bpn-btn bpn-btn-ghost !px-2 !py-1 text-xs disabled:opacity-50"
                     onClick={() => basculerActif(u)}
-                    disabled={u.id === courant?.id}
-                    title={u.id === courant?.id ? "Vous ne pouvez pas désactiver votre propre compte" : ""}
+                    disabled={u.id === courant?.id || geleAdmin(u)}
+                    title={u.id === courant?.id ? "Vous ne pouvez pas désactiver votre propre compte" : geleAdmin(u) ? "Seul un administrateur peut agir sur un compte administrateur" : ""}
                   >
                     {u.actif ? "Désactiver" : "Réactiver"}
                   </button>

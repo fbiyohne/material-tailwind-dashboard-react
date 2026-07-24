@@ -19,6 +19,9 @@ const COLONNES_CSV = [
 
 const MODES = ["Espèces", "Virement", "Chèque", "Mobile Money"];
 const TARIF = { avocat: 150000, stagiaire: 75000, honoraire: 0 };
+// Seuil de vigilance : un reçu unique dépassant ce montant est très inhabituel
+// (cotisations et droits se comptent en dizaines/centaines de milliers de FCFA).
+const SEUIL_MONTANT_INHABITUEL = 5000000;
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
 
 function Champ({ label, children }) {
@@ -42,6 +45,7 @@ export function Recus() {
   const [reference, setReference] = useState("");
   const [date, setDate] = useState(aujourdhui());
   const [succes, setSucces] = useState(null);
+  const [emission, setEmission] = useState(false); // garde anti double-soumission
   const [chargementRecus, setChargementRecus] = useState(true);
   const [erreurRecus, setErreurRecus] = useState(false);
 
@@ -71,7 +75,18 @@ export function Recus() {
   };
 
   const emettre = async () => {
-    if (!membre || montant <= 0) return;
+    if (!membre || montant <= 0 || emission) return; // garde anti double-clic
+    // Garde-fou anti-faute de frappe (zéro en trop) : au-delà d'un seuil très
+    // inhabituel pour une cotisation/un droit, on demande confirmation avant d'émettre.
+    if (Number(montant) > SEUIL_MONTANT_INHABITUEL) {
+      const ok = await confirm({
+        title: "Montant inhabituel",
+        message: `Le montant saisi (${formatFCFA(Number(montant))}) est très élevé pour un reçu. Confirmez-vous cette valeur ?`,
+        confirmLabel: "Confirmer le montant",
+      });
+      if (!ok) return;
+    }
+    setEmission(true);
     try {
       const { recu } = await enregistrerPaiement({ membreId, annee: exercice, montant: Number(montant), mode, ref: reference, date });
       setSucces(recu);
@@ -82,6 +97,8 @@ export function Recus() {
       await telechargerDocumentPdf(() => telechargerRecuPdf(recu.id, recu.numero), `Recu-${recu.numero}`);
     } catch (e) {
       toast.error(e.message);
+    } finally {
+      setEmission(false);
     }
   };
 
@@ -149,8 +166,8 @@ export function Recus() {
             <Champ label="Référence (optionnel)">
               <input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="Auto si vide" className="bpn-input-dark" />
             </Champ>
-            <button type="button" onClick={emettre} disabled={!membre || montant <= 0} className="bpn-btn bpn-btn-or w-full justify-center !py-2.5">
-              <PrinterIcon className="h-4 w-4" /> Émettre &amp; archiver
+            <button type="button" onClick={emettre} disabled={!membre || montant <= 0 || emission} className="bpn-btn bpn-btn-or w-full justify-center !py-2.5">
+              <PrinterIcon className="h-4 w-4" /> {emission ? "Émission…" : "Émettre & archiver"}
             </button>
             <button type="button" onClick={() => succes && telechargerDocumentPdf(() => telechargerRecuPdf(succes.id, succes.numero), `Recu-${succes.numero}`).catch((e) => toast.error(e.message))} disabled={!succes} title={succes ? "" : "Émettez d'abord le reçu"} className="bpn-btn bpn-btn-ghost w-full justify-center border-white/20 text-white/70 hover:bg-white/10 hover:text-white disabled:opacity-40">
               <ArrowDownTrayIcon className="h-4 w-4" /> Télécharger PDF

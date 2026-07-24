@@ -4,11 +4,17 @@ import { ArrowLeftIcon, CheckIcon } from "@heroicons/react/24/outline";
 import { Badge, useToast, FormField, PageHeader, ErrorState, TableSkeleton } from "../components";
 import { formatDate } from "../utils/format";
 import { STATUT_PUBLICATION_META } from "../data/publications";
+import { useAuth } from "../auth/AuthContext";
 import { getPublication, majPublication, changerStatutPublication } from "../api/resources";
 
 export function PublicationDetail() {
   const { id } = useParams();
   const toast = useToast();
+  const { user } = useAuth();
+  // Rédaction/soumission = SG ; validation = Bâtonnier ; la diffusion (Publier)
+  // est ouverte aux deux — miroir des permissions serveur.
+  const peutGerer = ["SECRETAIRE_GENERAL", "ADMIN"].includes(user?.role);
+  const peutValider = ["BATONNIER", "ADMIN"].includes(user?.role);
   const [publication, setPublication] = useState(null);
   const [form, setForm] = useState({});
 
@@ -65,13 +71,13 @@ export function PublicationDetail() {
           </span>
         }
       >
-        {publication.statut === "brouillon" && (
+        {peutGerer && publication.statut === "brouillon" && (
           <button className="bpn-btn bpn-btn-primary" onClick={() => transition("a_valider", "Soumis pour validation.")}>Soumettre</button>
         )}
-        {publication.statut === "a_valider" && (
+        {peutValider && publication.statut === "a_valider" && (
           <button className="bpn-btn bpn-btn-primary" onClick={() => transition("valide", "Validé par le Bâtonnier.")}>Valider (Bâtonnier)</button>
         )}
-        {publication.statut === "valide" && (
+        {(peutGerer || peutValider) && publication.statut === "valide" && (
           <button className="bpn-btn bpn-btn-or" onClick={() => transition("publie", "Publication diffusée.")}>Publier</button>
         )}
       </PageHeader>
@@ -81,7 +87,9 @@ export function PublicationDetail() {
         <div className="bpn-card">
           <div className="bpn-card-header">
             <span className="bpn-card-heading">Rédaction</span>
-            <button className="bpn-btn bpn-btn-primary bpn-btn-sm" onClick={enregistrer}><CheckIcon className="h-3.5 w-3.5" /> Enregistrer</button>
+            {peutGerer && (
+              <button className="bpn-btn bpn-btn-primary bpn-btn-sm" onClick={enregistrer}><CheckIcon className="h-3.5 w-3.5" /> Enregistrer</button>
+            )}
           </div>
           <div className="space-y-3 p-4">
             <FormField label="Titre">

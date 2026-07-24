@@ -50,7 +50,10 @@ export function EspaceScrutins() {
       ) : (
         scrutins.map((s) => {
           const total = s.candidats.reduce((a, c) => a + (c.voix ?? 0), 0);
-          const peutVoter = s.statut === "OUVERT" && !s.aDejaVote;
+          // `eligible` peut être absent (anciens clients) : on ne bloque que si le
+          // serveur le nie explicitement (=== false), sinon le POST /voter tranche.
+          const inelig = s.eligible === false;
+          const peutVoter = s.statut === "OUVERT" && !s.aDejaVote && !inelig;
           const set = choix[s.id] ?? new Set();
           return (
             <div key={s.id} className="bpn-card p-5">
@@ -66,6 +69,11 @@ export function EspaceScrutins() {
               </div>
 
               {peutVoter && <p className="mt-3 text-[12.5px] text-gris">Sélectionnez jusqu'à {s.nbSieges} candidat(s), puis validez votre vote.</p>}
+              {inelig && s.statut === "OUVERT" && !s.aDejaVote && (
+                <p className="mt-3 rounded border-l-[3px] border-or bg-or-L px-3 py-2 text-[12.5px] text-gris">
+                  Vous ne figurez pas dans le corps électoral de ce scrutin (inscription au tableau et cotisation à jour requises). Contactez le Secrétariat en cas d'erreur.
+                </p>
+              )}
 
               <ul className="mt-3 space-y-2">
                 {s.candidats.map((c) => {
