@@ -25,9 +25,24 @@ dashboardRouter.get(
     let payees = 0;
     let du = 0;
 
+    // Répartitions démographiques (non financières) — servies à tous les rôles.
+    const parQualite: Record<string, number> = {};
+    const parStatut: Record<string, number> = {};
+    const parDecennieMap: Record<number, number> = {};
+    const parite = { H: 0, F: 0, nr: 0 };
+
     for (const m of membres) {
       if (m.qualite === "AVOCAT") inscrits += 1;
       if (m.qualite === "STAGIAIRE") stagiaires += 1;
+      parQualite[m.qualite] = (parQualite[m.qualite] ?? 0) + 1;
+      parStatut[m.statut] = (parStatut[m.statut] ?? 0) + 1;
+      if (m.sexe === "H") parite.H += 1;
+      else if (m.sexe === "F") parite.F += 1;
+      else parite.nr += 1;
+      if (m.dateServment) {
+        const dec = Math.floor(m.dateServment.getFullYear() / 10) * 10;
+        parDecennieMap[dec] = (parDecennieMap[dec] ?? 0) + 1;
+      }
       const montantDuM = cotisationDue(m.cotisations[0], tarifs, m.qualite);
       const paye = m.cotisations[0]?.montantPaye ?? 0;
       du += montantDuM;
@@ -37,6 +52,10 @@ dashboardRouter.get(
       else if (st === "retard" || st === "partiel") enRetard += 1;
     }
 
+    const parDecennie = Object.entries(parDecennieMap)
+      .map(([decennie, n]) => ({ decennie: Number(decennie), n }))
+      .sort((a, b) => a.decennie - b.decennie);
+
     // RG-15 : les montants financiers ne sont servis qu'aux profils finances ;
     // le Bâtonnier reçoit la composition des membres mais pas les finances.
     const role = (req as AuthRequest).user?.role;
@@ -44,6 +63,7 @@ dashboardRouter.get(
     res.json({
       annee,
       membres: { inscrits, stagiaires, aJour, enRetard },
+      demographie: { parQualite, parStatut, parDecennie, parite, total: membres.length },
       ...(voitFinances ? { finances: { payees, impayees: du - payees, solde: du - payees } } : {}),
     });
   })

@@ -34,7 +34,7 @@ export function EditMembreModal({ membre, open, onClose, onSaved }) {
     setLoading(true);
     try {
       const maj = await modifierMembre(membre.id, {
-        nom: form.nom, cabinet: form.cabinet, statut: form.statut,
+        nom: form.nom, cabinet: form.cabinet, statut: form.statut, sexe: form.sexe || null,
         tel: form.tel, email: form.email, adresse: form.adresse, rccm: form.rccm, cnss: form.cnss,
         observations: form.observations, dateNaissance: form.dateNaissance, dateInscription: form.dateInscription,
       });
@@ -67,6 +67,13 @@ export function EditMembreModal({ membre, open, onClose, onSaved }) {
               <option value="omis">Omis</option>
               <option value="honoraire">Honoraire</option>
               <option value="radie">Radié</option>
+            </select>
+          </FormField>
+          <FormField label="Sexe" hint="reporting de parité">
+            <select value={form.sexe ?? ""} onChange={set("sexe")} className="bpn-input">
+              <option value="">Non renseigné</option>
+              <option value="H">Homme</option>
+              <option value="F">Femme</option>
             </select>
           </FormField>
           <FormField label="Date de naissance">

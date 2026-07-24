@@ -98,6 +98,7 @@ model Membre {
   nom             String
   qualite         Qualite
   statut          StatutMembre @default(INSCRIT)
+  sexe            String? // « H » / « F » — reporting institutionnel (parité) ; null = non renseigné
   cabinet         String?
   tel             String?
   email           String?

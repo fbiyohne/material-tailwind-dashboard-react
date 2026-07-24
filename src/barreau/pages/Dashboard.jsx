@@ -32,6 +32,41 @@ function formatQuand(v) {
   return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
+const QUALITE_LABEL = { AVOCAT: "Avocats", STAGIAIRE: "Stagiaires", HONORAIRE: "Honoraires" };
+const STATUT_LABEL = { INSCRIT: "Inscrits", SUSPENDU: "Suspendus", OMIS: "Omis", RADIE: "Radiés", HONORAIRE: "Honoraires", STAGIAIRE: "Stagiaires" };
+
+/** Barre de proportion (identité visuelle du Barreau : piste grise, remplissage accentué). */
+function Barre({ label, valeur, max, accent = "navy" }) {
+  const largeur = max > 0 ? Math.round((valeur / max) * 100) : 0;
+  return (
+    <div className="flex items-center gap-3 text-sm">
+      <span className="w-36 shrink-0 truncate text-gris" title={label}>{label}</span>
+      <span className="h-2 flex-1 overflow-hidden rounded bg-grisM">
+        <span className="block h-full rounded transition-all duration-500" style={{ width: `${largeur}%`, backgroundColor: `var(--bpn-${accent})` }} />
+      </span>
+      <span className="w-10 shrink-0 text-right font-mono text-navy">{valeur}</span>
+    </div>
+  );
+}
+
+/** Carte de synthèse démographique (composition du Barreau) — visible par tous les rôles. */
+function CarteRepartition({ titre, sousTitre, lignes }) {
+  const max = Math.max(1, ...lignes.map((l) => l.valeur));
+  return (
+    <div className="bpn-card">
+      <div className="bpn-card-header">
+        <span className="bpn-card-heading">{titre}</span>
+        {sousTitre && <span className="text-xs text-gris">{sousTitre}</span>}
+      </div>
+      <div className="space-y-2.5 p-4">
+        {lignes.length === 0 ? <p className="text-center text-sm text-gris">—</p> : lignes.map((l) => (
+          <Barre key={l.label} label={l.label} valeur={l.valeur} max={max} accent={l.accent} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function ColonneFinance({ label, montant, total, accent }) {
   return (
     <div className="border-l-[3px] p-4" style={{ borderLeftColor: `var(--bpn-${accent})` }}>
@@ -91,6 +126,20 @@ export function Dashboard() {
   const finances = data?.finances;
   const totalDu = finances ? finances.payees + finances.impayees : 0;
 
+  // Composition du Barreau (données démographiques, servies à tous les rôles).
+  const demo = data?.demographie;
+  const parQualite = demo ? Object.entries(demo.parQualite).map(([k, n]) => ({ label: QUALITE_LABEL[k] ?? k, valeur: n, accent: "navy" })) : [];
+  const parStatut = demo ? Object.entries(demo.parStatut).map(([k, n]) => ({ label: STATUT_LABEL[k] ?? k, valeur: n, accent: k === "INSCRIT" ? "vert" : k === "RADIE" || k === "SUSPENDU" ? "rouge" : "or" })) : [];
+  const parDecennie = demo ? demo.parDecennie.map((d) => ({ label: `Années ${d.decennie}`, valeur: d.n, accent: "or" })) : [];
+  const pariteConnue = demo ? demo.parite.H + demo.parite.F : 0;
+  const pctF = pariteConnue ? Math.round((demo.parite.F * 100) / pariteConnue) : 0;
+  const pctH = pariteConnue ? 100 - pctF : 0;
+  const parParite = demo ? [
+    { label: "Hommes", valeur: demo.parite.H, accent: "navy" },
+    { label: "Femmes", valeur: demo.parite.F, accent: "or" },
+    ...(demo.parite.nr ? [{ label: "Non renseigné", valeur: demo.parite.nr, accent: "gris" }] : []),
+  ] : [];
+
   // Cadrage par rôle : en-tête adapté, navigation des cartes restreinte aux
   // modules réellement accessibles, et finances réservées aux profils finances
   // (RG-15 : le Bâtonnier ne voit pas les montants).
@@ -133,6 +182,16 @@ export function Dashboard() {
             <ColonneFinance label="Cotisations payées" montant={finances?.payees ?? 0} total={totalDu} accent="vert" />
             <ColonneFinance label="Solde à recouvrer" montant={finances?.solde ?? 0} total={totalDu} accent="or" />
           </div>
+        </div>
+      )}
+
+      {/* Composition du Barreau — démographie & ancienneté (tous les rôles). */}
+      {demo && (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <CarteRepartition titre="Répartition par qualité" sousTitre={`${demo.total} membres`} lignes={parQualite} />
+          <CarteRepartition titre="Situation des inscrits" lignes={parStatut} />
+          <CarteRepartition titre="Parité" sousTitre={pariteConnue ? `${pctH}% H · ${pctF}% F` : "non renseigné"} lignes={parParite} />
+          <CarteRepartition titre="Inscriptions par décennie" sousTitre="ancienneté au serment" lignes={parDecennie} />
         </div>
       )}
 

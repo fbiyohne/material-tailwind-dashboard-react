@@ -14,11 +14,13 @@ async function login(email: string) {
 let sg = "";
 let tr = "";
 let admin = "";
+let bat = "";
 
 beforeAll(async () => {
   sg = (await login("sg@barreau-pn.cg")).token;
   tr = (await login("tresoriere@barreau-pn.cg")).token;
   admin = (await login("admin@barreau-pn.cg")).token;
+  bat = (await login("batonnier@barreau-pn.cg")).token;
 });
 
 describe("Authentification & sécurité", () => {
@@ -464,6 +466,25 @@ describe("Élections — scrutins (confidentialité, unicité, deux modalités)"
 
     // publication → Conseil recomposé
     expect((await request(app).post(`/api/scrutins/${sid}/publier`).set(...bearer(sg))).status).toBe(200);
+  });
+});
+
+describe("Membres — sexe & démographie du tableau de bord", () => {
+  it("enregistre le sexe et l'expose dans le tableau de bord", async () => {
+    const m = await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: `PARITE Test ${Date.now()}`, qualite: "AVOCAT", sexe: "F" });
+    expect(m.status).toBe(201);
+    expect(m.body.sexe).toBe("F");
+    const dash = await request(app).get("/api/dashboard").set(...bearer(sg));
+    expect(dash.status).toBe(200);
+    expect(dash.body.demographie).toBeTruthy();
+    expect(dash.body.demographie.parite.F).toBeGreaterThanOrEqual(1);
+    expect(typeof dash.body.demographie.parQualite.AVOCAT).toBe("number");
+    expect(Array.isArray(dash.body.demographie.parDecennie)).toBe(true);
+    // Le Bâtonnier voit la démographie mais pas les finances (RG-15).
+    const dashB = await request(app).get("/api/dashboard").set(...bearer(bat));
+    expect(dashB.body.demographie).toBeTruthy();
+    expect(dashB.body.finances).toBeUndefined();
+    await request(app).delete(`/api/membres/${m.body.id}`).set(...bearer(admin));
   });
 });
 

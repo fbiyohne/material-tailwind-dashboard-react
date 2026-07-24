@@ -46,7 +46,7 @@ membresRouter.get(
     // fiche GET /:id, réservée à SG/Bâtonnier (RG-15).
     const selectAnnuaire = {
       id: true, num: true, numInscription: true, nom: true, qualite: true,
-      statut: true, cabinet: true, tel: true, email: true, dateInscription: true,
+      statut: true, sexe: true, cabinet: true, tel: true, email: true, dateInscription: true,
       dateServment: true, dureeMois: true, maitreStage: true,
     } satisfies Prisma.MembreSelect;
 
@@ -124,6 +124,7 @@ const inscriptionSchema = z.object({
   nom: z.string().min(1),
   qualite: z.enum(["AVOCAT", "STAGIAIRE", "HONORAIRE"]).default("AVOCAT"),
   statut: z.enum(["INSCRIT", "SUSPENDU", "RADIE", "OMIS", "HONORAIRE", "STAGIAIRE"]).default("INSCRIT"),
+  sexe: z.enum(["H", "F"]).nullable().optional(),
   cabinet: z.string().optional(),
   tel: z.string().optional(),
   email: z.string().optional(),
@@ -153,6 +154,7 @@ membresRouter.post(
         nom: data.nom,
         qualite: data.qualite,
         statut: data.statut,
+        sexe: data.sexe ?? null,
         cabinet: data.cabinet,
         tel: data.tel,
         email: data.email,
@@ -181,6 +183,7 @@ const importRowSchema = z.object({
   nom: z.string().min(1),
   qualite: z.string().optional(),
   statut: z.string().optional(),
+  sexe: z.string().optional(),
   cabinet: z.string().optional(),
   tel: z.string().optional(),
   email: z.string().optional(),
@@ -198,6 +201,9 @@ const QUALITES: Record<string, "AVOCAT" | "STAGIAIRE" | "HONORAIRE"> = { avocat:
 const STATUTS: Record<string, "INSCRIT" | "SUSPENDU" | "RADIE" | "OMIS" | "HONORAIRE" | "STAGIAIRE"> = {
   inscrit: "INSCRIT", suspendu: "SUSPENDU", radie: "RADIE", "radié": "RADIE", omis: "OMIS", honoraire: "HONORAIRE", stagiaire: "STAGIAIRE",
 };
+// Normalise le sexe importé (« H »/« Homme »/« M »/« Masculin » → H ; « F »/« Femme » → F).
+const SEXES: Record<string, "H" | "F"> = { h: "H", homme: "H", m: "H", masculin: "H", f: "F", femme: "F", feminin: "F", "féminin": "F" };
+const normSexe = (v?: string): "H" | "F" | undefined => SEXES[(v ?? "").toString().trim().toLowerCase()];
 const norm = <T,>(v: string | undefined, map: Record<string, T>, def: T): T => map[(v ?? "").toString().trim().toLowerCase()] ?? def;
 const toDate = (v?: string) => { if (!v) return undefined; const d = new Date(v); return Number.isNaN(d.getTime()) ? undefined : d; };
 
@@ -219,7 +225,7 @@ membresRouter.post(
         const qualite = norm(r.qualite, QUALITES, qualiteDefaut);
         const statut = norm(r.statut, STATUTS, qualite === "STAGIAIRE" ? "STAGIAIRE" : qualite === "HONORAIRE" ? "HONORAIRE" : "INSCRIT");
         const base = {
-          nom: r.nom, qualite, statut,
+          nom: r.nom, qualite, statut, sexe: normSexe(r.sexe),
           cabinet: r.cabinet, tel: r.tel, email: r.email, rccm: r.rccm, cnss: r.cnss,
           adresse: r.adresse, observations: r.observations, maitreStage: r.maitreStage,
           dateNaissance: toDate(r.dateNaissance), dateServment: toDate(r.dateServment),

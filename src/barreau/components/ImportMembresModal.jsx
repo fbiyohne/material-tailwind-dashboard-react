@@ -14,6 +14,7 @@ const COLONNES = {
   nom: ["nom", "nometprenom", "nomprenom", "avocat", "nomcomplet"],
   qualite: ["qualite"],
   statut: ["statut", "situation"],
+  sexe: ["sexe", "genre", "civilite"],
   cabinet: ["cabinet"],
   tel: ["tel", "telephone", "telephoneportable", "contact"],
   email: ["email", "courriel", "mail", "adresseemail"],
