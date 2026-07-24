@@ -206,13 +206,17 @@ membresRouter.post(
   requireRole("SECRETAIRE_GENERAL"),
   asyncH(async (req, res) => {
     const rows = z.array(importRowSchema).max(2000).parse(req.body?.membres ?? []);
+    // Qualité par défaut des lignes sans colonne « qualité » explicite. Permet à la
+    // page « Avocats stagiaires » d'importer directement des stagiaires ; défaut
+    // « AVOCAT » (rétro-compatible avec la page « Avocats inscrits »).
+    const qualiteDefaut = z.enum(["AVOCAT", "STAGIAIRE", "HONORAIRE"]).catch("AVOCAT").parse(req.body?.qualiteDefaut);
     let crees = 0;
     let maj = 0;
     const erreurs: { ligne: number; message: string }[] = [];
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
       try {
-        const qualite = norm(r.qualite, QUALITES, "AVOCAT");
+        const qualite = norm(r.qualite, QUALITES, qualiteDefaut);
         const statut = norm(r.statut, STATUTS, qualite === "STAGIAIRE" ? "STAGIAIRE" : qualite === "HONORAIRE" ? "HONORAIRE" : "INSCRIT");
         const base = {
           nom: r.nom, qualite, statut,

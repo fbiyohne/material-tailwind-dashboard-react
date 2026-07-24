@@ -47,7 +47,7 @@ function mapperLigne(obj) {
  * numéro d'inscription. Colonnes reconnues : num, nom, qualité, statut, cabinet,
  * téléphone, email, rccm, cnss, adresse, observations, maître de stage, dates.
  */
-export function ImportMembresModal({ open, onClose, onDone }) {
+export function ImportMembresModal({ open, onClose, onDone, qualiteDefaut, title, description }) {
   const toast = useToast();
   const [rows, setRows] = useState([]);
   const [nomFichier, setNomFichier] = useState("");
@@ -80,7 +80,7 @@ export function ImportMembresModal({ open, onClose, onDone }) {
   const lancer = async () => {
     setEnCours(true);
     try {
-      const r = await importerMembres(rows);
+      const r = await importerMembres(rows, qualiteDefaut);
       setResume(r);
       toast.success(`Import terminé : ${r.crees} créé(s), ${r.maj} mis à jour.`);
       onDone?.();
@@ -95,7 +95,7 @@ export function ImportMembresModal({ open, onClose, onDone }) {
     <Modal
       open={open}
       onClose={() => { reset(); onClose(); }}
-      title="Importer le tableau du Barreau"
+      title={title || "Importer le tableau du Barreau"}
       footer={
         <>
           <button className="bpn-btn bpn-btn-ghost" onClick={() => { reset(); onClose(); }}>Fermer</button>
@@ -107,9 +107,13 @@ export function ImportMembresModal({ open, onClose, onDone }) {
     >
       <div className="space-y-4">
         <p className="text-sm leading-6 text-gris">
-          Sélectionnez un fichier <strong>.xlsx</strong> ou <strong>.csv</strong>. Les avocats sont mis à jour
-          par numéro d'inscription (les nouveaux sont créés). Colonnes reconnues : num, nom, qualité, statut,
-          cabinet, téléphone, email, rccm, cnss, adresse, observations, maître de stage, dates.
+          {description || (
+            <>
+              Sélectionnez un fichier <strong>.xlsx</strong> ou <strong>.csv</strong>. Les avocats sont mis à jour
+              par numéro d'inscription (les nouveaux sont créés). Colonnes reconnues : num, nom, qualité, statut,
+              cabinet, téléphone, email, rccm, cnss, adresse, observations, maître de stage, dates.
+            </>
+          )}
         </p>
 
         <label className="flex cursor-pointer items-center justify-center gap-2 rounded border-2 border-dashed border-grisM bg-grisL/40 px-4 py-6 text-sm text-gris transition hover:border-or hover:text-encre">
@@ -133,7 +137,7 @@ export function ImportMembresModal({ open, onClose, onDone }) {
                     <tr key={i} className="border-t border-grisL">
                       <td className="px-3 py-1.5 font-mono text-gris">{r.num}</td>
                       <td className="px-3 py-1.5">Me {r.nom}</td>
-                      <td className="px-3 py-1.5 text-gris">{r.qualite ?? "avocat"}</td>
+                      <td className="px-3 py-1.5 text-gris">{r.qualite ?? (qualiteDefaut ? qualiteDefaut.toLowerCase() : "avocat")}</td>
                       <td className="px-3 py-1.5 text-gris">{r.statut ?? "—"}</td>
                     </tr>
                   ))}
@@ -163,6 +167,10 @@ ImportMembresModal.propTypes = {
   open: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
   onDone: PropTypes.func,
+  // Qualité appliquée aux lignes sans colonne « qualité » explicite (ex. "STAGIAIRE").
+  qualiteDefaut: PropTypes.oneOf(["AVOCAT", "STAGIAIRE", "HONORAIRE"]),
+  title: PropTypes.string,
+  description: PropTypes.node,
 };
 
 export default ImportMembresModal;

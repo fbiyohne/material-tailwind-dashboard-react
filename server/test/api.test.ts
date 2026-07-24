@@ -384,6 +384,40 @@ describe("Cycle du stage — rapports & validation (Bâtonnier)", () => {
   });
 });
 
+describe("Import du tableau — qualité par défaut (qualiteDefaut)", () => {
+  it("importe en STAGIAIRE quand qualiteDefaut=STAGIAIRE et aucune colonne qualité", async () => {
+    const num = 900000 + (Date.now() % 10000);
+    const r = await request(app).post("/api/membres/import").set(...bearer(sg))
+      .send({ membres: [{ num, nom: `IMPORT Stagiaire ${num}` }], qualiteDefaut: "STAGIAIRE" });
+    expect(r.status).toBe(200);
+    expect(r.body.crees).toBe(1);
+    const m = await prisma.membre.findUnique({ where: { num } });
+    expect(m?.qualite).toBe("STAGIAIRE");
+    expect(m?.statut).toBe("STAGIAIRE"); // statut dérivé de la qualité stagiaire
+    await prisma.membre.delete({ where: { num } });
+  });
+
+  it("défaut AVOCAT sans qualiteDefaut (rétro-compatible page Avocats inscrits)", async () => {
+    const num = 910000 + (Date.now() % 10000);
+    const r = await request(app).post("/api/membres/import").set(...bearer(sg))
+      .send({ membres: [{ num, nom: `IMPORT Avocat ${num}` }] });
+    expect(r.status).toBe(200);
+    const m = await prisma.membre.findUnique({ where: { num } });
+    expect(m?.qualite).toBe("AVOCAT");
+    await prisma.membre.delete({ where: { num } });
+  });
+
+  it("une colonne qualité explicite prime sur qualiteDefaut", async () => {
+    const num = 920000 + (Date.now() % 10000);
+    const r = await request(app).post("/api/membres/import").set(...bearer(sg))
+      .send({ membres: [{ num, nom: `IMPORT Explicite ${num}`, qualite: "honoraire" }], qualiteDefaut: "STAGIAIRE" });
+    expect(r.status).toBe(200);
+    const m = await prisma.membre.findUnique({ where: { num } });
+    expect(m?.qualite).toBe("HONORAIRE");
+    await prisma.membre.delete({ where: { num } });
+  });
+});
+
 describe("Élections — scrutins (confidentialité, unicité, deux modalités)", () => {
   it("cloisonnement : un avocat ne gère pas les scrutins (403)", async () => {
     const av = await creerAvocatEspace("scrutin-cloison");

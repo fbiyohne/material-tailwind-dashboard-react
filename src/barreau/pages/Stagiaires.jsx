@@ -1,16 +1,30 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { PrinterIcon, TrashIcon } from "@heroicons/react/24/outline";
-import { Badge, useToast, useConfirm, PageHeader, TableSkeleton, ErrorState } from "../components";
+import { PrinterIcon, TrashIcon, ArrowUpTrayIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
+import { Badge, useToast, useConfirm, PageHeader, TableSkeleton, ErrorState, ImportMembresModal } from "../components";
 import { useAuth } from "../auth/AuthContext";
 import { formatDate } from "../utils/format";
 import { infoStage } from "../data/derivations";
+import { telechargerCsv } from "../utils/exportCsv";
 import { listerMembres, supprimerMembre } from "../api/resources";
 
 const FILTRES = [
   { value: "tous", label: "Tous" },
   { value: "encours", label: "En cours" },
   { value: "termine", label: "Terminés" },
+];
+
+// Colonnes de l'export CSV — spécifiques au stage (le champ stage est déjà dérivé
+// via infoStage). Chaque ligne exportée est un objet { membre, stage }.
+const COLONNES_CSV = [
+  { label: "N°", valeur: ({ membre }) => membre.num },
+  { label: "Stagiaire", valeur: ({ membre }) => `Me ${membre.nom}` },
+  { label: "Cabinet", valeur: ({ membre }) => membre.cabinet },
+  { label: "Serment", valeur: ({ stage }) => formatDate(stage.debut) },
+  { label: "Maître de stage", valeur: ({ stage }) => stage.maitreStage },
+  { label: "Fin prévue", valeur: ({ stage }) => formatDate(stage.fin) },
+  { label: "Progression", valeur: ({ stage }) => `${stage.progression}%` },
+  { label: "Statut", valeur: ({ stage }) => (stage.termine ? "Terminé" : "En cours") },
 ];
 
 function CarteStagiaire({ membre, stage, onFiche, onSupprimer }) {
@@ -81,10 +95,12 @@ export function Stagiaires() {
   const confirm = useConfirm();
   const { user } = useAuth();
   const estAdmin = user?.role === "ADMIN";
+  const peutImporter = user?.role === "SECRETAIRE_GENERAL" || user?.role === "ADMIN";
   const [membres, setMembres] = useState([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState(false);
   const [filtre, setFiltre] = useState("tous");
+  const [importOuvert, setImportOuvert] = useState(false);
 
   const charger = useCallback(() => {
     setChargement(true);
@@ -143,6 +159,23 @@ export function Stagiaires() {
           <PrinterIcon className="h-4 w-4" />
           Liste
         </button>
+        <button
+          type="button"
+          className="bpn-btn bpn-btn-ghost !py-1.5 text-xs"
+          disabled={stagiaires.length === 0}
+          onClick={() => telechargerCsv("Stagiaires", COLONNES_CSV, stagiaires)}
+        >
+          <ArrowDownTrayIcon className="h-4 w-4" /> Export CSV
+        </button>
+        {peutImporter && (
+          <button
+            type="button"
+            className="bpn-btn bpn-btn-ghost !py-1.5 text-xs"
+            onClick={() => setImportOuvert(true)}
+          >
+            <ArrowUpTrayIcon className="h-4 w-4" /> Importer (Excel/CSV)
+          </button>
+        )}
       </PageHeader>
 
       {chargement ? (
@@ -195,6 +228,21 @@ export function Stagiaires() {
         </table>
       </div>
 
+      <ImportMembresModal
+        open={importOuvert}
+        onClose={() => setImportOuvert(false)}
+        onDone={charger}
+        qualiteDefaut="STAGIAIRE"
+        title="Importer des avocats stagiaires"
+        description={
+          <>
+            Sélectionnez un fichier <strong>.xlsx</strong> ou <strong>.csv</strong>. Les stagiaires sont mis à jour
+            par numéro d'inscription (les nouveaux sont créés). Sans colonne « qualité », les lignes sont importées
+            comme <strong>stagiaires</strong>. Colonnes reconnues : num, nom, qualité, statut, cabinet, téléphone,
+            email, adresse, observations, maître de stage, date de serment, dates.
+          </>
+        }
+      />
     </div>
   );
 }
