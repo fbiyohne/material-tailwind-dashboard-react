@@ -540,6 +540,11 @@ espaceRouter.get(
     });
     const emarges = await prisma.emargement.findMany({ where: { membreId: moi, scrutinId: { in: scrutins.map((s) => s.id) } }, select: { scrutinId: true } });
     const aVote = new Set(emarges.map((e) => e.scrutinId));
+    // Éligibilité électorale de l'avocat (même règle que le POST /voter) : exposée
+    // pour que l'espace affiche l'état plutôt que de laisser buter sur un 403.
+    const annee = new Date().getFullYear();
+    const membre = await prisma.membre.findUnique({ where: { id: moi }, include: { cotisations: { where: { annee } } } });
+    const eligible = membre ? eligibiliteElectorale(membre, membre.cotisations[0] ?? null).eligible : false;
     res.json(
       scrutins.map((s) => ({
         id: s.id,
@@ -548,6 +553,7 @@ espaceRouter.get(
         statut: s.statut,
         nbSieges: s.nbSieges,
         aDejaVote: aVote.has(s.id),
+        eligible,
         // Les voix ne sont révélées qu'une fois le scrutin publié.
         candidats: s.candidats.map((c) => ({ id: c.id, nom: c.nom, ...(s.statut === "PUBLIE" ? { voix: c.voix } : {}) })),
       }))

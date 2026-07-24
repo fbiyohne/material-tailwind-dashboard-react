@@ -471,11 +471,17 @@ model Bulletin {
 
 /// Calendrier éditorial mensuel de la Lettre du Bâtonnier (FR-BAT).
 model CalendrierEditorial {
-  id     Int    @id @default(autoincrement())
-  mois   String @unique
-  theme  String
-  statut String @default("a_rediger")
-  ordre  Int    @default(0)
+  id      Int       @id @default(autoincrement())
+  mois    String    @unique
+  theme   String
+  statut  String    @default("a_rediger")
+  ordre   Int       @default(0)
+  /// Contenu rédigé de l'article (projet IA amendé par le Bâtonnier). Persisté
+  /// pour survivre aux rechargements et être partagé entre postes.
+  texte   String?
+  /// true : brouillon issu d'un gabarit (IA non configurée) ; false : rédigé par l'IA.
+  simule  Boolean   @default(true)
+  dateMaj DateTime?
 }
 
 /// Messagerie interne — fil de discussion entre un avocat et l'administration

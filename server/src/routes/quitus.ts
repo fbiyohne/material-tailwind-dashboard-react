@@ -84,6 +84,12 @@ quitusRouter.post(
       const numero = await prochainNumeroQuitus(annee);
       try {
         quitus = await prisma.$transaction(async (tx) => {
+          // Un seul quitus par avocat et par exercice : bloque les doublons
+          // (double-clic, appels concurrents) — le registre reste sans redondance.
+          const existant = await tx.quitus.findFirst({ where: { membreId, annee } });
+          if (existant) {
+            throw new HttpError(409, "Un quitus a déjà été émis pour cet avocat au titre de cet exercice.");
+          }
           const cotisation = await tx.cotisation.findUnique({ where: { membreId_annee: { membreId, annee } }, include: { membre: true } });
           if (!cotisation || !eligibleQuitus(cotisation)) {
             throw new HttpError(409, "Quitus bloqué : l'avocat doit être à jour ET validé par la Trésorière (BR-01)");

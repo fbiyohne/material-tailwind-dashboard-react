@@ -1,6 +1,7 @@
 import { Router } from "express";
+import { z } from "zod";
 import { prisma } from "../prisma.js";
-import { asyncH } from "../middleware/error.js";
+import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 
 /**
@@ -10,11 +11,42 @@ import { requireAuth, requireRole } from "../middleware/auth.js";
 export const calendrierEditorialRouter = Router();
 calendrierEditorialRouter.use(requireAuth, requireRole("SECRETAIRE_GENERAL", "BATONNIER"));
 
-/** GET /calendrier-editorial — entrées du calendrier, ordonnées. */
+/** GET /calendrier-editorial — entrées du calendrier (thème + article persisté), ordonnées. */
 calendrierEditorialRouter.get(
   "/",
   asyncH(async (_req, res) => {
     const entrees = await prisma.calendrierEditorial.findMany({ orderBy: { ordre: "asc" } });
     res.json(entrees);
+  })
+);
+
+const majSchema = z.object({
+  texte: z.string(),
+  // "a_rediger" | "redige" | "publie" — l'UI ne persiste que redige/publie.
+  statut: z.enum(["a_rediger", "redige", "publie"]).optional(),
+  simule: z.boolean().optional(),
+});
+
+/**
+ * PATCH /calendrier-editorial/:mois — enregistre (ou publie) l'article d'un mois.
+ * Persiste le texte amendé par le Bâtonnier pour qu'il survive au rechargement.
+ */
+calendrierEditorialRouter.patch(
+  "/:mois",
+  asyncH(async (req, res) => {
+    const mois = req.params.mois;
+    const data = majSchema.parse(req.body);
+    const entree = await prisma.calendrierEditorial.findUnique({ where: { mois } });
+    if (!entree) throw new HttpError(404, "Mois introuvable au calendrier éditorial.");
+    const maj = await prisma.calendrierEditorial.update({
+      where: { mois },
+      data: {
+        texte: data.texte,
+        ...(data.statut ? { statut: data.statut } : {}),
+        ...(data.simule !== undefined ? { simule: data.simule } : {}),
+        dateMaj: new Date(),
+      },
+    });
+    res.json(maj);
   })
 );
