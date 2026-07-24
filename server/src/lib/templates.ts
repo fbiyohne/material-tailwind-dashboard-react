@@ -153,11 +153,14 @@ export function tableauOrdreHtml(
     ? `<h3 style="font-family:'Playfair Display',serif;color:#1A3A6B;font-size:16px;margin:18px 0 6px"><span style="color:#C4990A">${numRomain[sections.length] ?? sections.length + 1}.</span> Personnes morales <span style="font-size:11px;color:#7A756A">(${extras.cabinets.length})</span></h3>${cabinetsTable(extras.cabinets)}`
     : "";
   const signataire = extras?.conseil?.batonnier || "Me BIKINDOU Audrey Séverin";
+  const nbInscrits = sections.reduce((n, s) => n + s.membres.length, 0);
+  const nbPM = extras?.cabinets?.length ?? 0;
+  const contexte = `<div style="text-align:center;font-size:11px;color:#7A756A;margin:-10px 0 18px">${nbInscrits} inscrit${nbInscrits > 1 ? "s" : ""} au tableau · ${nbPM} personne${nbPM > 1 ? "s" : ""} morale${nbPM > 1 ? "s" : ""} · arrêté au ${fmtDate(date)}</div>`;
   return documentHtml({
     org: "Le Bâtonnier",
     title: "Tableau de l'Ordre",
     reference: `Arrêté au ${fmtDate(date)}`,
-    bodyHtml: `${conseilBloc(extras?.conseil)}<p style="margin-bottom:4px">Tableau de l'Ordre des Avocats du Barreau de Pointe-Noire, dressé par ordre d'ancienneté.</p>${sections.map(section).join("")}${cabinetsSection}`,
+    bodyHtml: `${contexte}${conseilBloc(extras?.conseil)}<p style="margin-bottom:4px">Tableau de l'Ordre des Avocats du Barreau de Pointe-Noire, dressé par ordre d'ancienneté.</p>${sections.map(section).join("")}${cabinetsSection}`,
     signataire: { role: "Le Bâtonnier", nom: signataire },
     date,
   });

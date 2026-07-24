@@ -514,6 +514,10 @@ describe("Tableau de l'Ordre — document officiel (Conseil en en-tête, section
     // Signature = bâtonnier réel (et non l'intitulé codé en dur)
     const pied = html.slice(html.indexOf('class="sign"'));
     expect(pied).toContain("Me BÂTONNIER Test");
+    // Ligne de contexte sous le titre : inscrits · personnes morales · date d'arrêté
+    expect(html).toContain("1 inscrit au tableau");
+    expect(html).toContain("1 personne morale");
+    expect(html).toMatch(/arrêté au[\s\S]*2026/);
   });
 
   it("reste valable sans Conseil ni personnes morales (rétro-compatible)", () => {
