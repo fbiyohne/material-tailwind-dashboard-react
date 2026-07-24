@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll } from "vitest";
 import request from "supertest";
 import { creerApp } from "../src/app.js";
 import { prisma } from "../src/prisma.js";
+import { tableauOrdreHtml } from "../src/lib/templates.js";
 
 const app = creerApp();
 const bearer = (t: string) => ["Authorization", `Bearer ${t}`] as const;
@@ -485,6 +486,41 @@ describe("Membres — sexe & démographie du tableau de bord", () => {
     expect(dashB.body.demographie).toBeTruthy();
     expect(dashB.body.finances).toBeUndefined();
     await request(app).delete(`/api/membres/${m.body.id}`).set(...bearer(admin));
+  });
+});
+
+describe("Tableau de l'Ordre — document officiel (Conseil en en-tête, sections, signature)", () => {
+  it("compose le PDF avec le Conseil, les personnes morales et signe du bâtonnier réel", () => {
+    const html = tableauOrdreHtml(
+      [{ qualite: "AVOCAT", membres: [{ rang: 1, nom: "DUPONT Jean", statut: "INSCRIT", cabinet: "Cabinet X", dateInscription: "2010-01-01" }] }],
+      new Date("2026-07-24"),
+      {
+        conseil: {
+          batonnier: "Me BÂTONNIER Test",
+          bureau: [{ fonction: "Secrétaire Général", sigle: "SGO", nom: "Me SG Test" }],
+          membres: ["Me Membre Un", "Me Membre Deux"],
+        },
+        cabinets: [{ num: "C1", nom: "Cabinet Associés Test", forme: "Association d'avocats", titulaire: "Titulaire Test", effectif: 3 }],
+      },
+    );
+    // Conseil en en-tête
+    expect(html).toContain("Conseil de l'Ordre");
+    expect(html).toContain("Me BÂTONNIER Test");
+    expect(html).toContain("Secrétaire Général");
+    expect(html).toContain("Me Membre Un");
+    // Section personnes morales
+    expect(html).toContain("Personnes morales");
+    expect(html).toContain("Cabinet Associés Test");
+    // Signature = bâtonnier réel (et non l'intitulé codé en dur)
+    const pied = html.slice(html.indexOf('class="sign"'));
+    expect(pied).toContain("Me BÂTONNIER Test");
+  });
+
+  it("reste valable sans Conseil ni personnes morales (rétro-compatible)", () => {
+    const html = tableauOrdreHtml([{ qualite: "AVOCAT", membres: [{ rang: 1, nom: "SEUL Test", statut: "INSCRIT", cabinet: null, dateInscription: null }] }], new Date());
+    expect(html).toContain("Tableau de l'Ordre");
+    expect(html).not.toContain("Conseil de l'Ordre");
+    expect(html).toContain("Me BIKINDOU Audrey Séverin"); // signataire par défaut
   });
 });
 

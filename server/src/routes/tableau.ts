@@ -3,7 +3,7 @@ import { prisma } from "../prisma.js";
 import { asyncH } from "../middleware/error.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { envoyerPdf } from "../lib/pdf.js";
-import { tableauOrdreHtml } from "../lib/templates.js";
+import { tableauOrdreHtml, type ConseilPdf, type CabinetPdf } from "../lib/templates.js";
 import { archiver } from "../lib/business.js";
 
 /**
@@ -39,12 +39,48 @@ tableauRouter.get(
   })
 );
 
-/** GET /tableau/pdf — tableau officiel en PDF. */
+const SIGLE_ORDRE: Record<string, number> = { SGO: 1, SGA: 2, TG: 3, TGA: 4 };
+
+/** Composition du Conseil de l'Ordre en exercice, mise en forme pour l'en-tête du tableau. */
+async function composerConseil(): Promise<ConseilPdf> {
+  const membres = await prisma.membreConseil.findMany({ where: { actif: true }, orderBy: { ordre: "asc" } });
+  const batonnier = membres.find((m) => m.role === "batonnier")?.nom ?? null;
+  const bureau = membres
+    .filter((m) => m.role === "bureau")
+    .sort((a, b) => (SIGLE_ORDRE[a.sigle ?? ""] ?? 9) - (SIGLE_ORDRE[b.sigle ?? ""] ?? 9))
+    .map((m) => ({ fonction: m.fonction, sigle: m.sigle, nom: m.nom }));
+  const autres = membres.filter((m) => m.role !== "batonnier" && m.role !== "bureau").map((m) => m.nom);
+  return { batonnier, bureau, membres: autres };
+}
+
+/** Personnes morales (conventions déposées), numérotées C1… par ancienneté. */
+async function composerCabinets(): Promise<CabinetPdf[]> {
+  const cabinets = await prisma.cabinet.findMany({
+    where: { statut: "actif", conventionDeposee: true },
+    include: { titulaire: { select: { nom: true } }, membres: { select: { statut: true, dateServment: true } } },
+  });
+  const anciennete = (c: (typeof cabinets)[number]) => {
+    const t = c.membres.map((m) => m.dateServment).filter((d): d is Date => d != null).map((d) => d.getTime());
+    return t.length ? Math.min(...t) : Infinity;
+  };
+  return cabinets
+    .slice()
+    .sort((a, b) => anciennete(a) - anciennete(b) || a.nom.localeCompare(b.nom))
+    .map((c, i) => ({
+      num: `C${i + 1}`,
+      nom: c.nom,
+      forme: c.forme,
+      titulaire: c.titulaire?.nom ?? null,
+      effectif: c.membres.filter((m) => m.statut === "INSCRIT").length,
+    }));
+}
+
+/** GET /tableau/pdf — tableau officiel en PDF (Conseil en en-tête, sections, personnes morales, signature). */
 tableauRouter.get(
   "/pdf",
   asyncH(async (_req, res) => {
-    const { sections } = await composer();
-    await envoyerPdf(res, tableauOrdreHtml(sections, new Date()), `Tableau-de-l-Ordre-${new Date().toISOString().slice(0, 10)}.pdf`);
+    const [{ sections }, conseil, cabinets] = await Promise.all([composer(), composerConseil(), composerCabinets()]);
+    await envoyerPdf(res, tableauOrdreHtml(sections, new Date(), { conseil, cabinets }), `Tableau-de-l-Ordre-${new Date().toISOString().slice(0, 10)}.pdf`);
   })
 );
 

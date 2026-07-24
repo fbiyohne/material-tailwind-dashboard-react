@@ -79,10 +79,67 @@ const liste = (items: string[]) =>
 const QUALITE_TABLEAU: Record<string, string> = { AVOCAT: "Avocats", STAGIAIRE: "Avocats stagiaires", HONORAIRE: "Avocats honoraires" };
 const MENTION_STATUT: Record<string, string> = { SUSPENDU: "Suspendu", OMIS: "Omis" };
 
-/** Tableau de l'Ordre — registre officiel par ordre d'ancienneté, sections par qualité. */
-export function tableauOrdreHtml(sections: { qualite: string; membres: any[] }[], date: Date | string): string {
-  const section = (s: { qualite: string; membres: any[] }) => `
-    <h3 style="font-family:'Playfair Display',serif;color:#1A3A6B;font-size:16px;margin:18px 0 6px">${QUALITE_TABLEAU[s.qualite] ?? s.qualite} <span style="font-size:11px;color:#7A756A">(${s.membres.length})</span></h3>
+/** Composition du Conseil de l'Ordre présentée à un instant donné (en-tête du tableau). */
+export interface ConseilPdf {
+  batonnier?: string | null;
+  bureau: { fonction: string; sigle?: string | null; nom: string }[];
+  membres: string[];
+}
+/** Personne morale (convention déposée) figurant en section III du tableau. */
+export interface CabinetPdf {
+  num: string;
+  nom: string;
+  forme?: string | null;
+  titulaire?: string | null;
+  effectif: number;
+}
+
+/** Bloc « Conseil de l'Ordre » imprimé en tête du tableau officiel. */
+function conseilBloc(conseil?: ConseilPdf): string {
+  if (!conseil || (!conseil.batonnier && conseil.bureau.length === 0 && conseil.membres.length === 0)) return "";
+  const bat = conseil.batonnier
+    ? `<div style="text-align:center;margin-bottom:8px"><div style="font-size:8.5px;text-transform:uppercase;letter-spacing:1.5px;color:#7A756A">Bâtonnier de l'Ordre</div><b style="font-family:'Playfair Display',serif;font-size:15px;color:#1A3A6B">${escapeHtml(conseil.batonnier)}</b></div>`
+    : "";
+  const bureau = conseil.bureau.length
+    ? `<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:8px">${conseil.bureau
+        .map((b) => `<div style="text-align:center;background:#fff;border:1px solid #E9DFBD;border-radius:5px;padding:5px 10px;min-width:120px"><div style="font-size:8.5px;color:#C4990A;font-weight:600;text-transform:uppercase;letter-spacing:.4px">${escapeHtml(b.fonction)}${b.sigle ? ` (${escapeHtml(b.sigle)})` : ""}</div><div style="font-size:12px;font-weight:600;color:#1A3A6B">${escapeHtml(b.nom)}</div></div>`)
+        .join("")}</div>`
+    : "";
+  const membres = conseil.membres.length
+    ? `<div style="font-size:11px;color:#4a4a44;text-align:center;line-height:1.6"><span style="font-size:8.5px;text-transform:uppercase;letter-spacing:1px;color:#7A756A">Membres — </span>${conseil.membres.map((m) => escapeHtml(m)).join(" · ")}</div>`
+    : "";
+  return `<div style="background:#FDF6E3;border:1px solid #E9DFBD;border-radius:6px;padding:12px 16px;margin:2px 0 18px">
+    <div style="text-align:center;font-family:'Playfair Display',serif;color:#1A3A6B;font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px">Conseil de l'Ordre</div>
+    ${bat}${bureau}${membres}</div>`;
+}
+
+/** Section « personnes morales » (conventions déposées) — intro + table, sans titre. */
+function cabinetsTable(cabinets: CabinetPdf[]): string {
+  return `<p style="font-size:10.5px;color:#7A756A;margin:0 0 6px">Cabinets, sociétés et associations d'avocats ayant déposé leur convention à l'Ordre.</p>
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr style="border-bottom:1.5px solid #1A3A6B;color:#7A756A;text-align:left">
+        <th style="padding:5px 6px;width:42px">N°</th><th style="padding:5px 6px">Dénomination</th><th style="padding:5px 6px">Titulaire</th><th style="padding:5px 6px;width:150px">Forme</th><th style="padding:5px 6px;width:64px;text-align:center">Effectif</th></tr></thead>
+      <tbody>${cabinets.map((c) => `<tr style="border-bottom:1px solid #E0DBD0">
+        <td style="padding:5px 6px;font-family:'DM Mono',monospace;color:#C4990A">${escapeHtml(c.num)}</td>
+        <td style="padding:5px 6px"><b>${escapeHtml(c.nom)}</b></td>
+        <td style="padding:5px 6px;color:#7A756A">${c.titulaire ? "Me " + escapeHtml(c.titulaire) : "—"}</td>
+        <td style="padding:5px 6px;color:#7A756A">${c.forme ? escapeHtml(c.forme) : "—"}</td>
+        <td style="padding:5px 6px;text-align:center;font-family:'DM Mono',monospace;color:#1A3A6B">${c.effectif}</td></tr>`).join("")}</tbody>
+    </table>`;
+}
+
+/**
+ * Tableau de l'Ordre — document officiel : Conseil de l'Ordre en en-tête, sections
+ * par qualité (avocats, stagiaires, honoraires), personnes morales, signature du Bâtonnier.
+ */
+export function tableauOrdreHtml(
+  sections: { qualite: string; membres: any[] }[],
+  date: Date | string,
+  extras?: { conseil?: ConseilPdf; cabinets?: CabinetPdf[] },
+): string {
+  const numRomain = ["I", "II", "III", "IV"];
+  const section = (s: { qualite: string; membres: any[] }, i: number) => `
+    <h3 style="font-family:'Playfair Display',serif;color:#1A3A6B;font-size:16px;margin:18px 0 6px"><span style="color:#C4990A">${numRomain[i] ?? i + 1}.</span> ${QUALITE_TABLEAU[s.qualite] ?? s.qualite} <span style="font-size:11px;color:#7A756A">(${s.membres.length})</span></h3>
     <table style="width:100%;border-collapse:collapse;font-size:12px">
       <thead><tr style="border-bottom:1.5px solid #1A3A6B;color:#7A756A;text-align:left">
         <th style="padding:5px 6px;width:42px">N°</th><th style="padding:5px 6px">Nom</th><th style="padding:5px 6px">Cabinet</th><th style="padding:5px 6px;width:120px">Inscription</th></tr></thead>
@@ -92,12 +149,16 @@ export function tableauOrdreHtml(sections: { qualite: string; membres: any[] }[]
         <td style="padding:5px 6px;color:#7A756A">${m.cabinet ? escapeHtml(m.cabinet) : "—"}</td>
         <td style="padding:5px 6px;color:#7A756A">${m.dateInscription ? fmtDate(m.dateInscription) : "—"}</td></tr>`).join("")}</tbody>
     </table>`;
+  const cabinetsSection = extras?.cabinets?.length
+    ? `<h3 style="font-family:'Playfair Display',serif;color:#1A3A6B;font-size:16px;margin:18px 0 6px"><span style="color:#C4990A">${numRomain[sections.length] ?? sections.length + 1}.</span> Personnes morales <span style="font-size:11px;color:#7A756A">(${extras.cabinets.length})</span></h3>${cabinetsTable(extras.cabinets)}`
+    : "";
+  const signataire = extras?.conseil?.batonnier || "Me BIKINDOU Audrey Séverin";
   return documentHtml({
     org: "Le Bâtonnier",
     title: "Tableau de l'Ordre",
     reference: `Arrêté au ${fmtDate(date)}`,
-    bodyHtml: `<p style="margin-bottom:4px">Tableau de l'Ordre des Avocats du Barreau de Pointe-Noire, dressé par ordre d'ancienneté.</p>${sections.map(section).join("")}`,
-    signataire: { role: "Le Bâtonnier", nom: "Me BIKINDOU Audrey Séverin" },
+    bodyHtml: `${conseilBloc(extras?.conseil)}<p style="margin-bottom:4px">Tableau de l'Ordre des Avocats du Barreau de Pointe-Noire, dressé par ordre d'ancienneté.</p>${sections.map(section).join("")}${cabinetsSection}`,
+    signataire: { role: "Le Bâtonnier", nom: signataire },
     date,
   });
 }
