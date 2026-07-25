@@ -3,9 +3,13 @@ import { env, verifierConfigProduction } from "./env.js";
 import { logger } from "./lib/logger.js";
 import { prisma } from "./prisma.js";
 import { initRealtime } from "./lib/realtime.js";
+import { rafraichirIdentite } from "./lib/identiteDocuments.js";
 
 // Rend visibles, au démarrage, les secrets manquants qui dégraderaient en silence.
 verifierConfigProduction((msg) => logger.warn(msg));
+
+// Charge l'identité institutionnelle (documents) depuis les Paramètres au démarrage.
+void rafraichirIdentite();
 
 const server = creerApp().listen(env.port, () => {
   logger.info({ port: env.port, env: env.nodeEnv }, `API Barreau de Pointe-Noire — http://localhost:${env.port}/api`);

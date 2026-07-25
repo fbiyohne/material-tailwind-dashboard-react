@@ -1,20 +1,45 @@
+import { useEffect, useState } from "react";
 import PropTypes from "prop-types";
+import { identite, logoInstitution, onConfigChange } from "../data/config";
 
-/** Sceau officiel du Barreau (SVG) — balance entourée de la dénomination. */
+/**
+ * Logo officiel du Barreau — source unique (Paramètres). Si un logo a été
+ * téléversé, il est affiché partout ; sinon on rend le sceau dessiné (balance)
+ * dont le texte reprend la dénomination / l'ordre configurés. Réagit aux
+ * changements de configuration (mise à jour immédiate après enregistrement).
+ */
 export function Sceau({ size = 84 }) {
+  // Re-rend le composant lorsque la configuration vivante change (logo/texte).
+  const [, forcer] = useState(0);
+  useEffect(() => onConfigChange(() => forcer((n) => n + 1)), []);
+
+  const logo = logoInstitution();
+  if (logo) {
+    return (
+      <img
+        src={logo}
+        alt={`Logo — ${identite().denomination}`}
+        width={size}
+        height={size}
+        style={{ width: size, height: size, objectFit: "contain" }}
+      />
+    );
+  }
+
+  const { denomination, ordre } = identite();
   return (
-    <svg width={size} height={size} viewBox="0 0 100 100" role="img" aria-label="Sceau du Barreau de Pointe-Noire">
+    <svg width={size} height={size} viewBox="0 0 100 100" role="img" aria-label={`Sceau — ${denomination}`}>
       <defs>
         <path id="sceau-haut" d="M 18,50 A 32,32 0 0 1 82,50" />
         <path id="sceau-bas" d="M 82,52 A 32,32 0 0 1 18,52" />
       </defs>
       <circle cx="50" cy="50" r="47" fill="none" stroke="#C4990A" strokeWidth="1.4" />
       <circle cx="50" cy="50" r="42" fill="none" stroke="#C4990A" strokeWidth="0.6" />
-      <text fill="#1A3A6B" fontSize="6.5" fontWeight="600" letterSpacing="1.1">
-        <textPath href="#sceau-haut" startOffset="50%" textAnchor="middle">ORDRE NATIONAL DES AVOCATS</textPath>
+      <text fill="#1A3A6B" fontSize="6" fontWeight="600" letterSpacing="0.8">
+        <textPath href="#sceau-haut" startOffset="50%" textAnchor="middle">{(ordre || "").toUpperCase()}</textPath>
       </text>
-      <text fill="#1A3A6B" fontSize="6.5" fontWeight="600" letterSpacing="1.1">
-        <textPath href="#sceau-bas" startOffset="50%" textAnchor="middle">BARREAU DE POINTE-NOIRE</textPath>
+      <text fill="#1A3A6B" fontSize="6" fontWeight="600" letterSpacing="0.8">
+        <textPath href="#sceau-bas" startOffset="50%" textAnchor="middle">{(denomination || "").toUpperCase()}</textPath>
       </text>
       {/* Balance de la justice */}
       <g stroke="#1A3A6B" strokeWidth="1.4" fill="none" strokeLinecap="round" strokeLinejoin="round">

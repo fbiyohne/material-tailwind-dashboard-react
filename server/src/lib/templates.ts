@@ -1,9 +1,17 @@
 /** Gabarits HTML des documents officiels (rendus en PDF par Puppeteer). */
 
 import { esc as escapeHtml, fmtDateFr as fmtDate } from "./documentsCommun.js";
+import { identite } from "./identiteDocuments.js";
 
-/** Sceau officiel (SVG) — balance entourée de la dénomination. */
-const SCEAU = `
+/**
+ * Logo officiel des documents — source unique (Paramètres). Si un logo a été
+ * téléversé (data URI image), il est utilisé partout ; sinon on rend le sceau
+ * dessiné (balance) dont le texte reprend la dénomination / l'ordre configurés.
+ */
+function sceau(): string {
+  const id = identite();
+  if (id.logo) return `<img src="${id.logo}" alt="Logo" style="width:84px;height:84px;object-fit:contain" />`;
+  return `
 <svg width="84" height="84" viewBox="0 0 100 100">
   <defs>
     <path id="h" d="M 18,50 A 32,32 0 0 1 82,50" />
@@ -11,14 +19,15 @@ const SCEAU = `
   </defs>
   <circle cx="50" cy="50" r="47" fill="none" stroke="#C4990A" stroke-width="1.4" />
   <circle cx="50" cy="50" r="42" fill="none" stroke="#C4990A" stroke-width="0.6" />
-  <text fill="#1A3A6B" font-size="6.5" font-weight="600" letter-spacing="1.1"><textPath href="#h" startOffset="50%" text-anchor="middle">ORDRE NATIONAL DES AVOCATS</textPath></text>
-  <text fill="#1A3A6B" font-size="6.5" font-weight="600" letter-spacing="1.1"><textPath href="#b" startOffset="50%" text-anchor="middle">BARREAU DE POINTE-NOIRE</textPath></text>
+  <text fill="#1A3A6B" font-size="6" font-weight="600" letter-spacing="0.8"><textPath href="#h" startOffset="50%" text-anchor="middle">${escapeHtml(id.ordre.toUpperCase())}</textPath></text>
+  <text fill="#1A3A6B" font-size="6" font-weight="600" letter-spacing="0.8"><textPath href="#b" startOffset="50%" text-anchor="middle">${escapeHtml(id.denomination.toUpperCase())}</textPath></text>
   <g stroke="#1A3A6B" stroke-width="1.4" fill="none" stroke-linecap="round">
     <line x1="50" y1="37" x2="50" y2="63" /><line x1="44" y1="63" x2="56" y2="63" /><line x1="38" y1="42" x2="62" y2="42" />
     <line x1="38" y1="42" x2="38" y2="49" /><path d="M33,49 Q38,54 43,49" />
     <line x1="62" y1="42" x2="62" y2="49" /><path d="M57,49 Q62,54 67,49" />
   </g>
 </svg>`;
+}
 
 interface DocOptions {
   org: string;
@@ -57,18 +66,18 @@ export function documentHtml({ org, title, reference, bodyHtml, signataire, date
   .mention { border-top:1px solid #E0DBD0; padding:8px 34px; text-align:center; font-size:8px; letter-spacing:2px; text-transform:uppercase; color:#7A756A; }
 </style></head><body>
   <div class="doc">
-    <div class="head"><div class="org">Barreau de Pointe-Noire</div><div class="sub">Ordre National des Avocats du Congo · ${org}</div></div>
+    <div class="head"><div class="org">${escapeHtml(identite().denomination)}</div><div class="sub">${escapeHtml(identite().ordre)} · ${org}</div></div>
     <div class="bar"></div>
     <div class="body">
       <div class="title">${title}</div>
       ${reference ? `<div class="ref">${reference}</div>` : '<div style="margin-bottom:18px"></div>'}
       <div class="content">${bodyHtml}</div>
       <div class="foot">
-        <div style="display:flex;align-items:flex-end;gap:12px">${SCEAU}<div class="date">Fait à Pointe-Noire,<br>le ${fmtDate(date)}</div></div>
+        <div style="display:flex;align-items:flex-end;gap:12px">${sceau()}<div class="date">Fait à Pointe-Noire,<br>le ${fmtDate(date)}</div></div>
         <div class="sign"><div class="role">${signataire.role}</div><div class="nom">${signataire.nom}</div></div>
       </div>
     </div>
-    <div class="mention">Document officiel · Ordre National des Avocats du Congo · Barreau de Pointe-Noire</div>
+    <div class="mention">Document officiel · ${escapeHtml(identite().ordre)} · ${escapeHtml(identite().denomination)}</div>
   </div>
 </body></html>`;
 }
@@ -152,7 +161,7 @@ export function tableauOrdreHtml(
   const cabinetsSection = extras?.cabinets?.length
     ? `<h3 style="font-family:'Playfair Display',serif;color:#1A3A6B;font-size:16px;margin:18px 0 6px"><span style="color:#C4990A">${numRomain[sections.length] ?? sections.length + 1}.</span> Personnes morales <span style="font-size:11px;color:#7A756A">(${extras.cabinets.length})</span></h3>${cabinetsTable(extras.cabinets)}`
     : "";
-  const signataire = extras?.conseil?.batonnier || "Me BIKINDOU Audrey Séverin";
+  const signataire = extras?.conseil?.batonnier || identite().batonnier;
   const nbInscrits = sections.reduce((n, s) => n + s.membres.length, 0);
   const nbPM = extras?.cabinets?.length ?? 0;
   const contexte = `<div style="text-align:center;font-size:11px;color:#7A756A;margin:-10px 0 18px">${nbInscrits} inscrit${nbInscrits > 1 ? "s" : ""} au tableau · ${nbPM} personne${nbPM > 1 ? "s" : ""} morale${nbPM > 1 ? "s" : ""} · arrêté au ${fmtDate(date)}</div>`;
@@ -175,7 +184,7 @@ export function attestationHtml(membre: { nom: string; num: number; dateInscript
     bodyHtml: `
       <p>Le Bâtonnier de l'Ordre des Avocats du Barreau de Pointe-Noire atteste que <b>Me ${escapeHtml(membre.nom)}</b> est inscrit(e) au Tableau de l'Ordre des Avocats du Barreau de Pointe-Noire sous le numéro <b>${membre.num}</b>${depuis}.</p>
       <p style="margin-top:12px">La présente attestation est délivrée à l'intéressé(e) pour servir et valoir ce que de droit.</p>`,
-    signataire: { role: "Le Bâtonnier", nom: "Me BIKINDOU Audrey Séverin" },
+    signataire: { role: "Le Bâtonnier", nom: identite().batonnier },
     date,
   });
 }
@@ -194,7 +203,7 @@ export function attestationNonRedevanceHtml(
     bodyHtml: `
       <p>Le Bâtonnier de l'Ordre des Avocats du Barreau de Pointe-Noire atteste que <b>Me ${escapeHtml(membre.nom)}</b>, inscrit(e) au Tableau de l'Ordre sous le numéro <b>${membre.num}</b>, est à jour de sa cotisation ordinale au titre de l'exercice <b>${annee}</b>.</p>
       <p style="margin-top:12px">L'intéressé(e) ne demeure redevable d'aucune somme envers l'Ordre au titre de cet exercice. La présente attestation est délivrée pour servir et valoir ce que de droit.</p>`,
-    signataire: { role: "Le Bâtonnier", nom: "Me BIKINDOU Audrey Séverin" },
+    signataire: { role: "Le Bâtonnier", nom: identite().batonnier },
     date,
   });
 }
@@ -207,27 +216,28 @@ export function convocationReunionHtml(reunion: any): string {
     bodyHtml: `
       <p>Le Bâtonnier a l'honneur de convier Mesdames et Messieurs les membres du Conseil de l'Ordre à la réunion qui se tiendra le <b>${fmtDate(reunion.date)}</b>${reunion.heure ? ` à <b>${escapeHtml(reunion.heure)}</b>` : ""}, au <b>${escapeHtml(reunion.lieu ?? "—")}</b>.</p>
       <p style="margin-top:10px"><b>Ordre du jour :</b></p>${liste(reunion.ordreDuJour ?? [])}`,
-    signataire: { role: "Le Bâtonnier", nom: "Me BIKINDOU Audrey Séverin" },
+    signataire: { role: "Le Bâtonnier", nom: identite().batonnier },
     date: reunion.date,
   });
 }
 
 export function feuillePresenceHtml(reunion: any): string {
+  const id = identite();
   const membres = [
-    "Me BIKINDOU Audrey Séverin — Bâtonnier",
-    "Me ONDZE BOYA Armelle Laure Carine — Trésorière",
-    "Me KALINA-MENGA Lionel — Secrétaire Général",
+    `${id.batonnier} — Bâtonnier`,
+    `${id.tresoriere} — Trésorière`,
+    `${id.secretaireGeneral} — Secrétaire Général`,
     "", "", "",
   ];
   const lignes = membres
-    .map((n) => `<tr><td style="padding:10px 0;border-bottom:1px solid #E0DBD0">${n}</td><td style="border-bottom:1px solid #E0DBD0"></td></tr>`)
+    .map((n) => `<tr><td style="padding:10px 0;border-bottom:1px solid #E0DBD0">${escapeHtml(n)}</td><td style="border-bottom:1px solid #E0DBD0"></td></tr>`)
     .join("");
   return documentHtml({
     org: "Conseil de l'Ordre",
     title: "Feuille de présence",
     reference: `Réunion du ${fmtDate(reunion.date)}`,
     bodyHtml: `<table style="width:100%;font-size:13px"><thead><tr><th style="text-align:left;border-bottom:1px solid #1A3A6B;color:#1A3A6B;padding-bottom:4px">Membre</th><th style="text-align:right;border-bottom:1px solid #1A3A6B;color:#1A3A6B">Émargement</th></tr></thead><tbody>${lignes}</tbody></table>`,
-    signataire: { role: "Le Secrétaire Général", nom: "Me KALINA-MENGA Lionel" },
+    signataire: { role: "Le Secrétaire Général", nom: identite().secretaireGeneral },
     date: reunion.date,
   });
 }
@@ -241,7 +251,7 @@ export function convocationAgHtml(a: any): string {
     bodyHtml: `
       <p>Le Bâtonnier convoque l'ensemble des membres du corps électoral à l'<b>${type}</b> qui se tiendra le <b>${fmtDate(a.date)}</b>, au <b>${escapeHtml(a.lieu ?? "—")}</b>.</p>
       <p style="margin-top:10px"><b>Ordre du jour :</b></p>${liste(a.ordreDuJour ?? [])}`,
-    signataire: { role: "Le Bâtonnier", nom: "Me BIKINDOU Audrey Séverin" },
+    signataire: { role: "Le Bâtonnier", nom: identite().batonnier },
     date: a.date,
   });
 }
@@ -257,7 +267,7 @@ export function convocationDisciplineHtml(d: any): string {
       <p>Dans le cadre du dossier disciplinaire <b>N° ${d.reference}</b>, <b>${qui}</b> est invité(e) à comparaître devant le Conseil de discipline de l'Ordre des Avocats du Barreau de Pointe-Noire${quand}.</p>
       <p style="margin-top:10px">Objet : ${escapeHtml(d.objet ?? "—")}.</p>
       <p style="margin-top:10px;font-size:12px;color:#7A756A">L'intéressé(e) pourra se faire assister du conseil de son choix et consulter le dossier au Secrétariat de l'Ordre.</p>`,
-    signataire: { role: "Le Bâtonnier, Président du Conseil de discipline", nom: "Me BIKINDOU Audrey Séverin" },
+    signataire: { role: "Le Bâtonnier, Président du Conseil de discipline", nom: identite().batonnier },
     date: new Date(),
   });
 }
@@ -285,7 +295,7 @@ export function pvReunionHtml(reunion: any): string {
       ${odj}
       <p style="margin:14px 0 4px"><b>Délibérations :</b></p>
       ${paragraphes(reunion.pv)}`,
-    signataire: { role: "Le Secrétaire Général", nom: "Me KALINA-MENGA Lionel" },
+    signataire: { role: "Le Secrétaire Général", nom: identite().secretaireGeneral },
     date: reunion.date,
   });
 }
@@ -307,7 +317,7 @@ export function pvAssembleeHtml(a: any): string {
       <p style="margin:14px 0 4px"><b>Délibérations :</b></p>
       ${paragraphes(a.pv)}
       ${decisions}`,
-    signataire: { role: "Le Bâtonnier", nom: "Me BIKINDOU Audrey Séverin" },
+    signataire: { role: "Le Bâtonnier", nom: identite().batonnier },
     date: a.date,
   });
 }
@@ -345,7 +355,7 @@ export function pvScrutinHtml(s: any): string {
         <tbody>${lignes || '<tr><td colspan="4" style="padding:8px;color:#7A756A">Aucun candidat.</td></tr>'}</tbody>
       </table>
       <p style="margin-top:16px;font-size:12px;color:#7A756A">Procès-verbal dressé à l'issue du dépouillement${s.closLe ? ` (clôture le ${fmtDate(s.closLe)})` : ""}.</p>`,
-    signataire: { role: "Le Secrétaire Général", nom: "Me KALINA-MENGA Lionel" },
+    signataire: { role: "Le Secrétaire Général", nom: identite().secretaireGeneral },
     date: s.closLe ?? new Date(),
   });
 }
@@ -366,7 +376,7 @@ export function decisionDisciplineHtml(d: any): string {
       <p style="margin:14px 0 4px"><b>Décision :</b></p>
       ${paragraphes(d.decision)}
       ${sanction}`,
-    signataire: { role: "Le Bâtonnier, Président du Conseil de discipline", nom: "Me BIKINDOU Audrey Séverin" },
+    signataire: { role: "Le Bâtonnier, Président du Conseil de discipline", nom: identite().batonnier },
     date: new Date(),
   });
 }

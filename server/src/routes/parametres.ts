@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { asyncH } from "../middleware/error.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { rafraichirIdentite } from "../lib/identiteDocuments.js";
 
 export const parametresRouter = Router();
 // Lecture ouverte à tout profil authentifié (données de référence d'affichage) ;
@@ -20,6 +21,7 @@ const DEFAUT = {
     tresoriere: "Me ONDZE BOYA Armelle Laure Carine",
     secretaireGeneral: "Me KALINA-MENGA Lionel",
     adresse: "Maison de l'Avocat — Pointe-Noire, République du Congo",
+    logo: "",
   },
   documents: {
     categoriesArchives: [
@@ -55,6 +57,11 @@ const tarifsSchema = z.object({
 const identiteSchema = z.object({
   denomination: z.string(), ordre: z.string(), batonnier: z.string(),
   tresoriere: z.string(), secretaireGeneral: z.string(), adresse: z.string(),
+  // Logo institutionnel en data URI image (≈2 Mo max) ; chaîne vide = sceau dessiné.
+  logo: z.string().max(3_000_000).refine(
+    (v) => v === "" || v.startsWith("data:image/"),
+    "Le logo doit être une image (data URI) ou vide.",
+  ),
 }).partial();
 const listeLibellesSchema = z.record(z.string(), z.string());
 const majSchema = z.object({
@@ -95,6 +102,8 @@ parametresRouter.put(
       create: { id: 1, data },
       update: { data },
     });
+    // Rafraîchit la source unique d'identité des documents (si l'identité a changé).
+    if (patch.identite) await rafraichirIdentite();
     res.json(saved.data);
   })
 );

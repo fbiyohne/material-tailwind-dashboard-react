@@ -24,6 +24,7 @@ export const PARAMETRES_DEFAUT = {
     tresoriere: "Me ONDZE BOYA Armelle Laure Carine",
     secretaireGeneral: "Me KALINA-MENGA Lionel",
     adresse: "Maison de l'Avocat — Pointe-Noire, République du Congo",
+    logo: "", // logo téléversé (data URI image) ; vide = sceau dessiné
   },
   documents: {
     categoriesArchives: [
@@ -97,6 +98,10 @@ export function exercices() {
   for (let a = courant; a >= premier; a--) liste.push(a);
   return liste;
 }
+/** Identité institutionnelle configurée (dénomination, ordre, signataires, adresse, logo). */
+export const identite = () => config.identite ?? PARAMETRES_DEFAUT.identite;
+/** Logo institutionnel téléversé (data URI) ou chaîne vide (→ sceau dessiné). */
+export const logoInstitution = () => config.identite?.logo || "";
 export const categoriesArchives = () => config.documents?.categoriesArchives ?? [];
 export const typesPublication = () => config.documents?.typesPublication ?? [];
 export const canauxActifs = () => config.paiement?.canauxActifs ?? [];

@@ -3,6 +3,7 @@ import { Sceau } from "./Sceau";
 import { QRCode } from "./QRCode";
 import { formatFCFA } from "../utils/format";
 import { montantEnLettresFCFA } from "../utils/nombreEnLettres";
+import { identite } from "../data/config";
 
 const fmtDateFr = (d) =>
   d ? new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" }) : "—";
@@ -78,7 +79,7 @@ export function RecuDocument({ numero, membre, montant, exercice, mode, objet, d
         <div className="flex items-center gap-6">
           <Sceau size={104} />
           <div className="flex-1 text-center">
-            <h1 className="font-display text-[26px] font-bold leading-tight text-navy">BARREAU DE POINTE-NOIRE</h1>
+            <h1 className="font-display text-[26px] font-bold leading-tight text-navy">{identite().denomination.toUpperCase()}</h1>
             <FiletOr className="w-60" />
             <h2 className="text-[12px] font-semibold uppercase tracking-wide text-encre">Trésorerie de l'Ordre des Avocats</h2>
             <p className="mt-1 text-[12px] italic text-gris">Défendre • Conseiller • Servir la Justice</p>
@@ -141,7 +142,7 @@ export function RecuDocument({ numero, membre, montant, exercice, mode, objet, d
           <div className="text-center">
             <p className="text-[13px] font-semibold text-encre">La Trésorière de l'Ordre</p>
             <div className="mt-12 w-52 border-t border-dotted border-gris" />
-            <p className="mt-1 text-[12px] text-gris">Me ONDZE BOYA</p>
+            <p className="mt-1 text-[12px] text-gris">{identite().tresoriere}</p>
           </div>
         </div>
 
@@ -154,7 +155,7 @@ export function RecuDocument({ numero, membre, montant, exercice, mode, objet, d
       <div className="mt-7 grid grid-cols-3 gap-4 bg-navy-2 px-10 py-5 text-[11px] leading-relaxed text-white/90">
         <div>
           <span className="font-semibold text-or">Adresse</span><br />
-          Immeuble du Barreau, Avenue Charles de Gaulle<br />Pointe-Noire — République du Congo
+          {identite().adresse}
         </div>
         <div className="text-center">
           <span className="font-semibold text-or">En ligne</span><br />

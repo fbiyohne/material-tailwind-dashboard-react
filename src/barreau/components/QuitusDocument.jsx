@@ -2,6 +2,7 @@ import PropTypes from "prop-types";
 import { CalendarDaysIcon } from "@heroicons/react/24/outline";
 import { Sceau } from "./Sceau";
 import { QRCode } from "./QRCode";
+import { identite } from "../data/config";
 
 const fmtDateFr = (d) =>
   d ? new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" }) : "—";
@@ -82,7 +83,7 @@ export function QuitusDocument({ numero, membre, exercice, date }) {
         <div className="flex items-center gap-6">
           <Sceau size={104} />
           <div className="flex-1 text-center">
-            <h1 className="font-display text-[26px] font-bold leading-tight text-navy">BARREAU DE POINTE-NOIRE</h1>
+            <h1 className="font-display text-[26px] font-bold leading-tight text-navy">{identite().denomination.toUpperCase()}</h1>
             <FiletOr className="w-60" />
             <h2 className="text-[12px] font-semibold uppercase tracking-wide text-encre">Ordre des Avocats au Barreau de Pointe-Noire</h2>
             <p className="mt-1 text-[12px] italic text-gris">Défendre • Conseiller • Servir la Justice</p>
@@ -144,13 +145,13 @@ export function QuitusDocument({ numero, membre, exercice, date }) {
           <div className="text-center">
             <p className="text-[13px] font-semibold text-encre">Le Trésorier de l'Ordre</p>
             <div className="mt-9 w-52 border-t border-dotted border-gris" />
-            <p className="mt-1 text-[12px] text-gris">Me ONDZE BOYA</p>
+            <p className="mt-1 text-[12px] text-gris">{identite().tresoriere}</p>
           </div>
           <CachetBatonnier />
           <div className="text-center">
             <p className="text-[13px] font-semibold text-encre">Le Bâtonnier</p>
             <div className="mt-9 w-52 border-t border-dotted border-gris" />
-            <p className="mt-1 text-[12px] text-gris">Me BIKINDOU Audrey Séverin</p>
+            <p className="mt-1 text-[12px] text-gris">{identite().batonnier}</p>
           </div>
         </div>
 
@@ -174,7 +175,7 @@ export function QuitusDocument({ numero, membre, exercice, date }) {
       <div className="grid grid-cols-3 gap-4 bg-navy-2 px-10 py-4 text-[11px] leading-relaxed text-white/90">
         <div>
           <span className="font-semibold text-or">Adresse</span><br />
-          Immeuble du Barreau, Avenue Charles de Gaulle<br />Pointe-Noire — République du Congo
+          {identite().adresse}
         </div>
         <div className="text-center">
           <span className="font-semibold text-or">En ligne</span><br />

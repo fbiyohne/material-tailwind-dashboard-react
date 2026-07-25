@@ -15,7 +15,7 @@ import {
   ExclamationTriangleIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
-import { Badge, Notice, useToast, PageHeader, FormField, Tabs, DataTable, Modal } from "../components";
+import { Badge, Notice, useToast, PageHeader, FormField, Tabs, DataTable, Modal, Sceau } from "../components";
 import { useAuth } from "../auth/AuthContext";
 import { formatFCFA, formatDateTime } from "../utils/format";
 import { appliquerConfig } from "../data/config";
@@ -39,7 +39,7 @@ const DEFAUT = {
   tarifs: { avocat: 150000, stagiaire: 75000, droitsPlaidoirie: 60000 },
   exerciceCourant: 2026,
   premierExercice: 2020,
-  identite: { denomination: "", ordre: "", batonnier: "", tresoriere: "", secretaireGeneral: "", adresse: "" },
+  identite: { denomination: "", ordre: "", batonnier: "", tresoriere: "", secretaireGeneral: "", adresse: "", logo: "" },
   categoriesArchives: [],
   typesPublication: [],
   canauxActifs: ["MTN", "AIRTEL", "CARTE", "VIREMENT"],
@@ -172,6 +172,19 @@ export function Parametres() {
   const fmtNb = (n) => String(n ?? "").replace(/\B(?=(\d{3})+(?!\d))/g, " ");
   const setT = (k) => (e) => setTarifs({ ...tarifs, [k]: parseNb(e.target.value) });
   const setI = (k) => (e) => setIdentite({ ...identite, [k]: e.target.value });
+  // Logo institutionnel : lu en data URI (≈1,5 Mo max) et conservé dans l'identité.
+  const MAX_LOGO = 1_500_000;
+  const chargerLogo = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { toast.error("Le logo doit être une image (PNG, JPG, SVG…)."); return; }
+    if (file.size > MAX_LOGO) { toast.error("Image trop volumineuse (max 1,5 Mo)."); return; }
+    const r = new FileReader();
+    r.onload = () => setIdentite((id) => ({ ...id, logo: String(r.result) }));
+    r.onerror = () => toast.error("Lecture du fichier impossible.");
+    r.readAsDataURL(file);
+    e.target.value = ""; // permet de re-sélectionner le même fichier
+  };
   const setLib = (dom, cle) => (e) =>
     setLibelles((l) => ({ ...l, [dom]: { ...l[dom], [cle]: e.target.value } }));
   const basculerCanal = (v) =>
@@ -268,7 +281,33 @@ export function Parametres() {
   };
 
   const panneauIdentite = (
-    <Section titre="Identité de l'institution" description="Utilisée dans les documents officiels et l'interface.">
+    <Section titre="Identité de l'institution" description="Utilisée dans TOUS les documents officiels (reçus, quitus, attestations, PV…) et l'interface. Le logo et les textes ci-dessous en sont la source unique.">
+      {/* Logo institutionnel — source unique des documents. */}
+      <div className="mb-5 flex flex-col gap-4 rounded-lg border border-grisM bg-grisL/40 p-4 sm:flex-row sm:items-center">
+        <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-grisM bg-white">
+          {identite.logo
+            ? <img src={identite.logo} alt="Logo actuel" className="h-full w-full object-contain" />
+            : <Sceau size={72} />}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-medium text-encre">Logo officiel</div>
+          <p className="mt-0.5 text-xs text-gris">
+            Image PNG, JPG ou SVG (max 1,5 Mo). À défaut, le sceau dessiné est utilisé, reprenant la dénomination et l'ordre saisis.
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <label className="bpn-btn bpn-btn-ghost bpn-btn-sm cursor-pointer">
+              <PlusIcon className="h-3.5 w-3.5" /> {identite.logo ? "Remplacer" : "Téléverser un logo"}
+              <input type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp,image/*" onChange={chargerLogo} className="hidden" />
+            </label>
+            {identite.logo && (
+              <button type="button" onClick={() => setIdentite((id) => ({ ...id, logo: "" }))} className="bpn-btn bpn-btn-ghost bpn-btn-sm text-rouge">
+                <TrashIcon className="h-3.5 w-3.5" /> Retirer
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <FormField label="Dénomination"><input value={identite.denomination} onChange={setI("denomination")} className="bpn-input" /></FormField>
         <FormField label="Ordre"><input value={identite.ordre} onChange={setI("ordre")} className="bpn-input" /></FormField>

@@ -1,5 +1,6 @@
 import PropTypes from "prop-types";
 import { Sceau } from "./Sceau";
+import { identite } from "../data/config";
 
 const fmtDate = (d) =>
   new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
@@ -22,10 +23,10 @@ export function DocumentChrome({
     <div className="bpn-print-zone overflow-hidden rounded border border-grisM bg-white">
       <div className="bg-navy px-5 py-3">
         <div className="text-2xs font-semibold uppercase tracking-[0.15em] text-or">
-          Barreau de Pointe-Noire
+          {identite().denomination}
         </div>
         <div className="text-2xs text-white/60">
-          Ordre National des Avocats du Congo · {org}
+          {identite().ordre} · {org}
         </div>
       </div>
       <div className="h-[3px] bg-gradient-to-r from-or via-or-2 to-or" />
@@ -57,7 +58,7 @@ export function DocumentChrome({
       </div>
 
       <div className="border-t border-grisM px-8 py-2 text-center text-2xs uppercase tracking-[0.18em] text-gris">
-        Document officiel · Ordre National des Avocats du Congo · Barreau de Pointe-Noire
+        Document officiel · {identite().ordre} · {identite().denomination}
       </div>
     </div>
   );

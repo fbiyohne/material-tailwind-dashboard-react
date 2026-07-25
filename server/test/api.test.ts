@@ -377,6 +377,25 @@ describe("Paramètres — données de référence centralisées", () => {
     expect(get.body.exercices.premier).toBe(2019);
   });
 
+  it("enregistre l'identité (dénomination, signataires, logo) et la persiste", async () => {
+    const logo = "data:image/svg+xml;base64,PHN2Zy8+"; // <svg/> minimal
+    const patch = { identite: { denomination: "Barreau de Test", batonnier: "Me TEST", logo } };
+    const put = await request(app).put("/api/parametres").set(...bearer(sg)).send(patch);
+    expect(put.status).toBe(200);
+    const get = await request(app).get("/api/parametres").set(...bearer(sg));
+    expect(get.body.identite.denomination).toBe("Barreau de Test");
+    expect(get.body.identite.batonnier).toBe("Me TEST");
+    expect(get.body.identite.logo).toBe(logo);
+    // Restaure l'identité par défaut pour ne pas polluer les autres suites.
+    await request(app).put("/api/parametres").set(...bearer(sg)).send({
+      identite: { denomination: "Barreau de Pointe-Noire", batonnier: "Me BIKINDOU Audrey Séverin", logo: "" },
+    });
+  });
+
+  it("rejette un logo qui n'est pas une image (400)", async () => {
+    expect((await request(app).put("/api/parametres").set(...bearer(sg)).send({ identite: { logo: "https://exemple.cg/logo.png" } })).status).toBe(400);
+  });
+
   it("rejette une clé arbitraire ou un canal inconnu (400)", async () => {
     expect((await request(app).put("/api/parametres").set(...bearer(sg)).send({ inconnu: 1 })).status).toBe(400);
     expect((await request(app).put("/api/parametres").set(...bearer(sg)).send({ paiement: { canauxActifs: ["BITCOIN"] } })).status).toBe(400);

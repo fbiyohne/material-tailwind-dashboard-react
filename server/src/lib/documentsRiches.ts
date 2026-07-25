@@ -8,15 +8,22 @@
  */
 import { montantEnLettresFCFA } from "./montantEnLettres.js";
 import { esc, fmtFCFA, fmtDateFr } from "./documentsCommun.js";
+import { identite } from "./identiteDocuments.js";
 
-/** Sceau officiel (balance entourée de la dénomination) — identique au composant Sceau. */
-const sceau = (size: number) => `
+/**
+ * Logo officiel — source unique (Paramètres). Logo téléversé (data URI image) s'il
+ * existe ; sinon sceau dessiné (balance) dont le texte reprend l'identité configurée.
+ */
+const sceau = (size: number) => {
+  const id = identite();
+  if (id.logo) return `<img src="${id.logo}" alt="Logo" style="width:${size}px;height:${size}px;object-fit:contain" />`;
+  return `
 <svg width="${size}" height="${size}" viewBox="0 0 100 100" aria-label="Sceau">
   <defs><path id="s-h" d="M 18,50 A 32,32 0 0 1 82,50"/><path id="s-b" d="M 82,52 A 32,32 0 0 1 18,52"/></defs>
   <circle cx="50" cy="50" r="47" fill="none" stroke="#C4990A" stroke-width="1.4"/>
   <circle cx="50" cy="50" r="42" fill="none" stroke="#C4990A" stroke-width="0.6"/>
-  <text fill="#1A3A6B" font-size="6.5" font-weight="600" letter-spacing="1.1"><textPath href="#s-h" startOffset="50%" text-anchor="middle">ORDRE NATIONAL DES AVOCATS</textPath></text>
-  <text fill="#1A3A6B" font-size="6.5" font-weight="600" letter-spacing="1.1"><textPath href="#s-b" startOffset="50%" text-anchor="middle">BARREAU DE POINTE-NOIRE</textPath></text>
+  <text fill="#1A3A6B" font-size="6" font-weight="600" letter-spacing="0.8"><textPath href="#s-h" startOffset="50%" text-anchor="middle">${esc(id.ordre.toUpperCase())}</textPath></text>
+  <text fill="#1A3A6B" font-size="6" font-weight="600" letter-spacing="0.8"><textPath href="#s-b" startOffset="50%" text-anchor="middle">${esc(id.denomination.toUpperCase())}</textPath></text>
   <g stroke="#1A3A6B" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round">
     <line x1="50" y1="37" x2="50" y2="63"/><line x1="44" y1="63" x2="56" y2="63"/><line x1="38" y1="42" x2="62" y2="42"/>
     <circle cx="50" cy="38" r="1.6" fill="#C4990A" stroke="none"/>
@@ -24,6 +31,7 @@ const sceau = (size: number) => `
     <line x1="62" y1="42" x2="62" y2="49"/><path d="M57,49 Q62,54 67,49"/>
   </g>
 </svg>`;
+};
 
 /** Cachet circulaire (Trésorerie ou Bâtonnier). */
 const cachet = (l1: string, l2: string, size = 132) => `
@@ -49,9 +57,9 @@ const calendrier = `
   <path d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/>
 </svg>`;
 
-const bandeauContact = `
+const bandeauContact = () => `
 <div class="band">
-  <div><span class="band-l">Adresse</span><br/>Immeuble du Barreau, Avenue Charles de Gaulle<br/>Pointe-Noire — République du Congo</div>
+  <div><span class="band-l">Adresse</span><br/>${esc(identite().adresse)}</div>
   <div style="text-align:center"><span class="band-l">En ligne</span><br/>contact@barreau-pointe-noire.cg<br/>www.barreau-pointe-noire.cg</div>
   <div style="text-align:right"><span class="band-l">Téléphone</span><br/>+242 05 000 00 00<br/>+242 06 000 00 00</div>
 </div>`;
@@ -99,7 +107,7 @@ const enTete = (sousTitre: string) => `
   <div style="display:flex; align-items:center; gap:24px;">
     ${sceau(104)}
     <div style="flex:1; text-align:center;">
-      <div class="disp navy" style="font-size:26px; font-weight:700; line-height:1.15;">BARREAU DE POINTE-NOIRE</div>
+      <div class="disp navy" style="font-size:26px; font-weight:700; line-height:1.15;">${esc(identite().denomination.toUpperCase())}</div>
       ${filet(240)}
       <div style="font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.04em;">${sousTitre}</div>
       <div class="gris" style="margin-top:4px; font-size:12px; font-style:italic;">Défendre • Conseiller • Servir la Justice</div>
@@ -123,7 +131,7 @@ const page = (corps: string) =>
     <div class="corner"><div></div></div>
     <div class="watermark" aria-hidden="true">${sceau(360)}</div>
     ${corps}
-    ${bandeauContact}
+    ${bandeauContact()}
   </div></body></html>`;
 
 interface RecuLike { numero: string; montant: number; annee: number; mode?: string | null; objet?: string | null; date: Date | string; }
@@ -164,7 +172,7 @@ export function recuRicheHtml(recu: RecuLike, membre: MembreLike, qr: string, ho
         <div class="sig">
           <div style="font-size:13px; font-weight:600;">La Trésorière de l'Ordre</div>
           <div class="line"></div>
-          <div class="gris" style="margin-top:4px; font-size:12px;">Me ONDZE BOYA</div>
+          <div class="gris" style="margin-top:4px; font-size:12px;">${esc(identite().tresoriere)}</div>
         </div>
       </div>
       <div class="gris" style="margin-top:28px; text-align:center; font-size:11px; font-style:italic;">Ce reçu est strictement personnel et atteste du paiement mentionné ci-dessus.</div>
@@ -213,13 +221,13 @@ export function quitusRicheHtml(quitus: { numero: string; annee: number; dateEmi
         <div class="sig">
           <div style="font-size:13px; font-weight:600;">Le Trésorier de l'Ordre</div>
           <div class="line"></div>
-          <div class="gris" style="margin-top:4px; font-size:12px;">Me ONDZE BOYA</div>
+          <div class="gris" style="margin-top:4px; font-size:12px;">${esc(identite().tresoriere)}</div>
         </div>
         ${cachet("LE", "BÂTONNIER")}
         <div class="sig">
           <div style="font-size:13px; font-weight:600;">Le Bâtonnier</div>
           <div class="line"></div>
-          <div class="gris" style="margin-top:4px; font-size:12px;">Me BIKINDOU Audrey Séverin</div>
+          <div class="gris" style="margin-top:4px; font-size:12px;">${esc(identite().batonnier)}</div>
         </div>
       </div>
       <div style="margin-top:14px; border-top:1px solid #E0DBD0; padding-top:12px;">
