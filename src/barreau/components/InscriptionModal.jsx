@@ -10,6 +10,7 @@ import { FormField } from "./FormField";
 import { FormSection } from "./FormSection";
 import { Notice } from "./Notice";
 import { useToast } from "./Toast";
+import { useConfirm } from "./ConfirmDialog";
 import { inscrireMembre } from "../api/resources";
 
 const vide = () => ({
@@ -28,14 +29,31 @@ const champ = (error) => `bpn-input ${error ? "is-invalid" : ""}`;
 export function InscriptionModal({ open, onClose }) {
   const navigate = useNavigate();
   const toast = useToast();
+  const confirm = useConfirm();
   const [form, setForm] = useState(vide());
   const [erreurs, setErreurs] = useState({});
   const [loading, setLoading] = useState(false);
+  const [modifie, setModifie] = useState(false); // saisie modifiée (garde anti perte)
   const estStagiaire = form.qualite === "stagiaire";
 
   const set = (k) => (e) => {
     setForm((f) => ({ ...f, [k]: e.target.value }));
+    setModifie(true);
     if (erreurs[k]) setErreurs((er) => ({ ...er, [k]: undefined }));
+  };
+
+  // Garde anti perte de saisie : confirme avant de fermer un formulaire d'inscription
+  // renseigné mais non soumis (voile / Échap / croix), puis réinitialise.
+  const avantFermeture = async () => {
+    if (!modifie) return true;
+    const ok = await confirm({
+      title: "Abandonner l'inscription ?",
+      message: "Les informations saisies pour ce nouvel avocat seront perdues.",
+      confirmLabel: "Abandonner",
+      danger: true,
+    });
+    if (ok) { setForm(vide()); setErreurs({}); setModifie(false); }
+    return ok;
   };
 
   const valider = () => {
@@ -73,6 +91,7 @@ export function InscriptionModal({ open, onClose }) {
       toast.success(`Inscription enregistrée — ${m.numInscription}`);
       setForm(vide());
       setErreurs({});
+      setModifie(false);
       onClose();
       navigate(`/avocats/${m.id}`);
     } catch (err) {
@@ -86,6 +105,7 @@ export function InscriptionModal({ open, onClose }) {
     <Modal
       open={open}
       onClose={onClose}
+      onBeforeClose={avantFermeture}
       title="Inscription d'un avocat"
       footer={
         <button className="bpn-btn bpn-btn-or" onClick={soumettre} disabled={!form.nom.trim() || loading}>

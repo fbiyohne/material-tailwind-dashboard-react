@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef } from "react";
+import { useCallback, useEffect, useId, useRef } from "react";
 import PropTypes from "prop-types";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 
@@ -11,10 +11,20 @@ const SELECTEUR_FOCUS =
  * ferme à l'Escape et au clic sur le voile, verrouille le défilement et rend
  * le focus à l'élément déclencheur à la fermeture.
  */
-export function Modal({ open, onClose, title, children, footer }) {
+export function Modal({ open, onClose, onBeforeClose, title, children, footer }) {
   const ref = useRef(null);
   const declencheur = useRef(null);
   const titleId = useId();
+
+  // Fermeture éventuellement gardée : si `onBeforeClose` renvoie false (ex. saisie
+  // non enregistrée non confirmée), on annule la fermeture (voile / Échap / croix).
+  const demanderFermeture = useCallback(async () => {
+    if (onBeforeClose) {
+      const ok = await onBeforeClose();
+      if (!ok) return;
+    }
+    onClose?.();
+  }, [onBeforeClose, onClose]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -26,7 +36,7 @@ export function Modal({ open, onClose, title, children, footer }) {
 
     const onKey = (e) => {
       if (e.key === "Escape") {
-        onClose?.();
+        demanderFermeture();
         return;
       }
       if (e.key === "Tab" && node) {
@@ -49,14 +59,14 @@ export function Modal({ open, onClose, title, children, footer }) {
       document.body.style.overflow = "";
       declencheur.current?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open, demanderFermeture]);
 
   if (!open) return null;
 
   return (
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center bg-navy-3/80 p-4 backdrop-blur-[2px]"
-      onClick={onClose}
+      onClick={demanderFermeture}
     >
       <div
         ref={ref}
@@ -71,7 +81,7 @@ export function Modal({ open, onClose, title, children, footer }) {
           <h3 id={titleId} className="font-display text-base text-navy">{title}</h3>
           <button
             type="button"
-            onClick={onClose}
+            onClick={demanderFermeture}
             className="flex h-6 w-6 items-center justify-center rounded-full bg-grisL text-gris hover:bg-grisM"
             aria-label="Fermer la fenêtre"
           >
@@ -90,6 +100,8 @@ export function Modal({ open, onClose, title, children, footer }) {
 Modal.propTypes = {
   open: PropTypes.bool,
   onClose: PropTypes.func,
+  // Optionnel : garde de fermeture asynchrone. Renvoyer false annule la fermeture.
+  onBeforeClose: PropTypes.func,
   title: PropTypes.string,
   children: PropTypes.node,
   footer: PropTypes.node,

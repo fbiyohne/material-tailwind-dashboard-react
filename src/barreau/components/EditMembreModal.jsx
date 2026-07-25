@@ -5,6 +5,7 @@ import { Modal } from "./Modal";
 import { FormField } from "./FormField";
 import { FormSection } from "./FormSection";
 import { useToast } from "./Toast";
+import { useConfirm } from "./ConfirmDialog";
 import { modifierMembre } from "../api/resources";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -13,9 +14,11 @@ const champ = (error) => `bpn-input ${error ? "is-invalid" : ""}`;
 /** Édition de la fiche d'un membre (FR-AV-01 : modifier). */
 export function EditMembreModal({ membre, open, onClose, onSaved }) {
   const toast = useToast();
+  const confirm = useConfirm();
   const [form, setForm] = useState(membre ?? {});
   const [erreurs, setErreurs] = useState({});
   const [loading, setLoading] = useState(false);
+  const [modifie, setModifie] = useState(false); // saisie modifiée (garde anti perte)
 
   // On aplatit les champs de stage (normalisés en objet `stage`) pour l'édition,
   // afin de pouvoir renseigner/corriger la prestation de serment depuis la fiche.
@@ -28,6 +31,7 @@ export function EditMembreModal({ membre, open, onClose, onSaved }) {
         dureeMois: membre.stage?.dureeMois ?? "",
       });
       setErreurs({});
+      setModifie(false);
     }
   }, [membre]);
 
@@ -35,8 +39,20 @@ export function EditMembreModal({ membre, open, onClose, onSaved }) {
   const estStagiaire = membre.qualite === "stagiaire";
   const set = (k) => (e) => {
     setForm((f) => ({ ...f, [k]: e.target.value }));
+    setModifie(true);
     if (erreurs[k]) setErreurs((er) => ({ ...er, [k]: undefined }));
   };
+
+  // Garde anti perte de saisie : demande confirmation avant de fermer une fiche
+  // modifiée mais non enregistrée (voile / Échap / croix).
+  const avantFermeture = async () =>
+    !modifie ||
+    (await confirm({
+      title: "Abandonner les modifications ?",
+      message: "Les changements non enregistrés de cette fiche seront perdus.",
+      confirmLabel: "Abandonner",
+      danger: true,
+    }));
 
   const valider = async () => {
     const e = {};
@@ -74,6 +90,7 @@ export function EditMembreModal({ membre, open, onClose, onSaved }) {
     <Modal
       open={open}
       onClose={onClose}
+      onBeforeClose={avantFermeture}
       title={`Modifier — Me ${membre.nom}`}
       footer={<button className="bpn-btn bpn-btn-primary" onClick={valider} disabled={!form.nom?.trim() || loading}>Enregistrer</button>}
     >
