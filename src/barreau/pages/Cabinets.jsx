@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PlusIcon, TrashIcon, BuildingOffice2Icon, ArrowUturnLeftIcon, UserPlusIcon } from "@heroicons/react/24/outline";
-import { Badge, Modal, PageHeader, useToast, useConfirm, TableSkeleton, ErrorState, EmptyState } from "../components";
+import { Badge, Modal, PageHeader, useToast, useConfirm, TableSkeleton, ErrorState, DataTable } from "../components";
 import { formatDate } from "../utils/format";
 import { useAuth } from "../auth/AuthContext";
 import {
@@ -81,6 +81,48 @@ export function Cabinets() {
 
   const nbConv = cabinets.filter((c) => c.conventionDeposee && c.statut !== "retiré").length;
 
+  const colonnes = [
+    { key: "num", label: "N°",
+      cell: (c) => <span className="font-mono text-or-fonce">{c.statut === "retiré" ? "—" : (numeros.get(c.id) ?? "·")}</span> },
+    { key: "nom", label: "Personne morale", sortable: true, sortValue: (c) => c.nom.toLowerCase(),
+      cell: (c) => (
+        <div>
+          <div className="font-medium text-encre">{c.nom}</div>
+          {c.adresse && <div className="text-xs text-gris">{c.adresse}</div>}
+          {c.statut === "retiré" && c.motifRetrait && <div className="text-xs text-rouge">{c.motifRetrait}{c.dateRetrait ? ` · ${formatDate(c.dateRetrait)}` : ""}</div>}
+        </div>
+      ) },
+    { key: "titulaire", label: "Titulaire", sortable: true, sortValue: (c) => c.titulaire?.nom?.toLowerCase() ?? "",
+      cell: (c) => c.titulaire
+        ? <span className="text-sm">Me {c.titulaire.nom}{c.titulaire.statut !== "INSCRIT" && <Badge ton="gris" dot={false} className="ml-1 !text-2xs">inactif</Badge>}</span>
+        : <span className="text-xs text-gris">—</span> },
+    { key: "forme", label: "Forme", sortable: true, sortValue: (c) => c.forme ?? "",
+      cell: (c) => <span className="text-xs text-gris">{c.forme || "—"}</span> },
+    { key: "effectif", label: "Effectif", align: "center", sortable: true, sortValue: (c) => c.effectif ?? 0,
+      cell: (c) => <span className="font-mono text-navy">{c.effectif}</span> },
+    { key: "convention", label: "Convention", align: "center",
+      cell: (c) => c.conventionDeposee ? <Badge ton="vert" dot={false}>Déposée</Badge> : <span className="text-xs text-gris">—</span> },
+    { key: "actions", label: peutGerer ? "Actions" : "Statut", align: "right",
+      cell: (c) => {
+        const retire = c.statut === "retiré";
+        return (
+          <div className="flex items-center justify-end gap-1.5">
+            <Badge ton={retire ? "gris" : "bleu"} dot={false} className="whitespace-nowrap">{retire ? "Retiré" : "Actif"}</Badge>
+            {peutGerer && (
+              <>
+                <button className="bpn-btn bpn-btn-ghost bpn-btn-sm" onClick={() => setGestion(c)}>Membres</button>
+                <button className="bpn-btn bpn-btn-ghost bpn-btn-sm" onClick={() => setEdition({ ...c, forme: c.forme || "Cabinet individuel", adresse: c.adresse || "", tel: c.tel || "", email: c.email || "" })}>Éditer</button>
+                {retire
+                  ? <button className="bpn-btn bpn-btn-ghost !px-2 !py-1 text-xs" onClick={() => retablir(c)} title="Rétablir"><ArrowUturnLeftIcon className="h-3.5 w-3.5" /></button>
+                  : <button className="bpn-btn bpn-btn-ghost bpn-btn-sm" onClick={() => retirer(c)}>Retirer</button>}
+                <button type="button" onClick={() => supprimer(c)} title="Supprimer" className="rounded p-1.5 text-gris transition hover:bg-rougeL hover:text-rouge"><TrashIcon className="h-3.5 w-3.5" /></button>
+              </>
+            )}
+          </div>
+        );
+      } },
+  ];
+
   return (
     <div className="space-y-5">
       <PageHeader eyebrow="Membres" titre="Personnes morales" sousTitre={`Cabinets, sociétés et associations d'avocats — ${nbConv} convention(s) déposée(s).`}>
@@ -94,64 +136,16 @@ export function Cabinets() {
         <select value={filtre} onChange={(e) => setFiltre(e.target.value)} aria-label="Filtrer par statut" className="bpn-input sm:w-40"><option value="actif">Actifs</option><option value="retiré">Retirés</option><option value="tous">Tous</option></select>
       </div>
 
-      <div className="bpn-card overflow-hidden">
-        {liste.length === 0 ? (
-          <div className="p-6"><EmptyState icon={BuildingOffice2Icon} title="Aucune personne morale" description="Ajoutez un cabinet ou rattachez des membres depuis leur fiche." /></div>
-        ) : (
-          <div className="overflow-x-auto">
-          <table className="bpn-table">
-            <thead>
-              <tr>
-                <th className="w-14">N°</th>
-                <th>Personne morale</th>
-                <th>Titulaire</th>
-                <th>Forme</th>
-                <th className="text-center">Effectif</th>
-                <th className="text-center">Convention</th>
-                <th className="text-right">{peutGerer ? "Actions" : "Statut"}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {liste.map((c) => {
-                const retire = c.statut === "retiré";
-                return (
-                  <tr key={c.id} className={retire ? "opacity-60" : ""}>
-                    <td className="font-mono text-or">{retire ? "—" : (numeros.get(c.id) ?? "·")}</td>
-                    <td>
-                      <div className="font-medium text-encre">{c.nom}</div>
-                      {c.adresse && <div className="text-xs text-gris">{c.adresse}</div>}
-                      {retire && c.motifRetrait && <div className="text-xs text-rouge">{c.motifRetrait}{c.dateRetrait ? ` · ${formatDate(c.dateRetrait)}` : ""}</div>}
-                    </td>
-                    <td>
-                      {c.titulaire ? (
-                        <span className="text-sm">Me {c.titulaire.nom}{c.titulaire.statut !== "INSCRIT" && <Badge ton="gris" dot={false} className="ml-1 !text-2xs">inactif</Badge>}</span>
-                      ) : <span className="text-xs text-gris">—</span>}
-                    </td>
-                    <td className="text-xs text-gris">{c.forme || "—"}</td>
-                    <td className="text-center font-mono text-navy">{c.effectif}</td>
-                    <td className="text-center">{c.conventionDeposee ? <Badge ton="vert" dot={false}>Déposée</Badge> : <span className="text-xs text-gris">—</span>}</td>
-                    <td>
-                      <div className="flex items-center justify-end gap-1.5">
-                        <Badge ton={retire ? "gris" : "bleu"} dot={false} className="whitespace-nowrap">{retire ? "Retiré" : "Actif"}</Badge>
-                        {peutGerer && (
-                          <>
-                            <button className="bpn-btn bpn-btn-ghost bpn-btn-sm" onClick={() => setGestion(c)}>Membres</button>
-                            <button className="bpn-btn bpn-btn-ghost bpn-btn-sm" onClick={() => setEdition({ ...c, forme: c.forme || "Cabinet individuel", adresse: c.adresse || "", tel: c.tel || "", email: c.email || "" })}>Éditer</button>
-                            {retire
-                              ? <button className="bpn-btn bpn-btn-ghost !px-2 !py-1 text-xs" onClick={() => retablir(c)} title="Rétablir"><ArrowUturnLeftIcon className="h-3.5 w-3.5" /></button>
-                              : <button className="bpn-btn bpn-btn-ghost bpn-btn-sm" onClick={() => retirer(c)}>Retirer</button>}
-                            <button type="button" onClick={() => supprimer(c)} title="Supprimer" className="rounded p-1.5 text-gris transition hover:bg-rougeL hover:text-rouge"><TrashIcon className="h-3.5 w-3.5" /></button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          </div>
-        )}
+      <div className="bpn-card">
+        <DataTable
+          columns={colonnes}
+          rows={liste}
+          getRowId={(c) => c.id}
+          emptyIcon={BuildingOffice2Icon}
+          emptyTitle="Aucune personne morale"
+          emptyDescription="Ajoutez un cabinet ou rattachez des membres depuis leur fiche."
+          libelle="personnes morales"
+        />
       </div>
 
       <CabinetForm cabinet={edition} onClose={() => setEdition(null)} onSaved={() => { setEdition(null); charger(); }} />
