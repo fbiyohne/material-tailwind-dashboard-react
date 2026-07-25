@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PrinterIcon, TrashIcon, ArrowUpTrayIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
-import { Badge, useToast, useConfirm, PageHeader, TableSkeleton, ErrorState, ImportMembresModal } from "../components";
+import { Badge, Pagination, useToast, useConfirm, PageHeader, TableSkeleton, ErrorState, ImportMembresModal } from "../components";
 import { useAuth } from "../auth/AuthContext";
 import { formatDate } from "../utils/format";
 import { infoStage } from "../data/derivations";
@@ -142,6 +142,14 @@ export function Stagiaires() {
     [membres, filtre]
   );
 
+  // Pagination de la grille (l'impression, elle, liste tous les stagiaires).
+  const PAR_PAGE = 12;
+  const [page, setPage] = useState(1);
+  useEffect(() => { setPage(1); }, [filtre]);
+  const totalPages = Math.max(1, Math.ceil(stagiaires.length / PAR_PAGE));
+  const pageCourante = Math.min(page, totalPages);
+  const visibles = stagiaires.slice((pageCourante - 1) * PAR_PAGE, pageCourante * PAR_PAGE);
+
   return (
     <div className="space-y-5">
       <PageHeader className="bpn-no-print" eyebrow="Membres" titre="Avocats stagiaires" sousTitre="Liste de stage — suivi de la progression et du maître de stage.">
@@ -192,7 +200,7 @@ export function Stagiaires() {
         </div>
       ) : (
         <div className="bpn-no-print grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {stagiaires.map(({ membre, stage }) => (
+          {visibles.map(({ membre, stage }) => (
             <CarteStagiaire key={membre.id} membre={membre} stage={stage} onFiche={(m) => navigate(`/avocats/${m.id}`)} onSupprimer={estAdmin ? supprimer : undefined} />
           ))}
           {stagiaires.length === 0 && (
@@ -200,6 +208,12 @@ export function Stagiaires() {
               Aucun stagiaire pour ce filtre.
             </p>
           )}
+        </div>
+      )}
+
+      {!chargement && !erreur && totalPages > 1 && (
+        <div className="bpn-no-print bpn-card">
+          <Pagination page={pageCourante} totalPages={totalPages} total={stagiaires.length} onPage={setPage} libelle="stagiaires" />
         </div>
       )}
 

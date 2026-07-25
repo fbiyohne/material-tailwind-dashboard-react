@@ -1,10 +1,51 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PlusIcon, TrashIcon, UserGroupIcon, ArrowRightOnRectangleIcon, ArrowUturnLeftIcon } from "@heroicons/react/24/outline";
-import { Badge, Modal, PageHeader, useToast, useConfirm, TableSkeleton, ErrorState, EmptyState } from "../components";
+import { Badge, Modal, PageHeader, Pagination, useToast, useConfirm, TableSkeleton, ErrorState, EmptyState } from "../components";
 import { formatDate } from "../utils/format";
 import { fonctionsConseil } from "../data/config";
 import { useAuth } from "../auth/AuthContext";
 import { listerConseil, ajouterMembreConseil, majMembreConseil, supprimerMembreConseil, listerMembres } from "../api/resources";
+
+// Section du Conseil (Bâtonnier / Bureau / Membres / Sortants) : pagine côté client
+// au-delà d'un seuil — surtout utile pour l'historique des sortants qui grandit.
+const TAILLE_SECTION = 15;
+function SectionConseil({ titre, sousTitre, rows, peutGerer }) {
+  const [page, setPage] = useState(1);
+  const total = rows.length;
+  const totalPages = Math.max(1, Math.ceil(total / TAILLE_SECTION));
+  const p = Math.min(page, totalPages);
+  const visibles = rows.slice((p - 1) * TAILLE_SECTION, p * TAILLE_SECTION);
+  return (
+    <div className="bpn-card overflow-hidden">
+      <div className="flex items-baseline justify-between border-b border-grisL px-4 py-2.5">
+        <h2 className="font-display text-base text-navy">{titre}</h2>
+        {sousTitre && <span className="text-xs text-gris">{sousTitre}</span>}
+      </div>
+      {total === 0 ? (
+        <p className="px-4 py-5 text-center text-sm text-gris">—</p>
+      ) : (
+        <>
+          <div className="overflow-x-auto">
+            <table className="bpn-table">
+              <thead>
+                <tr>
+                  <th className="w-16">{titre === "Bureau" ? "Sigle" : "N°"}</th>
+                  <th>Membre</th>
+                  <th className="w-32">Rôle</th>
+                  <th>Fonction</th>
+                  <th className="whitespace-nowrap">Serment / mandat</th>
+                  <th className="text-right">{peutGerer ? "Actions" : "Statut"}</th>
+                </tr>
+              </thead>
+              <tbody>{visibles}</tbody>
+            </table>
+          </div>
+          {totalPages > 1 && <Pagination page={p} totalPages={totalPages} total={total} onPage={setPage} libelle="membres" />}
+        </>
+      )}
+    </div>
+  );
+}
 
 // Rôles structurés : pilotent le regroupement à l'affichage (cf. Ordre National).
 const ROLES = [
@@ -167,34 +208,6 @@ export function Conseil() {
     </tr>
   );
 
-  const section = (titre, sousTitre, rows) => (
-    <div className="bpn-card overflow-hidden">
-      <div className="flex items-baseline justify-between border-b border-grisL px-4 py-2.5">
-        <h2 className="font-display text-base text-navy">{titre}</h2>
-        {sousTitre && <span className="text-xs text-gris">{sousTitre}</span>}
-      </div>
-      {rows.length === 0 ? (
-        <p className="px-4 py-5 text-center text-sm text-gris">—</p>
-      ) : (
-        <div className="overflow-x-auto">
-        <table className="bpn-table">
-          <thead>
-            <tr>
-              <th className="w-16">{titre === "Bureau" ? "Sigle" : "N°"}</th>
-              <th>Membre</th>
-              <th className="w-32">Rôle</th>
-              <th>Fonction</th>
-              <th className="whitespace-nowrap">Serment / mandat</th>
-              <th className="text-right">{peutGerer ? "Actions" : "Statut"}</th>
-            </tr>
-          </thead>
-          <tbody>{rows}</tbody>
-        </table>
-        </div>
-      )}
-    </div>
-  );
-
   return (
     <div className="space-y-5">
       <PageHeader eyebrow="Institutionnel" titre="Conseil de l'Ordre" sousTitre={`Composition et mandats — ${enFonction.length} membre(s) en exercice.`} />
@@ -248,10 +261,13 @@ export function Conseil() {
         <div className="bpn-card p-6"><EmptyState icon={UserGroupIcon} title="Conseil vide" description="Ajoutez les membres du Conseil ou publiez une élection." /></div>
       ) : (
         <>
-          {section("Bâtonnier", null, batonnier.map((m) => ligne(m)))}
-          {section("Bureau", `${bureau.length} membre(s)`, bureau.map((m) => ligne(m)))}
-          {section("Membres", `classés par ancienneté · ${membresOrd.length} membre(s)`, membresOrd.map((m, i) => ligne(m, i + 1)))}
-          {sortants.length > 0 && section("Membres sortants", `historique des mandats · ${sortants.length}`, sortants.slice().sort((a, b) => (b.mandatFin || "").localeCompare(a.mandatFin || "")).map((m) => ligne(m)))}
+          <SectionConseil titre="Bâtonnier" rows={batonnier.map((m) => ligne(m))} peutGerer={peutGerer} />
+          <SectionConseil titre="Bureau" sousTitre={`${bureau.length} membre(s)`} rows={bureau.map((m) => ligne(m))} peutGerer={peutGerer} />
+          <SectionConseil titre="Membres" sousTitre={`classés par ancienneté · ${membresOrd.length} membre(s)`} rows={membresOrd.map((m, i) => ligne(m, i + 1))} peutGerer={peutGerer} />
+          {sortants.length > 0 && (
+            <SectionConseil titre="Membres sortants" sousTitre={`historique des mandats · ${sortants.length}`}
+              rows={sortants.slice().sort((a, b) => (b.mandatFin || "").localeCompare(a.mandatFin || "")).map((m) => ligne(m))} peutGerer={peutGerer} />
+          )}
         </>
       )}
 
