@@ -65,43 +65,51 @@ export function EspaceAvocatLayout() {
         Aller au contenu
       </a>
       <header className="bg-navy-3 text-white">
-        <div className="mx-auto flex max-w-container items-center justify-between gap-4 px-4 py-3 md:px-8">
-          <div className="flex items-center gap-3">
+        {/* En-tête sur une seule rangée : logo à gauche, menu centré au milieu,
+            déconnexion à droite (le menu occupe l'espace central au lieu d'une
+            deuxième barre en dessous). */}
+        <div className="mx-auto flex max-w-container items-center gap-4 px-4 py-2 md:px-8">
+          {/* Logo — gauche */}
+          <div className="flex shrink-0 items-center gap-3">
             <div className="shrink-0 rounded-full bg-white p-1.5"><Sceau size={36} /></div>
-            <div>
+            <div className="hidden sm:block">
               <div className="text-2xs uppercase tracking-[0.2em] text-or-2">Barreau de Pointe-Noire</div>
               <div className="font-display text-base leading-tight">Espace avocat</div>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="hidden text-sm text-white/70 sm:inline">{user?.nom}</span>
+
+          {/* Menu — centre */}
+          <nav className="flex flex-1 items-center justify-center gap-1 overflow-x-auto">
+            {NAV.map(({ to, label, icon: Icon, end, badge }) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={end}
+                className={({ isActive }) =>
+                  `flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-sm transition ${
+                    isActive ? "bg-white/10 font-medium text-white" : "text-white/55 hover:bg-white/5 hover:text-white"
+                  }`
+                }
+              >
+                <Icon className="h-4 w-4" /> {label}
+                {badge === "messagerie" && nonLus > 0 && (
+                  <span className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-rouge px-1 text-2xs font-semibold leading-none text-white">{nonLus}</span>
+                )}
+              </NavLink>
+            ))}
+          </nav>
+
+          {/* Déconnexion — droite */}
+          <div className="flex shrink-0 items-center gap-3">
+            <span className="hidden text-sm text-white/70 lg:inline">{user?.nom}</span>
             <button
               onClick={logout}
               className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-1.5 text-xs text-white/70 transition hover:bg-white/10 hover:text-white"
             >
-              <ArrowRightOnRectangleIcon className="h-4 w-4" /> Se déconnecter
+              <ArrowRightOnRectangleIcon className="h-4 w-4" /> <span className="hidden sm:inline">Se déconnecter</span>
             </button>
           </div>
         </div>
-        <nav className="mx-auto flex max-w-container gap-1 overflow-x-auto px-4 md:px-8">
-          {NAV.map(({ to, label, icon: Icon, end, badge }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              className={({ isActive }) =>
-                `-mb-px flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm transition ${
-                  isActive ? "border-or text-white" : "border-transparent text-white/55 hover:text-white"
-                }`
-              }
-            >
-              <Icon className="h-4 w-4" /> {label}
-              {badge === "messagerie" && nonLus > 0 && (
-                <span className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-rouge px-1 text-2xs font-semibold leading-none text-white">{nonLus}</span>
-              )}
-            </NavLink>
-          ))}
-        </nav>
       </header>
 
       <main ref={mainRef} id="contenu-principal" tabIndex={-1} className="mx-auto max-w-container px-4 py-6 outline-none md:px-8 md:py-8">

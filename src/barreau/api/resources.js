@@ -236,6 +236,11 @@ export const testerEmailInstallation = (body) => api("/installation/test-email",
 // ─── Espace avocat (rôle AVOCAT — libre-service cloisonné) ────────────────
 export const getEspaceMoi = () => api("/espace/moi");
 export const getEspaceDocuments = () => api("/espace/documents");
+// Pièces justificatives soumises par l'avocat (vérification par le Secrétariat).
+export const getEspacePieces = () => api("/espace/pieces");
+export const soumettreEspacePiece = (body) => api("/espace/pieces", { method: "POST", body });
+export const supprimerEspacePiece = (id) => api(`/espace/pieces/${id}`, { method: "DELETE" });
+export const voirEspacePiece = (id) => ouvrirFichierAuth(`/espace/pieces/${id}/fichier`);
 export const telechargerEspaceRecuPdf = (id, numero) => telechargerPdf(`/espace/recus/${id}/pdf`, `Recu-${numero}.pdf`);
 export const telechargerEspaceQuitusPdf = (id, numero) => telechargerPdf(`/espace/quitus/${id}/pdf`, `Quitus-${numero}.pdf`);
 export const initierEspacePaiement = (body) => api("/espace/paiement", { method: "POST", body });
