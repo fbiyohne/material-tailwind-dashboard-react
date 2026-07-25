@@ -22,6 +22,14 @@ async function detail(id: number) {
     },
   });
   if (!scrutin) throw new HttpError(404, "Scrutin introuvable");
+  // Vote en ligne encore ouvert : le décompte s'incrémente en direct mais reste
+  // confidentiel (pas de tableau de bord en temps réel, y compris pour le SG) —
+  // on masque voix et on neutralise le tri par voix jusqu'à la clôture.
+  if (scrutin.modalite === "EN_LIGNE" && scrutin.statut === "OUVERT") {
+    scrutin.candidats = scrutin.candidats
+      .map((c) => ({ ...c, voix: 0 }))
+      .sort((a, b) => a.nom.localeCompare(b.nom));
+  }
   return scrutin;
 }
 
@@ -91,17 +99,14 @@ scrutinsRouter.post("/:id/voix", requireRole("SECRETAIRE_GENERAL"), asyncH(async
   res.json(await detail(id));
 }));
 
-/** POST /scrutins/:id/clore — clôture le vote (SG) ; fige les voix (dépouillement en ligne). */
+/** POST /scrutins/:id/clore — clôture le vote (SG) ; révèle le décompte. */
 scrutinsRouter.post("/:id/clore", requireRole("SECRETAIRE_GENERAL"), asyncH(async (req, res) => {
   const id = Number(req.params.id);
-  const s = await prisma.scrutin.findUnique({ where: { id }, include: { candidats: { select: { id: true } } } });
+  const s = await prisma.scrutin.findUnique({ where: { id }, select: { statut: true } });
   if (!s) throw new HttpError(404, "Scrutin introuvable");
   if (s.statut !== "OUVERT") throw new HttpError(409, "Le scrutin n'est pas ouvert.");
-  if (s.modalite === "EN_LIGNE") {
-    const compte = await prisma.bulletin.groupBy({ by: ["candidatId"], where: { scrutinId: id }, _count: { _all: true } });
-    const parCandidat = new Map(compte.map((c) => [c.candidatId, c._count._all]));
-    await prisma.$transaction(s.candidats.map((c) => prisma.candidat.update({ where: { id: c.id }, data: { voix: parCandidat.get(c.id) ?? 0 } })));
-  }
+  // Le décompte du vote en ligne est déjà à jour (incrémenté à chaque vote) : la
+  // clôture le fige simplement en le rendant visible (voir masquage dans `detail`).
   res.json(await prisma.scrutin.update({ where: { id }, data: { statut: "CLOS", closLe: new Date() } }));
 }));
 

@@ -568,8 +568,8 @@ const voterSchema = z.object({ candidatIds: z.array(z.number().int()).min(1) });
 
 /**
  * POST /espace/scrutins/:id/voter — vote en ligne, confidentiel et unique.
- * L'émargement (participation) et les bulletins (choix anonymes) sont dissociés :
- * aucun lien ne relie le votant à son vote.
+ * L'émargement trace la seule participation ; le choix n'est jamais stocké
+ * individuellement (décompte agrégé), donc rien ne relie le votant à son vote.
  */
 espaceRouter.post(
   "/scrutins/:id/voter",
@@ -598,9 +598,14 @@ espaceRouter.post(
     if (choix.length > scrutin.nbSieges) throw new HttpError(400, `Vous ne pouvez voter que pour ${scrutin.nbSieges} candidat(s) au maximum.`);
 
     try {
+      // Vote anonyme : on incrémente directement le décompte agrégé de chaque
+      // candidat choisi, sans stocker de bulletin individuel — ainsi aucun
+      // enregistrement (ni son ordre d'insertion) ne relie le votant à son choix.
+      // L'émargement (unique) garantit l'unicité du vote ; incrément + émargement
+      // dans la même transaction → un double vote annule tout (contrainte @@unique).
       await prisma.$transaction([
-        prisma.emargement.create({ data: { scrutinId: id, membreId: moi } }), // unicité via @@unique(scrutinId, membreId)
-        ...choix.map((cid) => prisma.bulletin.create({ data: { scrutinId: id, candidatId: cid } })), // bulletins anonymes
+        prisma.emargement.create({ data: { scrutinId: id, membreId: moi } }),
+        ...choix.map((cid) => prisma.candidat.update({ where: { id: cid }, data: { voix: { increment: 1 } } })),
       ]);
     } catch {
       throw new HttpError(409, "Vous avez déjà voté pour ce scrutin.");

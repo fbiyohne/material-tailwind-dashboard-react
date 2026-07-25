@@ -137,13 +137,19 @@ export async function prochainNumInscription(): Promise<{ num: number; numInscri
   return { num, numInscription: `PN-${new Date().getFullYear()}-${pad(num, 3)}` };
 }
 
-/** N° d'attestation ATT-AAAA-NNN. */
+/**
+ * N° d'attestation ATT-AAAA-NNN via un compteur atomique par année : sûr sous
+ * concurrence (pas de doublon) et monotone (pas de réutilisation d'un numéro après
+ * suppression d'archive), contrairement à l'ancien `count+1`.
+ */
 export async function prochainNumeroAttestation(): Promise<string> {
   const annee = new Date().getFullYear();
-  const n = await prisma.archive.count({
-    where: { categorie: "Attestation d'inscription", reference: { startsWith: `ATT-${annee}-` } },
+  const compteur = await prisma.compteur.upsert({
+    where: { cle: `ATT-${annee}` },
+    create: { cle: `ATT-${annee}`, valeur: 1 },
+    update: { valeur: { increment: 1 } },
   });
-  return `ATT-${annee}-${pad(n + 1, 3)}`;
+  return `ATT-${annee}-${pad(compteur.valeur, 3)}`;
 }
 
 // ─── Corps électoral (RG-04, RG-05) ──────────────────────────────────────────

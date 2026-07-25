@@ -125,6 +125,9 @@ model Membre {
   paiements   Paiement[]
   conversations   ConversationParticipant[] // fils de messagerie auxquels le membre participe
   messagesEnvoyes Message[]                  // messages dont le membre est l'auteur
+  emargements     Emargement[]               // participations aux scrutins (unicité par scrutin)
+  candidatures    Candidat[]                 // candidatures à des scrutins
+  mandatsConseil  MembreConseil[]            // sièges au Conseil rattachés à ce membre
   compte      User?                  // compte d'accès à l'espace avocat (1-1, optionnel)
   // Personne morale (cabinet) : rattachement structuré. Le champ texte `cabinet`
   // est conservé pour l'historique/import ; `cabinetLie` est la relation exploitée.
@@ -288,6 +291,17 @@ model Quitus {
   annee        Int
   dateEmission DateTime
   createdAt    DateTime @default(now())
+
+  // Un seul quitus par avocat et par exercice — défense en profondeur (la garde
+  // applicative existe déjà, cette contrainte la rend infaillible sous concurrence).
+  @@unique([membreId, annee])
+}
+
+/// Compteur atomique par clé (ex. « ATT-2026 ») — numérotation officielle sûre
+/// sous concurrence et monotone (pas de réutilisation après suppression).
+model Compteur {
+  cle    String @id
+  valeur Int    @default(0)
 }
 
 model DossierDisciplinaire {
@@ -394,6 +408,9 @@ model MembreConseil {
   // conservé comme historique avec date et motif de sortie.
   actif       Boolean   @default(true)
   motifSortie String? // motif de fin de mandat (démission, décès, fin de mandat…)
+  // Avocat rattaché (mandat issu d'un scrutin). SET NULL à la suppression du membre :
+  // le siège/l'historique est conservé (nom dénormalisé) sans référence pendante.
+  membre      Membre?   @relation(fields: [membreId], references: [id], onDelete: SetNull)
   membreId    Int? // avocat rattaché (mandat issu d'un scrutin)
   mandatDebut DateTime?
   mandatFin   DateTime?
@@ -431,17 +448,20 @@ model Scrutin {
 
   candidats   Candidat[]
   emargements Emargement[]
-  bulletins   Bulletin[]
 }
 
 model Candidat {
   id        Int      @id @default(autoincrement())
   scrutin   Scrutin  @relation(fields: [scrutinId], references: [id], onDelete: Cascade)
   scrutinId Int
+  // Avocat rattaché (facultatif). SET NULL à la suppression : on ne perd pas la
+  // candidature (nom dénormalisé), mais on n'a plus de référence pendante.
+  membre    Membre?  @relation(fields: [membreId], references: [id], onDelete: SetNull)
   membreId  Int?
   nom       String
-  voix      Int      @default(0) // saisie (présentiel) ou figée à la clôture (en ligne)
-  bulletins Bulletin[]
+  // Décompte : saisi (présentiel) ou incrémenté à chaque vote (en ligne, anonyme —
+  // aucun bulletin individuel n'est stocké, donc rien ne relie un votant à son choix).
+  voix      Int      @default(0)
 
   @@index([scrutinId])
 }
@@ -451,22 +471,11 @@ model Emargement {
   id        Int      @id @default(autoincrement())
   scrutin   Scrutin  @relation(fields: [scrutinId], references: [id], onDelete: Cascade)
   scrutinId Int
+  membre    Membre   @relation(fields: [membreId], references: [id], onDelete: Cascade)
   membreId  Int
   createdAt DateTime @default(now())
 
   @@unique([scrutinId, membreId])
-}
-
-/// Bulletin anonyme (vote en ligne) : aucun lien vers le votant (confidentialité).
-model Bulletin {
-  id         Int      @id @default(autoincrement())
-  scrutin    Scrutin  @relation(fields: [scrutinId], references: [id], onDelete: Cascade)
-  scrutinId  Int
-  candidat   Candidat @relation(fields: [candidatId], references: [id], onDelete: Cascade)
-  candidatId Int
-  createdAt  DateTime @default(now())
-
-  @@index([scrutinId])
 }
 
 /// Calendrier éditorial mensuel de la Lettre du Bâtonnier (FR-BAT).
