@@ -86,6 +86,33 @@ espaceRouter.get(
   })
 );
 
+/**
+ * PATCH /espace/moi — l'avocat met à jour SES coordonnées de contact (téléphone,
+ * email de contact, adresse). Bornée à ces champs : ni le nom, ni la qualité, ni le
+ * statut, ni l'email de connexion (compte User) ne sont modifiables ici.
+ */
+const coordonneesSchema = z.object({
+  tel: z.string().trim().max(40).optional(),
+  email: z.string().trim().email().max(160).or(z.literal("")).optional(),
+  adresse: z.string().trim().max(300).optional(),
+});
+espaceRouter.patch(
+  "/moi",
+  asyncH(async (req: AuthRequest, res) => {
+    const data = coordonneesSchema.parse(req.body);
+    const membre = await prisma.membre.update({
+      where: { id: monMembreId(req) },
+      data: {
+        tel: data.tel,
+        email: data.email === "" ? null : data.email,
+        adresse: data.adresse,
+      },
+      select: { tel: true, email: true, adresse: true },
+    });
+    res.json(membre);
+  })
+);
+
 /** GET /espace/documents — reçus et quitus délivrés à l'avocat connecté. */
 espaceRouter.get(
   "/documents",

@@ -6,6 +6,10 @@ import { requireAuth, requireRole } from "../middleware/auth.js";
 import { envoyerPdf } from "../lib/pdf.js";
 import { archiver } from "../lib/business.js";
 import { convocationAgHtml, pvAssembleeHtml } from "../lib/templates.js";
+import { envoyerEmail } from "../lib/notifications.js";
+import { emailEnSimulation } from "../lib/mail.js";
+
+const TYPE_AG = { AGO: "Assemblée Générale Ordinaire", AGE: "Assemblée Générale Extraordinaire" } as Record<string, string>;
 
 export const assembleesRouter = Router();
 // Module institutionnel : lecture SG/Bâtonnier (l'agenda public passe par /dashboard/agenda).
@@ -18,6 +22,29 @@ assembleesRouter.get("/:id/convocation/pdf", asyncH(async (req, res) => {
   const jour = new Date(a.date).toISOString().slice(0, 10);
   await archiver({ categorie: "Convocation", titre: `Convocation ${a.type} du ${jour}`, reference: `CONV-${a.type}-${jour}`, date: new Date() });
   await envoyerPdf(res, convocationAgHtml(a), `Convocation-${a.type}-${jour}.pdf`);
+}));
+
+/** POST /assemblees/:id/convoquer — envoie la convocation par email à tous les membres (SG). */
+assembleesRouter.post("/:id/convoquer", requireRole("SECRETAIRE_GENERAL"), asyncH(async (req, res) => {
+  const a = await prisma.assemblee.findUnique({ where: { id: Number(req.params.id) } });
+  if (!a) throw new HttpError(404, "Assemblée introuvable");
+  const jour = new Date(a.date).toISOString().slice(0, 10);
+  const libelle = TYPE_AG[a.type] ?? "Assemblée Générale";
+  const odj = (a.ordreDuJour ?? []).map((p, i) => `${i + 1}. ${p}`).join("\n");
+  // Convocation adressée à tous les membres non radiés disposant d'un email.
+  const membres = await prisma.membre.findMany({ where: { statut: { not: "RADIE" }, email: { not: null } }, select: { nom: true, email: true } });
+  let envoyes = 0;
+  for (const m of membres) {
+    await envoyerEmail({
+      to: m.email!,
+      subject: `Convocation — ${libelle} du ${jour} · Barreau de Pointe-Noire`,
+      text: `Maître ${m.nom},\n\nLe Bâtonnier a l'honneur de vous convier à l'${libelle} du Barreau de Pointe-Noire, le ${jour}${a.lieu ? `, au ${a.lieu}` : ""}.\n\nOrdre du jour :\n${odj || "—"}\n\nLe Secrétariat Général du Barreau de Pointe-Noire.`,
+      evenement: "CONVOCATION",
+    });
+    envoyes += 1;
+  }
+  await archiver({ categorie: "Convocation (AG)", titre: `Convocation ${a.type} du ${jour} — envoyée à ${envoyes} membre(s)`, reference: `CONV-${a.type}-${jour}`, date: new Date() });
+  res.json({ envoyes, total: membres.length, simulation: await emailEnSimulation() });
 }));
 
 /** GET /assemblees/:id/pv/pdf — procès-verbal d'AG (PDF) + archivage auto. */

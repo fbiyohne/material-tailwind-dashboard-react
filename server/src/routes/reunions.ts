@@ -6,6 +6,8 @@ import { requireAuth, requireRole } from "../middleware/auth.js";
 import { envoyerPdf } from "../lib/pdf.js";
 import { archiver } from "../lib/business.js";
 import { convocationReunionHtml, feuillePresenceHtml, pvReunionHtml } from "../lib/templates.js";
+import { envoyerEmail } from "../lib/notifications.js";
+import { emailEnSimulation } from "../lib/mail.js";
 
 export const reunionsRouter = Router();
 // Module institutionnel : lecture SG/Bâtonnier (l'agenda public passe par /dashboard/agenda).
@@ -18,6 +20,30 @@ reunionsRouter.get("/:id/convocation/pdf", asyncH(async (req, res) => {
   const jour = new Date(r.date).toISOString().slice(0, 10);
   await archiver({ categorie: "Convocation", titre: `Convocation réunion du ${jour}`, reference: `CONV-REU-${jour}`, date: new Date() });
   await envoyerPdf(res, convocationReunionHtml(r), `Convocation-reunion-${jour}.pdf`);
+}));
+
+/** POST /reunions/:id/convoquer — envoie la convocation par email aux membres du Conseil (SG). */
+reunionsRouter.post("/:id/convoquer", requireRole("SECRETAIRE_GENERAL"), asyncH(async (req, res) => {
+  const r = await prisma.reunion.findUnique({ where: { id: Number(req.params.id) } });
+  if (!r) throw new HttpError(404, "Réunion introuvable");
+  const jour = new Date(r.date).toISOString().slice(0, 10);
+  const odj = (r.ordreDuJour ?? []).map((p, i) => `${i + 1}. ${p}`).join("\n");
+  // Destinataires : les membres du Conseil en exercice, rattachés à une fiche avec email.
+  const sieges = await prisma.membreConseil.findMany({ where: { actif: true, membreId: { not: null } }, select: { membreId: true } });
+  const ids = sieges.map((s) => s.membreId!).filter((v) => v != null);
+  const membres = await prisma.membre.findMany({ where: { id: { in: ids }, email: { not: null } }, select: { nom: true, email: true } });
+  let envoyes = 0;
+  for (const m of membres) {
+    await envoyerEmail({
+      to: m.email!,
+      subject: `Convocation — réunion du Conseil de l'Ordre du ${jour} · Barreau de Pointe-Noire`,
+      text: `Maître ${m.nom},\n\nLe Bâtonnier convie les membres du Conseil de l'Ordre à la réunion du ${jour}${r.heure ? ` à ${r.heure}` : ""}${r.lieu ? `, au ${r.lieu}` : ""}.\n\nOrdre du jour :\n${odj || "—"}\n\nLe Secrétariat Général du Barreau de Pointe-Noire.`,
+      evenement: "CONVOCATION",
+    });
+    envoyes += 1;
+  }
+  await archiver({ categorie: "Convocation (Conseil)", titre: `Convocation réunion du ${jour} — envoyée à ${envoyes} membre(s)`, reference: `CONV-REU-${jour}`, date: new Date() });
+  res.json({ envoyes, total: membres.length, simulation: await emailEnSimulation() });
 }));
 
 reunionsRouter.get("/:id/feuille-presence/pdf", asyncH(async (req, res) => {
