@@ -1,9 +1,11 @@
 import { Router } from "express";
 import { z } from "zod";
+import path from "node:path";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireAvocat, type AuthRequest } from "../middleware/auth.js";
+import { enregistrerFichier, lireFichier, supprimerFichier } from "../lib/storage.js";
 import { cotisationDue, droitDue, statutCotisation, tarifsActuels, eligibiliteElectorale } from "../lib/business.js";
 import { finaliserPaiement } from "../lib/encaissement.js";
 import { CANAUX, modeSandbox, nouvelleReference, initierPaiement } from "../lib/paiement.js";
@@ -298,6 +300,76 @@ espaceRouter.get(
     if (!d || d.membreId !== monMembreId(req)) throw new HttpError(404, "Dossier introuvable");
     if (!d.decision) throw new HttpError(404, "Décision non disponible");
     await envoyerPdf(res, decisionDisciplineHtml(d), `Decision-${d.reference}.pdf`);
+  })
+);
+
+// ── Pièces justificatives soumises par l'avocat (vérification KYC) ───────────
+const TYPES_PIECE_ESPACE = ["IDENTITE", "DIPLOME", "SERMENT", "PHOTO", "CASIER", "AUTRE"] as const;
+const MAX_TAILLE_PIECE = 5 * 1024 * 1024; // 5 Mo
+const pieceEspaceSchema = z.object({
+  type: z.enum(TYPES_PIECE_ESPACE),
+  nomFichier: z.string().min(1).max(200),
+  mimeType: z.string().min(1).max(120),
+  donnees: z.string().min(1), // base64 sans préfixe data:
+});
+const INLINE_SUR_PIECE = new Set(["application/pdf", "image/png", "image/jpeg", "image/gif", "image/webp"]);
+
+/** GET /espace/pieces — pièces soumises par l'avocat + statut de vérification. */
+espaceRouter.get(
+  "/pieces",
+  asyncH(async (req: AuthRequest, res) => {
+    const pieces = await prisma.pieceDossier.findMany({
+      where: { membreId: monMembreId(req) },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, type: true, nomFichier: true, mimeType: true, taille: true, statut: true, note: true, createdAt: true },
+    });
+    res.json(pieces);
+  })
+);
+
+/** POST /espace/pieces — l'avocat soumet une pièce pour SON propre dossier. */
+espaceRouter.post(
+  "/pieces",
+  asyncH(async (req: AuthRequest, res) => {
+    const moi = monMembreId(req);
+    const data = pieceEspaceSchema.parse(req.body);
+    const tailleEstimee = Math.floor((data.donnees.length * 3) / 4);
+    if (tailleEstimee > MAX_TAILLE_PIECE) throw new HttpError(413, "Fichier trop volumineux (max 5 Mo).");
+    const ext = path.extname(data.nomFichier).slice(0, 12);
+    const { chemin, taille } = enregistrerFichier(`pieces/${moi}`, data.donnees, ext);
+    const piece = await prisma.pieceDossier.create({
+      data: { membreId: moi, type: data.type, nomFichier: data.nomFichier, fichier: chemin, mimeType: data.mimeType, taille },
+    });
+    res.status(201).json({ id: piece.id, type: piece.type, nomFichier: piece.nomFichier, statut: piece.statut, createdAt: piece.createdAt });
+  })
+);
+
+/** GET /espace/pieces/:id/fichier — l'avocat consulte UNE de SES pièces. */
+espaceRouter.get(
+  "/pieces/:id/fichier",
+  asyncH(async (req: AuthRequest, res) => {
+    const piece = await prisma.pieceDossier.findUnique({ where: { id: Number(req.params.id) } });
+    if (!piece || piece.membreId !== monMembreId(req)) throw new HttpError(404, "Pièce introuvable");
+    const buffer = lireFichier(piece.fichier);
+    const sur = INLINE_SUR_PIECE.has(piece.mimeType ?? "");
+    const nom = piece.nomFichier.replace(/[\r\n"]/g, "");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Content-Type", sur ? piece.mimeType! : "application/octet-stream");
+    res.setHeader("Content-Disposition", `${sur ? "inline" : "attachment"}; filename="${nom}"`);
+    res.end(buffer);
+  })
+);
+
+/** DELETE /espace/pieces/:id — retrait d'une pièce encore en attente (pas déjà vérifiée). */
+espaceRouter.delete(
+  "/pieces/:id",
+  asyncH(async (req: AuthRequest, res) => {
+    const piece = await prisma.pieceDossier.findUnique({ where: { id: Number(req.params.id) } });
+    if (!piece || piece.membreId !== monMembreId(req)) throw new HttpError(404, "Pièce introuvable");
+    if (piece.statut === "VERIFIEE") throw new HttpError(409, "Une pièce déjà vérifiée ne peut pas être retirée.");
+    try { supprimerFichier(piece.fichier); } catch { /* fichier déjà absent */ }
+    await prisma.pieceDossier.delete({ where: { id: piece.id } });
+    res.status(204).end();
   })
 );
 
