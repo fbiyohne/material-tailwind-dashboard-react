@@ -12,10 +12,11 @@ import { STATUT_DOSSIER_META } from "../data/institutionnel";
 import { formatDate, formatDateTime } from "../utils/format";
 import { listerMembres, listerDossiers, ouvrirDossier as apiOuvrirDossier, supprimerDossier, journalDiscipline as apiJournal } from "../api/resources";
 
+const VIDE_DOSSIER = { membreId: "", objet: "", dateSaisine: new Date().toISOString().slice(0, 10), plaignant: "", rapporteur: "" };
 function OuvrirDossierModal({ open, onClose, onCreated }) {
   const toast = useToast();
   const [avocats, setAvocats] = useState([]);
-  const [form, setForm] = useState({ avocatNom: "", objet: "", dateSaisine: new Date().toISOString().slice(0, 10) });
+  const [form, setForm] = useState(VIDE_DOSSIER);
   const [creation, setCreation] = useState(false);
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
@@ -23,7 +24,7 @@ function OuvrirDossierModal({ open, onClose, onCreated }) {
     if (open) listerMembres().then((d) => {
       const a = d.items.filter((m) => m.qualite !== "stagiaire");
       setAvocats(a);
-      setForm((f) => ({ ...f, avocatNom: f.avocatNom || a[0]?.nom || "" }));
+      setForm((f) => ({ ...f, membreId: f.membreId || (a[0]?.id ?? "") }));
     }).catch(() => {});
   }, [open]);
 
@@ -31,13 +32,23 @@ function OuvrirDossierModal({ open, onClose, onCreated }) {
     // Garde anti double-clic : une référence AAAA-NN est consommée par ouverture
     // et n'est pas réutilisable — un double-clic créerait deux dossiers.
     if (!form.objet.trim() || creation) return;
+    // On rattache le dossier à la fiche de l'avocat (membreId) pour alimenter son
+    // casier disciplinaire, et on transmet l'avocatNom (dénormalisé) + plaignant/rapporteur.
+    const avocat = avocats.find((m) => String(m.id) === String(form.membreId));
     setCreation(true);
     try {
-      await apiOuvrirDossier(form);
+      await apiOuvrirDossier({
+        avocatNom: avocat?.nom ?? "",
+        membreId: form.membreId ? Number(form.membreId) : undefined,
+        objet: form.objet,
+        dateSaisine: form.dateSaisine,
+        plaignant: form.plaignant.trim() || undefined,
+        rapporteur: form.rapporteur.trim() || undefined,
+      });
       toast.success("Dossier disciplinaire ouvert.");
       onCreated?.();
       onClose();
-      setForm({ avocatNom: avocats[0]?.nom ?? "", objet: "", dateSaisine: new Date().toISOString().slice(0, 10) });
+      setForm({ ...VIDE_DOSSIER, membreId: avocats[0]?.id ?? "" });
     } catch (e) {
       toast.error(e.message);
     } finally {
@@ -53,13 +64,21 @@ function OuvrirDossierModal({ open, onClose, onCreated }) {
       </Notice>
       <div className="space-y-3">
         <FormField label="Avocat mis en cause">
-          <select value={form.avocatNom} onChange={set("avocatNom")} className="bpn-input">
-            {avocats.map((m) => <option key={m.id} value={m.nom}>Me {m.nom}</option>)}
+          <select value={form.membreId} onChange={set("membreId")} className="bpn-input">
+            {avocats.map((m) => <option key={m.id} value={m.id}>Me {m.nom}</option>)}
           </select>
         </FormField>
         <FormField label="Objet de la saisine" required>
           <textarea rows={3} value={form.objet} onChange={set("objet")} className="bpn-input" placeholder="Nature de la plainte ou de la saisine…" />
         </FormField>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <FormField label="Plaignant" hint="le cas échéant">
+            <input value={form.plaignant} onChange={set("plaignant")} className="bpn-input" placeholder="Auteur de la saisine" />
+          </FormField>
+          <FormField label="Rapporteur" hint="le cas échéant">
+            <input value={form.rapporteur} onChange={set("rapporteur")} className="bpn-input" placeholder="Membre chargé de l'instruction" />
+          </FormField>
+        </div>
         <FormField label="Date de saisine">
           <input type="date" value={form.dateSaisine} onChange={set("dateSaisine")} className="bpn-input" />
         </FormField>

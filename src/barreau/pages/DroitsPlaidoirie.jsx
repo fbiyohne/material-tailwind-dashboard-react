@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BanknotesIcon, ArrowDownTrayIcon, PrinterIcon, TrashIcon } from "@heroicons/react/24/outline";
-import { Badge, StatCard, PaiementModal, useToast, useConfirm, EtatImprimable, PageHeader, DataTable, SelecteurExercice } from "../components";
+import { Badge, StatCard, PaiementModal, PaiementEnLigneModal, useToast, useConfirm, EtatImprimable, PageHeader, DataTable, SelecteurExercice } from "../components";
 import { useAuth } from "../auth/AuthContext";
 import { STATUT_META } from "../data/derivations";
 import { EXERCICE_COURANT } from "../data/dashboard-data";
@@ -28,6 +28,7 @@ export function DroitsPlaidoirie() {
   const [lignes, setLignes] = useState([]);
   const [totaux, setTotaux] = useState({ du: 0, paye: 0, solde: 0 });
   const [paiement, setPaiement] = useState(null);
+  const [enLigne, setEnLigne] = useState(null);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState(false);
 
@@ -69,9 +70,14 @@ export function DroitsPlaidoirie() {
       cell: (l) => (
         <div className="flex items-center justify-end gap-1.5">
           {l.solde > 0 ? (
-            <button className="bpn-btn bpn-btn-ghost bpn-btn-sm" onClick={() => setPaiement(l)}>
-              <BanknotesIcon className="h-3.5 w-3.5" /> Encaisser
-            </button>
+            <>
+              <button className="bpn-btn bpn-btn-ghost bpn-btn-sm" onClick={() => setPaiement(l)}>
+                <BanknotesIcon className="h-3.5 w-3.5" /> Encaisser
+              </button>
+              <button className="bpn-btn bpn-btn-ghost bpn-btn-sm" onClick={() => setEnLigne({ membre: l.membre, montantDu: l.du, montantPaye: l.paye })}>
+                En ligne
+              </button>
+            </>
           ) : <span className="text-xs text-vert">✓ Soldé</span>}
           {estAdmin && l.aLigne && (
             <button className="bpn-btn bpn-btn-ghost !px-2 !py-1 text-xs text-rouge" onClick={() => supprimer(l)} title="Supprimer la ligne de droit">
@@ -143,6 +149,14 @@ export function DroitsPlaidoirie() {
         type="droit"
         open={!!paiement}
         onClose={() => setPaiement(null)}
+        onDone={charger}
+      />
+      <PaiementEnLigneModal
+        ligne={enLigne}
+        exercice={exercice}
+        type="droit"
+        open={!!enLigne}
+        onClose={() => setEnLigne(null)}
         onDone={charger}
       />
     </div>

@@ -75,7 +75,10 @@ export function PublicationDetail() {
           <button className="bpn-btn bpn-btn-primary" onClick={() => transition("a_valider", "Soumis pour validation.")}>Soumettre</button>
         )}
         {peutValider && publication.statut === "a_valider" && (
-          <button className="bpn-btn bpn-btn-primary" onClick={() => transition("valide", "Validé par le Bâtonnier.")}>Valider (Bâtonnier)</button>
+          <>
+            <button className="bpn-btn bpn-btn-ghost" onClick={() => transition("brouillon", "Renvoyée au Secrétariat pour correction.")}>Renvoyer pour correction</button>
+            <button className="bpn-btn bpn-btn-primary" onClick={() => transition("valide", "Validé par le Bâtonnier.")}>Valider (Bâtonnier)</button>
+          </>
         )}
         {(peutGerer || peutValider) && publication.statut === "valide" && (
           <button className="bpn-btn bpn-btn-or" onClick={() => transition("publie", "Publication diffusée.")}>Publier</button>

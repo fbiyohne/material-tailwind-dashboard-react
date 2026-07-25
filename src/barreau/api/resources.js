@@ -168,6 +168,7 @@ export const listerReunions = () => api("/reunions");
 export const getReunion = (id) => api(`/reunions/${id}`);
 export const creerReunion = (data) => api("/reunions", { method: "POST", body: data });
 export const majReunion = (id, patch) => api(`/reunions/${id}`, { method: "PATCH", body: patch });
+export const convoquerReunion = (id) => api(`/reunions/${id}/convoquer`, { method: "POST" });
 export const supprimerReunion = (id) => api(`/reunions/${id}`, { method: "DELETE" });
 
 // ─── Conseil de l'Ordre (feuilles de présence) ───────────────────────────
@@ -178,6 +179,7 @@ export const listerAssemblees = () => api("/assemblees");
 export const getAssemblee = (id) => api(`/assemblees/${id}`);
 export const creerAssemblee = (data) => api("/assemblees", { method: "POST", body: data });
 export const majAssemblee = (id, patch) => api(`/assemblees/${id}`, { method: "PATCH", body: patch });
+export const convoquerAssemblee = (id) => api(`/assemblees/${id}/convoquer`, { method: "POST" });
 export const supprimerAssemblee = (id) => api(`/assemblees/${id}`, { method: "DELETE" });
 
 // ─── Discipline (statut enum → minuscule) ────────────────────────────────
@@ -187,6 +189,7 @@ const normDossier = (d) => ({
   dateSaisine: dateCourte(d.dateSaisine),
   dateConvocation: dateCourte(d.dateConvocation),
   dateAudience: dateCourte(d.dateAudience),
+  dateRecours: dateCourte(d.dateRecours),
 });
 export const listerDossiers = () => api("/discipline").then((a) => a.map(normDossier));
 export const getDossier = (id) => api(`/discipline/${id}`).then(normDossier);
@@ -235,6 +238,7 @@ export const testerEmailInstallation = (body) => api("/installation/test-email",
 
 // ─── Espace avocat (rôle AVOCAT — libre-service cloisonné) ────────────────
 export const getEspaceMoi = () => api("/espace/moi");
+export const majEspaceCoordonnees = (body) => api("/espace/moi", { method: "PATCH", body });
 export const getEspaceDocuments = () => api("/espace/documents");
 // Pièces justificatives soumises par l'avocat (vérification par le Secrétariat).
 export const getEspacePieces = () => api("/espace/pieces");

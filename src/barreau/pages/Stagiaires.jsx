@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { PrinterIcon, TrashIcon, ArrowUpTrayIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
+import { PrinterIcon, TrashIcon, ArrowUpTrayIcon, ArrowDownTrayIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { Badge, Pagination, useToast, useConfirm, PageHeader, TableSkeleton, ErrorState, ImportMembresModal } from "../components";
 import { useAuth } from "../auth/AuthContext";
 import { formatDate } from "../utils/format";
@@ -102,6 +102,7 @@ export function Stagiaires() {
   const estAdmin = user?.role === "ADMIN";
   const peutImporter = user?.role === "SECRETAIRE_GENERAL" || user?.role === "ADMIN";
   const [membres, setMembres] = useState([]);
+  const [recherche, setRecherche] = useState("");
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState(false);
   const [filtre, setFiltre] = useState("tous");
@@ -138,14 +139,18 @@ export function Stagiaires() {
         .map((m) => ({ membre: m, stage: infoStage(m) }))
         .filter(({ stage }) =>
           filtre === "tous" ? true : filtre === "termine" ? stage?.termine : !stage?.termine
-        ),
-    [membres, filtre]
+        )
+        .filter(({ membre: m }) => {
+          const q = recherche.trim().toLowerCase();
+          return !q || m.nom.toLowerCase().includes(q) || (m.cabinet ?? "").toLowerCase().includes(q);
+        }),
+    [membres, filtre, recherche]
   );
 
   // Pagination de la grille (l'impression, elle, liste tous les stagiaires).
   const PAR_PAGE = 10;
   const [page, setPage] = useState(1);
-  useEffect(() => { setPage(1); }, [filtre]);
+  useEffect(() => { setPage(1); }, [filtre, recherche]);
   const totalPages = Math.max(1, Math.ceil(stagiaires.length / PAR_PAGE));
   const pageCourante = Math.min(page, totalPages);
   const visibles = stagiaires.slice((pageCourante - 1) * PAR_PAGE, pageCourante * PAR_PAGE);
@@ -191,6 +196,11 @@ export function Stagiaires() {
           </button>
         )}
       </PageHeader>
+
+      <div className="bpn-no-print relative max-w-md">
+        <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gris" />
+        <input type="text" value={recherche} onChange={(e) => setRecherche(e.target.value)} placeholder="Rechercher par nom ou cabinet…" aria-label="Rechercher un stagiaire" className="bpn-input pl-9" />
+      </div>
 
       {chargement ? (
         <div className="bpn-no-print"><TableSkeleton rows={6} cols={3} /></div>

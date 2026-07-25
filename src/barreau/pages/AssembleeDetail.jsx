@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeftIcon, PlusIcon, CheckIcon, ArrowDownTrayIcon, TrashIcon, ListBulletIcon, UserGroupIcon, ClipboardDocumentCheckIcon, DocumentTextIcon } from "@heroicons/react/24/outline";
+import { ArrowLeftIcon, PlusIcon, CheckIcon, ArrowDownTrayIcon, TrashIcon, ListBulletIcon, UserGroupIcon, ClipboardDocumentCheckIcon, DocumentTextIcon, PaperAirplaneIcon } from "@heroicons/react/24/outline";
 import { Badge, DocumentModal, useToast, useConfirm, PageHeader, Tabs, ErrorState, TableSkeleton } from "../components";
 import { formatDate } from "../utils/format";
 import { EXERCICE_COURANT } from "../data/dashboard-data";
 import { useAuth } from "../auth/AuthContext";
-import { getAssemblee, majAssemblee, getCorpsElectoral, archiverDoc, telechargerPvAgPdf, supprimerAssemblee } from "../api/resources";
+import { getAssemblee, majAssemblee, getCorpsElectoral, archiverDoc, telechargerPvAgPdf, supprimerAssemblee, convoquerAssemblee } from "../api/resources";
 
 const TYPE_LABEL = { AGO: "Assemblée Générale Ordinaire", AGE: "Assemblée Générale Extraordinaire" };
 
@@ -84,6 +84,15 @@ export function AssembleeDetail() {
       toast.error(e.message);
     }
   };
+  const supprimerDecision = async (i) => {
+    try {
+      const maj = await majAssemblee(assemblee.id, { decisions: (assemblee.decisions ?? []).filter((_, j) => j !== i) });
+      setAssemblee(maj);
+      toast.success("Décision retirée.");
+    } catch (e) {
+      toast.error(e.message);
+    }
+  };
   const sauverPv = async () => {
     try {
       await majAssemblee(assemblee.id, { pv, statut: "tenue" });
@@ -134,6 +143,16 @@ export function AssembleeDetail() {
         }
       >
         <button className="bpn-btn bpn-btn-ghost" onClick={() => setConvocation(true)}>Convocation</button>
+        {peutGerer && (
+          <button className="bpn-btn bpn-btn-primary" onClick={async () => {
+            const ok = await confirm({ title: "Envoyer la convocation ?", message: "La convocation sera envoyée par email à tous les membres du Barreau disposant d'une adresse.", confirmLabel: "Envoyer" });
+            if (!ok) return;
+            try { const r = await convoquerAssemblee(assemblee.id); toast.success(`Convocation envoyée à ${r.envoyes} membre(s)${r.simulation ? " (simulation — SMTP non configuré)" : ""}.`); }
+            catch (e) { toast.error(e.message); }
+          }}>
+            <PaperAirplaneIcon className="h-4 w-4" /> Envoyer la convocation
+          </button>
+        )}
         {peutGerer && assemblee.statut !== "tenue" && (
           <button className="bpn-btn bpn-btn-ghost text-rouge" onClick={supprimer}><TrashIcon className="h-4 w-4" /> Supprimer</button>
         )}
@@ -189,9 +208,16 @@ export function AssembleeDetail() {
                 {(assemblee.decisions ?? []).length === 0 ? (
                   <p className="py-3 text-center text-sm text-gris">Aucune décision enregistrée.</p>
                 ) : (
-                  <ul className="list-inside list-decimal space-y-1 text-sm text-encre">
-                    {assemblee.decisions.map((d, i) => <li key={i}>{d}</li>)}
-                  </ul>
+                  <ol className="space-y-1.5 text-sm text-encre">
+                    {assemblee.decisions.map((d, i) => (
+                      <li key={i} className="flex items-start justify-between gap-3 rounded border border-grisL bg-grisL/40 px-3 py-2">
+                        <span className="flex-1"><span className="mr-1 font-mono text-xs text-gris">{i + 1}.</span>{d}</span>
+                        {peutGerer && (
+                          <button type="button" onClick={() => supprimerDecision(i)} title="Retirer la décision" className="shrink-0 text-gris transition hover:text-rouge"><TrashIcon className="h-4 w-4" /></button>
+                        )}
+                      </li>
+                    ))}
+                  </ol>
                 )}
               </Carte>
             ),

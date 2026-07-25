@@ -53,6 +53,8 @@ export function DossierDetail() {
       await majDossier(dossier.id, {
         statut: form.statut, dateConvocation: form.dateConvocation, dateAudience: form.dateAudience,
         decision: form.decision, sanction: form.sanction, pieces: form.pieces ?? [],
+        plaignant: form.plaignant ?? "", rapporteur: form.rapporteur ?? "",
+        recours: form.recours ?? "", dateRecours: form.dateRecours || undefined,
       });
       setEnregistre(true);
       toast.success("Dossier mis à jour.");
@@ -153,6 +155,12 @@ export function DossierDetail() {
                     </select>
                   </FormField>
                   <div />
+                  <FormField label="Plaignant">
+                    <input value={form.plaignant ?? ""} onChange={set("plaignant")} className="bpn-input" placeholder="Auteur de la saisine" />
+                  </FormField>
+                  <FormField label="Rapporteur">
+                    <input value={form.rapporteur ?? ""} onChange={set("rapporteur")} className="bpn-input" placeholder="Membre chargé de l'instruction" />
+                  </FormField>
                   <FormField label="Date de convocation">
                     <input type="date" value={form.dateConvocation ?? ""} onChange={set("dateConvocation")} className="bpn-input" />
                   </FormField>
@@ -164,6 +172,12 @@ export function DossierDetail() {
                   </FormField>
                   <FormField label="Sanction éventuelle" full>
                     <input value={form.sanction ?? ""} onChange={set("sanction")} className="bpn-input" placeholder="Avertissement, blâme, suspension, radiation…" />
+                  </FormField>
+                  <FormField label="Recours (appel)" hint="le cas échéant" full>
+                    <textarea rows={2} value={form.recours ?? ""} onChange={set("recours")} className="bpn-input" placeholder="Recours formé devant la Cour d'appel : objet, référence…" />
+                  </FormField>
+                  <FormField label="Date du recours">
+                    <input type="date" value={form.dateRecours ?? ""} onChange={set("dateRecours")} className="bpn-input" />
                   </FormField>
                 </div>
                 <div className="flex items-center justify-end gap-3 border-t border-grisM px-4 py-3">

@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeftIcon, CalendarDaysIcon, MapPinIcon, CheckIcon, ArrowDownTrayIcon, TrashIcon, ListBulletIcon, UserGroupIcon, DocumentTextIcon } from "@heroicons/react/24/outline";
+import { ArrowLeftIcon, CalendarDaysIcon, MapPinIcon, CheckIcon, ArrowDownTrayIcon, TrashIcon, ListBulletIcon, UserGroupIcon, DocumentTextIcon, PaperAirplaneIcon } from "@heroicons/react/24/outline";
 import { Badge, DocumentModal, useToast, useConfirm, PageHeader, Tabs, ErrorState, TableSkeleton } from "../components";
 import { formatDate } from "../utils/format";
 import { useAuth } from "../auth/AuthContext";
-import { getReunion, majReunion, archiverDoc, telechargerPvReunionPdf, getConseil, supprimerReunion } from "../api/resources";
+import { getReunion, majReunion, archiverDoc, telechargerPvReunionPdf, getConseil, supprimerReunion, convoquerReunion } from "../api/resources";
 
 /** Libellé d'émargement d'un membre du Conseil — sert aussi de clé de présence. */
 const labelConseil = (c) => `${c.nom} — ${c.fonction}`;
@@ -138,6 +138,16 @@ export function ReunionDetail() {
       >
         <button className="bpn-btn bpn-btn-ghost" onClick={() => setConvocation(true)}>Convocation</button>
         <button className="bpn-btn bpn-btn-ghost" onClick={() => setFeuille(true)}>Feuille de présence</button>
+        {peutGerer && (
+          <button className="bpn-btn bpn-btn-primary" onClick={async () => {
+            const ok = await confirm({ title: "Envoyer la convocation ?", message: "La convocation sera envoyée par email aux membres du Conseil disposant d'une adresse.", confirmLabel: "Envoyer" });
+            if (!ok) return;
+            try { const r = await convoquerReunion(reunion.id); toast.success(`Convocation envoyée à ${r.envoyes} membre(s)${r.simulation ? " (simulation — SMTP non configuré)" : ""}.`); }
+            catch (e) { toast.error(e.message); }
+          }}>
+            <PaperAirplaneIcon className="h-4 w-4" /> Envoyer la convocation
+          </button>
+        )}
         {peutGerer && reunion.statut !== "tenue" && (
           <button className="bpn-btn bpn-btn-ghost text-rouge" onClick={supprimer}><TrashIcon className="h-4 w-4" /> Supprimer</button>
         )}

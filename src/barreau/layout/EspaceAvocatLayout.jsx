@@ -3,7 +3,7 @@ import { Routes, Route, Navigate, NavLink, useLocation } from "react-router-dom"
 import {
   ArrowRightOnRectangleIcon, HomeIcon, FolderIcon, BookOpenIcon,
   BuildingLibraryIcon, MegaphoneIcon, ArchiveBoxIcon, ScaleIcon, ChatBubbleLeftRightIcon, HandRaisedIcon,
-  Bars3Icon, XMarkIcon,
+  Bars3Icon, XMarkIcon, UserCircleIcon,
 } from "@heroicons/react/24/outline";
 import { Sceau } from "../components";
 import { useAuth } from "../auth/AuthContext";
@@ -19,6 +19,7 @@ const EspaceArchives = lazy(() => import("../pages/espace/EspaceArchives"));
 const EspaceDiscipline = lazy(() => import("../pages/espace/EspaceDiscipline"));
 const EspaceMessagerie = lazy(() => import("../pages/espace/EspaceMessagerie"));
 const EspaceScrutins = lazy(() => import("../pages/espace/EspaceScrutins"));
+const MonCompte = lazy(() => import("../pages/espace/MonCompte"));
 
 const NAV = [
   { to: "/", label: "Ma situation", icon: HomeIcon, end: true },
@@ -105,8 +106,20 @@ export function EspaceAvocatLayout() {
             ))}
           </nav>
 
-          {/* Extrémité droite : déconnexion, et hamburger sous « nav ». */}
+          {/* Extrémité droite : compte, déconnexion, et hamburger sous « nav ». */}
           <div className="flex shrink-0 items-center gap-2">
+            <NavLink
+              to="/compte"
+              title="Mon compte"
+              aria-label="Mon compte"
+              className={({ isActive }) =>
+                `hidden items-center justify-center rounded-lg border p-1.5 transition nav:inline-flex ${
+                  isActive ? "border-or/40 bg-or/15 text-or-2" : "border-white/15 text-white/70 hover:bg-white/10 hover:text-white"
+                }`
+              }
+            >
+              <UserCircleIcon className="h-5 w-5" />
+            </NavLink>
             <button
               onClick={logout}
               className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-1.5 text-xs text-white/70 transition hover:bg-white/10 hover:text-white"
@@ -129,7 +142,7 @@ export function EspaceAvocatLayout() {
         {menuMobile && (
           <nav className="border-t border-white/10 px-4 pb-3 md:px-8 nav:hidden">
             <div className="grid gap-1 py-2 sm:grid-cols-2">
-              {NAV.map(({ to, label, icon: Icon, end, badge }) => (
+              {[...NAV, { to: "/compte", label: "Mon compte", icon: UserCircleIcon, end: false }].map(({ to, label, icon: Icon, end, badge }) => (
                 <NavLink
                   key={to}
                   to={to}
@@ -162,6 +175,7 @@ export function EspaceAvocatLayout() {
             <Route path="/publications" element={<EspacePublications />} />
             <Route path="/archives" element={<EspaceArchives />} />
             <Route path="/discipline" element={<EspaceDiscipline />} />
+            <Route path="/compte" element={<MonCompte />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
