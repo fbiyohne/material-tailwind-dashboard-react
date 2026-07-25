@@ -85,9 +85,14 @@ export function AvocatDetail() {
 
   const stage = infoStage(membre);
   const cot = cotParAnnee[EXERCICE_COURANT];
+  // Sans ligne de cotisation persistée, on n'invente pas un « dû » (qui afficherait
+  // un faux « En retard ») : état neutre « Non générée » (cf. Avocats.jsx qui évite
+  // aussi ce faux positif).
+  const cotConnu = !!cot;
   const du = cot?.montantDu ?? (membre.qualite === "honoraire" ? 0 : membre.qualite === "stagiaire" ? 75000 : 150000);
   const paye = cot?.montantPaye ?? 0;
-  const cotMeta = STATUT_META[statutLigne(du, paye)];
+  const META_NON_GENEREE = { label: "Non générée", ton: "gris" };
+  const cotMeta = cotConnu ? STATUT_META[statutLigne(du, paye)] : META_NON_GENEREE;
 
   const documents = [
     ...(membre.quitus ?? []).map((q) => ({ type: "Quitus", ref: q.numero, date: q.date })),
@@ -182,7 +187,7 @@ export function AvocatDetail() {
                         <div className="font-display text-2xl font-bold" style={{ color: `var(--bpn-${cotMeta.ton === "vert" ? "vert" : cotMeta.ton === "rouge" ? "rouge" : cotMeta.ton === "or" ? "or" : "gris"})` }}>
                           {paye ? formatFCFA(paye) : "—"}
                         </div>
-                        <div className="mt-1 text-xs text-gris">sur {formatFCFA(du)} dus</div>
+                        <div className="mt-1 text-xs text-gris">{cotConnu ? `sur ${formatFCFA(du)} dus` : "cotisation non générée pour cet exercice"}</div>
                       </div>
                       <div className="flex flex-col items-end gap-1.5">
                         <Badge ton={cotMeta.ton}>{cotMeta.label}</Badge>
@@ -223,8 +228,21 @@ export function AvocatDetail() {
                     <tbody>
                       {EXERCICES.map((annee) => {
                         const c = cotParAnnee[annee];
-                        const d = c?.montantDu ?? du;
-                        const p = c?.montantPaye ?? 0;
+                        // Pas de ligne pour cet exercice (ex. années antérieures à
+                        // l'inscription) → « — » neutre, pas de faux arriéré présumé.
+                        if (!c) {
+                          return (
+                            <tr key={annee} className="border-t border-grisL">
+                              <td className="py-2 font-mono text-xs text-gris">{annee}</td>
+                              <td className="py-2 text-right text-gris">—</td>
+                              <td className="py-2 text-right text-gris">—</td>
+                              <td className="py-2 text-right text-gris">—</td>
+                              <td className="py-2 pl-4"><Badge ton="gris">Non générée</Badge></td>
+                            </tr>
+                          );
+                        }
+                        const d = c.montantDu;
+                        const p = c.montantPaye ?? 0;
                         const m = STATUT_META[statutLigne(d, p)];
                         return (
                           <tr key={annee} className="border-t border-grisL">

@@ -4,6 +4,7 @@ import { Badge, Modal, useToast, useConfirm, PageHeader, DataTable } from "../co
 import { formatDate } from "../utils/format";
 import { telechargerCsv } from "../utils/exportCsv";
 import { categoriesArchives } from "../data/config";
+import { useAuth } from "../auth/AuthContext";
 import { listerArchives, supprimerArchive } from "../api/resources";
 
 const COLONNES_CSV = [
@@ -16,6 +17,10 @@ const COLONNES_CSV = [
 export function Archives() {
   const toast = useToast();
   const confirm = useConfirm();
+  const { user } = useAuth();
+  // Suppression d'archive réservée au SG (DELETE /archives = requireRole("SECRETAIRE_GENERAL")) :
+  // on masque le bouton pour le Bâtonnier plutôt que de le laisser buter sur un 403.
+  const peutSupprimer = ["SECRETAIRE_GENERAL", "ADMIN"].includes(user?.role);
   const [archives, setArchives] = useState([]);
   const [categories, setCategories] = useState(["toutes"]);
   const [recherche, setRecherche] = useState("");
@@ -75,15 +80,17 @@ export function Archives() {
           <button className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs" onClick={() => setApercu(a)}>
             <DocumentArrowDownIcon className="h-3.5 w-3.5" /> Consulter
           </button>
-          <button
-            type="button"
-            onClick={() => supprimer(a)}
-            title="Supprimer l'archive"
-            aria-label={`Supprimer l'archive « ${a.titre} »`}
-            className="rounded p-1.5 text-gris transition hover:bg-rougeL hover:text-rouge"
-          >
-            <TrashIcon className="h-3.5 w-3.5" />
-          </button>
+          {peutSupprimer && (
+            <button
+              type="button"
+              onClick={() => supprimer(a)}
+              title="Supprimer l'archive"
+              aria-label={`Supprimer l'archive « ${a.titre} »`}
+              className="rounded p-1.5 text-gris transition hover:bg-rougeL hover:text-rouge"
+            >
+              <TrashIcon className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
       ) },
   ];

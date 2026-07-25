@@ -85,6 +85,9 @@ export function Cotisations() {
   const [historique, setHistorique] = useState(null);
   const [paiement, setPaiement] = useState(null);
   const [enLigne, setEnLigne] = useState(null);
+  // Action de masse en cours (génération/relance) : évite les doubles campagnes
+  // e-mail/SMS et les doubles générations sur double-clic.
+  const [actionMasse, setActionMasse] = useState(null);
 
   const charger = useCallback(() => {
     setChargement(true);
@@ -284,6 +287,7 @@ export function Cotisations() {
         </button>
         <button
           className="bpn-btn bpn-btn-ghost"
+          disabled={actionMasse !== null}
           onClick={async () => {
             const ok = await confirm({
               title: `Générer les cotisations ${exercice} ?`,
@@ -291,26 +295,29 @@ export function Cotisations() {
               confirmLabel: "Générer",
             });
             if (!ok) return;
+            setActionMasse("generation");
             try {
               const r = await genererCotisations(exercice);
               toast.success(r.crees > 0 ? `${r.crees} cotisation${r.crees > 1 ? "s" : ""} générée${r.crees > 1 ? "s" : ""} (${r.existantes} déjà présentes).` : `Aucune nouvelle ligne — les ${r.existantes} cotisations existent déjà.`);
               charger();
-            } catch (e) { toast.error(e.message); }
+            } catch (e) { toast.error(e.message); } finally { setActionMasse(null); }
           }}
         >
-          <RectangleStackIcon className="h-4 w-4" /> Générer l'exercice
+          <RectangleStackIcon className="h-4 w-4" /> {actionMasse === "generation" ? "Génération…" : "Générer l'exercice"}
         </button>
         <button
           type="button"
           className="bpn-btn bpn-btn-primary"
+          disabled={actionMasse !== null}
           onClick={async () => {
+            setActionMasse("relance");
             try {
               const r = await lancerRelances(exercice);
               toast.success(`${r.envoyes} relance${r.envoyes > 1 ? "s" : ""} envoyée${r.envoyes > 1 ? "s" : ""}${r.simulation ? " (simulation)" : ""}.`);
-            } catch (e) { toast.error(e.message); }
+            } catch (e) { toast.error(e.message); } finally { setActionMasse(null); }
           }}
         >
-          <EnvelopeIcon className="h-4 w-4" /> Relancer les retardataires
+          <EnvelopeIcon className="h-4 w-4" /> {actionMasse === "relance" ? "Envoi…" : "Relancer les retardataires"}
         </button>
       </PageHeader>
 

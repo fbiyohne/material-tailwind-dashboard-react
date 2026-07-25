@@ -87,7 +87,19 @@ export function Quitus() {
     return { eligibles: eligibles.length, partiels, bloques };
   }, [lignes, eligibles.length]);
 
-  const membreActif = eligibles.find((m) => m.id === membreId) ?? eligibles[0] ?? null;
+  // Retire de la sélection les avocats déjà munis d'un quitus pour l'exercice :
+  // inutile de proposer « Générer » pour un membre déjà certifié (le serveur
+  // renverrait 409). Le registre à droite conserve la trace de leur quitus.
+  const dejaCertifies = useMemo(
+    () => new Set(registre.filter((q) => q.annee === exercice).map((q) => q.membreId)),
+    [registre, exercice]
+  );
+  const eligiblesRestants = useMemo(
+    () => eligibles.filter((m) => !dejaCertifies.has(m.id)),
+    [eligibles, dejaCertifies]
+  );
+
+  const membreActif = eligiblesRestants.find((m) => m.id === membreId) ?? eligiblesRestants[0] ?? null;
 
   // Charge la fiche complète (n° d'inscription, date, adresse) pour renseigner le quitus.
   useEffect(() => {
@@ -186,8 +198,8 @@ export function Quitus() {
             </label>
             <label className="block">
               <span className="mb-1 block text-xs uppercase tracking-wide text-white/55">Avocat bénéficiaire</span>
-              <select value={membreActif?.id ?? ""} onChange={(e) => setMembreId(Number(e.target.value))} disabled={eligibles.length === 0} className="bpn-input-dark disabled:opacity-50">
-                {eligibles.length === 0 ? <option>Aucun avocat éligible</option> : eligibles.map((m) => <option key={m.id} value={m.id}>{m.num}. Me {m.nom} — à jour ✓</option>)}
+              <select value={membreActif?.id ?? ""} onChange={(e) => setMembreId(Number(e.target.value))} disabled={eligiblesRestants.length === 0} className="bpn-input-dark disabled:opacity-50">
+                {eligiblesRestants.length === 0 ? <option>Aucun avocat à certifier</option> : eligiblesRestants.map((m) => <option key={m.id} value={m.id}>{m.num}. Me {m.nom} — à jour ✓</option>)}
               </select>
             </label>
             <label className="block">

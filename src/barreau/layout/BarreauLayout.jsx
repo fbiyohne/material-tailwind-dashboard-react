@@ -59,9 +59,19 @@ export function BarreauLayout() {
                   }
                 />
               ))}
-              {detailRoutes.map(({ path, element }) => (
-                <Route key={path} path={path} element={element} />
-              ))}
+              {detailRoutes.map(({ path, element, parent: parentPath }) => {
+                // Une page de détail hérite des rôles de son module parent : un rôle
+                // sans accès au module (ex. Trésorière sur /avocats) est redirigé,
+                // au lieu d'atterrir sur une page qui bute ensuite sur un 403.
+                const moduleParent = allModules.find((m) => m.path === parentPath);
+                return (
+                  <Route
+                    key={path}
+                    path={path}
+                    element={aAcces({ roles: moduleParent?.roles }, role) ? element : <Navigate to="/" replace />}
+                  />
+                );
+              })}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

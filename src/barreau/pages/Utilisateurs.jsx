@@ -202,7 +202,11 @@ export function Utilisateurs() {
                     className="bpn-input !w-auto !py-1 text-xs disabled:opacity-60"
                     title={u.id === courant?.id ? "Vous ne pouvez pas changer votre propre rôle" : geleAdmin(u) ? "Seul un administrateur peut agir sur un compte administrateur" : ""}
                   >
-                    {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
+                    {/* Un non-ADMIN ne peut pas attribuer le rôle ADMIN (anti-escalade
+                        serveur) : on ne le propose pas, tout en gardant la valeur
+                        courante affichable si la ligne est déjà ADMIN. */}
+                    {ROLES.filter((r) => estAdmin || r !== "ADMIN" || r === u.role)
+                      .map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
                   </select>
                 ),
             },
@@ -296,7 +300,9 @@ export function Utilisateurs() {
               <>
                 <FormField label="Rôle">
                   <select value={creation.role} onChange={setC("role")} className="bpn-input">
-                    {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
+                    {/* Création : un non-ADMIN ne peut pas provisionner un compte ADMIN. */}
+                    {ROLES.filter((r) => estAdmin || r !== "ADMIN")
+                      .map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
                   </select>
                 </FormField>
                 <FormField label="Mot de passe" hint="min. 8 caractères" required full>

@@ -20,14 +20,19 @@ const COLONNES_CSV = [
   { label: "N°", valeur: ({ membre }) => membre.num },
   { label: "Stagiaire", valeur: ({ membre }) => `Me ${membre.nom}` },
   { label: "Cabinet", valeur: ({ membre }) => membre.cabinet },
-  { label: "Serment", valeur: ({ stage }) => formatDate(stage.debut) },
-  { label: "Maître de stage", valeur: ({ stage }) => stage.maitreStage },
-  { label: "Fin prévue", valeur: ({ stage }) => formatDate(stage.fin) },
-  { label: "Progression", valeur: ({ stage }) => `${stage.progression}%` },
-  { label: "Statut", valeur: ({ stage }) => (stage.termine ? "Terminé" : "En cours") },
+  { label: "Serment", valeur: ({ stage }) => formatDate(stage?.debut) },
+  { label: "Maître de stage", valeur: ({ stage }) => stage?.maitreStage ?? "" },
+  { label: "Fin prévue", valeur: ({ stage }) => formatDate(stage?.fin) },
+  { label: "Progression", valeur: ({ stage }) => `${stage?.progression ?? 0}%` },
+  { label: "Statut", valeur: ({ stage }) => (!stage ? "Serment à renseigner" : stage.termine ? "Terminé" : "En cours") },
 ];
 
 function CarteStagiaire({ membre, stage, onFiche, onSupprimer }) {
+  // Un stagiaire sans date de serment n'a pas de stage dérivé (stage === null) :
+  // on l'affiche quand même, avec une mention « Serment à renseigner », plutôt
+  // que de le faire disparaître de la liste.
+  const sansServment = !stage;
+  const progression = stage?.progression ?? 0;
   return (
     <div className="bpn-card p-4">
       <div className="flex items-start justify-between gap-2">
@@ -36,8 +41,8 @@ function CarteStagiaire({ membre, stage, onFiche, onSupprimer }) {
           <div className="text-xs text-gris">{membre.cabinet}</div>
         </div>
         <div className="flex items-center gap-1.5">
-          <Badge ton={stage.termine ? "vert" : "bleu"}>
-            {stage.termine ? "Stage terminé" : "En cours"}
+          <Badge ton={sansServment ? "or" : stage.termine ? "vert" : "bleu"}>
+            {sansServment ? "Serment à renseigner" : stage.termine ? "Stage terminé" : "En cours"}
           </Badge>
           {onSupprimer && (
             <button type="button" onClick={() => onSupprimer(membre)} className="bpn-btn bpn-btn-ghost !px-1.5 !py-1 text-xs text-rouge" title="Supprimer définitivement">
@@ -50,29 +55,29 @@ function CarteStagiaire({ membre, stage, onFiche, onSupprimer }) {
       <div className="mt-3 space-y-1 text-xs text-gris">
         <div className="flex justify-between">
           <span>Serment</span>
-          <span className="text-encre">{formatDate(stage.debut)}</span>
+          <span className="text-encre">{formatDate(stage?.debut)}</span>
         </div>
         <div className="flex justify-between">
           <span>Maître de stage</span>
-          <span className="text-encre">{stage.maitreStage}</span>
+          <span className="text-encre">{stage?.maitreStage ?? "—"}</span>
         </div>
         <div className="flex justify-between">
           <span>Fin prévue</span>
-          <span className="text-encre">{formatDate(stage.fin)}</span>
+          <span className="text-encre">{formatDate(stage?.fin)}</span>
         </div>
       </div>
 
       <div className="mt-3">
         <div className="mb-1 flex items-center justify-between text-xs">
           <span className="text-gris">Progression</span>
-          <span className="font-mono text-or">{stage.progression}%</span>
+          <span className="font-mono text-or">{progression}%</span>
         </div>
         <div className="h-2 overflow-hidden rounded bg-grisM">
           <div
             className="h-full rounded transition-all"
             style={{
-              width: `${stage.progression}%`,
-              backgroundColor: stage.termine ? "var(--bpn-vert)" : "var(--bpn-or)",
+              width: `${progression}%`,
+              backgroundColor: stage?.termine ? "var(--bpn-vert)" : "var(--bpn-or)",
             }}
           />
         </div>
@@ -128,10 +133,11 @@ export function Stagiaires() {
   const stagiaires = useMemo(
     () =>
       membres
+        // On conserve TOUS les stagiaires, y compris ceux sans date de serment
+        // (stage === null) : un serment non renseigné compte comme « en cours ».
         .map((m) => ({ membre: m, stage: infoStage(m) }))
-        .filter(({ stage }) => stage)
         .filter(({ stage }) =>
-          filtre === "tous" ? true : filtre === "termine" ? stage.termine : !stage.termine
+          filtre === "tous" ? true : filtre === "termine" ? stage?.termine : !stage?.termine
         ),
     [membres, filtre]
   );
@@ -219,9 +225,9 @@ export function Stagiaires() {
                 <td className="py-1 font-mono text-xs">{membre.num}</td>
                 <td className="py-1">Me {membre.nom}</td>
                 <td className="py-1">{membre.cabinet}</td>
-                <td className="py-1">{formatDate(stage.debut)}</td>
-                <td className="py-1">{stage.maitreStage}</td>
-                <td className="py-1">{stage.termine ? "Terminé" : "En cours"}</td>
+                <td className="py-1">{formatDate(stage?.debut)}</td>
+                <td className="py-1">{stage?.maitreStage ?? "—"}</td>
+                <td className="py-1">{!stage ? "Serment à renseigner" : stage.termine ? "Terminé" : "En cours"}</td>
               </tr>
             ))}
           </tbody>

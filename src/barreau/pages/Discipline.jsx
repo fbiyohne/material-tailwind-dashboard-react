@@ -16,6 +16,7 @@ function OuvrirDossierModal({ open, onClose, onCreated }) {
   const toast = useToast();
   const [avocats, setAvocats] = useState([]);
   const [form, setForm] = useState({ avocatNom: "", objet: "", dateSaisine: new Date().toISOString().slice(0, 10) });
+  const [creation, setCreation] = useState(false);
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
   useEffect(() => {
@@ -27,7 +28,10 @@ function OuvrirDossierModal({ open, onClose, onCreated }) {
   }, [open]);
 
   const valider = async () => {
-    if (!form.objet.trim()) return;
+    // Garde anti double-clic : une référence AAAA-NN est consommée par ouverture
+    // et n'est pas réutilisable — un double-clic créerait deux dossiers.
+    if (!form.objet.trim() || creation) return;
+    setCreation(true);
     try {
       await apiOuvrirDossier(form);
       onCreated?.();
@@ -35,12 +39,14 @@ function OuvrirDossierModal({ open, onClose, onCreated }) {
       setForm({ avocatNom: avocats[0]?.nom ?? "", objet: "", dateSaisine: new Date().toISOString().slice(0, 10) });
     } catch (e) {
       toast.error(e.message);
+    } finally {
+      setCreation(false);
     }
   };
 
   return (
     <Modal open={open} onClose={onClose} title="Ouvrir un dossier disciplinaire"
-      footer={<button className="bpn-btn bpn-btn-danger" onClick={valider}>Ouvrir le dossier</button>}>
+      footer={<button className="bpn-btn bpn-btn-danger" onClick={valider} disabled={creation || !form.objet.trim()}>{creation ? "Ouverture…" : "Ouvrir le dossier"}</button>}>
       <Notice ton="or" className="mb-4">
         Référence unique attribuée automatiquement (format <span className="font-mono font-medium text-navy">AAAA-NN</span>, non réutilisable).
       </Notice>
