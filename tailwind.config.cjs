@@ -60,6 +60,11 @@ module.exports = withMT({
         // exploitent l'espace disponible au lieu d'être tassés au centre.
         container: "1500px",
       },
+      // Point de rupture dédié à la barre de navigation de l'espace avocat : au-delà,
+      // les liens tiennent sur une seule ligne ; en deçà, on bascule sur un menu déroulant.
+      screens: {
+        nav: "1400px",
+      },
       boxShadow: {
         card: "0 4px 24px rgba(0,0,0,.08)",
         "card-hover": "0 12px 40px rgba(0,0,0,.14)",

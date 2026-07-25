@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, NavLink, useLocation } from "react-router-dom"
 import {
   ArrowRightOnRectangleIcon, HomeIcon, FolderIcon, BookOpenIcon,
   BuildingLibraryIcon, MegaphoneIcon, ArchiveBoxIcon, ScaleIcon, ChatBubbleLeftRightIcon, HandRaisedIcon,
+  Bars3Icon, XMarkIcon,
 } from "@heroicons/react/24/outline";
 import { Sceau } from "../components";
 import { useAuth } from "../auth/AuthContext";
@@ -31,16 +32,24 @@ const NAV = [
   { to: "/discipline", label: "Discipline", icon: ScaleIcon, end: false },
 ];
 
+/** Pastille de messages non lus (réutilisée dans la nav desktop et le menu mobile). */
+const PastilleMsg = ({ n }) => (
+  <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-rouge px-1 text-2xs font-semibold leading-none text-white">{n}</span>
+);
+
 /**
  * Ossature de l'espace avocat (rôle AVOCAT) : en-tête institutionnel, navigation
  * réduite et zone de contenu. Totalement distinct du back-office du Secrétariat
  * Général — un avocat n'accède qu'à ses propres données.
  */
 export function EspaceAvocatLayout() {
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
   const location = useLocation();
   const mainRef = useFocusAuChangementDeRoute();
   const [nonLus, setNonLus] = useState(0);
+  const [menuMobile, setMenuMobile] = useState(false);
+  // Le menu déroulant (petits écrans) se referme à chaque changement de page.
+  useEffect(() => { setMenuMobile(false); }, [location.pathname]);
 
   // Pastille de messagerie : rafraîchie au changement de page (lecture incluse),
   // en temps réel (WebSocket) et par sondage léger (filet de sécurité).
@@ -65,53 +74,79 @@ export function EspaceAvocatLayout() {
         Aller au contenu
       </a>
       <header className="bg-navy-3 text-white">
-        {/* En-tête sur une seule rangée : logo à gauche, menu centré au milieu,
-            déconnexion à droite (le menu occupe l'espace central au lieu d'une
-            deuxième barre en dessous). */}
-        <div className="mx-auto flex max-w-container items-center gap-4 px-4 py-2 md:px-8">
-          {/* Logo — gauche */}
-          <div className="flex shrink-0 items-center gap-3">
+        <div className="mx-auto flex max-w-container items-center gap-4 px-4 py-2.5 md:px-8">
+          {/* Logo — extrémité gauche (retour à Ma situation). */}
+          <NavLink to="/" end className="flex shrink-0 items-center gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-or">
             <div className="shrink-0 rounded-full bg-white p-1.5"><Sceau size={36} /></div>
             <div className="hidden sm:block">
               <div className="text-2xs uppercase tracking-[0.2em] text-or-2">Barreau de Pointe-Noire</div>
               <div className="font-display text-base leading-tight">Espace avocat</div>
             </div>
-          </div>
+          </NavLink>
 
-          {/* Menu — centre, réparti pour « respirer » (justify-evenly). Le nav en
-              flex-1 écarte le logo (gauche) et la déconnexion (droite) aux extrémités.
-              S'il ne tient pas, il passe à la ligne (flex-wrap) au lieu de défiler. */}
-          <nav className="flex flex-1 flex-wrap items-center justify-evenly gap-x-1 gap-y-1">
-            {NAV.map(({ to, label, icon: Icon, end, badge }) => (
+          {/* Menu — une seule ligne, centrée, sans retour à la ligne ni défilement.
+              Libellés seuls pour tenir dans la largeur ; affiché au-delà de « nav »
+              (1400px), sinon on bascule sur le menu déroulant (hamburger). */}
+          <nav className="mx-auto hidden items-center gap-1 nav:flex">
+            {NAV.map(({ to, label, end, badge }) => (
               <NavLink
                 key={to}
                 to={to}
                 end={end}
                 className={({ isActive }) =>
-                  `flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-sm transition ${
-                    isActive ? "bg-white/10 font-medium text-white" : "text-white/55 hover:bg-white/5 hover:text-white"
+                  `flex items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-sm transition ${
+                    isActive ? "bg-or/15 font-medium text-or-2" : "text-white/60 hover:bg-white/5 hover:text-white"
                   }`
                 }
               >
-                <Icon className="h-4 w-4" /> {label}
-                {badge === "messagerie" && nonLus > 0 && (
-                  <span className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-rouge px-1 text-2xs font-semibold leading-none text-white">{nonLus}</span>
-                )}
+                {label}
+                {badge === "messagerie" && nonLus > 0 && <PastilleMsg n={nonLus} />}
               </NavLink>
             ))}
           </nav>
 
-          {/* Déconnexion — droite */}
-          <div className="flex shrink-0 items-center gap-3">
-            <span className="hidden max-w-[10rem] truncate text-sm text-white/70 xl:inline">{user?.nom}</span>
+          {/* Extrémité droite : déconnexion, et hamburger sous « nav ». */}
+          <div className="flex shrink-0 items-center gap-2">
             <button
               onClick={logout}
               className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-1.5 text-xs text-white/70 transition hover:bg-white/10 hover:text-white"
             >
               <ArrowRightOnRectangleIcon className="h-4 w-4" /> <span className="hidden sm:inline">Se déconnecter</span>
             </button>
+            <button
+              type="button"
+              onClick={() => setMenuMobile((o) => !o)}
+              aria-label="Menu de navigation"
+              aria-expanded={menuMobile}
+              className="inline-flex items-center justify-center rounded-lg border border-white/15 p-1.5 text-white/80 transition hover:bg-white/10 nav:hidden"
+            >
+              {menuMobile ? <XMarkIcon className="h-5 w-5" /> : <Bars3Icon className="h-5 w-5" />}
+            </button>
           </div>
         </div>
+
+        {/* Menu déroulant — sous « nav ». Grille de liens (avec icônes), jamais de défilement. */}
+        {menuMobile && (
+          <nav className="border-t border-white/10 px-4 pb-3 md:px-8 nav:hidden">
+            <div className="grid gap-1 py-2 sm:grid-cols-2">
+              {NAV.map(({ to, label, icon: Icon, end, badge }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  end={end}
+                  className={({ isActive }) =>
+                    `flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition ${
+                      isActive ? "bg-or/15 font-medium text-or-2" : "text-white/70 hover:bg-white/5 hover:text-white"
+                    }`
+                  }
+                >
+                  <Icon className="h-5 w-5 shrink-0" /> <span className="flex-1">{label}</span>
+                  {badge === "messagerie" && nonLus > 0 && <PastilleMsg n={nonLus} />}
+                </NavLink>
+              ))}
+            </div>
+          </nav>
+        )}
       </header>
 
       <main ref={mainRef} id="contenu-principal" tabIndex={-1} className="mx-auto max-w-container px-4 py-6 outline-none md:px-8 md:py-8">
