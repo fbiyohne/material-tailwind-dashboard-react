@@ -72,7 +72,12 @@ usersRouter.patch(
     const id = Number(req.params.id);
     const data = patchSchema.parse(req.body);
     // Email normalisé en minuscules (cohérence avec la création / la connexion).
-    if (data.email) data.email = data.email.trim().toLowerCase();
+    if (data.email) {
+      data.email = data.email.trim().toLowerCase();
+      // Unicité : un autre compte ne doit pas déjà porter cet email (évite un 500 Prisma).
+      const doublon = await prisma.user.findFirst({ where: { email: { equals: data.email, mode: "insensitive" }, id: { not: id } } });
+      if (doublon) throw new HttpError(409, "Un compte existe déjà avec cet email");
+    }
     // Garde-fou : ne pas se désactiver ni se rétrograder soi-même.
     if (id === req.user!.id && (data.actif === false || (data.role && data.role !== req.user!.role))) {
       throw new HttpError(400, "Vous ne pouvez pas modifier votre propre rôle ou statut");

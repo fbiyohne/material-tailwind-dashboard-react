@@ -6,7 +6,7 @@ import { useAuth } from "../auth/AuthContext";
 import { formatDate } from "../utils/format";
 import { telechargerCsv } from "../utils/exportCsv";
 import { telechargerDocumentPdf } from "../utils/exports";
-import { quitusEligibles, listerQuitus, genererQuitus, supprimerQuitus, getCotisations, getMembre, telechargerQuitusPdf } from "../api/resources";
+import { quitusEligibles, listerQuitus, genererQuitus, genererQuitusLot, supprimerQuitus, getCotisations, getMembre, telechargerQuitusPdf } from "../api/resources";
 
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
 const pad3 = (n) => String(n).padStart(3, "0");
@@ -55,6 +55,7 @@ export function Quitus() {
   // propose le bouton qu'aux rôles autorisés (la Trésorière consulte le registre).
   const peutGenerer = ["SECRETAIRE_GENERAL", "ADMIN"].includes(user?.role);
   const [generation, setGeneration] = useState(false);
+  const [lotEnCours, setLotEnCours] = useState(false);
   const [exercice, setExercice] = useState(EXERCICE_COURANT);
   const [eligibles, setEligibles] = useState([]);
   const [registre, setRegistre] = useState([]);
@@ -130,6 +131,23 @@ export function Quitus() {
     } finally {
       setGeneration(false);
     }
+  };
+
+  // Génère en une passe tous les quitus manquants des avocats éligibles de l'exercice.
+  const genererLot = async () => {
+    if (lotEnCours || eligiblesRestants.length === 0) return;
+    const ok = await confirm({
+      title: "Générer tous les quitus",
+      message: `${eligiblesRestants.length} avocat(s) éligible(s) sans quitus pour l'exercice ${exercice}. Générer et archiver leurs quitus en une fois ?`,
+      confirmLabel: "Générer le lot",
+    });
+    if (!ok) return;
+    setLotEnCours(true);
+    try {
+      const r = await genererQuitusLot(exercice);
+      toast.success(r.crees > 0 ? `${r.crees} quitus généré${r.crees > 1 ? "s" : ""} et archivé${r.crees > 1 ? "s" : ""}.` : "Aucun nouveau quitus à générer.");
+      charger();
+    } catch (e) { toast.error(e.message); } finally { setLotEnCours(false); }
   };
 
   // Suppression d'un quitus du registre — réservée au super-administrateur (ADMIN).
@@ -208,6 +226,11 @@ export function Quitus() {
             {peutGenerer && (
               <button type="button" onClick={generer} disabled={!membreActif || generation} className="bpn-btn bpn-btn-or w-full justify-center !py-2.5">
                 <DocumentCheckIcon className="h-4 w-4" /> {generation ? "Génération…" : "Générer & archiver"}
+              </button>
+            )}
+            {peutGenerer && eligiblesRestants.length > 1 && (
+              <button type="button" onClick={genererLot} disabled={lotEnCours} className="bpn-btn bpn-btn-ghost w-full justify-center border-white/20 text-white/80 hover:bg-white/10 hover:text-white disabled:opacity-40">
+                <DocumentCheckIcon className="h-4 w-4" /> {lotEnCours ? "Génération du lot…" : `Générer les ${eligiblesRestants.length} quitus éligibles`}
               </button>
             )}
             <button type="button" onClick={() => succes && telechargerDocumentPdf(() => telechargerQuitusPdf(succes.id, succes.numero), `Quitus-${succes.numero}`).catch((e) => toast.error(e.message))} disabled={!succes} title={succes ? "" : "Générez d'abord le quitus"} className="bpn-btn bpn-btn-ghost w-full justify-center border-white/20 text-white/70 hover:bg-white/10 hover:text-white disabled:opacity-40">

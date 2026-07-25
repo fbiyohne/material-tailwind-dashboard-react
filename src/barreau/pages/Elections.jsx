@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { PlusIcon, TrashIcon, LockOpenIcon, LockClosedIcon, MegaphoneIcon, CheckBadgeIcon, UsersIcon } from "@heroicons/react/24/outline";
+import { PlusIcon, TrashIcon, LockOpenIcon, LockClosedIcon, MegaphoneIcon, CheckBadgeIcon, UsersIcon, DocumentArrowDownIcon } from "@heroicons/react/24/outline";
 import { Badge, Modal, FormField, PageHeader, useToast, useConfirm, TableSkeleton, ErrorState, EmptyState } from "../components";
 import { useAuth } from "../auth/AuthContext";
 import {
   listerScrutins, getScrutin, creerScrutin, ajouterCandidat, supprimerCandidat,
-  ouvrirScrutin, saisirVoix, cloreScrutin, publierScrutin,
+  ouvrirScrutin, saisirVoix, cloreScrutin, publierScrutin, supprimerScrutin, telechargerPvScrutinPdf,
 } from "../api/resources";
 
 const TYPE = { CONSEIL: "Conseil de l'Ordre", BATONNIER: "Bâtonnier", AUTRE: "Autre scrutin" };
@@ -65,6 +65,20 @@ export function Elections() {
     } catch (e) { toast.error(e.message); }
   };
 
+  const supprimer = async (s) => {
+    const ok = await confirm({
+      title: "Supprimer le scrutin ?",
+      message: `« ${s.titre} » et ses candidats seront définitivement supprimés.`,
+      confirmLabel: "Supprimer", danger: true,
+    });
+    if (!ok) return;
+    try {
+      await supprimerScrutin(s.id);
+      toast.success("Scrutin supprimé.");
+      setSelId(null); setDetail(null); charger();
+    } catch (e) { toast.error(e.message); }
+  };
+
   if (erreur) return <div className="bpn-card p-6"><ErrorState title="Indisponible" description="Les scrutins n'ont pas pu être chargés." onRetry={charger} /></div>;
   if (!scrutins) return <div className="bpn-card p-6"><TableSkeleton rows={5} cols={2} /></div>;
 
@@ -95,7 +109,7 @@ export function Elections() {
           {!detail ? (
             <p className="py-10 text-center text-sm text-gris">Sélectionnez un scrutin pour le gérer.</p>
           ) : (
-            <ScrutinDetail detail={detail} peutGerer={peutGerer} action={action} confirm={confirm} nomCand={nomCand} setNomCand={setNomCand} />
+            <ScrutinDetail detail={detail} peutGerer={peutGerer} action={action} confirm={confirm} nomCand={nomCand} setNomCand={setNomCand} nonce={nonce} toast={toast} onSupprime={supprimer} />
           )}
         </div>
       </div>
@@ -114,7 +128,7 @@ export function Elections() {
 }
 
 /** Détail + gestion d'un scrutin selon son statut. */
-function ScrutinDetail({ detail, peutGerer, action, confirm, nomCand, setNomCand }) {
+function ScrutinDetail({ detail, peutGerer, action, confirm, nomCand, setNomCand, nonce, toast, onSupprime }) {
   const s = detail;
   const total = s.candidats.reduce((a, c) => a + c.voix, 0);
   const resultatsVisibles = s.statut === "CLOS" || s.statut === "PUBLIE";
@@ -180,6 +194,18 @@ function ScrutinDetail({ detail, peutGerer, action, confirm, nomCand, setNomCand
           {s.statut === "CLOS" && <button className="bpn-btn bpn-btn-or" onClick={() => confirm({ title: "Publier les résultats ?", message: s.type === "CONSEIL" ? "Les résultats seront publiés et la composition du Conseil mise à jour." : "Les résultats seront publiés.", confirmLabel: "Publier" }).then((ok) => ok && action(() => publierScrutin(s.id), "Résultats publiés."))}><MegaphoneIcon className="h-4 w-4" /> Publier les résultats</button>}
           {s.statut === "PUBLIE" && <span className="inline-flex items-center gap-1.5 text-sm text-vert"><CheckBadgeIcon className="h-4 w-4" /> Résultats publiés{s.type === "CONSEIL" ? " · Conseil mis à jour" : ""}.</span>}
           {s.modalite === "EN_LIGNE" && s.statut === "OUVERT" && <span className="inline-flex items-center gap-1.5 text-sm text-gris"><UsersIcon className="h-4 w-4" /> {s._count.emargements} avocat(s) ont voté.</span>}
+          {/* Procès-verbal des résultats (après clôture) */}
+          {(s.statut === "CLOS" || s.statut === "PUBLIE") && (
+            <button className="bpn-btn bpn-btn-ghost" onClick={() => telechargerPvScrutinPdf(s.id).catch((e) => toast.error(e.message))}>
+              <DocumentArrowDownIcon className="h-4 w-4" /> Télécharger le PV
+            </button>
+          )}
+          {/* Suppression réservée à un scrutin encore en préparation */}
+          {s.statut === "PREPARATION" && (
+            <button className="bpn-btn bpn-btn-ghost text-rouge hover:bg-rougeL" onClick={() => onSupprime(s)}>
+              <TrashIcon className="h-4 w-4" /> Supprimer le scrutin
+            </button>
+          )}
         </div>
       )}
     </div>

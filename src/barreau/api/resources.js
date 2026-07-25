@@ -100,6 +100,9 @@ export const ouvrirScrutin = (id) => api(`/scrutins/${id}/ouvrir`, { method: "PO
 export const saisirVoix = (id, candidatId, voix) => api(`/scrutins/${id}/voix`, { method: "POST", body: { candidatId, voix } });
 export const cloreScrutin = (id) => api(`/scrutins/${id}/clore`, { method: "POST" });
 export const publierScrutin = (id) => api(`/scrutins/${id}/publier`, { method: "POST" });
+export const majScrutin = (id, body) => api(`/scrutins/${id}`, { method: "PATCH", body });
+export const supprimerScrutin = (id) => api(`/scrutins/${id}`, { method: "DELETE" });
+export const telechargerPvScrutinPdf = (id) => telechargerPdf(`/scrutins/${id}/pv/pdf`, `PV-scrutin-${id}.pdf`);
 // Élections — espace avocat (vote en ligne)
 export const getEspaceScrutins = () => api("/espace/scrutins");
 export const voterScrutin = (id, candidatIds) => api(`/espace/scrutins/${id}/voter`, { method: "POST", body: { candidatIds } });
@@ -138,6 +141,7 @@ export async function getCotisations(annee) {
 
 export const enregistrerPaiement = (payload) => api("/cotisations/paiement", { method: "POST", body: payload });
 export const lancerRelances = (annee) => api(`/cotisations/relances?annee=${annee}`, { method: "POST" });
+export const lancerRelancesDroits = (annee) => api(`/droits/relances?annee=${annee}`, { method: "POST" });
 export const genererCotisations = (annee) => api(`/cotisations/generer?annee=${annee}`, { method: "POST" });
 export const validerCotisation = (membreId, annee, valide = true) =>
   api(`/cotisations/${membreId}/valider`, { method: "POST", body: { annee, valide } });
@@ -149,6 +153,7 @@ export const annulerRecu = (id) => api(`/recus/${id}`, { method: "DELETE" });
 export const quitusEligibles = (annee) => api(`/quitus/eligibles?annee=${annee}`);
 export const listerQuitus = () => api("/quitus");
 export const genererQuitus = (membreId, annee) => api("/quitus", { method: "POST", body: { membreId, annee } });
+export const genererQuitusLot = (annee) => api(`/quitus/lot?annee=${annee}`, { method: "POST" });
 export const supprimerQuitus = (id) => api(`/quitus/${id}`, { method: "DELETE" });
 
 // ─── Droits / Corps électoral / Dashboard ────────────────────────────────
@@ -247,6 +252,9 @@ export const supprimerEspacePiece = (id) => api(`/espace/pieces/${id}`, { method
 export const voirEspacePiece = (id) => ouvrirFichierAuth(`/espace/pieces/${id}/fichier`);
 export const telechargerEspaceRecuPdf = (id, numero) => telechargerPdf(`/espace/recus/${id}/pdf`, `Recu-${numero}.pdf`);
 export const telechargerEspaceQuitusPdf = (id, numero) => telechargerPdf(`/espace/quitus/${id}/pdf`, `Quitus-${numero}.pdf`);
+// Attestations éditées en self-service par l'avocat (inscription / non-redevance).
+export const telechargerEspaceAttestationInscription = () => telechargerPdf("/espace/attestation/inscription/pdf", "Attestation-inscription.pdf");
+export const telechargerEspaceAttestationNonRedevance = () => telechargerPdf("/espace/attestation/non-redevance/pdf", "Attestation-non-redevance.pdf");
 export const initierEspacePaiement = (body) => api("/espace/paiement", { method: "POST", body });
 export const confirmerEspacePaiementSandbox = (ref, succes = true) => api(`/espace/paiement/${ref}/confirmer-sandbox`, { method: "POST", body: { succes } });
 

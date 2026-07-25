@@ -6,12 +6,12 @@ import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireAvocat, type AuthRequest } from "../middleware/auth.js";
 import { enregistrerFichier, lireFichier, supprimerFichier } from "../lib/storage.js";
-import { cotisationDue, droitDue, statutCotisation, tarifsActuels, eligibiliteElectorale } from "../lib/business.js";
+import { cotisationDue, droitDue, statutCotisation, tarifsActuels, eligibiliteElectorale, prochainNumeroAttestation, archiver } from "../lib/business.js";
 import { finaliserPaiement } from "../lib/encaissement.js";
 import { CANAUX, modeSandbox, nouvelleReference, initierPaiement } from "../lib/paiement.js";
 import QRCode from "qrcode";
 import { envoyerPdf, envoyerDocumentPdf } from "../lib/pdf.js";
-import { convocationAgHtml, pvAssembleeHtml, decisionDisciplineHtml } from "../lib/templates.js";
+import { convocationAgHtml, pvAssembleeHtml, decisionDisciplineHtml, attestationHtml, attestationNonRedevanceHtml } from "../lib/templates.js";
 import { recuRicheHtml, quitusRicheHtml } from "../lib/documentsRiches.js";
 import { notifierNouveauMessage, emailsAdministration, emailsMembres } from "../lib/messagerieNotif.js";
 import { messageNonDeMoi, compterNonLusParFil, totalNonLus, jamaisLu } from "../lib/messagerie.js";
@@ -110,6 +110,47 @@ espaceRouter.patch(
       select: { tel: true, email: true, adresse: true },
     });
     res.json(membre);
+  })
+);
+
+/**
+ * GET /espace/attestation/inscription/pdf — l'avocat édite lui-même son
+ * attestation d'inscription (self-service, FR-AV-05). Numérotée et archivée comme
+ * l'émission par le Secrétariat, avec traçabilité au nom de l'intéressé.
+ */
+espaceRouter.get(
+  "/attestation/inscription/pdf",
+  asyncH(async (req: AuthRequest, res) => {
+    const membre = await prisma.membre.findUnique({ where: { id: monMembreId(req) } });
+    if (!membre) throw new HttpError(404, "Fiche introuvable");
+    const numero = await prochainNumeroAttestation();
+    const date = new Date();
+    await archiver({ categorie: "Attestation d'inscription", titre: `Attestation ${numero} — Me ${membre.nom}`, reference: numero, date, membreNom: membre.nom });
+    await envoyerPdf(res, attestationHtml(membre, numero, date), `Attestation-${numero}.pdf`);
+  })
+);
+
+/**
+ * GET /espace/attestation/non-redevance/pdf — attestation de non-redevance, éditée
+ * en self-service uniquement si la cotisation de l'exercice courant est soldée
+ * (sinon 409 : l'avocat doit d'abord régulariser sa situation).
+ */
+espaceRouter.get(
+  "/attestation/non-redevance/pdf",
+  asyncH(async (req: AuthRequest, res) => {
+    const membre = await prisma.membre.findUnique({ where: { id: monMembreId(req) } });
+    if (!membre) throw new HttpError(404, "Fiche introuvable");
+    const annee = new Date().getFullYear();
+    const [tarifs, cot] = await Promise.all([
+      tarifsActuels(),
+      prisma.cotisation.findUnique({ where: { membreId_annee: { membreId: membre.id, annee } } }),
+    ]);
+    const solde = cotisationDue(cot, tarifs, membre.qualite) - (cot?.montantPaye ?? 0);
+    if (solde > 0) throw new HttpError(409, "Attestation indisponible : votre cotisation de l'exercice n'est pas soldée.");
+    const numero = await prochainNumeroAttestation();
+    const date = new Date();
+    await archiver({ categorie: "Attestation de non-redevance", titre: `Attestation de non-redevance ${numero} — Me ${membre.nom}`, reference: numero, date, membreNom: membre.nom });
+    await envoyerPdf(res, attestationNonRedevanceHtml(membre, numero, annee, date), `Attestation-non-redevance-${numero}.pdf`);
   })
 );
 

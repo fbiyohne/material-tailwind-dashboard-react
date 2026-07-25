@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowDownTrayIcon, ArrowUpTrayIcon, DocumentTextIcon, DocumentCheckIcon, PaperClipIcon, TrashIcon, EyeIcon } from "@heroicons/react/24/outline";
+import { ArrowDownTrayIcon, ArrowUpTrayIcon, DocumentTextIcon, DocumentCheckIcon, PaperClipIcon, TrashIcon, EyeIcon, AcademicCapIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
 import { Badge, PageHeader, EmptyState, Notice, Tabs, FormField, useToast, useConfirm, TableSkeleton, ErrorState } from "../../components";
 import { formatFCFA, formatDate } from "../../utils/format";
 import {
   getEspaceDocuments, telechargerEspaceRecuPdf, telechargerEspaceQuitusPdf,
   getEspacePieces, soumettreEspacePiece, supprimerEspacePiece, voirEspacePiece,
+  getEspaceMoi, telechargerEspaceAttestationInscription, telechargerEspaceAttestationNonRedevance,
 } from "../../api/resources";
 
 /** Lit un fichier en base64 (sans le préfixe data:), pour l'envoi au serveur. */
@@ -39,6 +40,7 @@ export function MesDocuments() {
   const [docs, setDocs] = useState(null);
   const [erreur, setErreur] = useState(false);
   const [pieces, setPieces] = useState(null);
+  const [moi, setMoi] = useState(null);
   const [typePiece, setTypePiece] = useState("IDENTITE");
   const [envoiPiece, setEnvoiPiece] = useState(false);
   const fichierRef = useRef(null);
@@ -48,7 +50,7 @@ export function MesDocuments() {
     getEspaceDocuments().then(setDocs).catch((e) => { setErreur(true); toast.error(e.message); });
   };
   const chargerPieces = () => getEspacePieces().then(setPieces).catch(() => setPieces([]));
-  useEffect(() => { charger(); chargerPieces(); /* eslint-disable-line */ }, []);
+  useEffect(() => { charger(); chargerPieces(); getEspaceMoi().then(setMoi).catch(() => {}); /* eslint-disable-line */ }, []);
 
   const telecharger = async (fn) => { try { await fn(); } catch (e) { toast.error(e.message || "Téléchargement impossible."); } };
 
@@ -198,13 +200,50 @@ export function MesDocuments() {
     </div>
   );
 
+  // Attestation de non-redevance : disponible seulement si la cotisation de l'exercice est soldée.
+  const cotSoldee = moi ? (moi.situation?.cotisation?.solde ?? 1) === 0 : false;
+  const attestations = (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="bpn-card p-5">
+        <div className="flex items-start gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-navy/5 text-navy"><AcademicCapIcon className="h-5 w-5" /></span>
+          <div className="min-w-0">
+            <h3 className="font-display text-base font-semibold text-encre">Attestation d'inscription</h3>
+            <p className="mt-1 text-sm text-gris">Atteste votre inscription au Tableau de l'Ordre. Document officiel numéroté et archivé.</p>
+          </div>
+        </div>
+        <button className="bpn-btn bpn-btn-or mt-4 w-full justify-center" onClick={() => telecharger(telechargerEspaceAttestationInscription)}>
+          <ArrowDownTrayIcon className="h-4 w-4" /> Télécharger le PDF
+        </button>
+      </div>
+
+      <div className="bpn-card p-5">
+        <div className="flex items-start gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-navy/5 text-navy"><ShieldCheckIcon className="h-5 w-5" /></span>
+          <div className="min-w-0">
+            <h3 className="font-display text-base font-semibold text-encre">Attestation de non-redevance</h3>
+            <p className="mt-1 text-sm text-gris">Atteste que vous êtes à jour de votre cotisation pour l'exercice en cours.</p>
+          </div>
+        </div>
+        {!cotSoldee && moi && (
+          <Notice ton="or" className="mt-3 text-xs">Disponible une fois votre cotisation de l'exercice intégralement réglée.</Notice>
+        )}
+        <button className="bpn-btn bpn-btn-or mt-4 w-full justify-center disabled:opacity-50" disabled={!cotSoldee}
+          onClick={() => telecharger(telechargerEspaceAttestationNonRedevance)}>
+          <ArrowDownTrayIcon className="h-4 w-4" /> Télécharger le PDF
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-5">
-      <PageHeader eyebrow="Mon espace" titre="Mes documents" sousTitre="Vos reçus, quitus, et la soumission de vos pièces justificatives au Secrétariat." />
+      <PageHeader eyebrow="Mon espace" titre="Mes documents" sousTitre="Vos reçus, quitus, attestations et la soumission de vos pièces justificatives au Secrétariat." />
       <Tabs
         tabs={[
           { id: "quitus", label: `Quitus de cotisation (${docs.quitus.length})`, icon: DocumentCheckIcon, content: quitus },
           { id: "recus", label: `Reçus de paiement (${docs.recus.length})`, icon: DocumentTextIcon, content: recus },
+          { id: "attestations", label: "Attestations", icon: AcademicCapIcon, content: attestations },
           { id: "pieces", label: `Pièces justificatives${pieces ? ` (${pieces.length})` : ""}`, icon: PaperClipIcon, content: piecesJustificatives },
         ]}
       />

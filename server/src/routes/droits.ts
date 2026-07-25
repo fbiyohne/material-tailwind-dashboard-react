@@ -6,10 +6,52 @@ import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { droitDue, statutCotisation, tarifsActuels } from "../lib/business.js";
 import { encaisser, gardeVersement } from "../lib/encaissement.js";
+import { envoyerEmail, envoyerSms, emailEnSimulation } from "../lib/notifications.js";
 
 export const droitsRouter = Router();
 // Données financières restreintes (RG-15) : SG, Trésorière, Admin.
 droitsRouter.use(requireAuth, requireRole("SECRETAIRE_GENERAL", "TRESORIERE"));
+
+/** POST /droits/relances?annee= — relance email/SMS des avocats au droit de plaidoirie impayé. */
+droitsRouter.post(
+  "/relances",
+  requireRole("SECRETAIRE_GENERAL", "TRESORIERE"),
+  asyncH(async (req, res) => {
+    const annee = anneeDeRequete(req);
+    const [tarifs, membres] = await Promise.all([
+      tarifsActuels(),
+      prisma.membre.findMany({ where: { qualite: "AVOCAT" }, include: { droitsPlaidoirie: { where: { annee } } } }),
+    ]);
+    const cibles = membres.filter((m) => {
+      const d = m.droitsPlaidoirie[0];
+      const du = droitDue(d, tarifs, m.qualite);
+      const st = statutCotisation(du, d?.montantPaye ?? 0);
+      return (st === "retard" || st === "partiel") && m.email;
+    });
+
+    let envoyes = 0;
+    for (const m of cibles) {
+      const d = m.droitsPlaidoirie[0];
+      const du = droitDue(d, tarifs, m.qualite);
+      const solde = du - (d?.montantPaye ?? 0);
+      await envoyerEmail({
+        to: m.email!,
+        subject: `Relance — droit de plaidoirie ${annee} · Barreau de Pointe-Noire`,
+        text: `Maître ${m.nom},\n\nVotre droit de plaidoirie au titre de l'exercice ${annee} présente un solde restant dû de ${solde.toLocaleString("fr-FR")} FCFA.\nNous vous invitons à régulariser votre situation auprès de la Trésorerie.\n\nLe Secrétariat Général du Barreau de Pointe-Noire.`,
+        evenement: "RELANCE",
+      });
+      if (m.tel) {
+        await envoyerSms({
+          to: m.tel,
+          message: `Barreau de Pointe-Noire : votre droit de plaidoirie ${annee} présente un solde de ${solde.toLocaleString("fr-FR")} FCFA. Merci de régulariser auprès de la Trésorerie.`,
+          evenement: "RELANCE",
+        });
+      }
+      envoyes += 1;
+    }
+    res.json({ annee, envoyes, simulation: await emailEnSimulation(), destinataires: cibles.map((m) => ({ nom: m.nom, email: m.email })) });
+  })
+);
 
 /** GET /droits?annee= — suivi réel des droits de plaidoirie (FR-DROITS). */
 droitsRouter.get(

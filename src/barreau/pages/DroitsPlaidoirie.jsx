@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { BanknotesIcon, ArrowDownTrayIcon, PrinterIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { BanknotesIcon, ArrowDownTrayIcon, PrinterIcon, TrashIcon, EnvelopeIcon } from "@heroicons/react/24/outline";
 import { Badge, StatCard, PaiementModal, PaiementEnLigneModal, useToast, useConfirm, EtatImprimable, PageHeader, DataTable, SelecteurExercice } from "../components";
 import { useAuth } from "../auth/AuthContext";
 import { STATUT_META } from "../data/derivations";
@@ -7,7 +7,7 @@ import { EXERCICE_COURANT } from "../data/dashboard-data";
 import { formatFCFA } from "../utils/format";
 import { telechargerCsv } from "../utils/exportCsv";
 import { exporterExcel, exporterPdf } from "../utils/exports";
-import { getDroits, supprimerDroit } from "../api/resources";
+import { getDroits, supprimerDroit, lancerRelancesDroits } from "../api/resources";
 
 const ENTETE_ETAT = ["N°", "Avocat", "Dû", "Perçu", "Solde", "Statut"];
 
@@ -24,6 +24,8 @@ export function DroitsPlaidoirie() {
   const confirm = useConfirm();
   const { user } = useAuth();
   const estAdmin = user?.role === "ADMIN";
+  const peutRelancer = ["SECRETAIRE_GENERAL", "TRESORIERE", "ADMIN"].includes(user?.role);
+  const [relanceEnCours, setRelanceEnCours] = useState(false);
   const [exercice, setExercice] = useState(EXERCICE_COURANT);
   const [lignes, setLignes] = useState([]);
   const [totaux, setTotaux] = useState({ du: 0, paye: 0, solde: 0 });
@@ -108,6 +110,19 @@ export function DroitsPlaidoirie() {
     <div className="space-y-5">
       <PageHeader eyebrow="Finances" titre="Droits de plaidoirie" sousTitre="Suivi des droits par avocat et par exercice — états individuels et généraux.">
         <SelecteurExercice valeur={exercice} onChange={setExercice} />
+        {peutRelancer && (
+          <button className="bpn-btn bpn-btn-primary !py-1.5 text-xs disabled:opacity-50" disabled={relanceEnCours || totaux.solde === 0}
+            title={totaux.solde === 0 ? "Aucun impayé à relancer" : ""}
+            onClick={async () => {
+              setRelanceEnCours(true);
+              try {
+                const r = await lancerRelancesDroits(exercice);
+                toast.success(`${r.envoyes} relance${r.envoyes > 1 ? "s" : ""} envoyée${r.envoyes > 1 ? "s" : ""}${r.simulation ? " (simulation)" : ""}.`);
+              } catch (e) { toast.error(e.message); } finally { setRelanceEnCours(false); }
+            }}>
+            <EnvelopeIcon className="h-4 w-4" /> {relanceEnCours ? "Envoi…" : "Relancer les impayés"}
+          </button>
+        )}
         <button className="bpn-btn bpn-btn-ghost !py-1.5 text-xs" onClick={() => exporterEtat("pdf")}>
           <PrinterIcon className="h-4 w-4" /> État PDF
         </button>

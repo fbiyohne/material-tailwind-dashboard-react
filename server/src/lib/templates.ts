@@ -180,6 +180,25 @@ export function attestationHtml(membre: { nom: string; num: number; dateInscript
   });
 }
 
+/** Attestation de non-redevance (cotisation de l'exercice intégralement réglée). */
+export function attestationNonRedevanceHtml(
+  membre: { nom: string; num: number },
+  numero: string,
+  annee: number,
+  date: Date | string,
+): string {
+  return documentHtml({
+    org: "Le Bâtonnier",
+    title: "Attestation de non-redevance",
+    reference: `N° ${numero}`,
+    bodyHtml: `
+      <p>Le Bâtonnier de l'Ordre des Avocats du Barreau de Pointe-Noire atteste que <b>Me ${escapeHtml(membre.nom)}</b>, inscrit(e) au Tableau de l'Ordre sous le numéro <b>${membre.num}</b>, est à jour de sa cotisation ordinale au titre de l'exercice <b>${annee}</b>.</p>
+      <p style="margin-top:12px">L'intéressé(e) ne demeure redevable d'aucune somme envers l'Ordre au titre de cet exercice. La présente attestation est délivrée pour servir et valoir ce que de droit.</p>`,
+    signataire: { role: "Le Bâtonnier", nom: "Me BIKINDOU Audrey Séverin" },
+    date,
+  });
+}
+
 export function convocationReunionHtml(reunion: any): string {
   return documentHtml({
     org: "Conseil de l'Ordre",
@@ -290,6 +309,44 @@ export function pvAssembleeHtml(a: any): string {
       ${decisions}`,
     signataire: { role: "Le Bâtonnier", nom: "Me BIKINDOU Audrey Séverin" },
     date: a.date,
+  });
+}
+
+/** Procès-verbal de scrutin (élections du Conseil / Bâtonnier) — résultats officiels. */
+export function pvScrutinHtml(s: any): string {
+  const TYPE_LABEL: Record<string, string> = { CONSEIL: "Conseil de l'Ordre", BATONNIER: "Bâtonnier", AUTRE: "Scrutin" };
+  const MODALITE_LABEL: Record<string, string> = { PRESENTIEL: "Présentiel", EN_LIGNE: "Vote en ligne" };
+  const candidats = [...(s.candidats ?? [])].sort((a: any, b: any) => b.voix - a.voix || a.nom.localeCompare(b.nom));
+  const total = candidats.reduce((n: number, c: any) => n + c.voix, 0);
+  const lignes = candidats
+    .map((c: any, i: number) => {
+      const pct = total > 0 ? Math.round((c.voix / total) * 100) : 0;
+      const elu = s.type === "CONSEIL" && i < s.nbSieges && c.voix > 0;
+      return `<tr style="border-bottom:1px solid #E0DBD0">
+        <td style="padding:6px 6px;font-family:'DM Mono',monospace;color:#C4990A">${i + 1}</td>
+        <td style="padding:6px 6px"><b>${escapeHtml(c.nom)}</b>${elu ? ` <span style="font-size:9px;color:#2f855a">(Élu·e)</span>` : ""}</td>
+        <td style="padding:6px 6px;text-align:right;font-family:'DM Mono',monospace;color:#1A3A6B">${c.voix}</td>
+        <td style="padding:6px 6px;text-align:right;color:#7A756A">${pct}%</td></tr>`;
+    })
+    .join("");
+  return documentHtml({
+    org: "Le Secrétaire Général",
+    title: "Procès-verbal du scrutin",
+    reference: escapeHtml(s.titre),
+    bodyHtml: `
+      <div class="row"><span class="l">Type de scrutin</span><span>${TYPE_LABEL[s.type] ?? s.type}</span></div>
+      <div class="row"><span class="l">Modalité</span><span>${MODALITE_LABEL[s.modalite] ?? s.modalite}</span></div>
+      <div class="row"><span class="l">Sièges à pourvoir</span><span>${s.nbSieges}</span></div>
+      <div class="row"><span class="l">Suffrages exprimés</span><span>${total}${s._count?.emargements != null ? ` · ${s._count.emargements} votant(s)` : ""}</span></div>
+      <p style="margin:16px 0 4px"><b>Résultats :</b></p>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="border-bottom:1.5px solid #1A3A6B;color:#7A756A;text-align:left">
+          <th style="padding:5px 6px;width:42px">Rang</th><th style="padding:5px 6px">Candidat</th><th style="padding:5px 6px;text-align:right;width:80px">Voix</th><th style="padding:5px 6px;text-align:right;width:64px">%</th></tr></thead>
+        <tbody>${lignes || '<tr><td colspan="4" style="padding:8px;color:#7A756A">Aucun candidat.</td></tr>'}</tbody>
+      </table>
+      <p style="margin-top:16px;font-size:12px;color:#7A756A">Procès-verbal dressé à l'issue du dépouillement${s.closLe ? ` (clôture le ${fmtDate(s.closLe)})` : ""}.</p>`,
+    signataire: { role: "Le Secrétaire Général", nom: "Me KALINA-MENGA Lionel" },
+    date: s.closLe ?? new Date(),
   });
 }
 

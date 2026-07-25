@@ -66,48 +66,84 @@ quitusRouter.get(
 
 const genSchema = z.object({ membreId: z.number().int(), annee: z.number().int() });
 
+/**
+ * Génère un quitus pour un avocat éligible, avec numérotation atomique (rejoue
+ * sur collision @unique) et re-vérification de l'éligibilité DANS la transaction
+ * (BR-01) : interdit l'émission pour un avocat redevenu débiteur entre le
+ * contrôle et l'écriture (TOCTOU, ex. annulation de reçu concurrente).
+ */
+async function genererQuitus(membreId: number, annee: number) {
+  const dateEmission = new Date();
+  const MAX_TENTATIVES = 5;
+  for (let tentative = 1; ; tentative++) {
+    const numero = await prochainNumeroQuitus(annee);
+    try {
+      return await prisma.$transaction(async (tx) => {
+        // Un seul quitus par avocat et par exercice : bloque les doublons
+        // (double-clic, appels concurrents) — le registre reste sans redondance.
+        const existant = await tx.quitus.findFirst({ where: { membreId, annee } });
+        if (existant) {
+          throw new HttpError(409, "Un quitus a déjà été émis pour cet avocat au titre de cet exercice.");
+        }
+        const cotisation = await tx.cotisation.findUnique({ where: { membreId_annee: { membreId, annee } }, include: { membre: true } });
+        if (!cotisation || !eligibleQuitus(cotisation)) {
+          throw new HttpError(409, "Quitus bloqué : l'avocat doit être à jour ET validé par la Trésorière (BR-01)");
+        }
+        const q = await tx.quitus.create({ data: { numero, membreId, annee, dateEmission } });
+        await tx.archive.create({
+          data: { categorie: "Quitus", titre: `Quitus ${numero} — Me ${cotisation.membre.nom}`, reference: numero, date: dateEmission, membreNom: cotisation.membre.nom },
+        });
+        return q;
+      });
+    } catch (e) {
+      const collisionNumero =
+        e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002" && tentative < MAX_TENTATIVES;
+      if (!collisionNumero) throw e;
+    }
+  }
+}
+
 /** POST /quitus — génère un quitus si éligible (BR-01). SG/Admin. */
 quitusRouter.post(
   "/",
   requireRole("SECRETAIRE_GENERAL"),
   asyncH(async (req, res) => {
     const { membreId, annee } = genSchema.parse(req.body);
-    const dateEmission = new Date();
+    res.status(201).json(await genererQuitus(membreId, annee));
+  })
+);
 
-    // Numérotation atomique (rejoue sur collision @unique) + re-vérification de
-    // l'éligibilité DANS la transaction (BR-01) : interdit l'émission pour un
-    // avocat redevenu débiteur entre le contrôle et l'écriture (TOCTOU, ex.
-    // annulation de reçu concurrente).
-    const MAX_TENTATIVES = 5;
-    let quitus;
-    for (let tentative = 1; ; tentative++) {
-      const numero = await prochainNumeroQuitus(annee);
+/**
+ * POST /quitus/lot?annee= — génère en une passe les quitus manquants pour tous les
+ * avocats éligibles de l'exercice (à jour ET validés). Idempotent : les avocats
+ * déjà pourvus sont ignorés silencieusement. SG/Admin.
+ */
+quitusRouter.post(
+  "/lot",
+  requireRole("SECRETAIRE_GENERAL"),
+  asyncH(async (req, res) => {
+    const annee = anneeDeRequete(req);
+    const cotisations = await prisma.cotisation.findMany({ where: { annee }, include: { membre: true } });
+    const eligibles = cotisations.filter((c) => eligibleQuitus(c));
+    // Écarte d'emblée les avocats déjà pourvus (le contrôle transactionnel reste
+    // la garde ultime contre les doublons concurrents).
+    const dejaEmis = new Set(
+      (await prisma.quitus.findMany({ where: { annee }, select: { membreId: true } })).map((q) => q.membreId)
+    );
+    let crees = 0;
+    const numeros: string[] = [];
+    for (const c of eligibles) {
+      if (dejaEmis.has(c.membreId)) continue;
       try {
-        quitus = await prisma.$transaction(async (tx) => {
-          // Un seul quitus par avocat et par exercice : bloque les doublons
-          // (double-clic, appels concurrents) — le registre reste sans redondance.
-          const existant = await tx.quitus.findFirst({ where: { membreId, annee } });
-          if (existant) {
-            throw new HttpError(409, "Un quitus a déjà été émis pour cet avocat au titre de cet exercice.");
-          }
-          const cotisation = await tx.cotisation.findUnique({ where: { membreId_annee: { membreId, annee } }, include: { membre: true } });
-          if (!cotisation || !eligibleQuitus(cotisation)) {
-            throw new HttpError(409, "Quitus bloqué : l'avocat doit être à jour ET validé par la Trésorière (BR-01)");
-          }
-          const q = await tx.quitus.create({ data: { numero, membreId, annee, dateEmission } });
-          await tx.archive.create({
-            data: { categorie: "Quitus", titre: `Quitus ${numero} — Me ${cotisation.membre.nom}`, reference: numero, date: dateEmission, membreNom: cotisation.membre.nom },
-          });
-          return q;
-        });
-        break;
+        const q = await genererQuitus(c.membreId, annee);
+        crees += 1;
+        numeros.push(q!.numero);
       } catch (e) {
-        const collisionNumero =
-          e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002" && tentative < MAX_TENTATIVES;
-        if (!collisionNumero) throw e;
+        // Un avocat devenu inéligible (course) ou déjà pourvu ne bloque pas le lot.
+        if (!(e instanceof HttpError && e.status === 409)) throw e;
       }
     }
-    res.status(201).json(quitus);
+    res.json({ annee, crees, ignores: eligibles.length - crees, numeros });
   })
 );
 

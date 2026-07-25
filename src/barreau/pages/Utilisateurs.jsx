@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { UserPlusIcon, KeyIcon, CheckIcon, XMarkIcon, TrashIcon, InboxArrowDownIcon, IdentificationIcon, BuildingOffice2Icon } from "@heroicons/react/24/outline";
+import { UserPlusIcon, KeyIcon, CheckIcon, XMarkIcon, TrashIcon, InboxArrowDownIcon, IdentificationIcon, BuildingOffice2Icon, PencilSquareIcon } from "@heroicons/react/24/outline";
 import { Badge, Modal, Notice, PageHeader, FormField, useToast, useConfirm, DataTable, AccesActivationModal } from "../components";
 import { formatDate } from "../utils/format";
 import { useAuth } from "../auth/AuthContext";
@@ -33,6 +33,7 @@ export function Utilisateurs() {
   const [creation, setCreation] = useState(null); // form objet ou null
   const [acces, setAcces] = useState(null); // { email, lien, renvoi } après provisionnement espace
   const [motDePasse, setMotDePasse] = useState(null); // { id, nom, password }
+  const [edition, setEdition] = useState(null); // { id, nom, email }
   const [loading, setLoading] = useState(false);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState(false);
@@ -107,6 +108,16 @@ export function Utilisateurs() {
         setCreation(null);
         await charger();
       }
+    } catch (e) { toast.error(e.message); } finally { setLoading(false); }
+  };
+
+  const enregistrerEdition = async () => {
+    setLoading(true);
+    try {
+      await majUser(edition.id, { nom: edition.nom.trim(), email: edition.email.trim() });
+      toast.success(`Compte mis à jour — ${edition.nom}.`);
+      setEdition(null);
+      await charger();
     } catch (e) { toast.error(e.message); } finally { setLoading(false); }
   };
 
@@ -223,6 +234,11 @@ export function Utilisateurs() {
               align: "right",
               cell: (u) => (
                 <div className="flex justify-end gap-2">
+                  {!geleAdmin(u) && u.role !== "AVOCAT" && (
+                    <button className="bpn-btn bpn-btn-ghost !px-2 !py-1 text-xs" onClick={() => setEdition({ id: u.id, nom: u.nom, email: u.email })}>
+                      <PencilSquareIcon className="h-3.5 w-3.5" /> Modifier
+                    </button>
+                  )}
                   {!geleAdmin(u) && (
                     <button className="bpn-btn bpn-btn-ghost !px-2 !py-1 text-xs" onClick={() => setMotDePasse({ id: u.id, nom: u.nom, password: "" })}>
                       <KeyIcon className="h-3.5 w-3.5" /> Mot de passe
@@ -316,6 +332,30 @@ export function Utilisateurs() {
 
       {/* Lien d'activation de l'espace avocat (après provisionnement depuis une demande) */}
       <AccesActivationModal acces={acces} onClose={() => setAcces(null)} />
+
+      {/* Édition du compte (nom / email) */}
+      <Modal
+        open={!!edition}
+        onClose={() => setEdition(null)}
+        title={edition ? `Modifier — ${edition.nom}` : ""}
+        footer={
+          <button className="bpn-btn bpn-btn-or" onClick={enregistrerEdition}
+            disabled={loading || !edition?.nom?.trim() || !edition?.email?.trim()}>
+            <CheckIcon className="h-4 w-4" /> Enregistrer
+          </button>
+        }
+      >
+        {edition && (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <FormField label="Nom" required full>
+              <input value={edition.nom} onChange={(e) => setEdition({ ...edition, nom: e.target.value })} className="bpn-input" />
+            </FormField>
+            <FormField label="Email" required full>
+              <input type="email" value={edition.email} onChange={(e) => setEdition({ ...edition, email: e.target.value })} className="bpn-input" />
+            </FormField>
+          </div>
+        )}
+      </Modal>
 
       {/* Réinitialisation mot de passe */}
       <Modal

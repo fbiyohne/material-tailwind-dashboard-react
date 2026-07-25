@@ -3,6 +3,9 @@ import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { envoyerPdf } from "../lib/pdf.js";
+import { pvScrutinHtml } from "../lib/templates.js";
+import { archiver } from "../lib/business.js";
 
 /**
  * Élections (Conseil de l'Ordre / Bâtonnier) — gestion du scrutin par le
@@ -53,6 +56,50 @@ const creerSchema = z.object({
 /** POST /scrutins — crée un scrutin (SG). */
 scrutinsRouter.post("/", requireRole("SECRETAIRE_GENERAL"), asyncH(async (req, res) => {
   res.status(201).json(await prisma.scrutin.create({ data: creerSchema.parse(req.body) }));
+}));
+
+const majSchema = z.object({
+  titre: z.string().trim().min(1).max(160).optional(),
+  nbSieges: z.number().int().positive().max(50).optional(),
+});
+
+/** PATCH /scrutins/:id — modifie l'intitulé / le nombre de sièges (SG, en préparation). */
+scrutinsRouter.patch("/:id", requireRole("SECRETAIRE_GENERAL"), asyncH(async (req, res) => {
+  const id = Number(req.params.id);
+  const s = await prisma.scrutin.findUnique({ where: { id }, select: { statut: true } });
+  if (!s) throw new HttpError(404, "Scrutin introuvable");
+  if (s.statut !== "PREPARATION") throw new HttpError(409, "Modification impossible : le scrutin n'est plus en préparation.");
+  const data = majSchema.parse(req.body);
+  await prisma.scrutin.update({ where: { id }, data });
+  res.json(await detail(id));
+}));
+
+/** DELETE /scrutins/:id — supprime un scrutin (SG, uniquement en préparation). */
+scrutinsRouter.delete("/:id", requireRole("SECRETAIRE_GENERAL"), asyncH(async (req, res) => {
+  const id = Number(req.params.id);
+  const s = await prisma.scrutin.findUnique({ where: { id }, select: { statut: true } });
+  if (!s) throw new HttpError(404, "Scrutin introuvable");
+  // On n'autorise la suppression qu'en préparation : un scrutin ouvert/clos/publié
+  // porte des émargements (votes exprimés) et une valeur institutionnelle à conserver.
+  if (s.statut !== "PREPARATION") throw new HttpError(409, "Suppression impossible : le scrutin a déjà été ouvert au vote.");
+  await prisma.$transaction([
+    prisma.candidat.deleteMany({ where: { scrutinId: id } }),
+    prisma.scrutin.delete({ where: { id } }),
+  ]);
+  res.status(204).end();
+}));
+
+/** GET /scrutins/:id/pv/pdf — procès-verbal des résultats en PDF (SG/Bâtonnier, après clôture). */
+scrutinsRouter.get("/:id/pv/pdf", asyncH(async (req, res) => {
+  const id = Number(req.params.id);
+  const s = await prisma.scrutin.findUnique({
+    where: { id },
+    include: { candidats: { orderBy: [{ voix: "desc" }, { nom: "asc" }] }, _count: { select: { emargements: true } } },
+  });
+  if (!s) throw new HttpError(404, "Scrutin introuvable");
+  if (s.statut !== "CLOS" && s.statut !== "PUBLIE") throw new HttpError(409, "Le procès-verbal n'est disponible qu'après clôture du scrutin.");
+  await archiver({ categorie: "Procès-verbal (élection)", titre: `PV — ${s.titre}`, reference: `SCRUTIN-${s.id}`, date: new Date() });
+  await envoyerPdf(res, pvScrutinHtml(s), `PV-scrutin-${s.id}.pdf`);
 }));
 
 const candidatSchema = z.object({ nom: z.string().trim().min(1).max(160), membreId: z.number().int().positive().optional() });

@@ -48,6 +48,8 @@ export function Recus() {
   const [emission, setEmission] = useState(false); // garde anti double-soumission
   const [chargementRecus, setChargementRecus] = useState(true);
   const [erreurRecus, setErreurRecus] = useState(false);
+  const [filtreExercice, setFiltreExercice] = useState("tous"); // "tous" | année
+  const [recherche, setRecherche] = useState("");
 
   const chargerRecus = useCallback(() => {
     setChargementRecus(true); setErreurRecus(false);
@@ -121,6 +123,21 @@ export function Recus() {
 
   const numeroAffiche = succes?.numero ?? "automatique";
 
+  // Exercices présents dans les reçus émis (pour alimenter le filtre), triés décroissant.
+  const exercicesRecus = useMemo(
+    () => [...new Set(recus.map((r) => r.annee))].sort((a, b) => b - a),
+    [recus]
+  );
+  // Filtre affichage : exercice + recherche (n° de reçu, nom d'avocat).
+  const recusAffiches = useMemo(() => {
+    const q = recherche.trim().toLowerCase();
+    return recus.filter((r) => {
+      if (filtreExercice !== "tous" && r.annee !== Number(filtreExercice)) return false;
+      if (!q) return true;
+      return String(r.numero).toLowerCase().includes(q) || (r.membre?.nom ?? "").toLowerCase().includes(q);
+    });
+  }, [recus, filtreExercice, recherche]);
+
   return (
     <div className="space-y-5">
       <PageHeader className="bpn-no-print" eyebrow="Finances" titre="Reçus de paiement" sousTitre="Émission d'un reçu officiel — mise à jour automatique des cotisations à l'enregistrement." />
@@ -182,15 +199,31 @@ export function Recus() {
           </div>
 
           <div className="bpn-no-print bpn-card">
-            <div className="bpn-card-header">
+            <div className="bpn-card-header flex-wrap gap-2">
               <span className="bpn-card-heading">Reçus émis</span>
-              <div className="flex items-center gap-3">
-                <button type="button" disabled={recus.length === 0}
-                  onClick={() => telechargerCsv(`Recus-${new Date().getFullYear()}`, COLONNES_CSV, recus)}
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  value={recherche}
+                  onChange={(e) => setRecherche(e.target.value)}
+                  placeholder="Rechercher (n°, avocat)…"
+                  className="bpn-input !w-44 !py-1 text-xs"
+                  aria-label="Rechercher un reçu"
+                />
+                <select
+                  value={filtreExercice}
+                  onChange={(e) => setFiltreExercice(e.target.value)}
+                  className="bpn-input !w-auto !py-1 text-xs"
+                  aria-label="Filtrer par exercice"
+                >
+                  <option value="tous">Tous les exercices</option>
+                  {exercicesRecus.map((a) => <option key={a} value={a}>{a}</option>)}
+                </select>
+                <button type="button" disabled={recusAffiches.length === 0}
+                  onClick={() => telechargerCsv(`Recus-${filtreExercice === "tous" ? "tous" : filtreExercice}`, COLONNES_CSV, recusAffiches)}
                   className="bpn-btn bpn-btn-ghost !py-1 text-xs disabled:opacity-40">
                   <ArrowDownTrayIcon className="h-3.5 w-3.5" /> Export CSV
                 </button>
-                <span className="font-mono text-xs text-gris">{recus.length}</span>
+                <span className="font-mono text-xs text-gris">{recusAffiches.length}</span>
               </div>
             </div>
             <DataTable
@@ -267,7 +300,7 @@ export function Recus() {
                   ),
                 },
               ]}
-              rows={recus}
+              rows={recusAffiches}
               getRowId={(r) => r.numero}
               loading={chargementRecus}
               error={erreurRecus}

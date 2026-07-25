@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { MagnifyingGlassIcon, DocumentArrowDownIcon, ArrowDownTrayIcon, ArchiveBoxIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { MagnifyingGlassIcon, DocumentArrowDownIcon, ArrowDownTrayIcon, ArchiveBoxIcon, TrashIcon, ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline";
 import { Badge, Modal, Notice, useToast, useConfirm, PageHeader, DataTable } from "../components";
 import { formatDate } from "../utils/format";
 import { telechargerCsv } from "../utils/exportCsv";
@@ -13,6 +13,14 @@ const COLONNES_CSV = [
   { label: "Document", valeur: (a) => a.titre },
   { label: "Référence", valeur: (a) => a.reference },
 ];
+
+// Catégories d'archives dont la référence pointe vers un document vérifiable
+// publiquement (page /verifier/:type/:numero, même mécanisme que le QR code).
+const TYPE_VERIFIABLE = { "Reçu de paiement": "recu", Quitus: "quitus" };
+const lienVerification = (a) => {
+  const type = TYPE_VERIFIABLE[a.categorie];
+  return type && a.reference ? `/verifier/${type}/${encodeURIComponent(a.reference)}` : null;
+};
 
 export function Archives() {
   const toast = useToast();
@@ -77,6 +85,17 @@ export function Archives() {
     { key: "actions", label: "Action", align: "right",
       cell: (a) => (
         <div className="flex items-center justify-end gap-1.5">
+          {lienVerification(a) && (
+            <a
+              href={lienVerification(a)}
+              target="_blank"
+              rel="noreferrer"
+              title="Ouvrir le document vérifiable"
+              className="bpn-btn bpn-btn-ghost bpn-btn-sm"
+            >
+              <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" /> Ouvrir
+            </a>
+          )}
           <button className="bpn-btn bpn-btn-ghost bpn-btn-sm" onClick={() => setApercu(a)}>
             <DocumentArrowDownIcon className="h-3.5 w-3.5" /> Consulter
           </button>
@@ -147,10 +166,21 @@ export function Archives() {
               <div className="flex justify-between gap-4 py-2"><dt className="text-gris">Référence</dt><dd className="font-mono text-encre">{apercu.reference}</dd></div>
               {apercu.membreNom && <div className="flex justify-between gap-4 py-2"><dt className="text-gris">Concerné</dt><dd className="font-medium text-encre">Me {apercu.membreNom}</dd></div>}
             </dl>
-            <Notice ton="or">
-              Cette entrée trace un document officiel généré par l'application. Le PDF se régénère
-              depuis le module d'origine (reçu, quitus, attestation, convocation…).
-            </Notice>
+            {lienVerification(apercu) ? (
+              <a
+                href={lienVerification(apercu)}
+                target="_blank"
+                rel="noreferrer"
+                className="bpn-btn bpn-btn-or w-full justify-center"
+              >
+                <ArrowTopRightOnSquareIcon className="h-4 w-4" /> Ouvrir le document vérifiable
+              </a>
+            ) : (
+              <Notice ton="or">
+                Cette entrée trace un document officiel généré par l'application. Le PDF se régénère
+                depuis le module d'origine (reçu, quitus, attestation, convocation…).
+              </Notice>
+            )}
           </div>
         )}
       </Modal>
