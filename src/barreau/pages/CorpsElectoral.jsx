@@ -110,17 +110,31 @@ export function CorpsElectoral() {
                     </span>
                     <span className="font-mono text-xs text-gris">{electeurs.length} électeurs</span>
                   </div>
-                  <DataTable
-                    columns={COLONNES_ELECTEURS}
-                    rows={electeursNum}
-                    loading={chargement}
-                    error={erreur}
-                    onRetry={charger}
-                    paginate={false}
-                    emptyIcon={CheckBadgeIcon}
-                    emptyTitle="Aucun électeur qualifié"
-                    emptyDescription={`Aucun avocat ne remplit les conditions pour voter à l'exercice ${exercice} (inscrit, à jour de cotisations, non suspendu).`}
-                  />
+                  {/* À l'écran : liste paginée (10 par page). */}
+                  <div className="print:hidden">
+                    <DataTable
+                      columns={COLONNES_ELECTEURS}
+                      rows={electeursNum}
+                      loading={chargement}
+                      error={erreur}
+                      onRetry={charger}
+                      pageSize={10}
+                      libelle="électeurs"
+                      emptyIcon={CheckBadgeIcon}
+                      emptyTitle="Aucun électeur qualifié"
+                      emptyDescription={`Aucun avocat ne remplit les conditions pour voter à l'exercice ${exercice} (inscrit, à jour de cotisations, non suspendu).`}
+                    />
+                  </div>
+                  {/* À l'impression : liste intégrale (la pagination ne doit pas tronquer le document officiel). */}
+                  {electeursNum.length > 0 && (
+                    <div className="hidden print:block">
+                      <DataTable
+                        columns={COLONNES_ELECTEURS}
+                        rows={electeursNum}
+                        paginate={false}
+                      />
+                    </div>
+                  )}
                 </div>
               </>
             ),
@@ -143,7 +157,8 @@ export function CorpsElectoral() {
                   loading={chargement}
                   error={erreur}
                   onRetry={charger}
-                  paginate={false}
+                  pageSize={10}
+                  libelle="exclusions"
                   emptyIcon={NoSymbolIcon}
                   emptyTitle="Aucune exclusion"
                   emptyDescription="Tous les avocats inscrits remplissent les conditions pour voter."
