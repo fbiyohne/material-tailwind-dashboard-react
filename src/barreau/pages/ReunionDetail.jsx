@@ -34,6 +34,8 @@ export function ReunionDetail() {
   const [odj, setOdj] = useState("");
   const [presences, setPresences] = useState({});
   const [pv, setPv] = useState("");
+  const [heure, setHeure] = useState("");
+  const [lieu, setLieu] = useState("");
   const [convocation, setConvocation] = useState(false);
   const [feuille, setFeuille] = useState(false);
 
@@ -43,6 +45,8 @@ export function ReunionDetail() {
       setOdj((r.ordreDuJour ?? []).join("\n"));
       setPresences(r.presences ?? {});
       setPv(r.pv ?? "");
+      setHeure(r.heure ?? "");
+      setLieu(r.lieu ?? "");
     })
     .catch(() => setReunion(false));
   useEffect(() => { charger(); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -74,6 +78,15 @@ export function ReunionDetail() {
     try {
       await majReunion(reunion.id, { ordreDuJour: odj.split("\n").map((s) => s.trim()).filter(Boolean) });
       toast.success("Ordre du jour mis à jour.");
+    } catch (e) {
+      toast.error(e.message);
+    }
+  };
+  const sauverDetails = async () => {
+    try {
+      const maj = await majReunion(reunion.id, { heure, lieu });
+      setReunion(maj);
+      toast.success("Détails de la réunion mis à jour.");
     } catch (e) {
       toast.error(e.message);
     }
@@ -152,6 +165,18 @@ export function ReunionDetail() {
           <button className="bpn-btn bpn-btn-ghost text-rouge" onClick={supprimer}><TrashIcon className="h-4 w-4" /> Supprimer</button>
         )}
       </PageHeader>
+
+      {peutGerer && (
+        <div className="bpn-card">
+          <div className="bpn-card-header"><span className="bpn-card-heading">Détails de la séance</span>
+            <button className="bpn-btn bpn-btn-primary bpn-btn-sm" onClick={sauverDetails}>Enregistrer</button>
+          </div>
+          <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2">
+            <label className="block"><span className="mb-1 block text-xs uppercase tracking-wide text-gris">Heure</span><input type="time" value={heure} onChange={(e) => setHeure(e.target.value)} className="bpn-input" /></label>
+            <label className="block"><span className="mb-1 block text-xs uppercase tracking-wide text-gris">Lieu</span><input value={lieu} onChange={(e) => setLieu(e.target.value)} className="bpn-input" /></label>
+          </div>
+        </div>
+      )}
 
       <Tabs
         tabs={[

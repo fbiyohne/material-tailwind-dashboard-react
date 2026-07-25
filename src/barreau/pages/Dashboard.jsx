@@ -171,6 +171,22 @@ export function Dashboard() {
         <StatCard label="Stagiaires" value={membres?.stagiaires ?? "…"} sub="en cours" accent="navy" onClick={allerVers("/stagiaires")} />
       </div>
 
+      {/* Indicateurs institutionnels / système — servis selon le rôle (disciplinaire
+          pour SG/Bâtonnier, demandes d'accès pour SG/Admin). */}
+      {(data?.discipline || data?.demandesEnAttente != null) && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {data?.discipline && (
+            <StatCard label="Dossiers disciplinaires" value={data.discipline.enCours} sub="en cours" accent="rouge" onClick={allerVers("/discipline")} className={data.discipline.enCours > 0 ? "!border-rouge/40" : ""} />
+          )}
+          {data?.discipline && (
+            <StatCard label="Sanctions" value={data.discipline.sanctionsAnnee} sub={`exercice ${data?.annee ?? ""}`} accent="navy" onClick={allerVers("/discipline")} />
+          )}
+          {data?.demandesEnAttente != null && (
+            <StatCard label="Demandes d'accès" value={data.demandesEnAttente} sub="en attente" accent="or" onClick={allerVers("/utilisateurs")} className={data.demandesEnAttente > 0 ? "!border-or/40 !bg-or-L" : ""} />
+          )}
+        </div>
+      )}
+
       {/* Situation financière — réservée aux profils finances (RG-15) ; le
           Bâtonnier ne voit pas les montants. */}
       {voitFinances && (

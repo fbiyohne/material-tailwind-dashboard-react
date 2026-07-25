@@ -76,7 +76,7 @@ const anciennete = (m) => {
   return Number.isNaN(t) ? Infinity : t;
 };
 
-const videForm = { nom: "", fonction: "Membre du Conseil", role: "membre", sigle: "", membreId: null };
+const videForm = { nom: "", fonction: "Membre du Conseil", role: "membre", sigle: "", membreId: null, mandatDebut: "" };
 
 /**
  * Composition du Conseil de l'Ordre — gestion des membres, rôles et mandats (SG).
@@ -126,7 +126,7 @@ export function Conseil() {
     if (!form.nom.trim()) return;
     const fonction = form.fonction.trim() || fonctionDefaut(form.role);
     action(
-      () => ajouterMembreConseil({ nom: form.nom.trim(), fonction, role: form.role, sigle: form.role === "bureau" ? form.sigle.trim() || null : null, membreId: form.membreId ?? null, ordre: (membres?.length ?? 0) + 1 }),
+      () => ajouterMembreConseil({ nom: form.nom.trim(), fonction, role: form.role, sigle: form.role === "bureau" ? form.sigle.trim() || null : null, membreId: form.membreId ?? null, mandatDebut: form.mandatDebut || undefined, ordre: (membres?.length ?? 0) + 1 }),
       "Membre ajouté.",
     );
     setForm(videForm);
@@ -253,6 +253,7 @@ export function Conseil() {
           <select value={form.fonction} onChange={(e) => setForm({ ...form, fonction: e.target.value })} className="bpn-input sm:w-56">
             {optionsFonction(form.fonction).map((f) => <option key={f} value={f}>{f}</option>)}
           </select>
+          <input type="date" value={form.mandatDebut} onChange={(e) => setForm({ ...form, mandatDebut: e.target.value })} className="bpn-input sm:w-44" title="Début de mandat / serment" aria-label="Début de mandat" />
           <button className="bpn-btn bpn-btn-or shrink-0" onClick={ajouter} disabled={!form.nom.trim()}><PlusIcon className="h-4 w-4" /> Ajouter</button>
         </div>
       )}

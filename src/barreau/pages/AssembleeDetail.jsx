@@ -30,12 +30,13 @@ export function AssembleeDetail() {
   const [electeurs, setElecteurs] = useState(0);
   const [present, setPresent] = useState(0);
   const [pv, setPv] = useState("");
+  const [odj, setOdj] = useState("");
   const [nouvelleDecision, setNouvelleDecision] = useState("");
   const [convocation, setConvocation] = useState(false);
 
   const charger = () =>
     getAssemblee(Number(id))
-      .then((a) => { setAssemblee(a); setPresent(a.quorumPresent ?? 0); setPv(a.pv ?? ""); })
+      .then((a) => { setAssemblee(a); setPresent(a.quorumPresent ?? 0); setPv(a.pv ?? ""); setOdj((a.ordreDuJour ?? []).join("\n")); })
       .catch(() => setAssemblee(false));
 
   useEffect(() => {
@@ -65,6 +66,15 @@ export function AssembleeDetail() {
   const requis = Math.floor(electeurs / 2) + 1;
   const atteint = present >= requis;
 
+  const sauverOdj = async () => {
+    try {
+      const maj = await majAssemblee(assemblee.id, { ordreDuJour: odj.split("\n").map((s) => s.trim()).filter(Boolean) });
+      setAssemblee(maj);
+      toast.success("Ordre du jour mis à jour.");
+    } catch (e) {
+      toast.error(e.message);
+    }
+  };
   const sauverQuorum = async () => {
     try {
       await majAssemblee(assemblee.id, { quorumPresent: present });
@@ -165,10 +175,14 @@ export function AssembleeDetail() {
             label: "Ordre du jour",
             icon: ListBulletIcon,
             content: (
-              <Carte titre="Ordre du jour">
-                <ol className="list-inside list-decimal space-y-1 text-sm text-encre">
-                  {(assemblee.ordreDuJour ?? []).map((pt, i) => <li key={i}>{pt}</li>)}
-                </ol>
+              <Carte titre="Ordre du jour" action={peutGerer ? <button className="bpn-btn bpn-btn-primary bpn-btn-sm" onClick={sauverOdj}>Enregistrer</button> : undefined}>
+                {peutGerer ? (
+                  <textarea rows={6} value={odj} onChange={(e) => setOdj(e.target.value)} className="bpn-input" placeholder="Un point par ligne…" />
+                ) : (
+                  <ol className="list-inside list-decimal space-y-1 text-sm text-encre">
+                    {(assemblee.ordreDuJour ?? []).map((pt, i) => <li key={i}>{pt}</li>)}
+                  </ol>
+                )}
               </Carte>
             ),
           },

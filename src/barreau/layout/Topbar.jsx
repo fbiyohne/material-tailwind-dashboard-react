@@ -69,7 +69,13 @@ export function Topbar({ title, onOpenMenu, onAddAvocat }) {
   };
 
   const resultats = q.trim()
-    ? membres.filter((m) => m.nom.toLowerCase().includes(q.trim().toLowerCase())).slice(0, 6)
+    ? membres.filter((m) => {
+        const s = q.trim().toLowerCase();
+        return m.nom.toLowerCase().includes(s)
+          || (m.cabinet ?? "").toLowerCase().includes(s)
+          || (m.numInscription ?? "").toLowerCase().includes(s)
+          || String(m.num ?? "").includes(s);
+      }).slice(0, 6)
     : [];
 
   const aller = (path) => { setMenu(null); setQ(""); navigate(path); };
@@ -89,7 +95,7 @@ export function Topbar({ title, onOpenMenu, onAddAvocat }) {
           type="text"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Rechercher un avocat…"
+          placeholder="Rechercher un avocat (nom, n°, cabinet)…"
           className="bpn-input !py-1.5 pl-9 text-sm"
           aria-label="Recherche globale"
         />
