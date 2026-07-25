@@ -77,7 +77,7 @@ export function TableauOrdre() {
             columns={COLONNES_TABLEAU}
             rows={s.membres}
             getRowId={(m) => m.id}
-            pageSize={25}
+            pageSize={10}
             libelle="membres"
             emptyTitle="Aucun membre"
             emptyDescription="Aucun membre dans cette section."

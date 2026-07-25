@@ -4,7 +4,7 @@ import { Badge, PageHeader, useToast, TableSkeleton, ErrorState, EmptyState } fr
 import { formatDateTime } from "../utils/format";
 import { listerAudit } from "../api/resources";
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 10;
 
 /**
  * Journal d'audit (RG-16) — consultation des actions sensibles, filtrable par

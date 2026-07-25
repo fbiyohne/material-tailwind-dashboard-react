@@ -61,7 +61,7 @@ export function EspaceAnnuaire() {
           loading={chargement}
           error={erreur}
           onRetry={charger}
-          pageSize={12}
+          pageSize={10}
           libelle="confrères"
           initialSort={{ key: "identite", dir: "asc" }}
           emptyIcon={BookOpenIcon}

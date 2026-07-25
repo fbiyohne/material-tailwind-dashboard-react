@@ -8,7 +8,7 @@ import { listerConseil, ajouterMembreConseil, majMembreConseil, supprimerMembreC
 
 // Section du Conseil (Bâtonnier / Bureau / Membres / Sortants) : pagine côté client
 // au-delà d'un seuil — surtout utile pour l'historique des sortants qui grandit.
-const TAILLE_SECTION = 15;
+const TAILLE_SECTION = 10;
 function SectionConseil({ titre, sousTitre, rows, peutGerer }) {
   const [page, setPage] = useState(1);
   const total = rows.length;

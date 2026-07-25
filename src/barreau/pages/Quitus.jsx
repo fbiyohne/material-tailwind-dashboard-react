@@ -253,7 +253,7 @@ export function Quitus() {
               emptyTitle="Aucun quitus émis"
               emptyDescription="Les quitus délivrés apparaîtront dans ce registre."
               libelle="quitus"
-              pageSize={8}
+              pageSize={10}
               initialSort={{ key: "numero", dir: "desc" }}
             />
           </div>

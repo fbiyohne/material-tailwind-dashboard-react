@@ -70,7 +70,7 @@ export function EspaceArchives() {
           loading={chargement}
           error={erreur}
           onRetry={() => charger(recherche.trim())}
-          pageSize={12}
+          pageSize={10}
           libelle="documents"
           initialSort={{ key: "date", dir: "desc" }}
           emptyIcon={ArchiveBoxIcon}

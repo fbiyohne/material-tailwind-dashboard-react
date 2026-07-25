@@ -148,7 +148,7 @@ export function Pieces() {
           loading={chargement}
           error={erreur}
           onRetry={charger}
-          pageSize={12}
+          pageSize={10}
           libelle="pièces"
           initialSort={{ key: "createdAt", dir: "desc" }}
           emptyIcon={ShieldCheckIcon}

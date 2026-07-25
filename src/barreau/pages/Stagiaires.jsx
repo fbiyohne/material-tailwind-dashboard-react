@@ -143,7 +143,7 @@ export function Stagiaires() {
   );
 
   // Pagination de la grille (l'impression, elle, liste tous les stagiaires).
-  const PAR_PAGE = 12;
+  const PAR_PAGE = 10;
   const [page, setPage] = useState(1);
   useEffect(() => { setPage(1); }, [filtre]);
   const totalPages = Math.max(1, Math.ceil(stagiaires.length / PAR_PAGE));
