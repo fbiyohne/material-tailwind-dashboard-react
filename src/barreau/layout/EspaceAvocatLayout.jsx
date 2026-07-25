@@ -78,9 +78,10 @@ export function EspaceAvocatLayout() {
             </div>
           </div>
 
-          {/* Menu — centre. `safe center` : centré quand ça tient, aligné au début
-              (sans rogner le 1er item) quand ça déborde, et défilable. */}
-          <nav className="flex flex-1 items-center gap-1 overflow-x-auto [justify-content:safe_center]">
+          {/* Menu — centre, réparti pour « respirer » (justify-evenly). Le nav en
+              flex-1 écarte le logo (gauche) et la déconnexion (droite) aux extrémités.
+              S'il ne tient pas, il passe à la ligne (flex-wrap) au lieu de défiler. */}
+          <nav className="flex flex-1 flex-wrap items-center justify-evenly gap-x-1 gap-y-1">
             {NAV.map(({ to, label, icon: Icon, end, badge }) => (
               <NavLink
                 key={to}
