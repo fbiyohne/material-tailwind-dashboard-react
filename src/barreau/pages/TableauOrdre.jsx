@@ -56,6 +56,7 @@ export function TableauOrdre() {
             <span className="bpn-card-heading">{QUALITE[s.qualite] ?? s.qualite}</span>
             <Badge ton="bleu" dot={false}>{s.membres.length}</Badge>
           </div>
+          <div className="overflow-x-auto">
           <table className="bpn-table">
             <thead>
               <tr>
@@ -82,6 +83,7 @@ export function TableauOrdre() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       ))}
     </div>

@@ -219,7 +219,11 @@ export function Quitus() {
 
         <div className="space-y-5">
           {membreActif ? (
-            <QuitusDocument numero={numero} membre={(details && details.id === membreActif.id) ? details : membreActif} exercice={exercice} date={aujourdhui()} />
+            // Gabarit fixe (820px) : défilement horizontal sur mobile plutôt que
+            // de déborder toute la page.
+            <div className="overflow-x-auto">
+              <QuitusDocument numero={numero} membre={(details && details.id === membreActif.id) ? details : membreActif} exercice={exercice} date={aujourdhui()} />
+            </div>
           ) : (
             <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-grisM bg-white px-6 py-16 text-center">
               <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-rougeL text-rouge"><LockClosedIcon className="h-6 w-6" /></div>

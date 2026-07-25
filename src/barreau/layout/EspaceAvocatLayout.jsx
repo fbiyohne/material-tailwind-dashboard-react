@@ -58,6 +58,12 @@ export function EspaceAvocatLayout() {
 
   return (
     <div className="min-h-screen bg-creme">
+      <a
+        href="#contenu-principal"
+        className="sr-only z-[90] focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:rounded focus:bg-navy focus:px-4 focus:py-2 focus:text-sm focus:text-white"
+      >
+        Aller au contenu
+      </a>
       <header className="bg-navy-3 text-white">
         <div className="mx-auto flex max-w-container items-center justify-between gap-4 px-4 py-3 md:px-8">
           <div className="flex items-center gap-3">

@@ -176,6 +176,7 @@ export function Conseil() {
       {rows.length === 0 ? (
         <p className="px-4 py-5 text-center text-sm text-gris">—</p>
       ) : (
+        <div className="overflow-x-auto">
         <table className="bpn-table">
           <thead>
             <tr>
@@ -189,6 +190,7 @@ export function Conseil() {
           </thead>
           <tbody>{rows}</tbody>
         </table>
+        </div>
       )}
     </div>
   );

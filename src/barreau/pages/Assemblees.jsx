@@ -8,30 +8,36 @@ import { listerAssemblees, creerAssemblee as apiCreerAssemblee, supprimerAssembl
 
 const TYPE_LABEL = { AGO: "Assemblée Générale Ordinaire", AGE: "Assemblée Générale Extraordinaire" };
 
+const VIDE_ASSEMBLEE = { type: "AGO", date: "", lieu: "Palais de Justice — Pointe-Noire", odj: "" };
 function NouvelleAssembleeModal({ open, onClose, onCreated }) {
   const toast = useToast();
-  const [form, setForm] = useState({ type: "AGO", date: "", lieu: "Palais de Justice — Pointe-Noire", odj: "" });
+  const [form, setForm] = useState(VIDE_ASSEMBLEE);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { if (open) { setForm(VIDE_ASSEMBLEE); setBusy(false); } }, [open]);
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
   const valider = async () => {
-    if (!form.date) return;
+    if (!form.date || busy) return;
+    setBusy(true);
     try {
       await apiCreerAssemblee({ type: form.type, date: form.date, lieu: form.lieu, ordreDuJour: form.odj.split("\n").map((s) => s.trim()).filter(Boolean) });
+      toast.success("Assemblée convoquée.");
       onCreated?.();
       onClose();
-      setForm({ type: "AGO", date: "", lieu: "Palais de Justice — Pointe-Noire", odj: "" });
     } catch (e) {
       toast.error(e.message);
+    } finally {
+      setBusy(false);
     }
   };
   return (
     <Modal open={open} onClose={onClose} title="Convoquer une assemblée générale"
-      footer={<button className="bpn-btn bpn-btn-primary" onClick={valider}>Créer l'assemblée</button>}>
+      footer={<button className="bpn-btn bpn-btn-primary" onClick={valider} disabled={!form.date || busy}>{busy ? "Création…" : "Créer l'assemblée"}</button>}>
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
           <FormField label="Type">
             <select value={form.type} onChange={set("type")} className="bpn-input"><option value="AGO">AGO — Ordinaire</option><option value="AGE">AGE — Extraordinaire</option></select>
           </FormField>
-          <FormField label="Date"><input type="date" value={form.date} onChange={set("date")} className="bpn-input" /></FormField>
+          <FormField label="Date" required><input type="date" value={form.date} onChange={set("date")} className="bpn-input" /></FormField>
         </div>
         <FormField label="Lieu"><input value={form.lieu} onChange={set("lieu")} className="bpn-input" /></FormField>
         <FormField label="Ordre du jour" hint="une ligne par point"><textarea rows={4} value={form.odj} onChange={set("odj")} className="bpn-input" /></FormField>

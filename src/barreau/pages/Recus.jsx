@@ -176,7 +176,11 @@ export function Recus() {
         </div>
 
         <div className="space-y-5">
-          <RecuDocument numero={numeroAffiche} membre={membre} montant={Number(montant) || 0} exercice={exercice} mode={mode} date={date} />
+          {/* Aperçu à gabarit fixe (820px, pour l'impression/PDF) : défilement
+              horizontal sur petit écran plutôt que de déborder toute la page. */}
+          <div className="overflow-x-auto">
+            <RecuDocument numero={numeroAffiche} membre={membre} montant={Number(montant) || 0} exercice={exercice} mode={mode} date={date} />
+          </div>
 
           <div className="bpn-no-print bpn-card">
             <div className="bpn-card-header">

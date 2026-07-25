@@ -65,6 +65,7 @@ export function JournalAudit() {
         ) : items.length === 0 ? (
           <div className="p-6"><EmptyState icon={ShieldExclamationIcon} title="Aucune entrée" description={q || from || to ? "Aucune action ne correspond à ce filtre." : "Aucune action enregistrée."} /></div>
         ) : (
+          <div className="overflow-x-auto">
           <table className="bpn-table">
             <thead>
               <tr>
@@ -89,6 +90,7 @@ export function JournalAudit() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 

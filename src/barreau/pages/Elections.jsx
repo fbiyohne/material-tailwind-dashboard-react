@@ -154,7 +154,7 @@ function ScrutinDetail({ detail, peutGerer, action, confirm, nomCand, setNomCand
                   <div className="flex items-center gap-2">
                     {/* Saisie des voix (présentiel, ouvert/clos) */}
                     {peutGerer && s.modalite === "PRESENTIEL" && s.statut !== "PUBLIE" && s.statut !== "PREPARATION" ? (
-                      <input key={`voix-${c.id}-${nonce}`} type="number" min="0" defaultValue={c.voix} className="bpn-input !w-24 !py-1 text-right text-sm"
+                      <input key={`voix-${c.id}-${nonce}`} type="number" min="0" defaultValue={c.voix} aria-label={`Voix de ${c.nom}`} className="bpn-input !w-24 !py-1 text-right text-sm"
                         onBlur={(e) => { const v = Number(e.target.value) || 0; if (v !== c.voix) action(() => saisirVoix(s.id, c.id, v), "Voix enregistrées."); }} />
                     ) : resultatsVisibles ? (
                       <span className="font-mono text-sm text-encre">{c.voix} voix · {pct}%</span>

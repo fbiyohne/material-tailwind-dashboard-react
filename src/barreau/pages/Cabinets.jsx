@@ -89,15 +89,16 @@ export function Cabinets() {
       </PageHeader>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Rechercher un cabinet, une adresse…" className="bpn-input flex-1" />
-        <select value={conv} onChange={(e) => setConv(e.target.value)} className="bpn-input sm:w-64"><option value="tous">Toutes les personnes morales</option><option value="conv">Conventions déposées ({nbConv})</option></select>
-        <select value={filtre} onChange={(e) => setFiltre(e.target.value)} className="bpn-input sm:w-40"><option value="actif">Actifs</option><option value="retiré">Retirés</option><option value="tous">Tous</option></select>
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Rechercher un cabinet, une adresse…" aria-label="Rechercher une personne morale" className="bpn-input flex-1" />
+        <select value={conv} onChange={(e) => setConv(e.target.value)} aria-label="Filtrer par convention" className="bpn-input sm:w-64"><option value="tous">Toutes les personnes morales</option><option value="conv">Conventions déposées ({nbConv})</option></select>
+        <select value={filtre} onChange={(e) => setFiltre(e.target.value)} aria-label="Filtrer par statut" className="bpn-input sm:w-40"><option value="actif">Actifs</option><option value="retiré">Retirés</option><option value="tous">Tous</option></select>
       </div>
 
       <div className="bpn-card overflow-hidden">
         {liste.length === 0 ? (
           <div className="p-6"><EmptyState icon={BuildingOffice2Icon} title="Aucune personne morale" description="Ajoutez un cabinet ou rattachez des membres depuis leur fiche." /></div>
         ) : (
+          <div className="overflow-x-auto">
           <table className="bpn-table">
             <thead>
               <tr>
@@ -149,6 +150,7 @@ export function Cabinets() {
               })}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 

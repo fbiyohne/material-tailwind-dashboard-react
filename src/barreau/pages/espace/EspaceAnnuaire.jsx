@@ -50,7 +50,7 @@ export function EspaceAnnuaire() {
 
       <div className="relative max-w-md">
         <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gris" />
-        <input value={recherche} onChange={(e) => setRecherche(e.target.value)} placeholder="Rechercher par nom ou cabinet…" className="bpn-input pl-9" />
+        <input value={recherche} onChange={(e) => setRecherche(e.target.value)} placeholder="Rechercher par nom ou cabinet…" aria-label="Rechercher un confrère" className="bpn-input pl-9" />
       </div>
 
       <div className="bpn-card">

@@ -6,27 +6,34 @@ import { formatDate } from "../utils/format";
 import { useAuth } from "../auth/AuthContext";
 import { listerReunions, creerReunion as apiCreerReunion, supprimerReunion } from "../api/resources";
 
+const VIDE_REUNION = { date: "", heure: "15:00", lieu: "Maison de l'Avocat — Pointe-Noire", odj: "" };
 function NouvelleReunionModal({ open, onClose, onCreated }) {
   const toast = useToast();
-  const [form, setForm] = useState({ date: "", heure: "15:00", lieu: "Maison de l'Avocat — Pointe-Noire", odj: "" });
+  const [form, setForm] = useState(VIDE_REUNION);
+  const [busy, setBusy] = useState(false);
+  // Réinitialise à l'ouverture pour ne pas réafficher une saisie abandonnée.
+  useEffect(() => { if (open) { setForm(VIDE_REUNION); setBusy(false); } }, [open]);
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
   const valider = async () => {
-    if (!form.date) return;
+    if (!form.date || busy) return;
+    setBusy(true);
     try {
       await apiCreerReunion({ date: form.date, heure: form.heure, lieu: form.lieu, ordreDuJour: form.odj.split("\n").map((s) => s.trim()).filter(Boolean) });
+      toast.success("Réunion planifiée.");
       onCreated?.();
       onClose();
-      setForm({ date: "", heure: "15:00", lieu: "Maison de l'Avocat — Pointe-Noire", odj: "" });
     } catch (e) {
       toast.error(e.message);
+    } finally {
+      setBusy(false);
     }
   };
   return (
     <Modal open={open} onClose={onClose} title="Planifier une réunion du Conseil"
-      footer={<button className="bpn-btn bpn-btn-primary" onClick={valider}>Créer la réunion</button>}>
+      footer={<button className="bpn-btn bpn-btn-primary" onClick={valider} disabled={!form.date || busy}>{busy ? "Création…" : "Créer la réunion"}</button>}>
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
-          <FormField label="Date"><input type="date" value={form.date} onChange={set("date")} className="bpn-input" /></FormField>
+          <FormField label="Date" required><input type="date" value={form.date} onChange={set("date")} className="bpn-input" autoFocus /></FormField>
           <FormField label="Heure"><input type="time" value={form.heure} onChange={set("heure")} className="bpn-input" /></FormField>
         </div>
         <FormField label="Lieu"><input value={form.lieu} onChange={set("lieu")} className="bpn-input" /></FormField>

@@ -108,9 +108,9 @@ export function Archives() {
         <div className="relative flex-1">
           <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gris" />
           <input type="text" value={recherche} onChange={(e) => setRecherche(e.target.value)}
-            placeholder="Rechercher par titre ou référence…" className="bpn-input pl-9" />
+            placeholder="Rechercher par titre ou référence…" aria-label="Rechercher un document" className="bpn-input pl-9" />
         </div>
-        <select value={categorie} onChange={(e) => setCategorie(e.target.value)} className="bpn-input sm:w-64">
+        <select value={categorie} onChange={(e) => setCategorie(e.target.value)} aria-label="Filtrer par catégorie" className="bpn-input sm:w-64">
           {categories.map((c) => (
             <option key={c} value={c}>{c === "toutes" ? "Toutes les catégories" : c}</option>
           ))}

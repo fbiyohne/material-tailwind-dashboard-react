@@ -32,11 +32,13 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={toast}>
       {children}
-      <div className="fixed right-4 top-4 z-[80] flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2" aria-live="polite" aria-atomic="false">
+      {/* Chaque toast est sa propre région live : les erreurs sont « assertive »
+          (role=alert) pour être annoncées sans délai, les autres « polite » (role=status). */}
+      <div className="fixed right-4 top-4 z-[80] flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2">
         {toasts.map((t) => {
           const s = STYLES[t.type];
           return (
-            <div key={t.id} className={`flex items-start gap-2.5 rounded border-l-[3px] ${s.border} ${s.bg} ${s.text} px-4 py-3 text-sm shadow-card animate-[fadeIn_.2s_ease]`} role="status">
+            <div key={t.id} role={t.type === "error" ? "alert" : "status"} className={`flex items-start gap-2.5 rounded border-l-[3px] ${s.border} ${s.bg} ${s.text} px-4 py-3 text-sm shadow-card animate-[fadeIn_.2s_ease]`}>
               <s.Icon className="mt-0.5 h-5 w-5 shrink-0" />
               <span className="flex-1">{t.message}</span>
               <button onClick={() => setToasts((arr) => arr.filter((x) => x.id !== t.id))} className="opacity-60 hover:opacity-100" aria-label="Fermer">

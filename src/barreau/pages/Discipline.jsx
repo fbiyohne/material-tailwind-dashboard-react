@@ -34,6 +34,7 @@ function OuvrirDossierModal({ open, onClose, onCreated }) {
     setCreation(true);
     try {
       await apiOuvrirDossier(form);
+      toast.success("Dossier disciplinaire ouvert.");
       onCreated?.();
       onClose();
       setForm({ avocatNom: avocats[0]?.nom ?? "", objet: "", dateSaisine: new Date().toISOString().slice(0, 10) });
@@ -56,7 +57,7 @@ function OuvrirDossierModal({ open, onClose, onCreated }) {
             {avocats.map((m) => <option key={m.id} value={m.nom}>Me {m.nom}</option>)}
           </select>
         </FormField>
-        <FormField label="Objet de la saisine">
+        <FormField label="Objet de la saisine" required>
           <textarea rows={3} value={form.objet} onChange={set("objet")} className="bpn-input" placeholder="Nature de la plainte ou de la saisine…" />
         </FormField>
         <FormField label="Date de saisine">

@@ -146,9 +146,9 @@ export function Avocats() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
           <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gris" />
-          <input type="text" value={recherche} onChange={(e) => setParam("q", e.target.value, "")} placeholder="Rechercher par nom, cabinet ou n°…" className="bpn-input pl-9" />
+          <input type="text" value={recherche} onChange={(e) => setParam("q", e.target.value, "")} placeholder="Rechercher par nom, cabinet ou n°…" aria-label="Rechercher un avocat" className="bpn-input pl-9" />
         </div>
-        <select value={filtre} onChange={(e) => setParam("statut", e.target.value, "tous")} className="bpn-input sm:w-56">
+        <select value={filtre} onChange={(e) => setParam("statut", e.target.value, "tous")} aria-label="Filtrer par statut" className="bpn-input sm:w-56">
           {FILTRES.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
         </select>
       </div>

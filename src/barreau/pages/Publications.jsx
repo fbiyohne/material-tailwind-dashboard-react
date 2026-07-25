@@ -11,26 +11,32 @@ import { listerPublications, creerPublication as apiCreerPublication, changerSta
 function NouvellePublicationModal({ open, onClose, onCreated }) {
   const toast = useToast();
   const types = typesPublication();
-  const [form, setForm] = useState({ titre: "", type: types[0] ?? "Avis", contenu: "" });
+  const vide = () => ({ titre: "", type: types[0] ?? "Avis", contenu: "" });
+  const [form, setForm] = useState(vide);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { if (open) { setForm(vide()); setBusy(false); } }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
   const valider = async () => {
-    if (!form.titre.trim()) return;
+    if (!form.titre.trim() || busy) return;
+    setBusy(true);
     try {
       await apiCreerPublication(form);
+      toast.success("Publication soumise pour validation.");
       onCreated?.();
       onClose();
-      setForm({ titre: "", type: types[0] ?? "Avis", contenu: "" });
     } catch (e) {
       toast.error(e.message);
+    } finally {
+      setBusy(false);
     }
   };
   return (
     <Modal open={open} onClose={onClose} title="Nouvelle publication"
-      footer={<button className="bpn-btn bpn-btn-primary" onClick={valider}>Soumettre pour validation</button>}>
+      footer={<button className="bpn-btn bpn-btn-primary" onClick={valider} disabled={!form.titre.trim() || busy}>{busy ? "Envoi…" : "Soumettre pour validation"}</button>}>
       <div className="space-y-3">
         <div className="grid grid-cols-3 gap-3">
-          <FormField label="Titre" className="col-span-2">
-            <input value={form.titre} onChange={set("titre")} className="bpn-input" />
+          <FormField label="Titre" required className="col-span-2">
+            <input value={form.titre} onChange={set("titre")} className="bpn-input" autoFocus />
           </FormField>
           <FormField label="Type">
             <select value={form.type} onChange={set("type")} className="bpn-input">
@@ -68,7 +74,9 @@ export function Publications() {
   useEffect(() => { charger(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const changerStatutPublication = async (id, statut) => {
-    try { await apiChangerStatut(id, statut); charger(); } catch (e) { toast.error(e.message); }
+    const messages = { valide: "Publication validée par le Bâtonnier.", publie: "Publication diffusée." };
+    try { await apiChangerStatut(id, statut); toast.success(messages[statut] ?? "Statut mis à jour."); charger(); }
+    catch (e) { toast.error(e.message); }
   };
   const supprimer = async (p) => {
     const ok = await confirm({

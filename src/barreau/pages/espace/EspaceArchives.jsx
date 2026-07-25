@@ -52,10 +52,10 @@ export function EspaceArchives() {
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative max-w-xs flex-1">
           <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gris" />
-          <input value={recherche} onChange={(e) => setRecherche(e.target.value)} placeholder="Rechercher un titre ou une référence…" className="bpn-input pl-9" />
+          <input value={recherche} onChange={(e) => setRecherche(e.target.value)} placeholder="Rechercher un titre ou une référence…" aria-label="Rechercher un document" className="bpn-input pl-9" />
         </div>
         {data?.categories?.length > 0 && (
-          <select value={categorie} onChange={(e) => setCategorie(e.target.value)} className="bpn-input w-auto text-sm">
+          <select value={categorie} onChange={(e) => setCategorie(e.target.value)} aria-label="Filtrer par catégorie" className="bpn-input w-auto text-sm">
             <option value="">Toutes les catégories</option>
             {data.categories.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
