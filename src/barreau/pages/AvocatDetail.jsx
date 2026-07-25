@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeftIcon, DocumentPlusIcon, PencilSquareIcon, NoSymbolIcon, TrashIcon, IdentificationIcon, BanknotesIcon, FolderIcon, KeyIcon, AcademicCapIcon } from "@heroicons/react/24/outline";
+import { ArrowLeftIcon, DocumentPlusIcon, PencilSquareIcon, NoSymbolIcon, TrashIcon, IdentificationIcon, BanknotesIcon, FolderIcon, KeyIcon, AcademicCapIcon, ArrowDownTrayIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
 import { ScaleIcon } from "@heroicons/react/24/outline";
-import { Badge, StatutBadge, AttestationModal, EditMembreModal, PiecesDossier, AccesActivationModal, StagePanel, CasierDiscipline, useConfirm, useToast, PageHeader, Tabs, EmptyState, TableSkeleton, ErrorState } from "../components";
+import { Badge, StatutBadge, AttestationModal, EditMembreModal, PiecesDossier, AccesActivationModal, StagePanel, CasierDiscipline, useConfirm, useToast, PageHeader, Tabs, TableSkeleton, ErrorState, DataTable } from "../components";
 import { QUALITE_LABEL, STATUT_META, infoStage } from "../data/derivations";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { formatFCFA, formatDate } from "../utils/format";
-import { getMembre, radierMembre, supprimerMembre, getDroits, provisionnerAccesAvocat } from "../api/resources";
+import { getMembre, radierMembre, supprimerMembre, getDroits, provisionnerAccesAvocat, telechargerQuitusPdf, telechargerRecuPdf } from "../api/resources";
 import { useAuth } from "../auth/AuthContext";
 
 const FINANCES = ["SECRETAIRE_GENERAL", "TRESORIERE", "ADMIN"];
@@ -95,9 +95,21 @@ export function AvocatDetail() {
   const cotMeta = cotConnu ? STATUT_META[statutLigne(du, paye)] : META_NON_GENEREE;
 
   const documents = [
-    ...(membre.quitus ?? []).map((q) => ({ type: "Quitus", ref: q.numero, date: q.date })),
-    ...(membre.recus ?? []).map((r) => ({ type: "Reçu", ref: r.numero, date: r.date })),
+    ...(membre.quitus ?? []).map((q) => ({ kind: "quitus", type: "Quitus", ton: "bleu", id: q.id, ref: q.numero, annee: q.annee, date: q.date })),
+    ...(membre.recus ?? []).map((r) => ({ kind: "recu", type: "Reçu", ton: "or", id: r.id, ref: r.numero, annee: r.annee, date: r.date })),
   ].sort((a, b) => (a.date < b.date ? 1 : -1));
+
+  // Historique des cotisations (une ligne par exercice ; « Non générée » si absente).
+  const lignesCotisations = EXERCICES.map((annee) => {
+    const c = cotParAnnee[annee];
+    if (!c) return { annee, du: null, paye: null, solde: null, meta: META_NON_GENEREE };
+    const d = c.montantDu;
+    const p = c.montantPaye ?? 0;
+    return { annee, du: d, paye: p, solde: Math.max(0, d - p), meta: STATUT_META[statutLigne(d, p)] };
+  });
+
+  const telechargerDoc = (d) =>
+    (d.kind === "quitus" ? telechargerQuitusPdf(d.id, d.ref) : telechargerRecuPdf(d.id, d.ref)).catch((e) => toast.error(e.message));
 
   return (
     <div className="space-y-5">
@@ -217,47 +229,27 @@ export function AvocatDetail() {
             label: "Cotisations",
             icon: BanknotesIcon,
             content: (
-              <Carte titre="Historique des cotisations">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-left text-xs uppercase tracking-wide text-gris">
-                        <th className="pb-2">Exercice</th><th className="pb-2 text-right">Dû</th><th className="pb-2 text-right">Payé</th><th className="pb-2 text-right">Solde</th><th className="pb-2 pl-4">Statut</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {EXERCICES.map((annee) => {
-                        const c = cotParAnnee[annee];
-                        // Pas de ligne pour cet exercice (ex. années antérieures à
-                        // l'inscription) → « — » neutre, pas de faux arriéré présumé.
-                        if (!c) {
-                          return (
-                            <tr key={annee} className="border-t border-grisL">
-                              <td className="py-2 font-mono text-xs text-gris">{annee}</td>
-                              <td className="py-2 text-right text-gris">—</td>
-                              <td className="py-2 text-right text-gris">—</td>
-                              <td className="py-2 text-right text-gris">—</td>
-                              <td className="py-2 pl-4"><Badge ton="gris">Non générée</Badge></td>
-                            </tr>
-                          );
-                        }
-                        const d = c.montantDu;
-                        const p = c.montantPaye ?? 0;
-                        const m = STATUT_META[statutLigne(d, p)];
-                        return (
-                          <tr key={annee} className="border-t border-grisL">
-                            <td className="py-2 font-mono text-xs text-gris">{annee}</td>
-                            <td className="py-2 text-right">{formatFCFA(d)}</td>
-                            <td className="py-2 text-right">{p ? formatFCFA(p) : "—"}</td>
-                            <td className="py-2 text-right">{d - p > 0 ? formatFCFA(d - p) : "✓"}</td>
-                            <td className="py-2 pl-4"><Badge ton={m.ton}>{m.label}</Badge></td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </Carte>
+              <div className="bpn-card">
+                <div className="bpn-card-header"><span className="bpn-card-heading">Historique des cotisations</span></div>
+                <DataTable
+                  columns={[
+                    { key: "annee", label: "Exercice", sortable: true, sortValue: (l) => l.annee,
+                      cell: (l) => <span className="font-mono text-xs text-gris">{l.annee}</span> },
+                    { key: "du", label: "Dû", align: "right",
+                      cell: (l) => (l.du == null ? <span className="text-gris">—</span> : formatFCFA(l.du)) },
+                    { key: "paye", label: "Payé", align: "right", sortable: true, sortValue: (l) => l.paye ?? -1,
+                      cell: (l) => (l.paye ? formatFCFA(l.paye) : <span className="text-gris">—</span>) },
+                    { key: "solde", label: "Solde", align: "right",
+                      cell: (l) => (l.solde == null ? <span className="text-gris">—</span> : l.solde > 0 ? formatFCFA(l.solde) : <span className="text-vert">✓</span>) },
+                    { key: "statut", label: "Statut",
+                      cell: (l) => <Badge ton={l.meta.ton} dot={false}>{l.meta.label}</Badge> },
+                  ]}
+                  rows={lignesCotisations}
+                  getRowId={(l) => l.annee}
+                  libelle="exercices"
+                  initialSort={{ key: "annee", dir: "desc" }}
+                />
+              </div>
             ),
           },
           {
@@ -268,20 +260,48 @@ export function AvocatDetail() {
               <div className="space-y-5">
                 <PiecesDossier membreId={membre.id} qualite={membre.qualite} peutGerer={["SECRETAIRE_GENERAL", "ADMIN"].includes(user?.role)} />
 
-                <Carte titre="Documents émis">
-                  {documents.length === 0 ? (
-                    <EmptyState title="Aucun document émis" description="Les quitus et reçus délivrés à cet avocat apparaîtront ici." />
-                  ) : (
-                    <ul className="divide-y divide-grisL">
-                      {documents.map((d, i) => (
-                        <li key={i} className="flex items-center justify-between py-2 text-sm">
-                          <span className="flex items-center gap-2"><Badge ton="bleu" dot={false}>{d.type}</Badge><span className="font-mono text-xs text-or-fonce">{d.ref}</span></span>
-                          <span className="text-xs text-gris">{formatDate(d.date)}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </Carte>
+                <div className="bpn-card">
+                  <div className="bpn-card-header">
+                    <span className="bpn-card-heading">Documents émis</span>
+                    <span className="font-mono text-xs text-gris">{documents.length}</span>
+                  </div>
+                  <DataTable
+                    columns={[
+                      { key: "type", label: "Type", sortable: true, sortValue: (d) => d.type,
+                        cell: (d) => <Badge ton={d.ton} dot={false}>{d.type}</Badge> },
+                      { key: "ref", label: "Référence", sortable: true, sortValue: (d) => d.ref,
+                        cell: (d) => <span className="font-mono text-xs text-or-fonce">{d.ref}</span> },
+                      { key: "annee", label: "Exercice",
+                        cell: (d) => <span className="font-mono text-xs text-gris">{d.annee ?? "—"}</span> },
+                      { key: "date", label: "Date", sortable: true, sortValue: (d) => d.date ?? "",
+                        cell: (d) => <span className="text-xs text-gris">{formatDate(d.date)}</span> },
+                      { key: "actions", label: "", align: "right",
+                        cell: (d) => (
+                          <div className="flex items-center justify-end gap-3">
+                            {peutVoirFinances && (
+                              <button type="button" onClick={() => telechargerDoc(d)}
+                                title={`Télécharger le ${d.type.toLowerCase()} (PDF)`}
+                                className="inline-flex items-center gap-1 text-xs font-medium text-navy transition hover:text-or-fonce">
+                                <ArrowDownTrayIcon className="h-4 w-4" /> PDF
+                              </button>
+                            )}
+                            <a href={`/verifier/${d.kind}/${encodeURIComponent(d.ref)}`} target="_blank" rel="noreferrer"
+                              title="Ouvrir la page de vérification publique"
+                              className="inline-flex items-center gap-1 text-xs font-medium text-navy transition hover:text-or-fonce">
+                              <ShieldCheckIcon className="h-4 w-4" /> Vérifier
+                            </a>
+                          </div>
+                        ) },
+                    ]}
+                    rows={documents}
+                    getRowId={(d) => `${d.kind}-${d.id}`}
+                    libelle="documents"
+                    initialSort={{ key: "date", dir: "desc" }}
+                    emptyIcon={FolderIcon}
+                    emptyTitle="Aucun document émis"
+                    emptyDescription="Les quitus et reçus délivrés à cet avocat apparaîtront ici."
+                  />
+                </div>
               </div>
             ),
           },
