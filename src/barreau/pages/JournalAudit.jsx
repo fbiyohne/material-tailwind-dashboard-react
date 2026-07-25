@@ -82,7 +82,7 @@ export function JournalAudit() {
                   <td className="whitespace-nowrap text-xs text-gris">{formatDateTime(e.quand)}</td>
                   <td className="font-medium text-encre">{e.acteur}</td>
                   <td className="text-encre/90">{e.action}</td>
-                  <td className="font-mono text-xs text-or">{e.cible ?? "—"}</td>
+                  <td className="font-mono text-xs text-or-fonce">{e.cible ?? "—"}</td>
                   <td className="text-right" title={`Code HTTP ${e.statut}`}>
                     <Badge ton={e.statut < 400 ? "vert" : "rouge"} dot={false}>{e.statut < 400 ? "Réussi" : "Échec"}</Badge>
                   </td>

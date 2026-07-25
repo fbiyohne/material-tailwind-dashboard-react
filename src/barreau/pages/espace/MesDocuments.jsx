@@ -31,7 +31,7 @@ export function MesDocuments() {
             <li key={q.id} className="flex items-center justify-between gap-3 px-4 py-3">
               <span className="flex items-center gap-3">
                 <Badge ton="bleu" dot={false}>Quitus {q.annee}</Badge>
-                <span className="font-mono text-xs text-or">{q.numero}</span>
+                <span className="font-mono text-xs text-or-fonce">{q.numero}</span>
                 <span className="text-xs text-gris">{formatDate(q.date)}</span>
               </span>
               <button className="bpn-btn bpn-btn-ghost bpn-btn-sm" onClick={() => telecharger(() => telechargerEspaceQuitusPdf(q.id, q.numero))}>
@@ -53,7 +53,7 @@ export function MesDocuments() {
           {docs.recus.map((r) => (
             <li key={r.id} className="flex items-center justify-between gap-3 px-4 py-3">
               <span className="flex min-w-0 items-center gap-3">
-                <span className="font-mono text-xs text-or">{r.numero}</span>
+                <span className="font-mono text-xs text-or-fonce">{r.numero}</span>
                 <span className="truncate text-sm text-encre">{r.objet ?? `Paiement ${r.annee}`}</span>
                 <span className="shrink-0 text-xs text-gris">{formatDate(r.date)}</span>
                 <span className="shrink-0 font-medium">{formatFCFA(r.montant)}</span>

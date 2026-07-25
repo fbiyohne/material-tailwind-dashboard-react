@@ -13,7 +13,7 @@ const pad3 = (n) => String(n).padStart(3, "0");
 
 const COLONNES_REGISTRE = [
   { key: "numero", label: "N°", sortable: true, sortValue: (q) => q.numero,
-    cell: (q) => <span className="font-mono text-xs text-or">{q.numero}</span> },
+    cell: (q) => <span className="font-mono text-xs text-or-fonce">{q.numero}</span> },
   { key: "nom", label: "Avocat", sortable: true, sortValue: (q) => q.membre?.nom,
     cell: (q) => <span className="font-medium">Me {q.membre?.nom}</span> },
   { key: "annee", label: "Exercice", sortable: true, sortValue: (q) => q.annee,
@@ -24,7 +24,7 @@ const COLONNES_REGISTRE = [
     cell: (q) => (
       <a href={`/verifier/quitus/${encodeURIComponent(q.numero)}`} target="_blank" rel="noreferrer"
         title="Ouvrir la page de vérification publique"
-        className="inline-flex items-center gap-1 text-xs font-medium text-navy transition hover:text-or">
+        className="inline-flex items-center gap-1 text-xs font-medium text-navy transition hover:text-or-fonce">
         <ShieldCheckIcon className="h-4 w-4" /> Vérifier
       </a>
     ) },
@@ -149,7 +149,7 @@ export function Quitus() {
     key: "pdf", label: "", align: "right",
     cell: (q) => (
       <button type="button" onClick={() => telechargerQuitusPdf(q.id, q.numero).catch((e) => toast.error(e.message))}
-        title="Télécharger le quitus (PDF)" className="inline-flex items-center gap-1 text-xs font-medium text-navy transition hover:text-or">
+        title="Télécharger le quitus (PDF)" className="inline-flex items-center gap-1 text-xs font-medium text-navy transition hover:text-or-fonce">
         <ArrowDownTrayIcon className="h-4 w-4" /> PDF
       </button>
     ),

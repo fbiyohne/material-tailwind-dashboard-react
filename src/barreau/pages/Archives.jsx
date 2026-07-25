@@ -73,7 +73,7 @@ export function Archives() {
       cell: (a) => <Badge ton="bleu" dot={false}>{a.categorie}</Badge> },
     { key: "titre", label: "Document", sortable: true, sortValue: (a) => a.titre.toLowerCase(),
       cell: (a) => <span className="font-medium">{a.titre}</span> },
-    { key: "reference", label: "Référence", cell: (a) => <span className="font-mono text-xs text-or">{a.reference}</span> },
+    { key: "reference", label: "Référence", cell: (a) => <span className="font-mono text-xs text-or-fonce">{a.reference}</span> },
     { key: "actions", label: "Action", align: "right",
       cell: (a) => (
         <div className="flex items-center justify-end gap-1.5">
@@ -139,7 +139,7 @@ export function Archives() {
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               <Badge ton="bleu" dot={false}>{apercu.categorie}</Badge>
-              <span className="font-mono text-xs text-or">{apercu.reference}</span>
+              <span className="font-mono text-xs text-or-fonce">{apercu.reference}</span>
             </div>
             <dl className="divide-y divide-grisL text-sm">
               <div className="flex justify-between gap-4 py-2"><dt className="text-gris">Date d'archivage</dt><dd className="font-medium text-encre">{formatDate(apercu.date)}</dd></div>

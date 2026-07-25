@@ -33,7 +33,7 @@ export function EspaceAnnuaire() {
     { key: "cabinet", label: "Cabinet", sortable: true, sortValue: (m) => (m.cabinet ?? "").toLowerCase(),
       cell: (m) => <span className="text-gris">{m.cabinet || "—"}</span> },
     { key: "num", label: "N° d'inscription",
-      cell: (m) => <span className="font-mono text-xs text-or">{m.numInscription || "—"}</span> },
+      cell: (m) => <span className="font-mono text-xs text-or-fonce">{m.numInscription || "—"}</span> },
     { key: "tel", label: "Téléphone",
       cell: (m) => (m.tel
         ? <a href={`tel:${m.tel}`} className="inline-flex items-center gap-1 font-mono text-xs text-gris transition hover:text-navy"><PhoneIcon className="h-3.5 w-3.5" />{m.tel}</a>

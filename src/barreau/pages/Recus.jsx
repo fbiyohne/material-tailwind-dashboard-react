@@ -200,7 +200,7 @@ export function Recus() {
                   label: "N°",
                   sortable: true,
                   sortValue: (r) => r.numero,
-                  cell: (r) => <span className="font-mono text-xs text-or">{r.numero}</span>,
+                  cell: (r) => <span className="font-mono text-xs text-or-fonce">{r.numero}</span>,
                 },
                 {
                   key: "nom",
@@ -247,7 +247,7 @@ export function Recus() {
                         type="button"
                         onClick={() => telechargerRecuPdf(r.id, r.numero).catch((e) => toast.error(e.message))}
                         title="Télécharger le reçu (PDF)"
-                        className="inline-flex items-center gap-1 text-xs font-medium text-navy transition hover:text-or"
+                        className="inline-flex items-center gap-1 text-xs font-medium text-navy transition hover:text-or-fonce"
                       >
                         <ArrowDownTrayIcon className="h-4 w-4" /> PDF
                       </button>
@@ -256,7 +256,7 @@ export function Recus() {
                         target="_blank"
                         rel="noreferrer"
                         title="Ouvrir la page de vérification publique"
-                        className="inline-flex items-center gap-1 text-xs font-medium text-navy transition hover:text-or"
+                        className="inline-flex items-center gap-1 text-xs font-medium text-navy transition hover:text-or-fonce"
                       >
                         <ShieldCheckIcon className="h-4 w-4" /> Vérifier
                       </a>

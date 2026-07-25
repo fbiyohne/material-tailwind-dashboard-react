@@ -66,7 +66,7 @@
   /* Eyebrow de section : même taille que les autres libellés capitales (text-xs,
      13px) pour une hiérarchie cohérente — 2xs reste réservé aux micro-textes. */
   .bpn-eyebrow {
-    @apply flex items-center gap-2.5 text-xs font-semibold uppercase tracking-[0.4em] text-or;
+    @apply flex items-center gap-2.5 text-xs font-semibold uppercase tracking-[0.4em] text-or-fonce;
   }
   .bpn-eyebrow::before {
     content: "";

@@ -70,7 +70,7 @@ function CarteStagiaire({ membre, stage, onFiche, onSupprimer }) {
       <div className="mt-3">
         <div className="mb-1 flex items-center justify-between text-xs">
           <span className="text-gris">Progression</span>
-          <span className="font-mono text-or">{progression}%</span>
+          <span className="font-mono text-or-fonce">{progression}%</span>
         </div>
         <div className="h-2 overflow-hidden rounded bg-grisM">
           <div

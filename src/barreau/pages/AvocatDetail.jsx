@@ -173,7 +173,7 @@ export function AvocatDetail() {
                       <Ligne label="Prestation de serment" value={stage ? formatDate(stage.debut) : "—"} />
                       <Ligne label="Maître de stage" value={stage?.maitreStage ?? "—"} />
                       <div className="pt-3">
-                        <div className="mb-1 flex justify-between text-xs"><span className="text-gris">Progression du stage</span><span className="font-mono text-or">{stage?.progression ?? 0}%</span></div>
+                        <div className="mb-1 flex justify-between text-xs"><span className="text-gris">Progression du stage</span><span className="font-mono text-or-fonce">{stage?.progression ?? 0}%</span></div>
                         <div className="h-2 overflow-hidden rounded bg-grisM"><div className="h-full rounded bg-or" style={{ width: `${stage?.progression ?? 0}%` }} /></div>
                       </div>
                     </>
@@ -275,7 +275,7 @@ export function AvocatDetail() {
                     <ul className="divide-y divide-grisL">
                       {documents.map((d, i) => (
                         <li key={i} className="flex items-center justify-between py-2 text-sm">
-                          <span className="flex items-center gap-2"><Badge ton="bleu" dot={false}>{d.type}</Badge><span className="font-mono text-xs text-or">{d.ref}</span></span>
+                          <span className="flex items-center gap-2"><Badge ton="bleu" dot={false}>{d.type}</Badge><span className="font-mono text-xs text-or-fonce">{d.ref}</span></span>
                           <span className="text-xs text-gris">{formatDate(d.date)}</span>
                         </li>
                       ))}

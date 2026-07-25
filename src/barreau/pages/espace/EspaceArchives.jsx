@@ -42,7 +42,7 @@ export function EspaceArchives() {
     { key: "titre", label: "Document", sortable: true, sortValue: (a) => a.titre.toLowerCase(),
       cell: (a) => <span className="text-encre">{a.titre}</span> },
     { key: "reference", label: "Référence",
-      cell: (a) => <span className="font-mono text-xs text-or">{a.reference || "—"}</span> },
+      cell: (a) => <span className="font-mono text-xs text-or-fonce">{a.reference || "—"}</span> },
   ];
 
   return (

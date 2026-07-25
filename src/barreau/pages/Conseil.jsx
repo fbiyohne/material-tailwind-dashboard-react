@@ -116,7 +116,7 @@ export function Conseil() {
 
   const ligne = (m, num) => (
     <tr key={m.id} className={m.actif ? "" : "opacity-60"}>
-      <td className="font-mono text-or">{num ?? m.sigle ?? "—"}</td>
+      <td className="font-mono text-or-fonce">{num ?? m.sigle ?? "—"}</td>
       <td>
         <div className="font-medium text-encre">{m.nom}</div>
         {!m.actif && <div className="text-xs text-gris">{m.motifSortie || "Mandat clôturé"}{m.mandatFin ? ` · ${formatDate(m.mandatFin)}` : ""}</div>}

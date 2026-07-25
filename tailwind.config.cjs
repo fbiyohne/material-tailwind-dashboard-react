@@ -21,6 +21,10 @@ module.exports = withMT({
           2: "#e8bc3a", // or clair
           3: "#f5d878", // or très clair
           L: "#FDF6E3", // or pâle (fonds, badges)
+          // Or foncé réservé au TEXTE sur fond clair : contraste ≈ 4,8:1 (conforme
+          // WCAG AA). L'or principal (#C4990A ≈ 2,6:1) reste pour boutons, bordures,
+          // accents non-texte et texte sur fond marine (où il contraste bien).
+          fonce: "#8A6D08",
         },
         creme: "#FAF8F3",
         grisL: "#F2EFE8",

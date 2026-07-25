@@ -216,7 +216,7 @@ export function Dashboard() {
               <ul className="max-h-80 divide-y divide-grisL overflow-y-auto">
                 {echeances.slice(0, MAX_LIGNES).map((e) => (
                   <li key={`${e.date}-${e.libelle}`} className="flex items-center gap-3 px-4 py-3">
-                    <span className="w-24 shrink-0 font-mono text-xs text-or">{dateCourteFr(e.date)}</span>
+                    <span className="w-24 shrink-0 font-mono text-xs text-or-fonce">{dateCourteFr(e.date)}</span>
                     <span className="text-sm text-encre">{e.libelle}</span>
                   </li>
                 ))}

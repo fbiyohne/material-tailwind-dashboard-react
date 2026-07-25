@@ -72,7 +72,7 @@ export function StagePanel({ membre, onChange }) {
       {/* Synthèse + validation */}
       <div className="bpn-card p-5">
         <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-encre">
-          <AcademicCapIcon className="h-4 w-4 text-or" /> Stage
+          <AcademicCapIcon className="h-4 w-4 text-or-fonce" /> Stage
         </div>
         <dl className="divide-y divide-grisL text-sm">
           <div className="flex justify-between gap-3 py-2"><dt className="text-gris">Maître de stage</dt><dd className="text-right font-medium text-encre">{stage?.maitreStage ?? "—"}</dd></div>
@@ -80,7 +80,7 @@ export function StagePanel({ membre, onChange }) {
           <div className="flex justify-between gap-3 py-2"><dt className="text-gris">Échéance</dt><dd className="font-medium text-encre">{stage?.fin ? formatDate(stage.fin) : "—"}</dd></div>
         </dl>
         <div className="mt-3">
-          <div className="mb-1 flex justify-between text-xs"><span className="text-gris">Progression</span><span className="font-mono text-or">{stage?.progression ?? 0}%</span></div>
+          <div className="mb-1 flex justify-between text-xs"><span className="text-gris">Progression</span><span className="font-mono text-or-fonce">{stage?.progression ?? 0}%</span></div>
           <div className="h-2 overflow-hidden rounded bg-grisM"><div className="h-full rounded" style={{ width: `${stage?.progression ?? 0}%`, backgroundColor: stage?.termine ? "var(--bpn-vert)" : "var(--bpn-or)" }} /></div>
         </div>
         {peutValider && (

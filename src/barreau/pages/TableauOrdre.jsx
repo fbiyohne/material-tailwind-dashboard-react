@@ -70,7 +70,7 @@ export function TableauOrdre() {
             <tbody>
               {s.membres.map((m) => (
                 <tr key={m.id}>
-                  <td className="font-mono text-or">{m.rang}</td>
+                  <td className="font-mono text-or-fonce">{m.rang}</td>
                   <td className="font-medium text-encre">Me {m.nom}</td>
                   <td className="text-gris">{m.cabinet ?? "—"}</td>
                   <td className="text-xs text-gris">{m.dateInscription ? formatDate(m.dateInscription) : "—"}</td>
