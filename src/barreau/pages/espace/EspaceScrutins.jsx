@@ -46,7 +46,7 @@ export function EspaceScrutins() {
       <PageHeader eyebrow="Mon espace" titre="Élections" sousTitre="Votez aux scrutins de l'Ordre. Votre vote est confidentiel." />
 
       {scrutins.length === 0 ? (
-        <div className="bpn-card p-6"><EmptyState icon={MegaphoneIcon} title="Aucun scrutin" description="Aucun scrutin n'est ouvert au vote pour le moment." /></div>
+        <div className="bpn-card p-4"><EmptyState icon={MegaphoneIcon} title="Aucun scrutin" description="Aucun scrutin n'est ouvert au vote pour le moment." /></div>
       ) : (
         scrutins.map((s) => {
           const total = s.candidats.reduce((a, c) => a + (c.voix ?? 0), 0);
@@ -56,19 +56,20 @@ export function EspaceScrutins() {
           const peutVoter = s.statut === "OUVERT" && !s.aDejaVote && !inelig;
           const set = choix[s.id] ?? new Set();
           return (
-            <div key={s.id} className="bpn-card p-5">
-              <div className="flex flex-wrap items-center justify-between gap-2">
+            <div key={s.id} className="bpn-card">
+              <div className="bpn-card-header">
                 <div>
-                  <h3 className="font-display text-lg font-semibold text-encre">{s.titre}</h3>
+                  <span className="bpn-card-heading">{s.titre}</span>
                   <div className="mt-0.5 text-xs text-gris">{TYPE[s.type]} · {s.nbSieges} siège(s) à pourvoir</div>
                 </div>
                 {s.statut === "PUBLIE" ? <Badge ton="bleu" dot={false}>Résultats publiés</Badge>
                   : s.aDejaVote ? <Badge ton="vert" dot={false}>Vous avez voté</Badge>
                   : s.statut === "CLOS" ? <Badge ton="or" dot={false}>Dépouillement</Badge>
-                  : <Badge ton="vert">Ouvert</Badge>}
+                  : <Badge ton="vert" dot={false}>Ouvert</Badge>}
               </div>
 
-              {peutVoter && <p className="mt-3 text-xs text-gris">Sélectionnez jusqu'à {s.nbSieges} candidat(s), puis validez votre vote.</p>}
+              <div className="p-5">
+              {peutVoter && <p className="text-xs text-gris">Sélectionnez jusqu'à {s.nbSieges} candidat(s), puis validez votre vote.</p>}
               {inelig && s.statut === "OUVERT" && !s.aDejaVote && (
                 <Notice ton="or" className="mt-3">
                   Vous ne figurez pas dans le corps électoral de ce scrutin (inscription au tableau et cotisation à jour requises). Contactez le Secrétariat en cas d'erreur.
@@ -100,6 +101,7 @@ export function EspaceScrutins() {
                 </button>
               )}
               {s.aDejaVote && s.statut !== "PUBLIE" && <p className="mt-3 inline-flex items-center gap-1.5 text-sm text-vert"><CheckBadgeIcon className="h-4 w-4" /> Votre participation a été enregistrée.</p>}
+              </div>
             </div>
           );
         })

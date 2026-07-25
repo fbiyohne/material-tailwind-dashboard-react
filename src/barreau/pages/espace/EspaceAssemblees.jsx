@@ -26,7 +26,7 @@ export function EspaceAssemblees() {
   if (!items) return <div className="bpn-card p-6"><TableSkeleton rows={4} cols={3} /></div>;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-5">
+    <div className="space-y-5">
       <PageHeader eyebrow="Mon espace" titre="Assemblées générales" sousTitre="Convocations, ordres du jour et procès-verbaux des assemblées du Barreau." />
 
       {items.length === 0 ? (

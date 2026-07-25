@@ -50,7 +50,7 @@ export function EspaceArchives() {
       <PageHeader eyebrow="Mon espace" titre="Archives officielles" sousTitre="Documents institutionnels du Barreau et pièces vous concernant." />
 
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative max-w-xs flex-1">
+        <div className="relative max-w-md flex-1">
           <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gris" />
           <input value={recherche} onChange={(e) => setRecherche(e.target.value)} placeholder="Rechercher un titre ou une référence…" aria-label="Rechercher un document" className="bpn-input pl-9" />
         </div>

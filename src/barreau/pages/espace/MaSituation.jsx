@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import { CreditCardIcon } from "@heroicons/react/24/outline";
-import { Badge, PageHeader, useToast, TableSkeleton, ErrorState } from "../../components";
+import { Badge, PageHeader, EmptyState, useToast, TableSkeleton, ErrorState } from "../../components";
 import { STATUT_META, QUALITE_LABEL } from "../../data/derivations";
 import { formatFCFA, formatDate } from "../../utils/format";
 import { getEspaceMoi } from "../../api/resources";
@@ -10,26 +10,28 @@ import { PaiementEspaceModal } from "./PaiementEspaceModal";
 function CarteSituation({ titre, du, paye, solde, statut, valide, onPayer }) {
   const meta = STATUT_META[statut] ?? { ton: "gris", label: statut };
   return (
-    <div className="bpn-card p-4">
-      <div className="mb-3 flex items-center justify-between">
+    <div className="bpn-card">
+      <div className="bpn-card-header">
         <span className="bpn-card-heading">{titre}</span>
         <div className="flex items-center gap-1.5">
-          <Badge ton={meta.ton}>{meta.label}</Badge>
-          {valide && <Badge ton="vert">Validé Trésorière</Badge>}
+          <Badge ton={meta.ton} dot={false}>{meta.label}</Badge>
+          {valide && <Badge ton="vert" dot={false}>Validé Trésorière</Badge>}
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-3 text-center">
-        <div><div className="text-xs uppercase tracking-wide text-gris">Dû</div><div className="mt-1 font-medium">{formatFCFA(du)}</div></div>
-        <div><div className="text-xs uppercase tracking-wide text-gris">Payé</div><div className="mt-1 font-medium text-vert">{paye ? formatFCFA(paye) : "—"}</div></div>
-        <div><div className="text-xs uppercase tracking-wide text-gris">Solde</div><div className={`mt-1 font-medium ${solde ? "text-rouge" : "text-vert"}`}>{solde ? formatFCFA(solde) : "✓ Soldé"}</div></div>
-      </div>
-      {solde > 0 && onPayer && (
-        <div className="mt-3 flex justify-end">
-          <button className="bpn-btn bpn-btn-or !px-3 !py-1.5 text-xs" onClick={onPayer}>
-            <CreditCardIcon className="h-4 w-4" /> Payer en ligne
-          </button>
+      <div className="p-4">
+        <div className="grid grid-cols-3 gap-3 text-center">
+          <div><div className="text-xs uppercase tracking-wide text-gris">Dû</div><div className="mt-1 font-medium">{formatFCFA(du)}</div></div>
+          <div><div className="text-xs uppercase tracking-wide text-gris">Payé</div><div className="mt-1 font-medium text-vert">{paye ? formatFCFA(paye) : "—"}</div></div>
+          <div><div className="text-xs uppercase tracking-wide text-gris">Solde</div><div className={`mt-1 font-medium ${solde ? "text-rouge" : "text-vert"}`}>{solde ? formatFCFA(solde) : "✓ Soldé"}</div></div>
         </div>
-      )}
+        {solde > 0 && onPayer && (
+          <div className="mt-3 flex justify-end">
+            <button className="bpn-btn bpn-btn-or bpn-btn-sm" onClick={onPayer}>
+              <CreditCardIcon className="h-4 w-4" /> Payer en ligne
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -44,29 +46,29 @@ function Historique({ titre, lignes }) {
     <div className="bpn-card">
       <div className="bpn-card-header"><span className="bpn-card-heading">{titre}</span><span className="font-mono text-xs text-gris">{lignes.length}</span></div>
       {lignes.length === 0 ? (
-        <p className="px-4 py-6 text-center text-sm text-gris">Aucun historique.</p>
+        <div className="p-6"><EmptyState title="Aucun historique" description="Aucun exercice enregistré pour l'instant." /></div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="bpn-table">
             <thead>
-              <tr className="border-b border-grisL text-left text-xs uppercase tracking-wide text-gris">
-                <th className="px-4 py-2.5 font-medium">Exercice</th>
-                <th className="px-4 py-2.5 text-right font-medium">Dû</th>
-                <th className="px-4 py-2.5 text-right font-medium">Payé</th>
-                <th className="px-4 py-2.5 font-medium">Date</th>
-                <th className="px-4 py-2.5 font-medium">Statut</th>
+              <tr>
+                <th>Exercice</th>
+                <th className="text-right">Dû</th>
+                <th className="text-right">Payé</th>
+                <th>Date</th>
+                <th>Statut</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-grisL">
+            <tbody>
               {lignes.map((l) => {
                 const meta = STATUT_META[l.statut] ?? { ton: "gris", label: l.statut };
                 return (
                   <tr key={l.annee}>
-                    <td className="px-4 py-2.5 font-mono text-xs text-gris">{l.annee}</td>
-                    <td className="px-4 py-2.5 text-right">{formatFCFA(l.du)}</td>
-                    <td className="px-4 py-2.5 text-right">{l.paye ? formatFCFA(l.paye) : "—"}</td>
-                    <td className="px-4 py-2.5 text-xs text-gris">{l.datePaiement ? formatDate(l.datePaiement) : "—"}</td>
-                    <td className="px-4 py-2.5"><Badge ton={meta.ton}>{meta.label}</Badge></td>
+                    <td className="font-mono text-xs text-gris">{l.annee}</td>
+                    <td className="text-right">{formatFCFA(l.du)}</td>
+                    <td className="text-right">{l.paye ? formatFCFA(l.paye) : "—"}</td>
+                    <td className="text-xs text-gris">{l.datePaiement ? formatDate(l.datePaiement) : "—"}</td>
+                    <td><Badge ton={meta.ton} dot={false}>{meta.label}</Badge></td>
                   </tr>
                 );
               })}
