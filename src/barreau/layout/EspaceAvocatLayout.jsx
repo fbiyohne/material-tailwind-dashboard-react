@@ -78,8 +78,9 @@ export function EspaceAvocatLayout() {
             </div>
           </div>
 
-          {/* Menu — centre */}
-          <nav className="flex flex-1 items-center justify-center gap-1 overflow-x-auto">
+          {/* Menu — centre. `safe center` : centré quand ça tient, aligné au début
+              (sans rogner le 1er item) quand ça déborde, et défilable. */}
+          <nav className="flex flex-1 items-center gap-1 overflow-x-auto [justify-content:safe_center]">
             {NAV.map(({ to, label, icon: Icon, end, badge }) => (
               <NavLink
                 key={to}
@@ -101,7 +102,7 @@ export function EspaceAvocatLayout() {
 
           {/* Déconnexion — droite */}
           <div className="flex shrink-0 items-center gap-3">
-            <span className="hidden text-sm text-white/70 lg:inline">{user?.nom}</span>
+            <span className="hidden max-w-[10rem] truncate text-sm text-white/70 xl:inline">{user?.nom}</span>
             <button
               onClick={logout}
               className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-1.5 text-xs text-white/70 transition hover:bg-white/10 hover:text-white"
