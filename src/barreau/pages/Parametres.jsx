@@ -22,7 +22,7 @@ import { appliquerConfig } from "../data/config";
 import { STATUT_META_CLES, STATUT_MEMBRE_META_CLES } from "../data/derivations";
 import { STATUT_DOSSIER_META_CLES } from "../data/institutionnel";
 import { STATUT_PUBLICATION_META_CLES } from "../data/publications";
-import { getParametres, majParametres, getNotifications, reinitialiserDonnees } from "../api/resources";
+import { getParametres, majParametres, getNotifications, reinitialiserDonnees, listerMembres } from "../api/resources";
 
 const EVT_LABEL = {
   RELANCE: "Relance cotisation",
@@ -144,8 +144,13 @@ export function Parametres() {
   const [fonctions, setFonctions] = useState(DEFAUT.fonctionsConseil);
   const [libelles, setLibelles] = useState(DEFAUT.libelles);
   const [notif, setNotif] = useState(null);
+  // Membres (hors stagiaires) proposés dans les sélecteurs Bâtonnier/Trésorière/SG.
+  const [membresListe, setMembresListe] = useState([]);
 
   useEffect(() => {
+    listerMembres({ qualiteNot: "STAGIAIRE", pageSize: 200 })
+      .then((d) => setMembresListe(d.items))
+      .catch(() => setMembresListe([]));
     getParametres().then((p) => {
       setTarifs({ ...DEFAUT.tarifs, ...p.tarifs });
       setExercice(p.exerciceCourant ?? DEFAUT.exerciceCourant);
@@ -244,14 +249,32 @@ export function Parametres() {
     </Section>
   );
 
+  // Noms des membres (format « Me … ») proposés dans les sélecteurs de fonction.
+  const nomsMembres = membresListe.map((m) => `Me ${m.nom}`).sort((a, b) => a.localeCompare(b));
+  // Sélecteur alimenté par la base : le titulaire d'une fonction est choisi parmi
+  // les membres. La valeur enregistrée reste au format « Me … », inchangée pour les
+  // documents. Une valeur historique hors liste est conservée comme option.
+  const champMembre = (cle, label) => {
+    const valeur = identite[cle] || "";
+    const options = !valeur || nomsMembres.includes(valeur) ? nomsMembres : [valeur, ...nomsMembres];
+    return (
+      <FormField label={label}>
+        <select value={valeur} onChange={setI(cle)} className="bpn-input">
+          <option value="">— Sélectionner un membre —</option>
+          {options.map((n) => <option key={n} value={n}>{n}</option>)}
+        </select>
+      </FormField>
+    );
+  };
+
   const panneauIdentite = (
     <Section titre="Identité de l'institution" description="Utilisée dans les documents officiels et l'interface.">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <FormField label="Dénomination"><input value={identite.denomination} onChange={setI("denomination")} className="bpn-input" /></FormField>
         <FormField label="Ordre"><input value={identite.ordre} onChange={setI("ordre")} className="bpn-input" /></FormField>
-        <FormField label="Bâtonnier"><input value={identite.batonnier} onChange={setI("batonnier")} className="bpn-input" /></FormField>
-        <FormField label="Trésorière"><input value={identite.tresoriere} onChange={setI("tresoriere")} className="bpn-input" /></FormField>
-        <FormField label="Secrétaire Général"><input value={identite.secretaireGeneral} onChange={setI("secretaireGeneral")} className="bpn-input" /></FormField>
+        {champMembre("batonnier", "Bâtonnier")}
+        {champMembre("tresoriere", "Trésorière")}
+        {champMembre("secretaireGeneral", "Secrétaire Général")}
         <FormField label="Adresse"><input value={identite.adresse} onChange={setI("adresse")} className="bpn-input" /></FormField>
       </div>
       <div className="mt-4 flex justify-end">
