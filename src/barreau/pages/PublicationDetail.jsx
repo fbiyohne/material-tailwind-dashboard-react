@@ -36,7 +36,7 @@ export function PublicationDetail() {
   }
   if (!publication) return <div className="bpn-card p-6"><TableSkeleton rows={5} cols={2} /></div>;
 
-  const meta = STATUT_PUBLICATION_META[publication.statut];
+  const meta = STATUT_PUBLICATION_META[publication.statut] ?? { ton: "gris", label: publication.statut };
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
   const enregistrer = async () => {

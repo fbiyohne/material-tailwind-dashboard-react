@@ -117,7 +117,7 @@ export function Publications() {
       ) : (
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
         {publications.map((p) => {
-          const meta = STATUT_PUBLICATION_META[p.statut];
+          const meta = STATUT_PUBLICATION_META[p.statut] ?? { ton: "gris", label: p.statut };
           return (
             <div key={p.id} className="bpn-card h-full p-5">
               <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">

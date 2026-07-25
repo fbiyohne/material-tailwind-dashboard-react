@@ -135,8 +135,8 @@ export function Reunions() {
               </div>
             </div>
             <ul className="mt-3 list-inside list-decimal space-y-0.5 text-sm text-encre">
-              {r.ordreDuJour.slice(0, 3).map((pt, i) => <li key={i}>{pt}</li>)}
-              {r.ordreDuJour.length > 3 && <li className="list-none text-xs text-gris">+ {r.ordreDuJour.length - 3} autres points</li>}
+              {(r.ordreDuJour ?? []).slice(0, 3).map((pt, i) => <li key={i}>{pt}</li>)}
+              {(r.ordreDuJour ?? []).length > 3 && <li className="list-none text-xs text-gris">+ {(r.ordreDuJour ?? []).length - 3} autres points</li>}
             </ul>
           </div>
         ))}

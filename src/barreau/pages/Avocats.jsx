@@ -65,7 +65,7 @@ export function Avocats() {
       ...(filtre !== "tous" ? { statut: filtre.toUpperCase() } : {}),
       pageSize: 200,
     })
-      .then((d) => setMembres(d.items))
+      .then((d) => setMembres(d.items ?? []))
       .catch(() => setErreur(true))
       .finally(() => setChargement(false));
   }, [recherche, filtre]);
@@ -110,7 +110,7 @@ export function Avocats() {
         // Pas de statut connu (chargement ou échec de la jointure) → neutre,
         // surtout pas « En retard » par défaut (faux positif sur honoraires/inconnus).
         if (!st) return <span className="text-xs text-gris">—</span>;
-        const meta = STATUT_META[st];
+        const meta = STATUT_META[st] ?? { ton: "gris", label: st };
         return <Badge ton={meta.ton}>{meta.label}</Badge>;
       } },
     { key: "actions", label: "Actions", align: "right",

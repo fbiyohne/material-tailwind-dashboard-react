@@ -135,7 +135,7 @@ export function Assemblees() {
               </div>
             </div>
             <ul className="mt-3 list-inside list-decimal space-y-0.5 text-sm text-encre">
-              {a.ordreDuJour.slice(0, 3).map((pt, i) => <li key={i}>{pt}</li>)}
+              {(a.ordreDuJour ?? []).slice(0, 3).map((pt, i) => <li key={i}>{pt}</li>)}
             </ul>
           </div>
         ))}

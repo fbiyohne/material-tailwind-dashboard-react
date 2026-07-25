@@ -148,7 +148,7 @@ export function AssembleeDetail() {
             content: (
               <Carte titre="Ordre du jour">
                 <ol className="list-inside list-decimal space-y-1 text-sm text-encre">
-                  {assemblee.ordreDuJour.map((pt, i) => <li key={i}>{pt}</li>)}
+                  {(assemblee.ordreDuJour ?? []).map((pt, i) => <li key={i}>{pt}</li>)}
                 </ol>
               </Carte>
             ),
@@ -223,7 +223,7 @@ export function AssembleeDetail() {
         <p>Le Bâtonnier convoque les membres du corps électoral à l'<strong>{TYPE_LABEL[assemblee.type]}</strong> du{" "}
           <strong>{formatDate(assemblee.date)}</strong>, au <strong>{assemblee.lieu}</strong>.</p>
         <p className="mt-3 font-medium">Ordre du jour :</p>
-        <ol className="mt-1 list-inside list-decimal">{assemblee.ordreDuJour.map((pt, i) => <li key={i}>{pt}</li>)}</ol>
+        <ol className="mt-1 list-inside list-decimal">{(assemblee.ordreDuJour ?? []).map((pt, i) => <li key={i}>{pt}</li>)}</ol>
       </DocumentModal>
     </div>
   );

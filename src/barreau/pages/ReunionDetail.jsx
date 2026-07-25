@@ -202,7 +202,7 @@ export function ReunionDetail() {
         <p>Le Bâtonnier a l'honneur de convier les membres du Conseil de l'Ordre à la réunion du{" "}
           <strong>{formatDate(reunion.date)}</strong> à <strong>{reunion.heure}</strong>, au <strong>{reunion.lieu}</strong>.</p>
         <p className="mt-3 font-medium">Ordre du jour :</p>
-        <ol className="mt-1 list-inside list-decimal">{reunion.ordreDuJour.map((pt, i) => <li key={i}>{pt}</li>)}</ol>
+        <ol className="mt-1 list-inside list-decimal">{(reunion.ordreDuJour ?? []).map((pt, i) => <li key={i}>{pt}</li>)}</ol>
       </DocumentModal>
 
       <DocumentModal

@@ -48,7 +48,7 @@ export function EspaceAssemblees() {
               {a.ordreDuJour?.length > 0 && (
                 <div>
                   <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-gris">Ordre du jour</div>
-                  <ol className="list-decimal space-y-1 pl-5 text-sm text-encre">{a.ordreDuJour.map((p, i) => <li key={i}>{p}</li>)}</ol>
+                  <ol className="list-decimal space-y-1 pl-5 text-sm text-encre">{(a.ordreDuJour ?? []).map((p, i) => <li key={i}>{p}</li>)}</ol>
                 </div>
               )}
               {a.decisions?.length > 0 && (

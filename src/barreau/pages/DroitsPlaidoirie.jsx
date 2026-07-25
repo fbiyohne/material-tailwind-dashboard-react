@@ -64,7 +64,7 @@ export function DroitsPlaidoirie() {
     { key: "solde", label: "Solde", align: "right", sortable: true, sortValue: (l) => l.solde,
       cell: (l) => <span className={`font-medium ${l.solde ? "text-rouge" : "text-vert"}`}>{l.solde ? formatFCFA(l.solde) : "✓ Soldé"}</span> },
     { key: "statut", label: "Statut", sortable: true, sortValue: (l) => l.statut,
-      cell: (l) => { const meta = STATUT_META[l.statut]; return <Badge ton={meta.ton}>{meta.label}</Badge>; } },
+      cell: (l) => { const meta = STATUT_META[l.statut] ?? { ton: "gris", label: l.statut }; return <Badge ton={meta.ton}>{meta.label}</Badge>; } },
     { key: "action", label: "Action", align: "right",
       cell: (l) => (
         <div className="flex items-center justify-end gap-1.5">
@@ -85,7 +85,7 @@ export function DroitsPlaidoirie() {
   const lignesEtat = useMemo(
     () => lignes.map((l) => [
       l.membre.num, `Me ${l.membre.nom}`, formatFCFA(l.du),
-      l.paye ? formatFCFA(l.paye) : "—", l.solde ? formatFCFA(l.solde) : "Soldé", STATUT_META[l.statut].label,
+      l.paye ? formatFCFA(l.paye) : "—", l.solde ? formatFCFA(l.solde) : "Soldé", (STATUT_META[l.statut] ?? { label: l.statut }).label,
     ]),
     [lignes]
   );
