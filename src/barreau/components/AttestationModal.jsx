@@ -2,6 +2,7 @@ import { useState } from "react";
 import PropTypes from "prop-types";
 import { ArrowDownTrayIcon, CheckCircleIcon } from "@heroicons/react/24/outline";
 import { Modal } from "./Modal";
+import { Notice } from "./Notice";
 import { DocumentChrome } from "./DocumentChrome";
 import { useToast } from "./Toast";
 import { telechargerAttestationPdf } from "../api/resources";
@@ -41,9 +42,7 @@ export function AttestationModal({ membre, onClose }) {
       }
     >
       {emise && (
-        <div className="bpn-no-print mb-3 flex items-center gap-2 rounded border-l-[3px] border-vert bg-vertL px-3 py-2 text-sm text-vert">
-          <CheckCircleIcon className="h-5 w-5 shrink-0" /> Attestation générée et archivée.
-        </div>
+        <Notice ton="vert" icon={CheckCircleIcon} className="bpn-no-print mb-3 text-sm">Attestation générée et archivée.</Notice>
       )}
 
       <DocumentChrome

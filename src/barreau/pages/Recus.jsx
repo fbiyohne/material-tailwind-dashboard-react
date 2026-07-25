@@ -6,7 +6,7 @@ import { formatFCFA, formatDate } from "../utils/format";
 import { telechargerCsv } from "../utils/exportCsv";
 import { montantEnLettresFCFA } from "../utils/nombreEnLettres";
 import { telechargerDocumentPdf } from "../utils/exports";
-import { Badge, RecuDocument, useToast, useConfirm, PageHeader, DataTable } from "../components";
+import { Badge, RecuDocument, Notice, useToast, useConfirm, PageHeader, DataTable } from "../components";
 import { listerMembres, listerRecus, enregistrerPaiement, annulerRecu, telechargerRecuPdf } from "../api/resources";
 
 const COLONNES_CSV = [
@@ -126,10 +126,9 @@ export function Recus() {
       <PageHeader className="bpn-no-print" eyebrow="Finances" titre="Reçus de paiement" sousTitre="Émission d'un reçu officiel — mise à jour automatique des cotisations à l'enregistrement." />
 
       {succes && (
-        <div className="bpn-no-print flex items-center gap-2 rounded border-l-[3px] border-vert bg-vertL px-4 py-2.5 text-sm text-vert">
-          <CheckCircleIcon className="h-5 w-5 shrink-0" />
+        <Notice ton="vert" icon={CheckCircleIcon} className="bpn-no-print text-sm">
           Reçu N° {succes.numero} émis pour Me {membre?.nom} — cotisation {succes.annee} mise à jour et reçu archivé.
-        </div>
+        </Notice>
       )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[320px_1fr]">

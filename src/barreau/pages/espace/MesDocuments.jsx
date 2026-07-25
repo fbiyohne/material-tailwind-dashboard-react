@@ -34,7 +34,7 @@ export function MesDocuments() {
                 <span className="font-mono text-xs text-or">{q.numero}</span>
                 <span className="text-xs text-gris">{formatDate(q.date)}</span>
               </span>
-              <button className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs" onClick={() => telecharger(() => telechargerEspaceQuitusPdf(q.id, q.numero))}>
+              <button className="bpn-btn bpn-btn-ghost bpn-btn-sm" onClick={() => telecharger(() => telechargerEspaceQuitusPdf(q.id, q.numero))}>
                 <ArrowDownTrayIcon className="h-3.5 w-3.5" /> PDF
               </button>
             </li>
@@ -58,7 +58,7 @@ export function MesDocuments() {
                 <span className="shrink-0 text-xs text-gris">{formatDate(r.date)}</span>
                 <span className="shrink-0 font-medium">{formatFCFA(r.montant)}</span>
               </span>
-              <button className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs" onClick={() => telecharger(() => telechargerEspaceRecuPdf(r.id, r.numero))}>
+              <button className="bpn-btn bpn-btn-ghost bpn-btn-sm" onClick={() => telecharger(() => telechargerEspaceRecuPdf(r.id, r.numero))}>
                 <ArrowDownTrayIcon className="h-3.5 w-3.5" /> PDF
               </button>
             </li>

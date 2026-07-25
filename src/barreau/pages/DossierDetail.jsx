@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeftIcon, ShieldExclamationIcon, CheckIcon, ArrowDownTrayIcon, PaperClipIcon, PlusIcon, XMarkIcon, DocumentTextIcon, ScaleIcon } from "@heroicons/react/24/outline";
-import { Badge, DocumentModal, useToast, FormField, PageHeader, Tabs, ErrorState, TableSkeleton } from "../components";
+import { Badge, DocumentModal, Notice, useToast, FormField, PageHeader, Tabs, ErrorState, TableSkeleton } from "../components";
 import { STATUT_DOSSIER_META } from "../data/institutionnel";
 import { formatDate } from "../utils/format";
 import { getDossier, majDossier, archiverDoc, telechargerDecisionDisciplinePdf } from "../api/resources";
@@ -93,9 +93,7 @@ export function DossierDetail() {
         </button>
       </PageHeader>
 
-      <div className="flex items-center gap-2 rounded border-l-[3px] border-rouge bg-rougeL px-4 py-2.5 text-sm text-rouge">
-        <ShieldExclamationIcon className="h-5 w-5 shrink-0" /> Dossier confidentiel — consultation journalisée (RG-13).
-      </div>
+      <Notice ton="rouge" icon={ShieldExclamationIcon} className="text-sm">Dossier confidentiel — consultation journalisée (RG-13).</Notice>
 
       <Tabs
         tabs={[

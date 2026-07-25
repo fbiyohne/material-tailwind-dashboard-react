@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { CheckBadgeIcon, MegaphoneIcon } from "@heroicons/react/24/outline";
-import { Badge, PageHeader, useToast, TableSkeleton, ErrorState, EmptyState } from "../../components";
+import { Badge, Notice, PageHeader, useToast, TableSkeleton, ErrorState, EmptyState } from "../../components";
 import { getEspaceScrutins, voterScrutin } from "../../api/resources";
 
 const TYPE = { CONSEIL: "Conseil de l'Ordre", BATONNIER: "Bâtonnier", AUTRE: "Scrutin" };
@@ -68,11 +68,11 @@ export function EspaceScrutins() {
                   : <Badge ton="vert">Ouvert</Badge>}
               </div>
 
-              {peutVoter && <p className="mt-3 text-[12.5px] text-gris">Sélectionnez jusqu'à {s.nbSieges} candidat(s), puis validez votre vote.</p>}
+              {peutVoter && <p className="mt-3 text-xs text-gris">Sélectionnez jusqu'à {s.nbSieges} candidat(s), puis validez votre vote.</p>}
               {inelig && s.statut === "OUVERT" && !s.aDejaVote && (
-                <p className="mt-3 rounded border-l-[3px] border-or bg-or-L px-3 py-2 text-[12.5px] text-gris">
+                <Notice ton="or" className="mt-3">
                   Vous ne figurez pas dans le corps électoral de ce scrutin (inscription au tableau et cotisation à jour requises). Contactez le Secrétariat en cas d'erreur.
-                </p>
+                </Notice>
               )}
 
               <ul className="mt-3 space-y-2">

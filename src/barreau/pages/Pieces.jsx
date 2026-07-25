@@ -93,16 +93,16 @@ export function Pieces() {
     { key: "actions", label: "Action", align: "right",
       cell: (p) => (
         <div className="flex items-center justify-end gap-1.5">
-          <button className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs" onClick={() => voirPiece(p.id).catch((e) => toast.error(e.message))}>
+          <button className="bpn-btn bpn-btn-ghost bpn-btn-sm" onClick={() => voirPiece(p.id).catch((e) => toast.error(e.message))}>
             <EyeIcon className="h-3.5 w-3.5" /> Voir
           </button>
           {peutGerer && p.statut !== "VERIFIEE" && (
-            <button className="bpn-btn bpn-btn-or !px-2.5 !py-1 text-xs" onClick={() => action(() => verifierPiece(p.id), "Pièce vérifiée.")}>
+            <button className="bpn-btn bpn-btn-or bpn-btn-sm" onClick={() => action(() => verifierPiece(p.id), "Pièce vérifiée.")}>
               <CheckIcon className="h-3.5 w-3.5" /> Vérifier
             </button>
           )}
           {peutGerer && p.statut !== "REJETEE" && (
-            <button className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs" onClick={() => rejeter(p)}>
+            <button className="bpn-btn bpn-btn-ghost bpn-btn-sm" onClick={() => rejeter(p)}>
               <XMarkIcon className="h-3.5 w-3.5" /> Rejeter
             </button>
           )}
@@ -126,7 +126,7 @@ export function Pieces() {
             <button
               key={f.cle}
               onClick={() => setFiltre(f.cle)}
-              className={`rounded-full px-3 py-1.5 text-[12.5px] font-medium transition ${filtre === f.cle ? "bg-navy text-white" : "bg-grisL text-gris hover:bg-grisM/30"}`}
+              className={`rounded px-3 py-1 text-xs font-medium transition ${filtre === f.cle ? "bg-navy text-white" : "bg-grisL text-gris hover:bg-grisM/30"}`}
             >
               {f.label}
               <span className={`ml-1.5 rounded-full px-1.5 text-2xs ${filtre === f.cle ? "bg-white/20" : "bg-white text-gris"}`}>{compte[f.cle] ?? 0}</span>

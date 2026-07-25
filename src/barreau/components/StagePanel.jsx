@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import { PlusIcon, TrashIcon, CheckBadgeIcon, AcademicCapIcon } from "@heroicons/react/24/outline";
 import { Badge } from "./Badge";
+import { Notice } from "./Notice";
 import { useToast } from "./Toast";
 import { useConfirm } from "./ConfirmDialog";
 import { useAuth } from "../auth/AuthContext";
@@ -87,7 +88,7 @@ export function StagePanel({ membre, onChange }) {
             <CheckBadgeIcon className="h-4 w-4" /> {busy ? "Validation…" : "Valider la fin de stage"}
           </button>
         )}
-        {!peutValider && <p className="mt-4 rounded border-l-[3px] border-or bg-or-L px-3 py-2 text-xs text-gris">La validation de fin de stage est un acte du Bâtonnier.</p>}
+        {!peutValider && <Notice ton="or" className="mt-4">La validation de fin de stage est un acte du Bâtonnier.</Notice>}
       </div>
 
       {/* Rapports / évaluations */}

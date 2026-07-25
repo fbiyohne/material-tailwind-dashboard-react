@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DocumentCheckIcon, CheckCircleIcon, LockClosedIcon, ArrowDownTrayIcon, ShieldCheckIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
-import { QuitusDocument, useToast, useConfirm, PageHeader, DataTable } from "../components";
+import { QuitusDocument, Notice, useToast, useConfirm, PageHeader, DataTable } from "../components";
 import { useAuth } from "../auth/AuthContext";
 import { formatDate } from "../utils/format";
 import { telechargerCsv } from "../utils/exportCsv";
@@ -169,15 +169,14 @@ export function Quitus() {
     <div className="space-y-5">
       <PageHeader className="bpn-no-print" eyebrow="Finances" titre="Quitus de cotisation" sousTitre="Délivrance d'un quitus officiel — automatique dès que la cotisation de l'avocat est soldée." />
 
-      <div className="bpn-no-print flex items-start gap-2 rounded border-l-[3px] border-vert bg-vertL px-4 py-2.5 text-sm text-vert">
-        <CheckCircleIcon className="mt-0.5 h-5 w-5 shrink-0" />
-        <span>Tout avocat dont la cotisation est <strong>intégralement réglée</strong> apparaît automatiquement : le règlement vaut validation. La génération reste bloquée tant qu'un solde est dû (règle BR-01).</span>
-      </div>
+      <Notice ton="vert" icon={CheckCircleIcon} className="bpn-no-print text-sm">
+        Tout avocat dont la cotisation est <strong>intégralement réglée</strong> apparaît automatiquement : le règlement vaut validation. La génération reste bloquée tant qu'un solde est dû (règle BR-01).
+      </Notice>
 
       {succes && (
-        <div className="bpn-no-print flex items-center gap-2 rounded border-l-[3px] border-navy bg-bleuL px-4 py-2.5 text-sm text-navy">
-          <DocumentCheckIcon className="h-5 w-5 shrink-0" /> Quitus {succes.numero} généré et archivé (exercice {succes.annee}).
-        </div>
+        <Notice ton="bleu" icon={DocumentCheckIcon} className="bpn-no-print text-sm">
+          Quitus {succes.numero} généré et archivé (exercice {succes.annee}).
+        </Notice>
       )}
 
       <div className="bpn-no-print grid grid-cols-1 gap-3 sm:grid-cols-3">

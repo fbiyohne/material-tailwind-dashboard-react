@@ -124,7 +124,7 @@ export function Cabinets() {
                     </td>
                     <td>
                       {c.titulaire ? (
-                        <span className="text-sm">Me {c.titulaire.nom}{c.titulaire.statut !== "INSCRIT" && <Badge ton="gris" dot={false} className="ml-1 !text-[10px]">inactif</Badge>}</span>
+                        <span className="text-sm">Me {c.titulaire.nom}{c.titulaire.statut !== "INSCRIT" && <Badge ton="gris" dot={false} className="ml-1 !text-2xs">inactif</Badge>}</span>
                       ) : <span className="text-xs text-gris">—</span>}
                     </td>
                     <td className="text-xs text-gris">{c.forme || "—"}</td>
@@ -135,11 +135,11 @@ export function Cabinets() {
                         <Badge ton={retire ? "gris" : "bleu"} dot={false} className="whitespace-nowrap">{retire ? "Retiré" : "Actif"}</Badge>
                         {peutGerer && (
                           <>
-                            <button className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs" onClick={() => setGestion(c)}>Membres</button>
-                            <button className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs" onClick={() => setEdition({ ...c, forme: c.forme || "Cabinet individuel", adresse: c.adresse || "", tel: c.tel || "", email: c.email || "" })}>Éditer</button>
+                            <button className="bpn-btn bpn-btn-ghost bpn-btn-sm" onClick={() => setGestion(c)}>Membres</button>
+                            <button className="bpn-btn bpn-btn-ghost bpn-btn-sm" onClick={() => setEdition({ ...c, forme: c.forme || "Cabinet individuel", adresse: c.adresse || "", tel: c.tel || "", email: c.email || "" })}>Éditer</button>
                             {retire
                               ? <button className="bpn-btn bpn-btn-ghost !px-2 !py-1 text-xs" onClick={() => retablir(c)} title="Rétablir"><ArrowUturnLeftIcon className="h-3.5 w-3.5" /></button>
-                              : <button className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs" onClick={() => retirer(c)}>Retirer</button>}
+                              : <button className="bpn-btn bpn-btn-ghost bpn-btn-sm" onClick={() => retirer(c)}>Retirer</button>}
                             <button type="button" onClick={() => supprimer(c)} title="Supprimer" className="rounded p-1.5 text-gris transition hover:bg-rougeL hover:text-rouge"><TrashIcon className="h-3.5 w-3.5" /></button>
                           </>
                         )}
@@ -267,7 +267,7 @@ function MembresManager({ cabinet, onClose, onChange }) {
             <ul className="divide-y divide-grisL">
               {cabinet.membres.map((m) => (
                 <li key={m.id} className="flex items-center justify-between px-3 py-2 text-sm">
-                  <span className="text-encre">Me {m.nom}{cabinet.titulaire?.id === m.id && <Badge ton="or" dot={false} className="ml-2 !text-[10px]">titulaire</Badge>}</span>
+                  <span className="text-encre">Me {m.nom}{cabinet.titulaire?.id === m.id && <Badge ton="or" dot={false} className="ml-2 !text-2xs">titulaire</Badge>}</span>
                   <button type="button" onClick={() => detacher(m)} className="rounded p-1.5 text-gris transition hover:bg-rougeL hover:text-rouge" title="Détacher"><TrashIcon className="h-3.5 w-3.5" /></button>
                 </li>
               ))}

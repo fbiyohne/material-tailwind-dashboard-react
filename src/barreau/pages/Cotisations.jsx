@@ -232,18 +232,18 @@ export function Cotisations() {
         <div className="flex items-center justify-end gap-1.5">
           {(l.statut === "retard" || l.statut === "partiel") && (
             <>
-              <button type="button" onClick={() => setPaiement(l)} className="bpn-btn bpn-btn-or !px-2.5 !py-1 text-xs">Paiement</button>
-              <button type="button" onClick={() => setEnLigne(l)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs">En ligne</button>
+              <button type="button" onClick={() => setPaiement(l)} className="bpn-btn bpn-btn-or bpn-btn-sm">Paiement</button>
+              <button type="button" onClick={() => setEnLigne(l)} className="bpn-btn bpn-btn-ghost bpn-btn-sm">En ligne</button>
             </>
           )}
           {l.statut === "ajour" && (l.valideTresoriere ? (
-            <button type="button" disabled={!peutValider} title={peutValider ? "Validé — cliquer pour annuler" : "Validé par la Trésorière"} onClick={() => peutValider && validerSituation(l)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs text-vert disabled:opacity-70">
+            <button type="button" disabled={!peutValider} title={peutValider ? "Validé — cliquer pour annuler" : "Validé par la Trésorière"} onClick={() => peutValider && validerSituation(l)} className="bpn-btn bpn-btn-ghost bpn-btn-sm text-vert disabled:opacity-70">
               <CheckCircleIcon className="h-3.5 w-3.5" /> Validé
             </button>
           ) : peutValider ? (
-            <button type="button" title="Valider la situation (Trésorière)" onClick={() => validerSituation(l)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs">Valider</button>
+            <button type="button" title="Valider la situation (Trésorière)" onClick={() => validerSituation(l)} className="bpn-btn bpn-btn-ghost bpn-btn-sm">Valider</button>
           ) : null)}
-          <button type="button" onClick={() => setHistorique(l.membre.id)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs">Historique</button>
+          <button type="button" onClick={() => setHistorique(l.membre.id)} className="bpn-btn bpn-btn-ghost bpn-btn-sm">Historique</button>
           {estAdmin && l.aLigne && (
             <button type="button" onClick={() => supprimer(l)} className="bpn-btn bpn-btn-ghost !px-2 !py-1 text-xs text-rouge" title="Supprimer la ligne de cotisation">
               <TrashIcon className="h-3.5 w-3.5" />

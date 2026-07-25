@@ -116,7 +116,7 @@ export function Discipline() {
     { key: "actions", label: "Actions", align: "right",
       cell: (d) => (
         <div className="flex justify-end gap-2">
-          <button className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs" onClick={() => navigate(`/discipline/${d.id}`)}>
+          <button className="bpn-btn bpn-btn-ghost bpn-btn-sm" onClick={() => navigate(`/discipline/${d.id}`)}>
             Ouvrir
           </button>
           {estAdmin && (
@@ -166,10 +166,9 @@ export function Discipline() {
         </button>
       </PageHeader>
 
-      <div className="flex items-center gap-2 rounded border-l-[3px] border-rouge bg-rougeL px-4 py-2.5 text-sm text-rouge">
-        <ShieldExclamationIcon className="h-5 w-5 shrink-0" />
+      <Notice ton="rouge" icon={ShieldExclamationIcon} className="text-sm">
         Données confidentielles — chaque consultation est enregistrée dans le journal d'accès.
-      </div>
+      </Notice>
 
       <div className="bpn-card">
         <DataTable

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { UserPlusIcon, KeyIcon, CheckIcon, XMarkIcon, TrashIcon, InboxArrowDownIcon, IdentificationIcon, BuildingOffice2Icon } from "@heroicons/react/24/outline";
-import { Badge, Modal, PageHeader, FormField, useToast, useConfirm, DataTable, AccesActivationModal } from "../components";
+import { Badge, Modal, Notice, PageHeader, FormField, useToast, useConfirm, DataTable, AccesActivationModal } from "../components";
 import { formatDate } from "../utils/format";
 import { useAuth } from "../auth/AuthContext";
 import {
@@ -292,10 +292,10 @@ export function Utilisateurs() {
               <input type="email" value={creation.email} onChange={setC("email")} className="bpn-input" />
             </FormField>
             {creation.type === "avocat" ? (
-              <p className="rounded border-l-[3px] border-or bg-or-L px-3 py-2 text-xs text-gris sm:col-span-2">
+              <Notice ton="or" className="sm:col-span-2">
                 Un accès à l'espace avocat sera créé (la fiche membre est établie si elle n'existe pas). L'avocat recevra un
                 lien d'activation pour définir lui-même son mot de passe — aucun rôle du back-office ne lui est attribué.
-              </p>
+              </Notice>
             ) : (
               <>
                 <FormField label="Rôle">

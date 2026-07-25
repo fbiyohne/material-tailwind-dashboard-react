@@ -97,7 +97,7 @@ export function Login({ onDemande, onOubli }) {
         </Button>
 
         <div className="text-right">
-          <button type="button" onClick={onOubli} className="text-[12.5px] text-white/45 underline-offset-4 transition hover:text-or-2 hover:underline">
+          <button type="button" onClick={onOubli} className="text-xs text-white/60 underline-offset-4 transition hover:text-or-2 hover:underline">
             Mot de passe oublié ?
           </button>
         </div>

@@ -22,7 +22,7 @@ export function AccesActivationModal({ acces, onClose }) {
           </p>
           <div className="flex items-center gap-2 rounded border border-grisM bg-grisL/40 p-2">
             <input readOnly value={acces.lien} className="bpn-input !border-0 !bg-transparent font-mono text-xs" onFocus={(e) => e.target.select()} />
-            <button className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs shrink-0" onClick={() => copier(acces.lien)}>
+            <button className="bpn-btn bpn-btn-ghost bpn-btn-sm shrink-0" onClick={() => copier(acces.lien)}>
               <ClipboardIcon className="h-3.5 w-3.5" /> Copier
             </button>
           </div>

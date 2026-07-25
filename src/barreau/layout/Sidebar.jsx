@@ -130,7 +130,7 @@ export function Sidebar({ open, onClose }) {
                     end={item.path === "/"}
                     onClick={onClose}
                     className={({ isActive }) =>
-                      `group relative mb-0.5 flex items-center gap-3 rounded-md px-3 py-[9px] text-[13.5px] transition-all duration-150 ${
+                      `group relative mb-0.5 flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-all duration-150 ${
                         isActive
                           ? "bg-or/[0.12] font-medium text-or-2"
                           : "text-white/75 hover:bg-white/[0.05] hover:text-white"

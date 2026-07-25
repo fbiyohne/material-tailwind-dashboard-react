@@ -150,7 +150,7 @@ export function Conseil() {
           <Badge ton={m.actif ? "vert" : "gris"} className="whitespace-nowrap">{m.actif ? "En exercice" : "Sortant"}</Badge>
           {peutGerer && (m.actif ? (
             <>
-              <button className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs" onClick={() => setSortie({ membre: m, motif: MOTIFS_SORTIE[0], date: new Date().toISOString().slice(0, 10), detail: "" })}>
+              <button className="bpn-btn bpn-btn-ghost bpn-btn-sm" onClick={() => setSortie({ membre: m, motif: MOTIFS_SORTIE[0], date: new Date().toISOString().slice(0, 10), detail: "" })}>
                 <ArrowRightOnRectangleIcon className="h-3.5 w-3.5" /> Enregistrer une sortie
               </button>
               <button type="button" onClick={() => supprimer(m)} title="Retirer" aria-label={`Retirer ${m.nom} du Conseil`} className="rounded p-1.5 text-gris transition hover:bg-rougeL hover:text-rouge">
@@ -158,7 +158,7 @@ export function Conseil() {
               </button>
             </>
           ) : (
-            <button className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs" onClick={() => retablir(m)}>
+            <button className="bpn-btn bpn-btn-ghost bpn-btn-sm" onClick={() => retablir(m)}>
               <ArrowUturnLeftIcon className="h-3.5 w-3.5" /> Rétablir
             </button>
           ))}

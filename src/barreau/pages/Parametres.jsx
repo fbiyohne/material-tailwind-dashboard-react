@@ -15,7 +15,7 @@ import {
   ExclamationTriangleIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
-import { Badge, useToast, PageHeader, FormField, Tabs, DataTable, Modal } from "../components";
+import { Badge, Notice, useToast, PageHeader, FormField, Tabs, DataTable, Modal } from "../components";
 import { useAuth } from "../auth/AuthContext";
 import { formatFCFA, formatDateTime } from "../utils/format";
 import { appliquerConfig } from "../data/config";
@@ -368,12 +368,11 @@ export function Parametres() {
           </tbody>
         </table>
       </div>
-      <div className="mt-4 flex items-start gap-2 rounded border-l-[3px] border-or bg-or-L px-4 py-2.5 text-xs text-gris">
-        <LockClosedIcon className="mt-0.5 h-4 w-4 shrink-0 text-or" />
+      <Notice ton="or" icon={LockClosedIcon} className="mt-4">
         Authentification multi-utilisateurs (JWT + RBAC) active. La création des comptes et
         l'attribution des rôles se font dans la page{" "}
         <Link to="/utilisateurs" className="font-medium text-navy underline">Utilisateurs</Link>.
-      </div>
+      </Notice>
     </Section>
 
     {estAdmin && (

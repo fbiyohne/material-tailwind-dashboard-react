@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { SparklesIcon, DocumentTextIcon, CheckIcon, ArrowDownTrayIcon, PaperAirplaneIcon, CalendarDaysIcon } from "@heroicons/react/24/outline";
-import { Badge, Modal, PageHeader, EmptyState, ErrorState, Skeleton, useToast } from "../components";
+import { Badge, Modal, Notice, PageHeader, EmptyState, ErrorState, Skeleton, useToast } from "../components";
 import { genererBrouillonArticle } from "../data/publications";
 import { archiverDoc, genererArticleLettre, getCalendrierEditorial, majArticleLettre } from "../api/resources";
 
@@ -190,12 +190,11 @@ export function LettreBatonnier() {
           ) : null
         }
       >
-        <div className="mb-3 flex items-center gap-2 rounded border-l-[3px] border-or bg-or-L px-3 py-2 text-xs text-gris">
-          <SparklesIcon className="h-4 w-4 shrink-0 text-or" />
+        <Notice ton="or" icon={SparklesIcon} className="mb-3">
           {apercu?.simule
             ? "Brouillon généré à partir d'un gabarit (IA non configurée). Le Bâtonnier peut le modifier ci-dessous avant de l'enregistrer ou de le publier."
             : "Projet rédigé par l'assistance IA (Claude). Le Bâtonnier peut le modifier ci-dessous avant publication."}
-        </div>
+        </Notice>
         <textarea
           value={brouillon}
           onChange={(e) => setBrouillon(e.target.value)}

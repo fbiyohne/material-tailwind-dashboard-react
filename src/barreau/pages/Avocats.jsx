@@ -116,9 +116,9 @@ export function Avocats() {
     { key: "actions", label: "Actions", align: "right",
       cell: (m) => (
         <div className="flex items-center justify-end gap-1.5">
-          <button type="button" onClick={() => navigate(`/avocats/${m.id}`)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs">Fiche</button>
+          <button type="button" onClick={() => navigate(`/avocats/${m.id}`)} className="bpn-btn bpn-btn-ghost bpn-btn-sm">Fiche</button>
           {peutImporter && (
-            <button type="button" onClick={() => setAttestation(m)} className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs">Attestation</button>
+            <button type="button" onClick={() => setAttestation(m)} className="bpn-btn bpn-btn-ghost bpn-btn-sm">Attestation</button>
           )}
           {estAdmin && (
             <button type="button" onClick={() => supprimer(m)} className="bpn-btn bpn-btn-ghost !px-2 !py-1 text-xs text-rouge" title="Supprimer définitivement">

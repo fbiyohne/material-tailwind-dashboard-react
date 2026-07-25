@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MagnifyingGlassIcon, DocumentArrowDownIcon, ArrowDownTrayIcon, ArchiveBoxIcon, TrashIcon } from "@heroicons/react/24/outline";
-import { Badge, Modal, useToast, useConfirm, PageHeader, DataTable } from "../components";
+import { Badge, Modal, Notice, useToast, useConfirm, PageHeader, DataTable } from "../components";
 import { formatDate } from "../utils/format";
 import { telechargerCsv } from "../utils/exportCsv";
 import { categoriesArchives } from "../data/config";
@@ -77,7 +77,7 @@ export function Archives() {
     { key: "actions", label: "Action", align: "right",
       cell: (a) => (
         <div className="flex items-center justify-end gap-1.5">
-          <button className="bpn-btn bpn-btn-ghost !px-2.5 !py-1 text-xs" onClick={() => setApercu(a)}>
+          <button className="bpn-btn bpn-btn-ghost bpn-btn-sm" onClick={() => setApercu(a)}>
             <DocumentArrowDownIcon className="h-3.5 w-3.5" /> Consulter
           </button>
           {peutSupprimer && (
@@ -147,10 +147,10 @@ export function Archives() {
               <div className="flex justify-between gap-4 py-2"><dt className="text-gris">Référence</dt><dd className="font-mono text-encre">{apercu.reference}</dd></div>
               {apercu.membreNom && <div className="flex justify-between gap-4 py-2"><dt className="text-gris">Concerné</dt><dd className="font-medium text-encre">Me {apercu.membreNom}</dd></div>}
             </dl>
-            <p className="rounded border-l-[3px] border-or bg-or-L px-3 py-2 text-xs text-gris">
+            <Notice ton="or">
               Cette entrée trace un document officiel généré par l'application. Le PDF se régénère
               depuis le module d'origine (reçu, quitus, attestation, convocation…).
-            </p>
+            </Notice>
           </div>
         )}
       </Modal>

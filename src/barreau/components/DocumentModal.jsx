@@ -2,6 +2,7 @@ import { useState } from "react";
 import PropTypes from "prop-types";
 import { PrinterIcon, CheckCircleIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
 import { Modal } from "./Modal";
+import { Notice } from "./Notice";
 import { DocumentChrome } from "./DocumentChrome";
 import { exporterPdf } from "../utils/exports";
 import { telechargerPdf } from "../api/client";
@@ -64,9 +65,7 @@ export function DocumentModal({
       }
     >
       {archive && (
-        <div className="bpn-no-print mb-3 flex items-center gap-2 rounded border-l-[3px] border-vert bg-vertL px-3 py-2 text-sm text-vert">
-          <CheckCircleIcon className="h-5 w-5 shrink-0" /> Document généré et archivé.
-        </div>
+        <Notice ton="vert" icon={CheckCircleIcon} className="bpn-no-print mb-3 text-sm">Document généré et archivé.</Notice>
       )}
 
       <DocumentChrome org={org} title={title} reference={reference} date={date} signataires={[signataire]}>
