@@ -27,7 +27,7 @@ const parMembre = new Map<number, Set<SocketClient>>();
 const administration = new Set<SocketClient>();
 
 export interface EvenementRealtime {
-  type: "messagerie";
+  type: "messagerie" | "notification";
   conversationId?: number;
 }
 

@@ -16,6 +16,7 @@ import { recuRicheHtml, quitusRicheHtml } from "../lib/documentsRiches.js";
 import { notifierNouveauMessage, emailsAdministration, emailsMembres } from "../lib/messagerieNotif.js";
 import { messageNonDeMoi, compterNonLusParFil, totalNonLus, jamaisLu } from "../lib/messagerie.js";
 import { realtimeMembres, realtimeAdministration } from "../lib/realtime.js";
+import { notifier, usersSecretariat, listerNotifications, compterNonLus, marquerLu, marquerToutLu } from "../lib/centreNotifications.js";
 
 /**
  * Espace avocat — surface en libre-service, strictement cloisonnée.
@@ -151,6 +152,37 @@ espaceRouter.get(
     const date = new Date();
     await archiver({ categorie: "Attestation de non-redevance", titre: `Attestation de non-redevance ${numero} — Me ${membre.nom}`, reference: numero, date, membreNom: membre.nom });
     await envoyerPdf(res, attestationNonRedevanceHtml(membre, numero, annee, date), `Attestation-non-redevance-${numero}.pdf`);
+  })
+);
+
+// — Centre de notifications de l'avocat (mêmes helpers que le back-office) —
+
+/** GET /espace/notifications — dernières alertes de l'avocat + compteur non-lues. */
+espaceRouter.get(
+  "/notifications",
+  asyncH(async (req: AuthRequest, res) => {
+    const userId = req.user!.id;
+    const [items, nonLus] = await Promise.all([listerNotifications(userId), compterNonLus(userId)]);
+    res.json({ items, nonLus });
+  })
+);
+
+/** POST /espace/notifications/lu-tout — marque toutes mes alertes comme lues. */
+espaceRouter.post(
+  "/notifications/lu-tout",
+  asyncH(async (req: AuthRequest, res) => {
+    const n = await marquerToutLu(req.user!.id);
+    res.json({ ok: true, marquees: n });
+  })
+);
+
+/** POST /espace/notifications/:id/lu — marque une de mes alertes comme lue. */
+espaceRouter.post(
+  "/notifications/:id/lu",
+  asyncH(async (req: AuthRequest, res) => {
+    const ok = await marquerLu(req.user!.id, Number(req.params.id));
+    if (!ok) throw new HttpError(404, "Notification introuvable");
+    res.json({ ok: true });
   })
 );
 
@@ -408,6 +440,11 @@ espaceRouter.post(
     const piece = await prisma.pieceDossier.create({
       data: { membreId: moi, type: data.type, nomFichier: data.nomFichier, fichier: chemin, mimeType: data.mimeType, taille },
     });
+    // Alerte le Secrétariat qu'une pièce attend vérification (best-effort).
+    const fiche = await prisma.membre.findUnique({ where: { id: moi }, select: { nom: true } });
+    void usersSecretariat()
+      .then((ids) => notifier(ids, { type: "PIECE_SOUMISE", titre: "Pièce à vérifier", message: `Me ${fiche?.nom ?? "un avocat"} a soumis une pièce (${data.type}).`, lien: `/avocats/${moi}` }))
+      .catch(() => {});
     res.status(201).json({ id: piece.id, type: piece.type, nomFichier: piece.nomFichier, statut: piece.statut, createdAt: piece.createdAt });
   })
 );

@@ -37,3 +37,4 @@ export { MessageBulle } from "./MessageBulle";
 export { AccesActivationModal } from "./AccesActivationModal";
 export { StagePanel } from "./StagePanel";
 export { CasierDiscipline } from "./CasierDiscipline";
+export { ClocheNotifications } from "./ClocheNotifications";

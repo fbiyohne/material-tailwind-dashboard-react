@@ -76,6 +76,25 @@ model User {
   // Réinitialisation de mot de passe en self-service (lien à durée limitée).
   resetToken       String?   @unique
   resetExpire      DateTime?
+  notifications    Notification[]
+}
+
+/// Centre de notifications in-app : alerte destinée à UN utilisateur (back-office
+/// ou avocat), distincte du JournalNotification (journal des emails/SMS émis).
+/// Un événement diffusé (ex. publication) crée une ligne par destinataire.
+model Notification {
+  id        Int      @id @default(autoincrement())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int
+  type      String // DEMANDE_ACCES, PIECE_SOUMISE, RECU, QUITUS, PUBLICATION, DECISION…
+  titre     String
+  message   String
+  lien      String? // route front cliquable (ex. « /utilisateurs », « /espace/documents »)
+  lu        Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, lu])
+  @@index([userId, createdAt])
 }
 
 model RefreshToken {

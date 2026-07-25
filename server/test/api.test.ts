@@ -262,6 +262,52 @@ describe("Espace avocat — provisionnement, activation & cloisonnement", () => 
     expect((await request(app).post("/api/espace/paiement/PAY-INCONNU/confirmer-sandbox").set(...bearer(avocat)).send({ succes: true })).status).toBe(404);
   });
 
+  // Centre de notifications : les alertes in-app sont émises en best-effort (asynchrones),
+  // d'où une courte reprise avant assertion.
+  const attendreNotifEspace = async (jeton: string, pred: (n: any) => boolean, tentatives = 15) => {
+    for (let i = 0; i < tentatives; i++) {
+      const r = await request(app).get("/api/espace/notifications").set(...bearer(jeton));
+      const item = (r.body.items ?? []).find(pred);
+      if (item) return item;
+      await new Promise((res) => setTimeout(res, 100));
+    }
+    return null;
+  };
+
+  it("le paiement de l'avocat lui crée une notification in-app (reçu), marquable comme lue", async () => {
+    const notif = await attendreNotifEspace(avocat, (n) => n.type === "RECU");
+    expect(notif).toBeTruthy();
+    // Marquer une seule comme lue, puis tout marquer : le compteur retombe à zéro.
+    const lu = await request(app).post(`/api/espace/notifications/${notif.id}/lu`).set(...bearer(avocat));
+    expect(lu.status).toBe(200);
+    const tout = await request(app).post("/api/espace/notifications/lu-tout").set(...bearer(avocat));
+    expect(tout.status).toBe(200);
+    const apres = await request(app).get("/api/espace/notifications").set(...bearer(avocat));
+    expect(apres.body.nonLus).toBe(0);
+  });
+
+  it("une publication mise en ligne notifie les avocats", async () => {
+    const p = await request(app).post("/api/publications").set(...bearer(sg)).send({ titre: `Communiqué test ${Date.now()}`, type: "Communiqué" });
+    expect(p.status).toBe(201);
+    const maj = await request(app).post(`/api/publications/${p.body.id}/statut`).set(...bearer(sg)).send({ statut: "PUBLIE" });
+    expect(maj.status).toBe(200);
+    const notif = await attendreNotifEspace(avocat, (n) => n.type === "PUBLICATION");
+    expect(notif).toBeTruthy();
+    expect(notif.lien).toBe("/publications");
+  });
+
+  it("centre de notifications back-office : forme de la réponse (SG)", async () => {
+    const r = await request(app).get("/api/mes-notifications").set(...bearer(sg));
+    expect(r.status).toBe(200);
+    expect(Array.isArray(r.body.items)).toBe(true);
+    expect(typeof r.body.nonLus).toBe("number");
+  });
+
+  it("cloisonnement des notifications : avocat ⇏ back-office, back-office ⇏ espace", async () => {
+    expect((await request(app).get("/api/mes-notifications").set(...bearer(avocat))).status).toBe(403);
+    expect((await request(app).get("/api/espace/notifications").set(...bearer(sg))).status).toBe(403);
+  });
+
   it("rejette un paiement sans solde à régler (cotisation déjà soldée, 400)", async () => {
     const anneeNow = new Date().getFullYear();
     const r = await request(app).post("/api/espace/paiement").set(...bearer(avocat)).send({ annee: anneeNow, type: "cotisation", canal: "MTN" });

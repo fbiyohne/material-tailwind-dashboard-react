@@ -140,6 +140,11 @@ export async function getCotisations(annee) {
 }
 
 export const enregistrerPaiement = (payload) => api("/cotisations/paiement", { method: "POST", body: payload });
+// Centre de notifications in-app (back-office)
+export const getMesNotifications = () => api("/mes-notifications");
+export const marquerNotifLue = (id) => api(`/mes-notifications/${id}/lu`, { method: "POST" });
+export const marquerToutesNotifsLues = () => api("/mes-notifications/lu-tout", { method: "POST" });
+
 export const lancerRelances = (annee) => api(`/cotisations/relances?annee=${annee}`, { method: "POST" });
 export const lancerRelancesDroits = (annee) => api(`/droits/relances?annee=${annee}`, { method: "POST" });
 export const genererCotisations = (annee) => api(`/cotisations/generer?annee=${annee}`, { method: "POST" });
@@ -255,6 +260,11 @@ export const telechargerEspaceQuitusPdf = (id, numero) => telechargerPdf(`/espac
 // Attestations éditées en self-service par l'avocat (inscription / non-redevance).
 export const telechargerEspaceAttestationInscription = () => telechargerPdf("/espace/attestation/inscription/pdf", "Attestation-inscription.pdf");
 export const telechargerEspaceAttestationNonRedevance = () => telechargerPdf("/espace/attestation/non-redevance/pdf", "Attestation-non-redevance.pdf");
+// Centre de notifications de l'avocat (espace)
+export const getEspaceNotifications = () => api("/espace/notifications");
+export const marquerEspaceNotifLue = (id) => api(`/espace/notifications/${id}/lu`, { method: "POST" });
+export const marquerToutesEspaceNotifsLues = () => api("/espace/notifications/lu-tout", { method: "POST" });
+
 export const initierEspacePaiement = (body) => api("/espace/paiement", { method: "POST", body });
 export const confirmerEspacePaiementSandbox = (ref, succes = true) => api(`/espace/paiement/${ref}/confirmer-sandbox`, { method: "POST", body: { succes } });
 

@@ -4,6 +4,7 @@ import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole, type AuthRequest } from "../middleware/auth.js";
 import { genererArticleLettre, iaDisponible } from "../lib/ia.js";
+import { notifier, usersAvocats } from "../lib/centreNotifications.js";
 
 export const publicationsRouter = Router();
 // Module institutionnel (Documents) : réservé SG/Bâtonnier comme au front (RG-15).
@@ -54,7 +55,14 @@ publicationsRouter.post("/:id/statut", requireRole("SECRETAIRE_GENERAL", "BATONN
   if (statut === "VALIDE" && role !== "BATONNIER" && role !== "ADMIN") {
     throw new HttpError(403, "Seul le Bâtonnier peut valider une publication");
   }
+  const avant = await prisma.publication.findUnique({ where: { id: Number(req.params.id) }, select: { statut: true } });
   const p = await prisma.publication.update({ where: { id: Number(req.params.id) }, data: { statut } });
+  // Diffusion : à la première mise en ligne (transition → PUBLIE), alerte tous les avocats.
+  if (statut === "PUBLIE" && avant?.statut !== "PUBLIE") {
+    void usersAvocats()
+      .then((ids) => notifier(ids, { type: "PUBLICATION", titre: "Nouvelle publication", message: p.titre, lien: "/publications" }))
+      .catch(() => {});
+  }
   res.json(p);
 }));
 

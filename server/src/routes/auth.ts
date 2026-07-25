@@ -9,6 +9,7 @@ import crypto from "node:crypto";
 import { env } from "../env.js";
 import { emettrePaire, rafraichir, revoquer, revoquerTousLesJetons } from "../lib/tokens.js";
 import { envoyerEmail } from "../lib/notifications.js";
+import { notifier, usersSecretariat } from "../lib/centreNotifications.js";
 
 export const authRouter = Router();
 
@@ -62,6 +63,10 @@ authRouter.post(
     await prisma.demandeAcces.create({
       data: { nom: data.nom.trim(), email, motif: data.motif.trim(), numInscription: vide(data.numInscription), cabinet: vide(data.cabinet) },
     });
+    // Alerte in-app du Secrétariat (best-effort, n'échoue jamais la demande).
+    void usersSecretariat()
+      .then((ids) => notifier(ids, { type: "DEMANDE_ACCES", titre: "Nouvelle demande d'accès", message: `${data.nom.trim()} sollicite un accès à l'application.`, lien: "/utilisateurs" }))
+      .catch(() => {});
     // Accusé de réception (n'échoue jamais la demande si l'envoi échoue).
     void envoyerEmail({
       to: email,

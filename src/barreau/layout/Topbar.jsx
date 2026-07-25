@@ -6,17 +6,18 @@ import {
   DocumentTextIcon,
   PlusIcon,
   MagnifyingGlassIcon,
-  BellIcon,
   ReceiptPercentIcon,
   DocumentCheckIcon,
   ArchiveBoxIcon,
   ChevronDownIcon,
 } from "@heroicons/react/24/outline";
-import { listerMembres, getAgenda } from "../api/resources";
+import { listerMembres, getAgenda, getMesNotifications, marquerNotifLue, marquerToutesNotifsLues } from "../api/resources";
 import { useAuth } from "../auth/AuthContext";
 import { aAcces } from "../routes";
+import { ClocheNotifications } from "../components";
 
-const dateCourteFr = (v) => new Date(v).toLocaleDateString("fr-FR", { day: "2-digit", month: "long" });
+// API du centre de notifications back-office, transmise à la cloche partagée.
+const API_NOTIFS = { charger: getMesNotifications, marquerLu: marquerNotifLue, marquerTout: marquerToutesNotifsLues };
 
 const FINANCES = ["SECRETAIRE_GENERAL", "TRESORIERE", "ADMIN"];
 const INSTITUTIONNEL = ["SECRETAIRE_GENERAL", "BATONNIER", "ADMIN"];
@@ -34,7 +35,7 @@ export function Topbar({ title, onOpenMenu, onAddAvocat }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [q, setQ] = useState("");
-  const [menu, setMenu] = useState(null); // "docs" | "notifs" | null
+  const [menu, setMenu] = useState(null); // "docs" | null
   const [membres, setMembres] = useState([]);
   const [echeances, setEcheances] = useState([]);
   const docs = DOCS.filter((d) => aAcces(d, user?.role)); // RBAC : raccourcis filtrés.
@@ -143,40 +144,8 @@ export function Topbar({ title, onOpenMenu, onAddAvocat }) {
       </div>
       )}
 
-      {/* Notifications */}
-      <div className="relative shrink-0">
-        <button
-          className="relative flex h-9 w-9 items-center justify-center rounded-full text-navy hover:bg-grisL"
-          onClick={() => setMenu(menu === "notifs" ? null : "notifs")}
-          aria-label="Notifications — prochaines échéances"
-          aria-haspopup="true"
-          aria-expanded={menu === "notifs"}
-        >
-          <BellIcon className="h-5 w-5" />
-          {echeances.length > 0 && (
-            <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-rouge ring-2 ring-white" />
-          )}
-        </button>
-        {menu === "notifs" && (
-          <div className="absolute right-0 top-full z-50 mt-1 w-72 overflow-hidden rounded-lg border border-grisM bg-white shadow-card">
-            <div className="border-b border-grisM px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gris">
-              Prochaines échéances
-            </div>
-            {echeances.length === 0 ? (
-              <p className="px-3 py-4 text-center text-xs text-gris">Aucune échéance à venir.</p>
-            ) : (
-              <ul className="divide-y divide-grisL">
-                {echeances.map((e) => (
-                  <li key={`${e.date}-${e.libelle}`} className="px-3 py-2.5">
-                    <div className="text-sm text-encre">{e.libelle}</div>
-                    <div className="mt-0.5 font-mono text-xs text-or">{dateCourteFr(e.date)}</div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
-      </div>
+      {/* Centre de notifications (alertes in-app + prochaines échéances) */}
+      <ClocheNotifications api={API_NOTIFS} onNaviguer={navigate} echeances={echeances} variante="clair" />
 
       {onAddAvocat && (
         <button type="button" className="bpn-btn bpn-btn-primary shrink-0" onClick={onAddAvocat}>

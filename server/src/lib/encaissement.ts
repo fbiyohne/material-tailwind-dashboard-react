@@ -3,6 +3,7 @@ import { prisma } from "../prisma.js";
 import { HttpError } from "../middleware/error.js";
 import { montantDuAvec, droitDuAvec, prochainNumeroRecu, tarifsActuels } from "./business.js";
 import { envoyerEmail } from "./notifications.js";
+import { notifier, userDeMembre } from "./centreNotifications.js";
 
 export type TypeReglement = "cotisation" | "droit";
 
@@ -128,6 +129,10 @@ export async function encaisser(opts: {
       evenement: "RECU",
     });
   }
+  // Alerte in-app de l'avocat : reçu disponible dans son espace (best-effort).
+  void userDeMembre(membre.id)
+    .then((uid) => (uid ? notifier([uid], { type: "RECU", titre: "Reçu disponible", message: `Votre reçu N° ${numero} (${estDroit ? "droit de plaidoirie" : "cotisation"} ${annee}) est disponible.`, lien: "/documents" }) : 0))
+    .catch(() => {});
   return resultat;
 }
 

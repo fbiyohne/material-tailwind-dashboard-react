@@ -10,6 +10,14 @@ import { eligibleQuitus, prochainNumeroQuitus } from "../lib/business.js";
 import { envoyerDocumentPdf } from "../lib/pdf.js";
 import { quitusRicheHtml } from "../lib/documentsRiches.js";
 import { signerDocument, quitusPayload } from "../lib/signature.js";
+import { notifier, userDeMembre } from "../lib/centreNotifications.js";
+
+/** Alerte in-app de l'avocat qu'un quitus est disponible (best-effort). */
+function notifierQuitus(membreId: number, annee: number): void {
+  void userDeMembre(membreId)
+    .then((uid) => (uid ? notifier([uid], { type: "QUITUS", titre: "Quitus disponible", message: `Votre quitus de cotisation ${annee} a été délivré.`, lien: "/documents" }) : 0))
+    .catch(() => {});
+}
 
 export const quitusRouter = Router();
 // Données financières restreintes (RG-15) : SG, Trésorière, Admin.
@@ -109,7 +117,9 @@ quitusRouter.post(
   requireRole("SECRETAIRE_GENERAL"),
   asyncH(async (req, res) => {
     const { membreId, annee } = genSchema.parse(req.body);
-    res.status(201).json(await genererQuitus(membreId, annee));
+    const quitus = await genererQuitus(membreId, annee);
+    notifierQuitus(membreId, annee);
+    res.status(201).json(quitus);
   })
 );
 
@@ -138,6 +148,7 @@ quitusRouter.post(
         const q = await genererQuitus(c.membreId, annee);
         crees += 1;
         numeros.push(q!.numero);
+        notifierQuitus(c.membreId, annee);
       } catch (e) {
         // Un avocat devenu inéligible (course) ou déjà pourvu ne bloque pas le lot.
         if (!(e instanceof HttpError && e.status === 409)) throw e;

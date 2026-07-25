@@ -1,15 +1,18 @@
 import { lazy, Suspense, useEffect, useState } from "react";
-import { Routes, Route, Navigate, NavLink, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate, NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   ArrowRightOnRectangleIcon, HomeIcon, FolderIcon, BookOpenIcon,
   BuildingLibraryIcon, MegaphoneIcon, ArchiveBoxIcon, ScaleIcon, ChatBubbleLeftRightIcon, HandRaisedIcon,
   Bars3Icon, XMarkIcon, UserCircleIcon,
 } from "@heroicons/react/24/outline";
-import { Sceau } from "../components";
+import { Sceau, ClocheNotifications } from "../components";
 import { useAuth } from "../auth/AuthContext";
 import { useFocusAuChangementDeRoute } from "../hooks/useFocusAuChangementDeRoute";
-import { getEspaceMessagerieNonLus } from "../api/resources";
+import { getEspaceMessagerieNonLus, getEspaceNotifications, marquerEspaceNotifLue, marquerToutesEspaceNotifsLues } from "../api/resources";
 import { onRealtime } from "../api/realtime";
+
+// API du centre de notifications de l'espace avocat, transmise à la cloche partagée.
+const API_NOTIFS_ESPACE = { charger: getEspaceNotifications, marquerLu: marquerEspaceNotifLue, marquerTout: marquerToutesEspaceNotifsLues };
 const MaSituation = lazy(() => import("../pages/espace/MaSituation"));
 const MesDocuments = lazy(() => import("../pages/espace/MesDocuments"));
 const EspaceAnnuaire = lazy(() => import("../pages/espace/EspaceAnnuaire"));
@@ -46,6 +49,7 @@ const PastilleMsg = ({ n }) => (
 export function EspaceAvocatLayout() {
   const { logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const mainRef = useFocusAuChangementDeRoute();
   const [nonLus, setNonLus] = useState(0);
   const [menuMobile, setMenuMobile] = useState(false);
@@ -106,8 +110,9 @@ export function EspaceAvocatLayout() {
             ))}
           </nav>
 
-          {/* Extrémité droite : compte, déconnexion, et hamburger sous « nav ». */}
+          {/* Extrémité droite : notifications, compte, déconnexion, et hamburger sous « nav ». */}
           <div className="flex shrink-0 items-center gap-2">
+            <ClocheNotifications api={API_NOTIFS_ESPACE} onNaviguer={navigate} variante="sombre" />
             <NavLink
               to="/compte"
               title="Mon compte"

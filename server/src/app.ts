@@ -16,6 +16,7 @@ import { usersRouter } from "./routes/users.js";
 import { demandesAccesRouter } from "./routes/demandesAcces.js";
 import { piecesRouter } from "./routes/pieces.js";
 import { notificationsRouter } from "./routes/notifications.js";
+import { mesNotificationsRouter } from "./routes/mesNotifications.js";
 import { paiementsRouter } from "./routes/paiements.js";
 import { cotisationsRouter } from "./routes/cotisations.js";
 import { recusRouter } from "./routes/recus.js";
@@ -94,6 +95,7 @@ export function creerApp() {
   app.use("/api/demandes-acces", demandesAccesRouter);
   app.use("/api/pieces", piecesRouter);
   app.use("/api/notifications", notificationsRouter);
+  app.use("/api/mes-notifications", mesNotificationsRouter);
   app.use("/api/paiements", paiementsRouter);
   app.use("/api/cotisations", cotisationsRouter);
   app.use("/api/recus", recusRouter);
