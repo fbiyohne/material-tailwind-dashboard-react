@@ -61,7 +61,8 @@ export function Annuaire() {
           placeholder="Rechercher par nom ou cabinet…" aria-label="Rechercher un avocat" className="bpn-input pl-9" />
       </div>
 
-      <div className="bpn-print-zone bpn-card">
+      {/* Écran : liste paginée (10/page). */}
+      <div className="bpn-no-print bpn-card">
         <div className="bpn-card-header">
           <span className="bpn-card-heading">
             Annuaire {interne ? "interne" : "public"} — Barreau de Pointe-Noire
@@ -82,12 +83,41 @@ export function Annuaire() {
           loading={chargement}
           error={erreur}
           onRetry={charger}
-          paginate={false}
+          pageSize={10}
           emptyIcon={BookOpenIcon}
           emptyTitle={recherche ? "Aucun avocat trouvé" : "Annuaire vide"}
           emptyDescription={recherche ? "Aucun résultat pour cette recherche. Essayez un autre nom ou cabinet." : "Aucun avocat inscrit à afficher pour le moment."}
           initialSort={{ key: "nom", dir: "asc" }}
         />
+      </div>
+
+      {/* Impression : annuaire complet (toutes les lignes, non paginé). */}
+      <div className="bpn-print-zone hidden print:block">
+        <div className="mb-2 text-center font-display text-xl text-navy">
+          Annuaire {interne ? "interne" : "public"} — Barreau de Pointe-Noire
+        </div>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-navy text-left text-xs uppercase text-navy">
+              <th className="py-1">Avocat</th>
+              <th className="py-1">Cabinet</th>
+              {interne && <th className="py-1">Téléphone</th>}
+              {interne && <th className="py-1">Email</th>}
+              <th className="py-1">Statut</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lignes.map((m) => (
+              <tr key={m.id} className="border-b border-grisL">
+                <td className="py-1">Me {m.nom}</td>
+                <td className="py-1">{m.cabinet ?? "—"}</td>
+                {interne && <td className="py-1">{m.tel ?? "—"}</td>}
+                {interne && <td className="py-1">{m.email ?? "—"}</td>}
+                <td className="py-1">{m.statut}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
