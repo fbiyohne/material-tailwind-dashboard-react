@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
-import { UserIcon, PhoneIcon, IdentificationIcon, PencilSquareIcon } from "@heroicons/react/24/outline";
+import { UserIcon, PhoneIcon, IdentificationIcon, PencilSquareIcon, AcademicCapIcon } from "@heroicons/react/24/outline";
 import { Modal } from "./Modal";
 import { FormField } from "./FormField";
 import { FormSection } from "./FormSection";
@@ -17,9 +17,22 @@ export function EditMembreModal({ membre, open, onClose, onSaved }) {
   const [erreurs, setErreurs] = useState({});
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => { if (membre) { setForm(membre); setErreurs({}); } }, [membre]);
+  // On aplatit les champs de stage (normalisés en objet `stage`) pour l'édition,
+  // afin de pouvoir renseigner/corriger la prestation de serment depuis la fiche.
+  useEffect(() => {
+    if (membre) {
+      setForm({
+        ...membre,
+        dateServment: membre.stage?.dateServment ?? "",
+        maitreStage: membre.stage?.maitreStage ?? "",
+        dureeMois: membre.stage?.dureeMois ?? "",
+      });
+      setErreurs({});
+    }
+  }, [membre]);
 
   if (!membre) return null;
+  const estStagiaire = membre.qualite === "stagiaire";
   const set = (k) => (e) => {
     setForm((f) => ({ ...f, [k]: e.target.value }));
     if (erreurs[k]) setErreurs((er) => ({ ...er, [k]: undefined }));
@@ -37,6 +50,15 @@ export function EditMembreModal({ membre, open, onClose, onSaved }) {
         nom: form.nom, cabinet: form.cabinet, statut: form.statut, sexe: form.sexe || null,
         tel: form.tel, email: form.email, adresse: form.adresse, rccm: form.rccm, cnss: form.cnss,
         observations: form.observations, dateNaissance: form.dateNaissance, dateInscription: form.dateInscription,
+        // Champs de stage : envoyés seulement pour un stagiaire ; on n'envoie la
+        // durée que si renseignée (le serveur exige un entier positif).
+        ...(estStagiaire
+          ? {
+              dateServment: form.dateServment || undefined,
+              maitreStage: form.maitreStage || undefined,
+              ...(form.dureeMois ? { dureeMois: Number(form.dureeMois) } : {}),
+            }
+          : {}),
       });
       toast.success(`Fiche mise à jour — Me ${maj.nom}`);
       onSaved?.(maj);
@@ -108,6 +130,20 @@ export function EditMembreModal({ membre, open, onClose, onSaved }) {
             <input value={form.cnss ?? ""} onChange={set("cnss")} className="bpn-input" />
           </FormField>
         </FormSection>
+
+        {estStagiaire && (
+          <FormSection icon={AcademicCapIcon} titre="Stage (avocat stagiaire)">
+            <FormField label="Prestation de serment" hint="ouvre le suivi de stage">
+              <input type="date" value={form.dateServment ?? ""} onChange={set("dateServment")} className="bpn-input" />
+            </FormField>
+            <FormField label="Durée du stage" hint="en mois (défaut 24)">
+              <input type="number" min={1} max={120} value={form.dureeMois ?? ""} onChange={set("dureeMois")} className="bpn-input" placeholder="24" />
+            </FormField>
+            <FormField label="Maître de stage" full>
+              <input value={form.maitreStage ?? ""} onChange={set("maitreStage")} className="bpn-input" />
+            </FormField>
+          </FormSection>
+        )}
 
         <FormSection icon={PencilSquareIcon} titre="Observations">
           <FormField label="Notes internes" full>

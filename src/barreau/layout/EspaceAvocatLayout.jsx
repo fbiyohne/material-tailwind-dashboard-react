@@ -50,7 +50,10 @@ export function EspaceAvocatLayout() {
     charger();
     const t = setInterval(charger, 30000);
     const off = onRealtime((evt) => { if (evt.type === "messagerie") charger(); });
-    return () => { actif = false; clearInterval(t); off(); };
+    // Rafraîchissement immédiat quand un fil est lu dans la page (sans changer de route).
+    const surLecture = () => charger();
+    window.addEventListener("bpn:messagerie-lu", surLecture);
+    return () => { actif = false; clearInterval(t); off(); window.removeEventListener("bpn:messagerie-lu", surLecture); };
   }, [location.pathname]);
 
   return (

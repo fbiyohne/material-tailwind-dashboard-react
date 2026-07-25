@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { PlusIcon, TrashIcon, LockOpenIcon, LockClosedIcon, MegaphoneIcon, CheckBadgeIcon, UsersIcon } from "@heroicons/react/24/outline";
 import { Badge, Modal, FormField, PageHeader, useToast, useConfirm, TableSkeleton, ErrorState, EmptyState } from "../components";
 import { useAuth } from "../auth/AuthContext";
@@ -30,6 +30,7 @@ export function Elections() {
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState(videForm);
   const [nomCand, setNomCand] = useState("");
+  const [nonce, setNonce] = useState(0);
 
   const charger = useCallback(() => {
     setErreur(false);
@@ -44,7 +45,17 @@ export function Elections() {
   }, [toast]);
 
   const rafraichir = () => { charger(); if (selId) getScrutin(selId).then(setDetail).catch(() => {}); };
-  const action = async (fn, msg) => { try { await fn(); toast.success(msg); rafraichir(); } catch (e) { toast.error(e.message); } };
+  // `nonce` force le remontage des saisies non contrôlées (voix) après chaque action,
+  // y compris en cas d'échec. `enCoursRef` évite qu'un double-clic déclenche deux fois
+  // la même action de cycle de vie (ouvrir/clôturer/publier), fiable dès le 2e clic.
+  const enCoursRef = useRef(false);
+  const action = async (fn, msg) => {
+    if (enCoursRef.current) return;
+    enCoursRef.current = true;
+    try { await fn(); toast.success(msg); rafraichir(); }
+    catch (e) { toast.error(e.message); }
+    finally { enCoursRef.current = false; setNonce((n) => n + 1); }
+  };
 
   const creer = async () => {
     try {
@@ -143,7 +154,7 @@ function ScrutinDetail({ detail, peutGerer, action, confirm, nomCand, setNomCand
                   <div className="flex items-center gap-2">
                     {/* Saisie des voix (présentiel, ouvert/clos) */}
                     {peutGerer && s.modalite === "PRESENTIEL" && s.statut !== "PUBLIE" && s.statut !== "PREPARATION" ? (
-                      <input type="number" min="0" defaultValue={c.voix} className="bpn-input !w-24 !py-1 text-right text-sm"
+                      <input key={`voix-${c.id}-${nonce}`} type="number" min="0" defaultValue={c.voix} className="bpn-input !w-24 !py-1 text-right text-sm"
                         onBlur={(e) => { const v = Number(e.target.value) || 0; if (v !== c.voix) action(() => saisirVoix(s.id, c.id, v), "Voix enregistrées."); }} />
                     ) : resultatsVisibles ? (
                       <span className="font-mono text-sm text-encre">{c.voix} voix · {pct}%</span>

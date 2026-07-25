@@ -162,28 +162,31 @@ export function Cabinets() {
 function CabinetForm({ cabinet, onClose, onSaved }) {
   const toast = useToast();
   const [form, setForm] = useState(cabinet ?? {});
+  const [busy, setBusy] = useState(false);
   useEffect(() => { setForm(cabinet ?? {}); }, [cabinet]);
   if (!cabinet) return null;
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.type === "checkbox" ? e.target.checked : e.target.value }));
   const estEdition = !!cabinet.id;
 
   const enregistrer = async () => {
-    if (!form.nom?.trim()) return;
+    // Garde anti double-clic : une création répétée dupliquerait la personne morale.
+    if (!form.nom?.trim() || busy) return;
     const body = {
       nom: form.nom.trim(), forme: form.forme || null, adresse: form.adresse || null,
       tel: form.tel || null, email: form.email || null, conventionDeposee: !!form.conventionDeposee,
       ...(estEdition ? { titulaireId: form.titulaireId ? Number(form.titulaireId) : null } : {}),
     };
+    setBusy(true);
     try {
       if (estEdition) await majCabinet(cabinet.id, body); else await ajouterCabinet(body);
       toast.success(estEdition ? "Cabinet mis à jour." : "Cabinet créé.");
       onSaved();
-    } catch (e) { toast.error(e.message); }
+    } catch (e) { toast.error(e.message); } finally { setBusy(false); }
   };
 
   return (
     <Modal open onClose={onClose} title={estEdition ? "Modifier la personne morale" : "Nouvelle personne morale"}
-      footer={<><button className="bpn-btn bpn-btn-ghost" onClick={onClose}>Annuler</button><button className="bpn-btn bpn-btn-primary" onClick={enregistrer} disabled={!form.nom?.trim()}>Enregistrer</button></>}>
+      footer={<><button className="bpn-btn bpn-btn-ghost" onClick={onClose}>Annuler</button><button className="bpn-btn bpn-btn-primary" onClick={enregistrer} disabled={!form.nom?.trim() || busy}>{busy ? "Enregistrement…" : "Enregistrer"}</button></>}>
       <div className="space-y-3">
         <label className="block text-sm"><span className="mb-1 block text-xs uppercase tracking-wide text-gris">Dénomination</span>
           <input value={form.nom ?? ""} onChange={set("nom")} className="bpn-input w-full" /></label>

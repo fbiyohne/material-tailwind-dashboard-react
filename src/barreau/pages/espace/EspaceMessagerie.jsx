@@ -131,7 +131,13 @@ export function EspaceMessagerie() {
     setSelId(id);
     setFil(null);
     getEspaceConversation(id)
-      .then((d) => { setFil(d); setConvs((cs) => cs?.map((c) => (c.id === id ? { ...c, nonLus: 0 } : c))); })
+      .then((d) => {
+        setFil(d);
+        setConvs((cs) => cs?.map((c) => (c.id === id ? { ...c, nonLus: 0 } : c)));
+        // Ouvrir un fil met à jour lastReadAt côté serveur : on signale au layout
+        // de rafraîchir la pastille globale sans attendre le sondage (30 s).
+        window.dispatchEvent(new Event("bpn:messagerie-lu"));
+      })
       .catch((e) => toast.error(e.message));
   };
 

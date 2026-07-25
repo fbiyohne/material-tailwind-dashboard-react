@@ -13,12 +13,17 @@ export function EspaceArchives() {
   const [recherche, setRecherche] = useState("");
   const [categorie, setCategorie] = useState("");
 
-  const charger = useCallback(() => {
+  const charger = useCallback((q = "") => {
     setChargement(true);
     setErreur(false);
-    getEspaceArchives().then(setData).catch((e) => { setErreur(true); toast.error(e.message); }).finally(() => setChargement(false));
+    getEspaceArchives(q).then(setData).catch((e) => { setErreur(true); toast.error(e.message); }).finally(() => setChargement(false));
   }, [toast]);
-  useEffect(() => { charger(); }, [charger]);
+  // Recherche pilotée serveur (debounce) : le serveur filtre sur l'ensemble des
+  // archives avant de plafonner à 300, donc un document ancien reste trouvable.
+  useEffect(() => {
+    const t = setTimeout(() => charger(recherche.trim()), 300);
+    return () => clearTimeout(t);
+  }, [recherche, charger]);
 
   const lignes = useMemo(() => {
     if (!data) return [];
@@ -64,7 +69,7 @@ export function EspaceArchives() {
           getRowId={(a) => a.id}
           loading={chargement}
           error={erreur}
-          onRetry={charger}
+          onRetry={() => charger(recherche.trim())}
           pageSize={12}
           libelle="documents"
           initialSort={{ key: "date", dir: "desc" }}

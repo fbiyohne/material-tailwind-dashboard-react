@@ -123,7 +123,7 @@ export function Conseil() {
       </td>
       <td>
         {peutGerer && m.actif ? (
-          <select defaultValue={m.role} className="bpn-input !w-32 !py-1 text-sm"
+          <select value={m.role} className="bpn-input !w-32 !py-1 text-sm"
             onChange={(e) => { const v = e.target.value; if (v !== m.role) action(() => majMembreConseil(m.id, { role: v }), "Rôle mis à jour."); }}>
             {ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
           </select>
@@ -131,7 +131,7 @@ export function Conseil() {
       </td>
       <td>
         {peutGerer && m.actif ? (
-          <select defaultValue={m.fonction} className="bpn-input !w-48 !py-1 text-sm"
+          <select value={m.fonction} className="bpn-input !w-48 !py-1 text-sm"
             onChange={(e) => { const v = e.target.value; if (v && v !== m.fonction) action(() => majMembreConseil(m.id, { fonction: v }), "Fonction mise à jour."); }}>
             {optionsFonction(m.fonction).map((f) => <option key={f} value={f}>{f}</option>)}
           </select>
@@ -141,7 +141,7 @@ export function Conseil() {
       <td>
         <div className="flex items-center justify-end gap-2">
           {m.actif && m.role === "bureau" && peutGerer && (
-            <select defaultValue={m.sigle || ""} className="bpn-input !w-20 !py-1 text-xs"
+            <select value={m.sigle || ""} className="bpn-input !w-20 !py-1 text-xs"
               onChange={(e) => action(() => majMembreConseil(m.id, { sigle: e.target.value || null }), "Sigle mis à jour.")}>
               <option value="">—</option>
               {SIGLES.map((s) => <option key={s} value={s}>{s}</option>)}

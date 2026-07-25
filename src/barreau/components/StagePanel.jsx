@@ -53,14 +53,17 @@ export function StagePanel({ membre, onChange }) {
   };
 
   const valider = async () => {
+    if (busy) return;
     const ok = await confirm({
       title: "Valider la fin de stage ?",
       message: `Me ${membre.nom} passera du statut d'avocat stagiaire à celui d'avocat inscrit au tableau. Action réservée au Bâtonnier.`,
       confirmLabel: "Valider la fin de stage",
     });
     if (!ok) return;
+    setBusy(true);
     try { await validerStage(membre.id); toast.success("Fin de stage validée — inscription au tableau des avocats."); onChange?.(); }
     catch (e) { toast.error(e.message); }
+    finally { setBusy(false); }
   };
 
   return (
@@ -80,8 +83,8 @@ export function StagePanel({ membre, onChange }) {
           <div className="h-2 overflow-hidden rounded bg-grisM"><div className="h-full rounded" style={{ width: `${stage?.progression ?? 0}%`, backgroundColor: stage?.termine ? "var(--bpn-vert)" : "var(--bpn-or)" }} /></div>
         </div>
         {peutValider && (
-          <button className="bpn-btn bpn-btn-or mt-4 w-full justify-center" onClick={valider}>
-            <CheckBadgeIcon className="h-4 w-4" /> Valider la fin de stage
+          <button className="bpn-btn bpn-btn-or mt-4 w-full justify-center" onClick={valider} disabled={busy}>
+            <CheckBadgeIcon className="h-4 w-4" /> {busy ? "Validation…" : "Valider la fin de stage"}
           </button>
         )}
         {!peutValider && <p className="mt-4 rounded border-l-[3px] border-or bg-or-L px-3 py-2 text-xs text-gris">La validation de fin de stage est un acte du Bâtonnier.</p>}
