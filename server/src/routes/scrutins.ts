@@ -113,12 +113,18 @@ scrutinsRouter.post("/:id/publier", requireRole("SECRETAIRE_GENERAL"), asyncH(as
   if (s.statut !== "CLOS") throw new HttpError(409, "Clôturez le scrutin avant publication.");
   await prisma.scrutin.update({ where: { id }, data: { statut: "PUBLIE" } });
   if (s.type === "CONSEIL") {
-    // Recompose le Conseil de l'Ordre avec les élus (sièges pourvus par ordre des voix).
+    // Renouvelle les sièges élus (« membre ») par ordre des voix, SANS toucher au
+    // Bâtonnier (élu par un scrutin distinct) ni au Bureau (SG, Trésorière…) : on ne
+    // clôture que les sièges « membre » en exercice, tracés comme sortants (date +
+    // motif), puis on installe les élus. Bâtonnier/Bureau restent en place.
     const elus = s.candidats.slice(0, s.nbSieges);
     await prisma.$transaction([
-      prisma.membreConseil.updateMany({ data: { actif: false } }),
+      prisma.membreConseil.updateMany({
+        where: { actif: true, role: "membre" },
+        data: { actif: false, mandatFin: new Date(), motifSortie: "Fin de mandat (renouvellement du Conseil)" },
+      }),
       ...elus.map((c, i) =>
-        prisma.membreConseil.create({ data: { nom: c.nom, fonction: "Membre du Conseil", ordre: i + 1, actif: true, membreId: c.membreId ?? null, mandatDebut: new Date() } })
+        prisma.membreConseil.create({ data: { nom: c.nom, fonction: "Membre du Conseil", role: "membre", ordre: i + 1, actif: true, membreId: c.membreId ?? null, mandatDebut: new Date() } })
       ),
     ]);
   }

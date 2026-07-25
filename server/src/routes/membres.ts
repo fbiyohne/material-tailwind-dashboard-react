@@ -262,6 +262,10 @@ membresRouter.patch(
         ...data,
         dateNaissance: data.dateNaissance ? new Date(data.dateNaissance) : undefined,
         dateInscription: data.dateInscription ? new Date(data.dateInscription) : undefined,
+        // La date de prestation de serment est reçue en chaîne : convertir en Date
+        // (sinon Prisma rejette). Permet de renseigner/corriger le serment d'un
+        // stagiaire depuis sa fiche, sans passer par un ré-import.
+        dateServment: data.dateServment ? new Date(data.dateServment) : undefined,
       },
     });
     // L'accès espace suit le statut (suspendu/radié/omis → coupé ; régulier → rétabli).

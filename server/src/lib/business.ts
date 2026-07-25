@@ -133,12 +133,16 @@ export async function prochainNumeroAttestation(): Promise<string> {
 // ─── Corps électoral (RG-04, RG-05) ──────────────────────────────────────────
 export function eligibiliteElectorale(
   membre: { qualite: Qualite; statut: string },
-  cot: { montantDu: number; montantPaye: number } | null
+  cot: { montantDu: number; montantPaye: number } | null,
+  tarifs?: Tarifs
 ): { eligible: boolean; raison: string | null } {
   if (membre.qualite === "HONORAIRE") return { eligible: false, raison: "honoraire" };
   if (membre.qualite === "STAGIAIRE") return { eligible: false, raison: "stagiaire" };
   if (["SUSPENDU", "RADIE", "OMIS"].includes(membre.statut)) return { eligible: false, raison: "statut" };
-  const du = cot?.montantDu ?? montantDu(membre.qualite);
+  // Avec les tarifs courants (Paramètres), le dû d'un membre sans ligne persistée est
+  // calculé sur le barème réel via cotisationDue (une exonération à 0 est ainsi respectée) ;
+  // à défaut, on retombe sur le barème statique (rétrocompatibilité).
+  const du = tarifs ? cotisationDue(cot, tarifs, membre.qualite) : cot?.montantDu ?? montantDu(membre.qualite);
   const paye = cot?.montantPaye ?? 0;
   if (statutCotisation(du, paye) !== "ajour") return { eligible: false, raison: "cotisation" };
   return { eligible: true, raison: null };

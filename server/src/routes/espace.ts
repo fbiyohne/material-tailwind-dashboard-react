@@ -543,8 +543,11 @@ espaceRouter.get(
     // Éligibilité électorale de l'avocat (même règle que le POST /voter) : exposée
     // pour que l'espace affiche l'état plutôt que de laisser buter sur un 403.
     const annee = new Date().getFullYear();
-    const membre = await prisma.membre.findUnique({ where: { id: moi }, include: { cotisations: { where: { annee } } } });
-    const eligible = membre ? eligibiliteElectorale(membre, membre.cotisations[0] ?? null).eligible : false;
+    const [membre, tarifs] = await Promise.all([
+      prisma.membre.findUnique({ where: { id: moi }, include: { cotisations: { where: { annee } } } }),
+      tarifsActuels(),
+    ]);
+    const eligible = membre ? eligibiliteElectorale(membre, membre.cotisations[0] ?? null, tarifs).eligible : false;
     res.json(
       scrutins.map((s) => ({
         id: s.id,
@@ -579,9 +582,12 @@ espaceRouter.post(
 
     // Éligibilité de l'électeur (corps électoral : statut + cotisation à jour).
     const annee = new Date().getFullYear();
-    const membre = await prisma.membre.findUnique({ where: { id: moi }, include: { cotisations: { where: { annee } } } });
+    const [membre, tarifs] = await Promise.all([
+      prisma.membre.findUnique({ where: { id: moi }, include: { cotisations: { where: { annee } } } }),
+      tarifsActuels(),
+    ]);
     if (!membre) throw new HttpError(404, "Fiche introuvable");
-    if (!eligibiliteElectorale(membre, membre.cotisations[0] ?? null).eligible) {
+    if (!eligibiliteElectorale(membre, membre.cotisations[0] ?? null, tarifs).eligible) {
       throw new HttpError(403, "Vous ne figurez pas dans le corps électoral pour ce scrutin.");
     }
 
