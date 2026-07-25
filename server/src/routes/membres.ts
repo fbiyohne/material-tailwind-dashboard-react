@@ -5,7 +5,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole, type AuthRequest } from "../middleware/auth.js";
-import { prochainNumInscription, prochainNumeroAttestation, archiver } from "../lib/business.js";
+import { prochainNumInscription, prochainNumeroAttestation, archiver, avecRejeuUnicite } from "../lib/business.js";
 import { enregistrerFichier } from "../lib/storage.js";
 import { envoyerPdf } from "../lib/pdf.js";
 import { attestationHtml } from "../lib/templates.js";
@@ -21,9 +21,14 @@ membresRouter.get(
   "/",
   asyncH(async (req, res) => {
     const q = String(req.query.q ?? "").trim();
-    const qualite = req.query.qualite as string | undefined;
-    const qualiteNot = req.query.qualiteNot as string | undefined;
-    const statut = req.query.statut as string | undefined;
+    // Filtres d'énumération validés : une valeur hors énum est ignorée (→ undefined)
+    // plutôt que transmise à Prisma, qui lèverait une 500 sur une valeur inconnue.
+    const QUALITES = ["AVOCAT", "STAGIAIRE", "HONORAIRE"];
+    const STATUTS = ["INSCRIT", "SUSPENDU", "RADIE", "OMIS", "HONORAIRE", "STAGIAIRE"];
+    const dansEnum = (v: unknown, set: string[]) => (typeof v === "string" && set.includes(v) ? v : undefined);
+    const qualite = dansEnum(req.query.qualite, QUALITES);
+    const qualiteNot = dansEnum(req.query.qualiteNot, QUALITES);
+    const statut = dansEnum(req.query.statut, STATUTS);
     const page = Math.max(1, Number(req.query.page ?? 1));
     const pageSize = Math.min(200, Math.max(1, Number(req.query.pageSize ?? 20)));
     const sort = String(req.query.sort ?? "num");
@@ -146,8 +151,11 @@ membresRouter.post(
   requireRole("SECRETAIRE_GENERAL"),
   asyncH(async (req, res) => {
     const data = inscriptionSchema.parse(req.body);
-    const { num, numInscription } = await prochainNumInscription();
-    const membre = await prisma.membre.create({
+    // Rejeu sur collision : deux inscriptions concurrentes calculeraient le même
+    // `num` (max+1) ; la contrainte @unique(num) rejette, on recalcule et réessaie.
+    const membre = await avecRejeuUnicite(async () => {
+      const { num, numInscription } = await prochainNumInscription();
+      return prisma.membre.create({
       data: {
         num,
         numInscription,
@@ -168,6 +176,7 @@ membresRouter.post(
         maitreStage: data.maitreStage,
         dureeMois: data.dureeMois,
       },
+      });
     });
     res.status(201).json(membre);
   })

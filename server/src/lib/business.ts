@@ -108,6 +108,22 @@ export async function prochainNumeroQuitus(annee: number): Promise<string> {
   return `Q-${annee}-${pad(prochainRang(items.map((q) => q.numero), 2), 3)}`;
 }
 
+/**
+ * Réexécute `fn` en cas de collision d'unicité (P2002) : les numéros calculés en
+ * « max+1 » hors verrou (inscription, référence disciplinaire) peuvent entrer en
+ * collision sous concurrence — au lieu d'un 500, on recalcule et on réessaie.
+ */
+export async function avecRejeuUnicite<T>(fn: () => Promise<T>, tentatives = 4): Promise<T> {
+  for (let i = 0; ; i++) {
+    try {
+      return await fn();
+    } catch (e: unknown) {
+      if ((e as { code?: string })?.code === "P2002" && i < tentatives) continue;
+      throw e;
+    }
+  }
+}
+
 /** Référence disciplinaire unique AAAA-NN (BR-06 / RG-12). */
 export async function prochaineReferenceDossier(annee: number): Promise<string> {
   const items = await prisma.dossierDisciplinaire.findMany({ where: { reference: { startsWith: `${annee}-` } }, select: { reference: true } });

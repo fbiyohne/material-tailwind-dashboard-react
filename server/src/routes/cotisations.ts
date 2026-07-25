@@ -108,7 +108,9 @@ cotisationsRouter.post(
     const aCreer = membres
       .filter((m) => m.cotisations.length === 0)
       .map((m) => ({ membreId: m.id, annee, montantDu: montantDuAvec(tarifs, m.qualite), montantPaye: 0, valideTresoriere: false }));
-    if (aCreer.length > 0) await prisma.cotisation.createMany({ data: aCreer });
+    // skipDuplicates : deux générations concurrentes (ou une race avec un paiement
+    // qui upsert la ligne) ne font plus échouer tout le lot sur @unique(membreId, annee).
+    if (aCreer.length > 0) await prisma.cotisation.createMany({ data: aCreer, skipDuplicates: true });
     res.status(201).json({ annee, crees: aCreer.length, existantes: membres.length - aCreer.length, total: membres.length });
   })
 );

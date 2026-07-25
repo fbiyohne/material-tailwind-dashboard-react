@@ -111,22 +111,27 @@ scrutinsRouter.post("/:id/publier", requireRole("SECRETAIRE_GENERAL"), asyncH(as
   const s = await prisma.scrutin.findUnique({ where: { id }, include: { candidats: { orderBy: { voix: "desc" } } } });
   if (!s) throw new HttpError(404, "Scrutin introuvable");
   if (s.statut !== "CLOS") throw new HttpError(409, "Clôturez le scrutin avant publication.");
-  await prisma.scrutin.update({ where: { id }, data: { statut: "PUBLIE" } });
-  if (s.type === "CONSEIL") {
-    // Renouvelle les sièges élus (« membre ») par ordre des voix, SANS toucher au
-    // Bâtonnier (élu par un scrutin distinct) ni au Bureau (SG, Trésorière…) : on ne
-    // clôture que les sièges « membre » en exercice, tracés comme sortants (date +
-    // motif), puis on installe les élus. Bâtonnier/Bureau restent en place.
-    const elus = s.candidats.slice(0, s.nbSieges);
-    await prisma.$transaction([
-      prisma.membreConseil.updateMany({
+  const elus = s.type === "CONSEIL" ? s.candidats.slice(0, s.nbSieges) : [];
+  // Publication + recomposition dans UNE transaction avec claim atomique : deux
+  // « publier » concurrents ne peuvent pas recomposer le Conseil deux fois (le 2e
+  // claim voit un statut ≠ CLOS → 409), et si la recomposition échoue, le passage
+  // à PUBLIE est annulé (le scrutin reste rejouable).
+  await prisma.$transaction(async (tx) => {
+    const claim = await tx.scrutin.updateMany({ where: { id, statut: "CLOS" }, data: { statut: "PUBLIE" } });
+    if (claim.count === 0) throw new HttpError(409, "Scrutin déjà publié.");
+    if (s.type === "CONSEIL") {
+      // Renouvelle les sièges élus (« membre ») par ordre des voix, SANS toucher au
+      // Bâtonnier (scrutin distinct) ni au Bureau : on ne clôture que les sièges
+      // « membre » en exercice (tracés sortants), puis on installe les élus.
+      await tx.membreConseil.updateMany({
         where: { actif: true, role: "membre" },
         data: { actif: false, mandatFin: new Date(), motifSortie: "Fin de mandat (renouvellement du Conseil)" },
-      }),
-      ...elus.map((c, i) =>
-        prisma.membreConseil.create({ data: { nom: c.nom, fonction: "Membre du Conseil", role: "membre", ordre: i + 1, actif: true, membreId: c.membreId ?? null, mandatDebut: new Date() } })
-      ),
-    ]);
-  }
+      });
+      for (let i = 0; i < elus.length; i++) {
+        const c = elus[i];
+        await tx.membreConseil.create({ data: { nom: c.nom, fonction: "Membre du Conseil", role: "membre", ordre: i + 1, actif: true, membreId: c.membreId ?? null, mandatDebut: new Date() } });
+      }
+    }
+  });
   res.json(await detail(id));
 }));

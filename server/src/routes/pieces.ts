@@ -54,8 +54,16 @@ piecesRouter.get(
   asyncH(async (req, res) => {
     const piece = await trouver(Number(req.params.id));
     const buffer = lireFichier(piece.fichier);
-    res.setHeader("Content-Type", piece.mimeType || "application/octet-stream");
-    res.setHeader("Content-Disposition", `inline; filename="${piece.nomFichier.replace(/"/g, "")}"`);
+    // Sécurité : ne rendre « inline » que des types sûrs et connus (PDF/images).
+    // Le mimeType est saisi librement à l'upload ; servir un text/html en inline
+    // (CSP désactivée en mono-service) exécuterait un script dans l'origine de l'app.
+    // Tout le reste est forcé en téléchargement neutre, avec anti-sniffing.
+    const INLINE_SUR = new Set(["application/pdf", "image/png", "image/jpeg", "image/gif", "image/webp"]);
+    const sur = INLINE_SUR.has(piece.mimeType ?? "");
+    const nom = piece.nomFichier.replace(/[\r\n"]/g, "");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Content-Type", sur ? piece.mimeType! : "application/octet-stream");
+    res.setHeader("Content-Disposition", `${sur ? "inline" : "attachment"}; filename="${nom}"`);
     res.end(buffer);
   })
 );

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole, type AuthRequest } from "../middleware/auth.js";
-import { prochaineReferenceDossier, archiver } from "../lib/business.js";
+import { prochaineReferenceDossier, archiver, avecRejeuUnicite } from "../lib/business.js";
 import { envoyerPdf } from "../lib/pdf.js";
 import { convocationDisciplineHtml, decisionDisciplineHtml } from "../lib/templates.js";
 
@@ -62,19 +62,23 @@ disciplineRouter.post(
   "/",
   asyncH(async (req: AuthRequest, res) => {
     const data = ouvrirSchema.parse(req.body);
-    const reference = await prochaineReferenceDossier(new Date().getFullYear());
-    const dossier = await prisma.dossierDisciplinaire.create({
-      data: {
-        reference,
-        avocatNom: data.avocatNom,
-        objet: data.objet,
-        plaignant: data.plaignant,
-        rapporteur: data.rapporteur,
-        dateSaisine: data.dateSaisine ? new Date(data.dateSaisine) : new Date(),
-        membreId: data.membreId ?? null,
-      },
+    // Rejeu sur collision : deux ouvertures concurrentes la même année calculeraient
+    // la même référence AAAA-NN (max+1) ; @unique(reference) rejette → on recalcule.
+    const dossier = await avecRejeuUnicite(async () => {
+      const reference = await prochaineReferenceDossier(new Date().getFullYear());
+      return prisma.dossierDisciplinaire.create({
+        data: {
+          reference,
+          avocatNom: data.avocatNom,
+          objet: data.objet,
+          plaignant: data.plaignant,
+          rapporteur: data.rapporteur,
+          dateSaisine: data.dateSaisine ? new Date(data.dateSaisine) : new Date(),
+          membreId: data.membreId ?? null,
+        },
+      });
     });
-    await journaliser(`Ouverture du dossier ${reference} — ${data.avocatNom}`, req.user!.id);
+    await journaliser(`Ouverture du dossier ${dossier.reference} — ${data.avocatNom}`, req.user!.id);
     res.status(201).json(dossier);
   })
 );
