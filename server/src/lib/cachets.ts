@@ -9,14 +9,22 @@ import path from "node:path";
  *
  * Note : l'emblème/logo d'en-tête reste géré séparément (Paramètres → identité).
  */
-const DOSSIER = path.resolve(process.cwd(), "../src/barreau/assets/cachets");
+// Copie serveur-locale (toujours présente au runtime, indépendante du front),
+// avec repli sur les assets partagés du front en développement.
+const DOSSIERS = [
+  path.resolve(process.cwd(), "assets/cachets"),
+  path.resolve(process.cwd(), "../src/barreau/assets/cachets"),
+];
 
 function charger(fichier: string): string {
-  try {
-    return `data:image/png;base64,${readFileSync(path.join(DOSSIER, fichier)).toString("base64")}`;
-  } catch {
-    return "";
+  for (const d of DOSSIERS) {
+    try {
+      return `data:image/png;base64,${readFileSync(path.join(d, fichier)).toString("base64")}`;
+    } catch {
+      /* essaie le dossier suivant */
+    }
   }
+  return "";
 }
 
 const CACHETS: Record<"batonnier" | "tresoriere" | "sg", string> = {
