@@ -1,0 +1,619 @@
+// Schéma de données — Secrétariat Général du Barreau de Pointe-Noire (V2)
+// PostgreSQL + Prisma. Modélise les entités principales du PRD (§6.2).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SECRETAIRE_GENERAL
+  BATONNIER
+  TRESORIERE
+  ADMIN
+  AVOCAT
+  SECRETAIRE_ADJOINT
+  CONSULTATION
+  ACCUEIL
+}
+
+/// Matrice de permissions éditable : une ligne = un module autorisé pour un rôle.
+/// L'ADMIN a toujours tout (implicite) ; l'absence de lignes pour un rôle retombe
+/// sur les valeurs par défaut définies en code (lib/rbac).
+model RolePermission {
+  role       Role
+  permission String
+
+  @@id([role, permission])
+  @@index([role])
+}
+
+enum Qualite {
+  AVOCAT
+  STAGIAIRE
+  HONORAIRE
+}
+
+enum StatutMembre {
+  INSCRIT
+  SUSPENDU
+  RADIE
+  OMIS
+  HONORAIRE
+  STAGIAIRE
+}
+
+enum TypeAssemblee {
+  AGO
+  AGE
+}
+
+enum StatutDossier {
+  OUVERT
+  INSTRUCTION
+  AUDIENCE
+  DECISION
+  CLASSE
+}
+
+enum StatutPublication {
+  BROUILLON
+  A_VALIDER
+  VALIDE
+  PUBLIE
+}
+
+model User {
+  id            Int            @id @default(autoincrement())
+  nom           String
+  email         String         @unique
+  role          Role
+  passwordHash  String
+  actif         Boolean        @default(true)
+  // Version de session : incrémentée à chaque changement de mot de passe pour
+  // invalider les jetons d'accès (JWT) déjà émis avant leur expiration.
+  tokenVersion  Int            @default(0)
+  createdAt     DateTime       @default(now())
+  refreshTokens RefreshToken[]
+  // Espace avocat : un compte de rôle AVOCAT est rattaché à sa fiche Membre
+  // (1-1). Le membreId du jeton sert au cloisonnement (un avocat ne voit que
+  // ses propres données). Activation par lien : le secrétariat provisionne le
+  // compte (actif=false) puis l'avocat choisit son mot de passe via le token.
+  membre           Membre?   @relation(fields: [membreId], references: [id], onDelete: Cascade)
+  membreId         Int?      @unique
+  activationToken  String?   @unique
+  activationExpire DateTime?
+  // Réinitialisation de mot de passe en self-service (lien à durée limitée).
+  resetToken       String?   @unique
+  resetExpire      DateTime?
+  notifications    Notification[]
+}
+
+/// Centre de notifications in-app : alerte destinée à UN utilisateur (back-office
+/// ou avocat), distincte du JournalNotification (journal des emails/SMS émis).
+/// Un événement diffusé (ex. publication) crée une ligne par destinataire.
+model Notification {
+  id        Int      @id @default(autoincrement())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int
+  type      String // DEMANDE_ACCES, PIECE_SOUMISE, RECU, QUITUS, PUBLICATION, DECISION…
+  titre     String
+  message   String
+  lien      String? // route front cliquable (ex. « /utilisateurs », « /espace/documents »)
+  lu        Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, lu])
+  @@index([userId, createdAt])
+}
+
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  tokenHash String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  // Horodatage de révocation : un rejeu juste après rotation est probablement
+  // bénin (retry réseau) ; un rejeu tardif signale un vol (révocation de la famille).
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+}
+
+model Membre {
+  id              Int          @id @default(autoincrement())
+  num             Int          @unique
+  numInscription  String?      @unique
+  nom             String
+  qualite         Qualite
+  statut          StatutMembre @default(INSCRIT)
+  sexe            String? // « H » / « F » — reporting institutionnel (parité) ; null = non renseigné
+  cabinet         String?
+  tel             String?
+  email           String?
+  rccm            String?
+  cnss            String?
+  adresse         String?
+  dateNaissance   DateTime?
+  dateInscription DateTime?
+  observations    String?
+  // Stage (avocats stagiaires)
+  dateServment    DateTime?
+  dureeMois       Int?
+  maitreStage     String?
+  stageValideAt   DateTime? // fin de stage validée (passage stagiaire → avocat)
+  stageValidePar  String?
+
+  rapportsStage RapportStage[]
+  cotisations Cotisation[]
+  recus       Recu[]
+  quitus      Quitus[]
+  timbres     Timbre[]
+  droitsPlaidoirie DroitPlaidoirie[]
+  dossiers    DossierDisciplinaire[]
+  pieces      PieceDossier[]
+  paiements   Paiement[]
+  conversations   ConversationParticipant[] // fils de messagerie auxquels le membre participe
+  messagesEnvoyes Message[]                  // messages dont le membre est l'auteur
+  emargements     Emargement[]               // participations aux scrutins (unicité par scrutin)
+  candidatures    Candidat[]                 // candidatures à des scrutins
+  mandatsConseil  MembreConseil[]            // sièges au Conseil rattachés à ce membre
+  compte      User?                  // compte d'accès à l'espace avocat (1-1, optionnel)
+  // Personne morale (cabinet) : rattachement structuré. Le champ texte `cabinet`
+  // est conservé pour l'historique/import ; `cabinetLie` est la relation exploitée.
+  cabinetId       Int?
+  cabinetLie      Cabinet?  @relation("CabinetMembres", fields: [cabinetId], references: [id])
+  cabinetsDiriges Cabinet[] @relation("CabinetTitulaire")
+  createdAt   DateTime               @default(now())
+}
+
+/// Personne morale (cabinet, société ou association d'avocats). Regroupe des
+/// membres, porte un titulaire, et — si sa convention est déposée à l'Ordre —
+/// figure dans la section « personnes morales » du tableau, numérotée par ancienneté.
+model Cabinet {
+  id                Int       @id @default(autoincrement())
+  nom               String
+  forme             String? // Cabinet individuel, Société civile professionnelle, Association d'avocats…
+  adresse           String?
+  tel               String?
+  email             String?
+  conventionDeposee Boolean   @default(false)
+  statut            String    @default("actif") // « actif » | « retiré »
+  dateRetrait       DateTime?
+  motifRetrait      String?
+  titulaireId       Int?
+  titulaire         Membre?   @relation("CabinetTitulaire", fields: [titulaireId], references: [id])
+  membres           Membre[]  @relation("CabinetMembres")
+  createdAt         DateTime  @default(now())
+}
+
+/// Rapport / évaluation périodique de stage d'un avocat stagiaire.
+model RapportStage {
+  id           Int      @id @default(autoincrement())
+  membre       Membre   @relation(fields: [membreId], references: [id], onDelete: Cascade)
+  membreId     Int
+  periode      String // ex. « 1er trimestre 2026 »
+  date         DateTime @default(now())
+  appreciation String // évaluation / compte rendu
+  note         String? // mention (Favorable / Réservé / Défavorable…)
+  auteur       String? // qui a consigné le rapport
+  createdAt    DateTime @default(now())
+
+  @@index([membreId])
+}
+
+enum StatutPaiement {
+  INITIE
+  EN_ATTENTE
+  REUSSI
+  ECHEC
+}
+
+/// Paiement en ligne (passerelle) — cotisation ou droit de plaidoirie.
+/// À la réussite, alimente le flux d'encaissement (reçu + situation, BR-03).
+model Paiement {
+  id         Int            @id @default(autoincrement())
+  ref        String         @unique
+  canal      String // MTN, AIRTEL, CARTE, VIREMENT, SANDBOX
+  type       String // cotisation, droit
+  membre     Membre         @relation(fields: [membreId], references: [id])
+  membreId   Int
+  annee      Int
+  montant    Int
+  statut     StatutPaiement @default(INITIE)
+  recuNumero String? // reçu émis à la réussite (garantit l'idempotence)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  @@index([membreId])
+}
+
+enum StatutPiece {
+  A_VERIFIER
+  VERIFIEE
+  REJETEE
+}
+
+/// Journal des notifications émises (email / SMS) — traçabilité des envois.
+model JournalNotification {
+  id           Int      @id @default(autoincrement())
+  canal        String // EMAIL, SMS
+  destinataire String
+  sujet        String
+  evenement    String // RELANCE, DEMANDE_ACCUSE, DEMANDE_DECISION, RECU, …
+  statut       String // ENVOYE, ECHEC
+  simulation   Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+/// Pièce du dossier d'inscription (vérification documentaire — KYC proportionné).
+/// Accès cloisonné (données personnelles) ; vérification par le SG/Admin.
+model PieceDossier {
+  id          Int         @id @default(autoincrement())
+  membre      Membre      @relation(fields: [membreId], references: [id], onDelete: Cascade)
+  membreId    Int
+  type        String // IDENTITE, DIPLOME, SERMENT, PHOTO, CASIER, AUTRE
+  nomFichier  String
+  fichier     String // chemin de stockage relatif (StorageProvider)
+  mimeType    String
+  taille      Int
+  statut      StatutPiece @default(A_VERIFIER)
+  note        String?
+  verifieePar String?
+  verifieeAt  DateTime?
+  createdAt   DateTime    @default(now())
+
+  @@index([membreId])
+}
+
+model DroitPlaidoirie {
+  id           Int       @id @default(autoincrement())
+  membre       Membre    @relation(fields: [membreId], references: [id], onDelete: Cascade)
+  membreId     Int
+  annee        Int
+  montantDu    Int
+  montantPaye  Int       @default(0)
+  datePaiement DateTime?
+  mode         String?
+  ref          String?
+
+  @@unique([membreId, annee])
+  @@index([annee])
+}
+
+model Cotisation {
+  id               Int       @id @default(autoincrement())
+  membre           Membre    @relation(fields: [membreId], references: [id], onDelete: Cascade)
+  membreId         Int
+  annee            Int
+  montantDu        Int
+  montantPaye      Int       @default(0)
+  datePaiement     DateTime?
+  mode             String?
+  ref              String?
+  valideTresoriere Boolean   @default(false)
+
+  @@unique([membreId, annee])
+  @@index([annee])
+}
+
+model Recu {
+  id        Int      @id @default(autoincrement())
+  numero    String   @unique
+  membre    Membre   @relation(fields: [membreId], references: [id])
+  membreId  Int
+  montant   Int
+  annee     Int
+  date      DateTime
+  mode      String?
+  ref       String?
+  objet     String?
+  createdAt DateTime @default(now())
+}
+
+model Quitus {
+  id           Int      @id @default(autoincrement())
+  numero       String   @unique
+  membre       Membre   @relation(fields: [membreId], references: [id])
+  membreId     Int
+  annee        Int
+  dateEmission DateTime
+  createdAt    DateTime @default(now())
+
+  // Un seul quitus par avocat et par exercice — défense en profondeur (la garde
+  // applicative existe déjà, cette contrainte la rend infaillible sous concurrence).
+  @@unique([membreId, annee])
+}
+
+/// Timbre / vignette électronique de droit de plaidoirie, apposé par l'avocat sur
+/// ses actes. Preuve unique et vérifiable (QR → page publique) par affaire.
+model Timbre {
+  id          Int      @id @default(autoincrement())
+  numero      Int      @unique // N° séquentiel affiché (ex. « N° 45 »)
+  code        String   @unique // identifiant unique (barre noire) ; sert au QR/vérification
+  membre      Membre   @relation(fields: [membreId], references: [id], onDelete: Cascade)
+  membreId    Int
+  affaire     String
+  reference   String?
+  juridiction String?
+  cabinet     String?
+  montant     Int
+  canal       String? // moyen de paiement (MTN, AIRTEL, CARTE, VIREMENT, SANDBOX)
+  refPaiement String? // référence de la transaction (traçabilité)
+  statut      String   @default("VALIDE") // VALIDE | ANNULE
+  createdAt   DateTime @default(now())
+
+  @@index([membreId])
+}
+
+/// Compteur atomique par clé (ex. « ATT-2026 ») — numérotation officielle sûre
+/// sous concurrence et monotone (pas de réutilisation après suppression).
+model Compteur {
+  cle    String @id
+  valeur Int    @default(0)
+}
+
+model DossierDisciplinaire {
+  id              Int           @id @default(autoincrement())
+  reference       String        @unique
+  membre          Membre?       @relation(fields: [membreId], references: [id])
+  membreId        Int?
+  avocatNom       String
+  objet           String
+  plaignant       String? // auteur de la saisine / plainte
+  rapporteur      String? // membre instructeur désigné
+  dateSaisine     DateTime
+  dateConvocation DateTime?
+  dateAudience    DateTime?
+  decision        String?
+  sanction        String?
+  recours         String? // recours formé contre la décision
+  dateRecours     DateTime?
+  pieces          String[]      @default([])
+  statut          StatutDossier @default(OUVERT)
+  createdAt       DateTime      @default(now())
+}
+
+model Reunion {
+  id          Int      @id @default(autoincrement())
+  date        DateTime
+  heure       String?
+  lieu        String?
+  ordreDuJour String[]
+  statut      String   @default("planifiee")
+  pv          String?
+  presences   Json?
+}
+
+model Assemblee {
+  id            Int           @id @default(autoincrement())
+  type          TypeAssemblee
+  date          DateTime
+  lieu          String?
+  ordreDuJour   String[]
+  quorumPresent Int           @default(0)
+  statut        String        @default("convoquee")
+  decisions     String[]
+  pv            String?
+}
+
+model Archive {
+  id        Int       @id @default(autoincrement())
+  categorie String
+  titre     String
+  reference String?
+  date      DateTime?
+  membreNom String?
+  archiveLe DateTime  @default(now())
+}
+
+model Publication {
+  id      Int               @id @default(autoincrement())
+  titre   String
+  type    String
+  contenu String?
+  statut  StatutPublication @default(A_VALIDER)
+  date    DateTime          @default(now())
+}
+
+model JournalDiscipline {
+  id     Int      @id @default(autoincrement())
+  action String
+  quand  DateTime @default(now())
+  userId Int?
+}
+
+/// Journal d'audit transverse — historise les actions importantes (RG-16 / NFR-09).
+model JournalAudit {
+  id      Int      @id @default(autoincrement())
+  action  String
+  cible   String?
+  methode String
+  chemin  String
+  statut  Int
+  ip      String?
+  userId  Int?
+  userNom String?
+  quand   DateTime @default(now())
+
+  @@index([quand])
+}
+
+model Parametres {
+  id   Int  @id @default(1)
+  data Json
+}
+
+/// Composition du Conseil de l'Ordre — alimente les feuilles de présence des réunions (FR-REU).
+model MembreConseil {
+  id          Int       @id @default(autoincrement())
+  nom         String
+  fonction    String
+  // Rôle structuré : « batonnier » (siège protocolaire), « bureau » (SG, Trésorière…),
+  // « membre » (membre du Conseil). Pilote le regroupement à l'affichage.
+  role        String    @default("membre")
+  sigle       String? // sigle protocolaire du bureau (SGO, SGA, TG, TGA)
+  ordre       Int       @default(0)
+  // actif=true → siège en exercice ; actif=false → mandat clôturé (« sortant »),
+  // conservé comme historique avec date et motif de sortie.
+  actif       Boolean   @default(true)
+  motifSortie String? // motif de fin de mandat (démission, décès, fin de mandat…)
+  // Avocat rattaché (mandat issu d'un scrutin). SET NULL à la suppression du membre :
+  // le siège/l'historique est conservé (nom dénormalisé) sans référence pendante.
+  membre      Membre?   @relation(fields: [membreId], references: [id], onDelete: SetNull)
+  membreId    Int? // avocat rattaché (mandat issu d'un scrutin)
+  mandatDebut DateTime?
+  mandatFin   DateTime?
+}
+
+enum TypeScrutin {
+  CONSEIL
+  BATONNIER
+  AUTRE
+}
+
+enum ModaliteScrutin {
+  PRESENTIEL // résultats saisis par le Secrétariat (vote en assemblée)
+  EN_LIGNE // vote des avocats depuis leur espace
+}
+
+enum StatutScrutin {
+  PREPARATION
+  OUVERT
+  CLOS
+  PUBLIE
+}
+
+/// Scrutin (élection du Conseil de l'Ordre / du Bâtonnier).
+model Scrutin {
+  id        Int             @id @default(autoincrement())
+  titre     String
+  type      TypeScrutin
+  modalite  ModaliteScrutin
+  statut    StatutScrutin   @default(PREPARATION)
+  nbSieges  Int             @default(1)
+  ouvertLe  DateTime?
+  closLe    DateTime?
+  createdAt DateTime        @default(now())
+
+  candidats   Candidat[]
+  emargements Emargement[]
+}
+
+model Candidat {
+  id        Int      @id @default(autoincrement())
+  scrutin   Scrutin  @relation(fields: [scrutinId], references: [id], onDelete: Cascade)
+  scrutinId Int
+  // Avocat rattaché (facultatif). SET NULL à la suppression : on ne perd pas la
+  // candidature (nom dénormalisé), mais on n'a plus de référence pendante.
+  membre    Membre?  @relation(fields: [membreId], references: [id], onDelete: SetNull)
+  membreId  Int?
+  nom       String
+  // Décompte : saisi (présentiel) ou incrémenté à chaque vote (en ligne, anonyme —
+  // aucun bulletin individuel n'est stocké, donc rien ne relie un votant à son choix).
+  voix      Int      @default(0)
+
+  @@index([scrutinId])
+}
+
+/// Émargement : trace la PARTICIPATION d'un votant (unicité), sans lien vers son choix.
+model Emargement {
+  id        Int      @id @default(autoincrement())
+  scrutin   Scrutin  @relation(fields: [scrutinId], references: [id], onDelete: Cascade)
+  scrutinId Int
+  membre    Membre   @relation(fields: [membreId], references: [id], onDelete: Cascade)
+  membreId  Int
+  createdAt DateTime @default(now())
+
+  @@unique([scrutinId, membreId])
+}
+
+/// Calendrier éditorial mensuel de la Lettre du Bâtonnier (FR-BAT).
+model CalendrierEditorial {
+  id      Int       @id @default(autoincrement())
+  mois    String    @unique
+  theme   String
+  statut  String    @default("a_rediger")
+  ordre   Int       @default(0)
+  /// Contenu rédigé de l'article (projet IA amendé par le Bâtonnier). Persisté
+  /// pour survivre aux rechargements et être partagé entre postes.
+  texte   String?
+  /// true : brouillon issu d'un gabarit (IA non configurée) ; false : rédigé par l'IA.
+  simule  Boolean   @default(true)
+  dateMaj DateTime?
+}
+
+/// Messagerie interne — fil de discussion entre un avocat et l'administration
+/// (Secrétariat) ou entre confrères. Cloisonnée : un avocat n'accède qu'aux fils
+/// dont il est participant ; l'administration accède aux fils qui lui sont adressés.
+model Conversation {
+  id                 Int                       @id @default(autoincrement())
+  sujet              String
+  /// true : fil avec l'administration ; false : fil entre confrères.
+  avecAdministration Boolean                   @default(false)
+  /// Dernière lecture côté administration (boîte partagée du Secrétariat).
+  adminLastReadAt    DateTime?
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+  participants       ConversationParticipant[]
+  messages           Message[]
+
+  @@index([updatedAt])
+}
+
+/// Participation d'un membre à un fil (1 pour un fil administration, 2 entre confrères).
+model ConversationParticipant {
+  id             Int          @id @default(autoincrement())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId Int
+  membre         Membre       @relation(fields: [membreId], references: [id], onDelete: Cascade)
+  membreId       Int
+  /// Dernière lecture du fil par ce membre (pour le décompte des non-lus).
+  lastReadAt     DateTime?
+
+  @@unique([conversationId, membreId])
+}
+
+/// Message individuel d'un fil. L'auteur est soit un membre, soit l'administration.
+model Message {
+  id                Int          @id @default(autoincrement())
+  conversation      Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId    Int
+  auteurMembre      Membre?      @relation(fields: [auteurMembreId], references: [id], onDelete: SetNull)
+  auteurMembreId    Int?
+  /// true : message émis par l'administration (Secrétariat).
+  estAdministration Boolean      @default(false)
+  /// Nom lisible de l'auteur, figé au moment de l'envoi.
+  auteurNom         String
+  corps             String
+  createdAt         DateTime     @default(now())
+
+  @@index([conversationId])
+}
+
+enum StatutDemande {
+  EN_ATTENTE
+  APPROUVEE
+  REFUSEE
+}
+
+/// Demande d'accès soumise publiquement (page « Demander un accès »).
+/// Ne crée aucun compte : la demande est mise en file d'attente puis validée
+/// par le SG/Admin, qui provisionne le compte (cloisonnement RBAC).
+model DemandeAcces {
+  id             Int           @id @default(autoincrement())
+  nom            String
+  email          String
+  numInscription String?
+  cabinet        String?
+  motif          String
+  statut         StatutDemande @default(EN_ATTENTE)
+  createdAt      DateTime      @default(now())
+  traiteeAt      DateTime?
+}

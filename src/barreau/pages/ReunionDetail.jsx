@@ -1,0 +1,289 @@
+import { useEffect, useState } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { ArrowLeftIcon, CalendarDaysIcon, MapPinIcon, CheckIcon, ArrowDownTrayIcon, TrashIcon, ListBulletIcon, UserGroupIcon, DocumentTextIcon, PaperAirplaneIcon, PencilSquareIcon } from "@heroicons/react/24/outline";
+import { Badge, DocumentModal, EditeurDocument, useToast, useConfirm, PageHeader, Tabs, ErrorState, TableSkeleton } from "../components";
+import { formatDate } from "../utils/format";
+import { assainirHtml } from "../utils/sanitizeHtml";
+import { useAuth } from "../auth/AuthContext";
+import { getReunion, majReunion, archiverDoc, telechargerPvReunionPdf, getConseil, supprimerReunion, convoquerReunion } from "../api/resources";
+
+/** Libellé d'émargement d'un membre du Conseil — sert aussi de clé de présence. */
+const labelConseil = (c) => `${c.nom} — ${c.fonction}`;
+
+function Carte({ titre, action, children }) {
+  return (
+    <div className="bpn-card">
+      <div className="bpn-card-header">
+        <span className="bpn-card-heading">{titre}</span>
+        {action}
+      </div>
+      <div className="p-4">{children}</div>
+    </div>
+  );
+}
+
+export function ReunionDetail() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const toast = useToast();
+  const confirm = useConfirm();
+  const { user } = useAuth();
+  // Édition (ODJ, présences, PV) et suppression = SG (writes serveur réservés au SG).
+  const peutGerer = ["SECRETAIRE_GENERAL", "ADMIN"].includes(user?.role);
+  const [reunion, setReunion] = useState(null);
+  const [conseil, setConseil] = useState([]);
+  const [odj, setOdj] = useState("");
+  const [presences, setPresences] = useState({});
+  const [pv, setPv] = useState("");
+  const [heure, setHeure] = useState("");
+  const [lieu, setLieu] = useState("");
+  const [convocation, setConvocation] = useState(false);
+  const [feuille, setFeuille] = useState(false);
+  const [editerPv, setEditerPv] = useState(false);
+
+  const charger = () => getReunion(Number(id))
+    .then((r) => {
+      setReunion(r);
+      setOdj((r.ordreDuJour ?? []).join("\n"));
+      setPresences(r.presences ?? {});
+      setPv(r.pv ?? "");
+      setHeure(r.heure ?? "");
+      setLieu(r.lieu ?? "");
+    })
+    .catch(() => setReunion(false));
+  useEffect(() => { charger(); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    getConseil().then(setConseil).catch(() => setConseil([]));
+  }, []);
+
+  const membresConseil = conseil.map(labelConseil);
+
+  if (reunion === false) {
+    return (
+      <div className="space-y-4">
+        <Link to="/reunions" className="inline-flex items-center gap-1.5 text-sm text-gris hover:text-navy">
+          <ArrowLeftIcon className="h-4 w-4" /> Retour aux réunions
+        </Link>
+        <div className="bpn-card p-6">
+          <ErrorState title="Réunion introuvable" description="Cette réunion n'existe pas ou a été supprimée." onRetry={charger} />
+        </div>
+      </div>
+    );
+  }
+  if (!reunion) return <div className="bpn-card p-6"><TableSkeleton rows={5} cols={2} /></div>;
+
+  const dateCourte = String(reunion.date).slice(0, 10);
+  const nbPresents = Object.values(presences).filter(Boolean).length;
+
+  const sauverOdj = async () => {
+    try {
+      await majReunion(reunion.id, { ordreDuJour: odj.split("\n").map((s) => s.trim()).filter(Boolean) });
+      toast.success("Ordre du jour mis à jour.");
+    } catch (e) {
+      toast.error(e.message);
+    }
+  };
+  const sauverDetails = async () => {
+    try {
+      const maj = await majReunion(reunion.id, { heure, lieu });
+      setReunion(maj);
+      toast.success("Détails de la réunion mis à jour.");
+    } catch (e) {
+      toast.error(e.message);
+    }
+  };
+  const sauverPresences = async () => {
+    try {
+      // Carte complète (chaque membre du Conseil présent OU absent) : le PV a
+      // besoin de connaître les absents et le total pour la section quorum.
+      const complet = Object.fromEntries(membresConseil.map((n) => [n, !!presences[n]]));
+      await majReunion(reunion.id, { presences: complet });
+      setPresences(complet);
+      toast.success(`Présences enregistrées (${Object.values(complet).filter(Boolean).length}/${membresConseil.length}).`);
+    } catch (e) {
+      toast.error(e.message);
+    }
+  };
+  const telechargerPv = async () => {
+    try {
+      await majReunion(reunion.id, { pv, statut: "tenue" });
+      await telechargerPvReunionPdf(reunion.id);
+      setReunion({ ...reunion, statut: "tenue" });
+      toast.success("Procès-verbal enregistré, archivé et téléchargé (PDF).");
+    } catch (e) {
+      toast.error(e.message);
+    }
+  };
+  const sauverPv = async () => {
+    try {
+      await majReunion(reunion.id, { pv, statut: "tenue" });
+      await archiverDoc({ categorie: "Procès-verbal (Conseil)", titre: `PV réunion du ${dateCourte}`, reference: dateCourte, date: dateCourte });
+      setReunion({ ...reunion, statut: "tenue" });
+      toast.success("Procès-verbal enregistré et archivé.");
+    } catch (e) {
+      toast.error(e.message);
+    }
+  };
+  const supprimer = async () => {
+    const ok = await confirm({
+      title: "Supprimer la réunion",
+      message: "Cette réunion planifiée sera définitivement supprimée. Continuer ?",
+      confirmLabel: "Supprimer",
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await supprimerReunion(reunion.id);
+      toast.success("Réunion supprimée.");
+      navigate("/reunions");
+    } catch (e) {
+      toast.error(e.message);
+    }
+  };
+
+  return (
+    <div className="space-y-5">
+      <PageHeader
+        breadcrumb={[{ label: "Réunions du Conseil", to: "/reunions" }, { label: formatDate(reunion.date) }]}
+        titre={<span className="capitalize">{formatDate(reunion.date)}</span>}
+        sousTitre={
+          <span className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <Badge ton={reunion.statut === "tenue" ? "vert" : "or"}>{reunion.statut === "tenue" ? "Tenue" : "Planifiée"}</Badge>
+            <span className="flex items-center gap-1"><CalendarDaysIcon className="h-3.5 w-3.5" /> {reunion.heure}</span>
+            <span className="flex items-center gap-1"><MapPinIcon className="h-3.5 w-3.5" /> {reunion.lieu}</span>
+          </span>
+        }
+      >
+        <button className="bpn-btn bpn-btn-ghost" onClick={() => setConvocation(true)}>Convocation</button>
+        <button className="bpn-btn bpn-btn-ghost" onClick={() => setFeuille(true)}>Feuille de présence</button>
+        {peutGerer && (
+          <button className="bpn-btn bpn-btn-primary" onClick={async () => {
+            const ok = await confirm({ title: "Envoyer la convocation ?", message: "La convocation sera envoyée par email aux membres du Conseil disposant d'une adresse.", confirmLabel: "Envoyer" });
+            if (!ok) return;
+            try { const r = await convoquerReunion(reunion.id); toast.success(`Convocation envoyée à ${r.envoyes} membre(s)${r.simulation ? " (simulation — SMTP non configuré)" : ""}.`); }
+            catch (e) { toast.error(e.message); }
+          }}>
+            <PaperAirplaneIcon className="h-4 w-4" /> Envoyer la convocation
+          </button>
+        )}
+        {peutGerer && reunion.statut !== "tenue" && (
+          <button className="bpn-btn bpn-btn-ghost text-rouge" onClick={supprimer}><TrashIcon className="h-4 w-4" /> Supprimer</button>
+        )}
+      </PageHeader>
+
+      {peutGerer && (
+        <div className="bpn-card">
+          <div className="bpn-card-header"><span className="bpn-card-heading">Détails de la séance</span>
+            <button className="bpn-btn bpn-btn-primary bpn-btn-sm" onClick={sauverDetails}>Enregistrer</button>
+          </div>
+          <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2">
+            <label className="block"><span className="mb-1 block text-xs uppercase tracking-wide text-gris">Heure</span><input type="time" value={heure} onChange={(e) => setHeure(e.target.value)} className="bpn-input" /></label>
+            <label className="block"><span className="mb-1 block text-xs uppercase tracking-wide text-gris">Lieu</span><input value={lieu} onChange={(e) => setLieu(e.target.value)} className="bpn-input" /></label>
+          </div>
+        </div>
+      )}
+
+      <Tabs
+        tabs={[
+          {
+            id: "odj",
+            label: "Ordre du jour",
+            icon: ListBulletIcon,
+            content: (
+              <Carte titre="Ordre du jour" action={peutGerer ? <button className="bpn-btn bpn-btn-primary bpn-btn-sm" onClick={sauverOdj}>Enregistrer</button> : undefined}>
+                <textarea rows={6} value={odj} onChange={(e) => setOdj(e.target.value)} className="bpn-input" placeholder="Un point par ligne…" />
+              </Carte>
+            ),
+          },
+          {
+            id: "presences",
+            label: "Présences",
+            icon: UserGroupIcon,
+            badge: `${nbPresents}/${membresConseil.length}`,
+            content: (
+              <Carte titre={`Présences (${nbPresents}/${membresConseil.length})`} action={peutGerer ? <button className="bpn-btn bpn-btn-primary bpn-btn-sm" onClick={sauverPresences}>Enregistrer</button> : undefined}>
+                <ul className="space-y-2">
+                  {membresConseil.map((nom) => (
+                    <li key={nom}>
+                      <label className="flex cursor-pointer items-center gap-2.5 text-sm">
+                        <input type="checkbox" checked={!!presences[nom]} onChange={(e) => setPresences({ ...presences, [nom]: e.target.checked })} className="h-4 w-4 accent-vert" />
+                        <span className={presences[nom] ? "text-encre" : "text-gris"}>{nom}</span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+                {membresConseil.length > 0 && (
+                  <div className="mt-3 border-t border-grisL pt-3 text-sm">
+                    <Badge ton={nbPresents * 2 >= membresConseil.length ? "vert" : "rouge"} dot={false}>
+                      {nbPresents * 2 >= membresConseil.length ? "Quorum atteint" : "Quorum non atteint"}
+                    </Badge>
+                    <span className="ml-2 text-gris">{nbPresents}/{membresConseil.length} présents · quorum à {Math.ceil(membresConseil.length / 2)}</span>
+                  </div>
+                )}
+              </Carte>
+            ),
+          },
+          {
+            id: "pv",
+            label: "Procès-verbal",
+            icon: DocumentTextIcon,
+            content: (
+              <Carte titre="Procès-verbal" action={peutGerer ? (
+                <div className="flex gap-2">
+                  <button className="bpn-btn bpn-btn-primary bpn-btn-sm" onClick={() => setEditerPv(true)}><PencilSquareIcon className="h-3.5 w-3.5" /> Rédiger</button>
+                  <button className="bpn-btn bpn-btn-ghost bpn-btn-sm" onClick={telechargerPv}><ArrowDownTrayIcon className="h-3.5 w-3.5" /> PDF</button>
+                  <button className="bpn-btn bpn-btn-or bpn-btn-sm" onClick={sauverPv}><CheckIcon className="h-3.5 w-3.5" /> Enregistrer &amp; archiver</button>
+                </div>
+              ) : undefined}>
+                {pv && assainirHtml(pv)
+                  ? <div className="bpn-doc" dangerouslySetInnerHTML={{ __html: assainirHtml(pv) }} />
+                  : <p className="py-6 text-center text-sm text-gris">Aucun procès-verbal rédigé. Cliquez sur « Rédiger » pour ouvrir l'éditeur.</p>}
+              </Carte>
+            ),
+          },
+        ]}
+      />
+
+      <EditeurDocument
+        open={editerPv}
+        title={`Procès-verbal — réunion du ${formatDate(reunion.date)}`}
+        value={pv}
+        note="Le texte ci-dessous constitue les « Délibérations ». Les sections (convocation, présences & quorum, ordre du jour, clôture) et la signature avec cachet sont ajoutées automatiquement au PDF."
+        onSave={async (html) => {
+          await majReunion(reunion.id, { pv: html });
+          setPv(html);
+          toast.success("Procès-verbal enregistré.");
+        }}
+        onClose={() => setEditerPv(false)}
+      />
+
+      <DocumentModal
+        open={convocation} onClose={() => setConvocation(false)} title="Convocation"
+        reference={`Réunion du ${formatDate(reunion.date)}`} date={dateCourte}
+        pdfPath={`/reunions/${reunion.id}/convocation/pdf`} pdfFilename={`Convocation-reunion-${dateCourte}.pdf`}
+        onArchive={() => archiverDoc({ categorie: "Convocation (Conseil)", titre: `Convocation réunion du ${dateCourte}`, reference: dateCourte, date: dateCourte })}
+      >
+        <p>Le Bâtonnier a l'honneur de convier les membres du Conseil de l'Ordre à la réunion du{" "}
+          <strong>{formatDate(reunion.date)}</strong> à <strong>{reunion.heure}</strong>, au <strong>{reunion.lieu}</strong>.</p>
+        <p className="mt-3 font-medium">Ordre du jour :</p>
+        <ol className="mt-1 list-inside list-decimal">{(reunion.ordreDuJour ?? []).map((pt, i) => <li key={i}>{pt}</li>)}</ol>
+      </DocumentModal>
+
+      <DocumentModal
+        open={feuille} onClose={() => setFeuille(false)} title="Feuille de présence"
+        reference={`Réunion du ${formatDate(reunion.date)}`} date={dateCourte}
+        pdfPath={`/reunions/${reunion.id}/feuille-presence/pdf`} pdfFilename={`Feuille-presence-${dateCourte}.pdf`}
+        signataire={{ role: "Le Secrétaire Général", nom: "Me KALINA-MENGA Lionel" }}
+        onArchive={() => archiverDoc({ categorie: "Feuille de présence", titre: `Feuille de présence du ${dateCourte}`, reference: dateCourte, date: dateCourte })}
+      >
+        <table className="w-full text-xs">
+          <thead><tr className="border-b border-navy text-left text-navy"><th className="py-1">Membre</th><th className="py-1 text-right">Émargement</th></tr></thead>
+          <tbody>{[...membresConseil, "", "", ""].map((nom, i) => <tr key={i} className="border-b border-grisM"><td className="py-3">{nom}</td><td /></tr>)}</tbody>
+        </table>
+      </DocumentModal>
+    </div>
+  );
+}
+
+export default ReunionDetail;

@@ -1,0 +1,64 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: barreau_pn
+      POSTGRES_USER: barreau
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U barreau -d barreau_pn"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://barreau:${POSTGRES_PASSWORD}@db:5432/barreau_pn?schema=public
+      JWT_SECRET: ${JWT_SECRET}
+      SIGNATURE_SECRET: ${SIGNATURE_SECRET}
+      CLIENT_ORIGIN: ${CLIENT_ORIGIN}
+      INSTALL_WIZARD: "1"
+      STATIC_DIR: ../dist
+      # Chemins persistés (cf. volumes) : pièces téléversées et clés de signature.
+      # Sans ces volumes, `docker compose up --build` détruirait les documents et
+      # régénérerait la paire de clés (invalidant la vérification QR des documents
+      # déjà signés).
+      STORAGE_DIR: /app/server/uploads
+      SIGNATURE_KEY_DIR: /app/server/secrets
+      PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
+      NODE_ENV: production
+    volumes:
+      - app-uploads:/app/server/uploads
+      - app-secrets:/app/server/secrets
+    expose:
+      - "4000"
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  db-data:
+  app-uploads:
+  app-secrets:
+  caddy-data:
+  caddy-config:

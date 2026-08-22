@@ -1,3 +1,272 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ════════════════════════════════════════════════════════════
+   Barreau de Pointe-Noire — styles de base institutionnels
+   Repris fidèlement de la maquette UI/UX (palette marine & or)
+   ════════════════════════════════════════════════════════════ */
+@layer base {
+  :root {
+    /* Tokens exposés en CSS pour les accents dynamiques (StatCard, barres…) */
+    --bpn-navy: #1a3a6b;
+    --bpn-or: #c4990a;
+    --bpn-vert: #1a5c3a;
+    --bpn-rouge: #8b1a1a;
+    --bpn-gris: #7a756a;
+  }
+
+  body {
+    @apply bg-creme text-encre font-sans antialiased;
+  }
+
+  /* Focus clavier visible — halo or (accessibilité WCAG 2.4.7) */
+  :focus-visible {
+    outline: 2px solid rgba(196, 153, 10, 0.7);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+  .bpn-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(196, 153, 10, 0.35);
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Respect des préférences de réduction d'animation (WCAG 2.3.3) */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* Scrollbar discrète, ton institutionnel */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-grisM;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gris;
+  }
+}
+
+@layer components {
+  /* ─── Eyebrow / titres de section ─────────────────────────── */
+  /* Eyebrow de section : même taille que les autres libellés capitales (text-xs,
+     13px) pour une hiérarchie cohérente — 2xs reste réservé aux micro-textes. */
+  .bpn-eyebrow {
+    @apply flex items-center gap-2.5 text-xs font-semibold uppercase tracking-[0.4em] text-or-fonce;
+  }
+  .bpn-eyebrow::before {
+    content: "";
+    @apply h-px w-6 bg-or;
+  }
+  /* Titre de section — échelle fluide fidèle à la maquette (28→44px). */
+  .bpn-title {
+    @apply font-display font-semibold leading-tight text-navy;
+    font-size: clamp(28px, 3vw, 44px);
+  }
+
+  /* ─── Carte indicateur (stat card) ────────────────────────── */
+  /* Tuile : entrée en fondu montant + transition douce ; le survol (ombre/lift)
+     est renforcé sur les tuiles cliquables (cf. composant StatCard). */
+  .bpn-stat {
+    @apply rounded-lg border border-grisM border-l-[3px] bg-creme p-4;
+    animation: bpnTileIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+  .bpn-stat:hover {
+    @apply shadow-card;
+  }
+  @keyframes bpnTileIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .bpn-stat-label {
+    @apply mb-2 text-xs font-medium uppercase tracking-wide text-gris;
+  }
+  .bpn-stat-value {
+    @apply font-display text-[28px] font-bold leading-none;
+  }
+  .bpn-stat-sub {
+    @apply mt-1 text-xs text-gris;
+  }
+
+  /* ─── Badges pastilles statut ─────────────────────────────── */
+  .bpn-badge {
+    @apply inline-flex items-center gap-1.5 rounded-xl px-2.5 py-[3px] text-xs font-medium;
+  }
+  .bpn-badge-dot {
+    @apply h-[5px] w-[5px] rounded-full bg-current;
+  }
+  .bpn-badge-vert {
+    @apply bg-vertL text-vert;
+  }
+  /* Statut actionnable / alerte : pastille pleine (la plus visible de la ligne). */
+  .bpn-badge-rouge {
+    @apply bg-rouge text-white;
+  }
+  .bpn-badge-or {
+    @apply bg-or-L text-or;
+  }
+  .bpn-badge-gris {
+    @apply bg-grisL text-gris;
+  }
+  .bpn-badge-bleu {
+    @apply bg-bleuL text-navy;
+  }
+
+  /* ─── Boutons ─────────────────────────────────────────────── */
+  .bpn-btn {
+    @apply inline-flex items-center gap-1.5 rounded border border-transparent px-4 py-2 text-sm font-medium transition-all duration-150;
+  }
+  /* Variante compacte (actions secondaires en ligne, cartes, en-têtes) — remplace
+     les surcharges ad hoc « !px-3 !py-1 text-xs » disséminées dans les pages. */
+  .bpn-btn-sm {
+    @apply px-3 py-1 text-xs;
+  }
+  .bpn-btn-primary {
+    @apply bg-navy text-white hover:bg-navy-2;
+  }
+  .bpn-btn-or {
+    @apply border-or bg-or text-navy-3 hover:bg-or-2;
+  }
+  .bpn-btn-ghost {
+    @apply border-grisM bg-transparent text-gris hover:bg-grisL hover:text-encre;
+  }
+  .bpn-btn-danger {
+    @apply bg-rouge text-white;
+  }
+  .bpn-btn:disabled {
+    @apply cursor-not-allowed opacity-40;
+  }
+
+  /* ─── Carte panneau ───────────────────────────────────────── */
+  .bpn-card {
+    @apply overflow-hidden rounded-xl border border-grisM bg-white;
+  }
+  .bpn-card-header {
+    @apply flex items-center justify-between border-b border-grisM px-4 py-2.5;
+  }
+  .bpn-card-heading {
+    @apply font-display text-base text-navy;
+  }
+
+  /* ─── Contenu riche (éditeur de document + aperçu) : restaure listes,
+     titres et espacements que le reset Tailwind neutralise. ─── */
+  .bpn-doc {
+    @apply text-sm leading-relaxed text-encre;
+  }
+  .bpn-doc p { @apply my-2; }
+  .bpn-doc h3 { @apply mb-1 mt-4 font-display text-base font-semibold text-navy; }
+  .bpn-doc h4 { @apply mb-1 mt-3 font-semibold text-encre; }
+  .bpn-doc ul { @apply my-2 list-disc pl-6; }
+  .bpn-doc ol { @apply my-2 list-decimal pl-6; }
+  .bpn-doc li { @apply my-0.5; }
+  .bpn-doc strong, .bpn-doc b { @apply font-semibold; }
+  .bpn-doc em, .bpn-doc i { @apply italic; }
+  .bpn-doc u { @apply underline; }
+
+  /* ─── Tableau institutionnel unifié (en-tête navy, lignes, hover) ─── */
+  .bpn-table {
+    @apply w-full text-sm;
+  }
+  .bpn-table thead tr {
+    @apply bg-navy text-left text-xs uppercase tracking-[0.08em] text-white/90;
+  }
+  .bpn-table thead th {
+    @apply px-3 py-2.5 font-medium;
+  }
+  .bpn-table tbody td {
+    @apply px-3 py-2.5;
+  }
+  .bpn-table tbody tr {
+    @apply border-b border-grisL transition-colors hover:bg-grisL/60;
+  }
+
+  /* ─── Champs de formulaire ────────────────────────────────── */
+  .bpn-input {
+    @apply w-full rounded border border-grisM bg-white px-3 py-2 text-sm text-encre outline-none transition focus:border-or focus:shadow-[0_0_0_3px_rgba(196,153,10,0.12)];
+  }
+  /* État invalide d'un champ (validation inline). */
+  .bpn-input.is-invalid {
+    @apply border-rouge focus:border-rouge focus:shadow-[0_0_0_3px_rgba(139,26,26,0.12)];
+  }
+  .bpn-label {
+    @apply text-xs font-medium uppercase tracking-wide text-gris;
+  }
+
+  /* Champ de formulaire sur fond sombre (panneau navy du module Reçus) */
+  .bpn-input-dark {
+    @apply w-full rounded border border-white/10 bg-white/[0.06] px-3 py-2 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-or focus:bg-white/10;
+  }
+  select.bpn-input-dark option {
+    @apply bg-navy-3 text-white;
+  }
+
+  /* ─── Pages d'authentification (split-screen institutionnel) ──────────── */
+  /* Champ sombre soigné : icône à gauche, anneau de focus or, état erreur. */
+  .auth-input {
+    @apply w-full rounded-lg border border-white/[0.12] bg-white/[0.04] py-2.5 pl-10 pr-3 text-sm text-white outline-none transition-all duration-150 placeholder:text-white/25 focus:border-or focus:bg-white/[0.07] focus:shadow-[0_0_0_3px_rgba(196,153,10,0.18)];
+  }
+  .auth-input.is-error {
+    @apply border-[#c2554f] focus:border-[#c2554f] focus:shadow-[0_0_0_3px_rgba(194,85,79,0.22)];
+  }
+  textarea.auth-input {
+    @apply pl-3 pt-2.5 leading-relaxed;
+  }
+  /* Révélation orchestrée au chargement (durée/easing uniques) — désactivée
+     sous prefers-reduced-motion par la règle globale plus haut. */
+  @keyframes authReveal {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: none; }
+  }
+  .auth-reveal {
+    opacity: 0;
+    animation: authReveal 0.62s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .bpn-skeleton {
+    @apply animate-pulse rounded bg-grisM/60;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bpn-skeleton { @apply animate-none; }
+  }
+}
+
+/* ─── Impression d'un document officiel — masquage total de l'interface
+   (NFR-13) : seule la zone .bpn-print-zone reste visible. ─────────────── */
+@media print {
+  @page {
+    size: A4;
+    margin: 18mm;
+  }
+  body * {
+    visibility: hidden;
+  }
+  .bpn-print-zone,
+  .bpn-print-zone * {
+    visibility: visible;
+  }
+  .bpn-print-zone {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    border: none;
+  }
+  .bpn-no-print {
+    display: none !important;
+  }
+}
