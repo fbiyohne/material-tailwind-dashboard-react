@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../prisma.js";
 import { asyncH } from "../middleware/error.js";
-import { requireAuth, requireRole } from "../middleware/auth.js";
+import { requireAuth, requireRole, requirePermission } from "../middleware/auth.js";
 import { envoyerPdf } from "../lib/pdf.js";
 import { tableauOrdreHtml, type ConseilPdf, type CabinetPdf } from "../lib/templates.js";
 import { archiver } from "../lib/business.js";
@@ -12,7 +12,7 @@ import { archiver } from "../lib/business.js";
  * SG / Bâtonnier ; l'arrêté (publication datée) est réservé au SG.
  */
 export const tableauRouter = Router();
-tableauRouter.use(requireAuth, requireRole("SECRETAIRE_GENERAL", "BATONNIER"));
+tableauRouter.use(requireAuth, requirePermission("membres"));
 
 const ORDRE_QUALITES = ["AVOCAT", "STAGIAIRE", "HONORAIRE"] as const;
 

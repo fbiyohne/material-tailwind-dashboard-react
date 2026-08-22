@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
-import { requireAuth, requireRole } from "../middleware/auth.js";
+import { requireAuth, requireRole, requirePermission } from "../middleware/auth.js";
 import { envoyerPdf } from "../lib/pdf.js";
 import { archiver } from "../lib/business.js";
 import { convocationReunionHtml, feuillePresenceHtml, pvReunionHtml } from "../lib/templates.js";
@@ -11,7 +11,7 @@ import { emailEnSimulation } from "../lib/mail.js";
 
 export const reunionsRouter = Router();
 // Module institutionnel : lecture SG/Bâtonnier (l'agenda public passe par /dashboard/agenda).
-reunionsRouter.use(requireAuth, requireRole("SECRETAIRE_GENERAL", "BATONNIER"));
+reunionsRouter.use(requireAuth, requirePermission("reunions_assemblees"));
 
 /** GET /reunions/:id/convocation/pdf — convocation (PDF) + archivage auto (RG-14). */
 reunionsRouter.get("/:id/convocation/pdf", asyncH(async (req, res) => {

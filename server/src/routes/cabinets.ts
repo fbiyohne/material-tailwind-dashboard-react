@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
-import { requireAuth, requireRole } from "../middleware/auth.js";
+import { requireAuth, requireRole, requirePermission } from "../middleware/auth.js";
 
 /**
  * Personnes morales (cabinets, sociétés, associations d'avocats). Lecture SG/Bâtonnier ;
@@ -11,7 +11,7 @@ import { requireAuth, requireRole } from "../middleware/auth.js";
  * permet à l'écran de numéroter les personnes morales (C1, C2…) par ancienneté.
  */
 export const cabinetsRouter = Router();
-cabinetsRouter.use(requireAuth, requireRole("SECRETAIRE_GENERAL", "BATONNIER"));
+cabinetsRouter.use(requireAuth, requirePermission("membres"));
 
 const membreSel = { id: true, nom: true, statut: true, qualite: true, dateServment: true } as const;
 

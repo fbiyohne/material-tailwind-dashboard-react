@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
-import { requireAuth, requireRole } from "../middleware/auth.js";
+import { requireAuth, requireRole, requirePermission } from "../middleware/auth.js";
 import { envoyerEmail } from "../lib/notifications.js";
 import { prochainNumInscription } from "../lib/business.js";
 import { provisionnerAccesEspace } from "../lib/acces.js";
@@ -16,7 +16,7 @@ import { provisionnerAccesEspace } from "../lib/acces.js";
  *    envoie un lien d'activation (l'avocat choisit son mot de passe).
  */
 export const demandesAccesRouter = Router();
-demandesAccesRouter.use(requireAuth, requireRole("SECRETAIRE_GENERAL", "ADMIN"));
+demandesAccesRouter.use(requireAuth, requirePermission("utilisateurs"));
 
 demandesAccesRouter.get(
   "/",

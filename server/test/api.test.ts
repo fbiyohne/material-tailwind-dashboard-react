@@ -1063,3 +1063,47 @@ describe("Timbre de plaidoirie — émission, vérification, annulation", () => 
     expect((await request(app).post("/api/timbres").set("Authorization", "Bearer invalide").send({})).status).toBe(401);
   });
 });
+
+describe("RBAC — matrice de rôles/permissions & nouveaux profils", () => {
+  let consult = ""; // jeton d'un compte « Consultation »
+  const email = `consult.${Date.now()}@barreau-pn.cg`;
+
+  it("crée un compte au profil CONSULTATION (SG) et se connecte", async () => {
+    const r = await request(app).post("/api/users").set(...bearer(sg)).send({ nom: "Consultant Test", email, role: "CONSULTATION", password: "consultpass8" });
+    expect(r.status).toBe(201);
+    consult = (await request(app).post("/api/auth/login").send({ email, password: "consultpass8" })).body.token;
+    expect(consult).toBeTruthy();
+  });
+
+  it("/auth/me renvoie les permissions du profil", async () => {
+    const me = await request(app).get("/api/auth/me").set(...bearer(consult));
+    expect(me.status).toBe(200);
+    expect(Array.isArray(me.body.permissions)).toBe(true);
+    expect(me.body.permissions).toContain("membres");
+    expect(me.body.permissions).not.toContain("finances");
+  });
+
+  it("enforcement : Consultation accède aux modules autorisés, refusé ailleurs", async () => {
+    // corps_electoral autorisé (défaut) → 200 ; finances non autorisé → 403.
+    expect((await request(app).get("/api/corps-electoral?annee=2026").set(...bearer(consult))).status).toBe(200);
+    expect((await request(app).get("/api/cotisations?annee=2026").set(...bearer(consult))).status).toBe(403);
+  });
+
+  it("la matrice est consultable (SG) et éditable réservée (403 pour Consultation)", async () => {
+    const g = await request(app).get("/api/rbac").set(...bearer(sg));
+    expect(g.status).toBe(200);
+    expect(Array.isArray(g.body.permissions)).toBe(true);
+    expect(g.body.matrice).toBeTruthy();
+    expect((await request(app).get("/api/rbac").set(...bearer(consult))).status).toBe(403);
+  });
+
+  it("l'édition de la matrice (ADMIN) modifie l'accès effectif, puis on restaure", async () => {
+    // Accorde « finances » à Consultation → l'accès passe à 200.
+    const put = await request(app).put("/api/rbac").set(...bearer(admin)).send({ role: "CONSULTATION", permissions: ["membres", "corps_electoral", "documents", "audit", "finances"] });
+    expect(put.status).toBe(200);
+    expect((await request(app).get("/api/cotisations?annee=2026").set(...bearer(consult))).status).toBe(200);
+    // Restaure les défauts (retire finances) pour ne pas polluer les autres tests.
+    await request(app).put("/api/rbac").set(...bearer(admin)).send({ role: "CONSULTATION", permissions: ["membres", "corps_electoral", "documents", "audit"] });
+    expect((await request(app).get("/api/cotisations?annee=2026").set(...bearer(consult))).status).toBe(403);
+  });
+});

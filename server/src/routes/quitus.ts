@@ -4,7 +4,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../prisma.js";
 import { anneeDeRequete } from "../lib/requete.js";
 import { asyncH, HttpError } from "../middleware/error.js";
-import { requireAuth, requireRole } from "../middleware/auth.js";
+import { requireAuth, requireRole, requirePermission } from "../middleware/auth.js";
 import QRCode from "qrcode";
 import { eligibleQuitus, prochainNumeroQuitus } from "../lib/business.js";
 import { envoyerDocumentPdf } from "../lib/pdf.js";
@@ -21,7 +21,7 @@ function notifierQuitus(membreId: number, annee: number): void {
 
 export const quitusRouter = Router();
 // Données financières restreintes (RG-15) : SG, Trésorière, Admin.
-quitusRouter.use(requireAuth, requireRole("SECRETAIRE_GENERAL", "TRESORIERE"));
+quitusRouter.use(requireAuth, requirePermission("finances"));
 
 /** GET /quitus/:id/pdf — quitus officiel signé en PDF vectoriel (Puppeteer). */
 quitusRouter.get(

@@ -3,14 +3,14 @@ import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { anneeDeRequete } from "../lib/requete.js";
 import { asyncH, HttpError } from "../middleware/error.js";
-import { requireAuth, requireRole } from "../middleware/auth.js";
+import { requireAuth, requireRole, requirePermission } from "../middleware/auth.js";
 import { cotisationDue, montantDuAvec, statutCotisation, tarifsActuels } from "../lib/business.js";
 import { encaisser, gardeVersement } from "../lib/encaissement.js";
 import { envoyerEmail, envoyerSms, emailEnSimulation } from "../lib/notifications.js";
 
 export const cotisationsRouter = Router();
 // Données financières restreintes aux profils autorisés (RG-15) : SG, Trésorière, Admin.
-cotisationsRouter.use(requireAuth, requireRole("SECRETAIRE_GENERAL", "TRESORIERE"));
+cotisationsRouter.use(requireAuth, requirePermission("finances"));
 
 /** POST /cotisations/relances?annee= — relance email des retardataires (FR). */
 cotisationsRouter.post(

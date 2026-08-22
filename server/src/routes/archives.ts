@@ -2,11 +2,11 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
-import { requireAuth, requireRole } from "../middleware/auth.js";
+import { requireAuth, requireRole, requirePermission } from "../middleware/auth.js";
 
 export const archivesRouter = Router();
 // Archives institutionnelles (réf. financières + disciplinaires) : SG/Bâtonnier/Admin.
-archivesRouter.use(requireAuth, requireRole("SECRETAIRE_GENERAL", "BATONNIER"));
+archivesRouter.use(requireAuth, requirePermission("documents"));
 
 const archiveSchema = z.object({
   categorie: z.string().min(1),

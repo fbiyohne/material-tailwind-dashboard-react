@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
-import { requireAuth, requireRole } from "../middleware/auth.js";
+import { requireAuth, requireRole, requirePermission } from "../middleware/auth.js";
 import { envoyerPdf } from "../lib/pdf.js";
 import { pvScrutinHtml } from "../lib/templates.js";
 import { archiver } from "../lib/business.js";
@@ -14,7 +14,7 @@ import { archiver } from "../lib/business.js";
  * Cycle : PRÉPARATION → OUVERT → CLOS → PUBLIÉ.
  */
 export const scrutinsRouter = Router();
-scrutinsRouter.use(requireAuth, requireRole("SECRETAIRE_GENERAL", "BATONNIER"));
+scrutinsRouter.use(requireAuth, requirePermission("elections"));
 
 async function detail(id: number) {
   const scrutin = await prisma.scrutin.findUnique({

@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import type { Role } from "@prisma/client";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
-import { requireAuth, requireRole, type AuthRequest } from "../middleware/auth.js";
+import { requireAuth, requireRole, type AuthRequest, requirePermission } from "../middleware/auth.js";
 
 /**
  * Gestion des comptes utilisateurs (CDC §5.1, table `users`).
@@ -12,10 +12,10 @@ import { requireAuth, requireRole, type AuthRequest } from "../middleware/auth.j
  * (passwordHash) ne sont jamais renvoyés.
  */
 export const usersRouter = Router();
-usersRouter.use(requireAuth, requireRole("SECRETAIRE_GENERAL", "ADMIN"));
+usersRouter.use(requireAuth, requirePermission("utilisateurs"));
 
 const SELECT = { id: true, nom: true, email: true, role: true, actif: true, createdAt: true } as const;
-const ROLES = ["SECRETAIRE_GENERAL", "BATONNIER", "TRESORIERE", "ADMIN"] as const;
+const ROLES = ["SECRETAIRE_GENERAL", "BATONNIER", "TRESORIERE", "ADMIN", "SECRETAIRE_ADJOINT", "CONSULTATION", "ACCUEIL"] as const;
 
 /**
  * Empêche l'escalade de privilège : seul un ADMIN peut attribuer le rôle ADMIN

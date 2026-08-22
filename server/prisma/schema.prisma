@@ -16,6 +16,20 @@ enum Role {
   TRESORIERE
   ADMIN
   AVOCAT
+  SECRETAIRE_ADJOINT
+  CONSULTATION
+  ACCUEIL
+}
+
+/// Matrice de permissions éditable : une ligne = un module autorisé pour un rôle.
+/// L'ADMIN a toujours tout (implicite) ; l'absence de lignes pour un rôle retombe
+/// sur les valeurs par défaut définies en code (lib/rbac).
+model RolePermission {
+  role       Role
+  permission String
+
+  @@id([role, permission])
+  @@index([role])
 }
 
 enum Qualite {

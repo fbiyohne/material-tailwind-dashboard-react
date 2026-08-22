@@ -4,6 +4,7 @@ import type { Role } from "@prisma/client";
 import { prisma } from "../prisma.js";
 import { env } from "../env.js";
 import { HttpError } from "./error.js";
+import { aLaPermission } from "../lib/rbac.js";
 
 export interface AuthUser {
   id: number;
@@ -59,6 +60,19 @@ export function requireRole(...roles: Role[]) {
   return (req: AuthRequest, _res: Response, next: NextFunction) => {
     if (!req.user) return next(new HttpError(401, "Authentification requise"));
     if (req.user.role === "ADMIN" || roles.includes(req.user.role)) return next();
+    next(new HttpError(403, "Accès refusé pour votre profil"));
+  };
+}
+
+/**
+ * Réserve l'accès à un module selon la matrice de permissions éditable (rôle ×
+ * module). Remplace requireRole au niveau des routeurs : l'attribution devient
+ * configurable sans toucher au code (cf. lib/rbac). L'ADMIN/SG ont tout.
+ */
+export function requirePermission(permission: string) {
+  return (req: AuthRequest, _res: Response, next: NextFunction) => {
+    if (!req.user) return next(new HttpError(401, "Authentification requise"));
+    if (aLaPermission(req.user.role, permission)) return next();
     next(new HttpError(403, "Accès refusé pour votre profil"));
   };
 }

@@ -2,12 +2,12 @@ import { Router } from "express";
 import { prisma } from "../prisma.js";
 import { anneeDeRequete } from "../lib/requete.js";
 import { asyncH } from "../middleware/error.js";
-import { requireAuth, requireRole } from "../middleware/auth.js";
+import { requireAuth, requireRole, requirePermission } from "../middleware/auth.js";
 import { eligibiliteElectorale, tarifsActuels } from "../lib/business.js";
 
 export const corpsElectoralRouter = Router();
 // Corps électoral (éligibilité = cotisations + discipline) : SG/Bâtonnier/Admin.
-corpsElectoralRouter.use(requireAuth, requireRole("SECRETAIRE_GENERAL", "BATONNIER"));
+corpsElectoralRouter.use(requireAuth, requirePermission("corps_electoral"));
 
 /** GET /corps-electoral?annee= — liste générée automatiquement (RG-04 à RG-06). */
 corpsElectoralRouter.get(

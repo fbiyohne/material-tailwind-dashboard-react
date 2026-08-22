@@ -2,14 +2,14 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
-import { requireAuth, requireRole } from "../middleware/auth.js";
+import { requireAuth, requireRole, requirePermission } from "../middleware/auth.js";
 
 /**
  * Calendrier éditorial mensuel de la Lettre du Bâtonnier (FR-BAT).
  * Module Documents (institutionnel) : lecture SG/Bâtonnier.
  */
 export const calendrierEditorialRouter = Router();
-calendrierEditorialRouter.use(requireAuth, requireRole("SECRETAIRE_GENERAL", "BATONNIER"));
+calendrierEditorialRouter.use(requireAuth, requirePermission("documents"));
 
 /** GET /calendrier-editorial — entrées du calendrier (thème + article persisté), ordonnées. */
 calendrierEditorialRouter.get(

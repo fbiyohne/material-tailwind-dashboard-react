@@ -2,14 +2,14 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
-import { requireAuth, requireRole, type AuthRequest } from "../middleware/auth.js";
+import { requireAuth, requireRole, type AuthRequest, requirePermission } from "../middleware/auth.js";
 import { prochaineReferenceDossier, archiver, avecRejeuUnicite } from "../lib/business.js";
 import { envoyerPdf } from "../lib/pdf.js";
 import { convocationDisciplineHtml, decisionDisciplineHtml } from "../lib/templates.js";
 
 export const disciplineRouter = Router();
 // Accès restreint SG / Bâtonnier / Admin, journalisé (RG-13).
-disciplineRouter.use(requireAuth, requireRole("SECRETAIRE_GENERAL", "BATONNIER"));
+disciplineRouter.use(requireAuth, requirePermission("discipline"));
 
 const journaliser = (action: string, userId?: number) =>
   prisma.journalDiscipline.create({ data: { action, userId } });

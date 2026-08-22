@@ -246,6 +246,10 @@ export const majParametres = (patch) => api("/parametres", { method: "PUT", body
 // Réinitialisation totale (ADMIN) — supprime toutes les données sauf le compte admin.
 export const reinitialiserDonnees = () => api("/parametres/reinitialiser-donnees", { method: "POST" });
 
+// Matrice de rôles/permissions (RBAC éditable)
+export const getRbac = () => api("/rbac");
+export const majRbacRole = (role, permissions) => api("/rbac", { method: "PUT", body: { role, permissions } });
+
 // ─── Installation (assistant de premier lancement, VPS) ──────────────────────
 export const getEtatInstallation = () => api("/installation/etat", { auth: false });
 export const installer = (body) => api("/installation", { method: "POST", auth: false, body });

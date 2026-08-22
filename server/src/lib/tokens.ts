@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import type { Role, User } from "@prisma/client";
 import { prisma } from "../prisma.js";
 import { env } from "../env.js";
+import { permissionsDeRole } from "./rbac.js";
 
 const hash = (t: string) => crypto.createHash("sha256").update(t).digest("hex");
 
@@ -29,7 +30,7 @@ export async function emettrePaire(user: User) {
   return {
     token: signerAccessToken(user),
     refreshToken: await creerRefreshToken(user.id),
-    user: { id: user.id, nom: user.nom, email: user.email, role: user.role },
+    user: { id: user.id, nom: user.nom, email: user.email, role: user.role, permissions: permissionsDeRole(user.role) },
   };
 }
 

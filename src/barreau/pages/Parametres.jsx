@@ -15,7 +15,7 @@ import {
   ExclamationTriangleIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
-import { Badge, Notice, useToast, PageHeader, FormField, Tabs, DataTable, Modal, Sceau } from "../components";
+import { Badge, Notice, useToast, PageHeader, FormField, Tabs, DataTable, Modal, Sceau, MatriceAcces } from "../components";
 import { useAuth } from "../auth/AuthContext";
 import { formatFCFA, formatDateTime } from "../utils/format";
 import { appliquerConfig } from "../data/config";
@@ -409,30 +409,10 @@ export function Parametres() {
 
   const panneauRoles = (
     <div className="space-y-5">
-    <Section titre="Rôles & permissions" description="Profils d'accès de l'application (parties prenantes du CDC).">
-      <div className="overflow-x-auto">
-        <table className="bpn-table">
-          <thead>
-            <tr>
-              <th scope="col" className="px-3 py-2.5 font-medium">Profil</th>
-              <th scope="col" className="px-3 py-2.5 font-medium">Mission</th>
-              <th scope="col" className="px-3 py-2.5 font-medium">Niveau d'accès</th>
-            </tr>
-          </thead>
-          <tbody>
-            {ROLES.map((r) => (
-              <tr key={r.role} className="border-b border-grisL">
-                <td className="px-3 py-2.5 font-medium">{r.role}</td>
-                <td className="px-3 py-2.5 text-gris">{r.mission}</td>
-                <td className="px-3 py-2.5"><Badge ton={r.ton} dot={false}>{r.acces}</Badge></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+    <Section titre="Matrice des accès" description="Attribuez les modules à chaque profil. Enforcement appliqué à l'interface et au serveur.">
+      <MatriceAcces />
       <Notice ton="or" icon={LockClosedIcon} className="mt-4">
-        Authentification multi-utilisateurs (JWT + RBAC) active. La création des comptes et
-        l'attribution des rôles se font dans la page{" "}
+        La création des comptes et l'attribution d'un profil à un utilisateur se font dans la page{" "}
         <Link to="/utilisateurs" className="font-medium text-navy underline">Utilisateurs</Link>.
       </Notice>
     </Section>

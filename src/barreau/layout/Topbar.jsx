@@ -38,7 +38,7 @@ export function Topbar({ title, onOpenMenu, onAddAvocat }) {
   const [menu, setMenu] = useState(null); // "docs" | null
   const [membres, setMembres] = useState([]);
   const [echeances, setEcheances] = useState([]);
-  const docs = DOCS.filter((d) => aAcces(d, user?.role)); // RBAC : raccourcis filtrés.
+  const docs = DOCS.filter((d) => aAcces(d, user)); // RBAC : raccourcis filtrés.
 
   useEffect(() => {
     listerMembres().then((d) => setMembres(d.items)).catch(() => {});

@@ -10,6 +10,7 @@ import { env } from "../env.js";
 import { emettrePaire, rafraichir, revoquer, revoquerTousLesJetons } from "../lib/tokens.js";
 import { envoyerEmail } from "../lib/notifications.js";
 import { notifier, usersSecretariat } from "../lib/centreNotifications.js";
+import { permissionsDeRole } from "../lib/rbac.js";
 
 export const authRouter = Router();
 
@@ -213,7 +214,7 @@ authRouter.get(
   asyncH(async (req: AuthRequest, res) => {
     const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
     if (!user) throw new HttpError(404, "Utilisateur introuvable");
-    res.json({ id: user.id, nom: user.nom, email: user.email, role: user.role });
+    res.json({ id: user.id, nom: user.nom, email: user.email, role: user.role, permissions: permissionsDeRole(user.role) });
   })
 );
 

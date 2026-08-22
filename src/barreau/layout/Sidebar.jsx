@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import { NavLink, useLocation } from "react-router-dom";
 import { XMarkIcon, ArrowRightOnRectangleIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
-import { sectionsPourRole } from "../routes";
+import { sectionsPourUser } from "../routes";
 import { Sceau } from "../components";
 import { identite } from "../data/config";
 import { useAuth } from "../auth/AuthContext";
@@ -31,7 +31,7 @@ const ROLE_LABEL = {
 export function Sidebar({ open, onClose }) {
   const { user, logout } = useAuth();
   const location = useLocation();
-  const sections = sectionsPourRole(user?.role); // RBAC : menu filtré par rôle.
+  const sections = sectionsPourUser(user); // RBAC : menu filtré par permissions.
 
   // Pastilles de notification calculées sur des données réelles (et non codées
   // en dur) : cotisations impayées de l'exercice courant et dossiers

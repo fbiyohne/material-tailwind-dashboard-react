@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { asyncH } from "../middleware/error.js";
-import { requireAuth, requireRole } from "../middleware/auth.js";
+import { requireAuth, requireRole, requirePermission } from "../middleware/auth.js";
 
 /**
  * Composition du Conseil de l'Ordre — alimente les feuilles de présence des
@@ -10,7 +10,7 @@ import { requireAuth, requireRole } from "../middleware/auth.js";
  * La composition est recomposée automatiquement à la publication d'une élection.
  */
 export const conseilRouter = Router();
-conseilRouter.use(requireAuth, requireRole("SECRETAIRE_GENERAL", "BATONNIER"));
+conseilRouter.use(requireAuth, requirePermission("elections"));
 
 /**
  * GET /conseil — membres du Conseil (actifs par défaut ; `?tous=1` pour l'historique).

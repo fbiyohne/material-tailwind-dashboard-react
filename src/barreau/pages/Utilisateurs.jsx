@@ -14,10 +14,13 @@ const ROLE_LABEL = {
   TRESORIERE: "Trésorière",
   ADMIN: "Administrateur",
   AVOCAT: "Avocat",
+  SECRETAIRE_ADJOINT: "Secrétaire adjoint",
+  CONSULTATION: "Consultation (lecture)",
+  ACCUEIL: "Agent d'accueil",
 };
 // Rôles attribuables manuellement : le rôle AVOCAT n'en fait pas partie — un
 // compte avocat se provisionne depuis la fiche du membre (accès espace).
-const ROLES = ["SECRETAIRE_GENERAL", "BATONNIER", "TRESORIERE", "ADMIN"];
+const ROLES = ["SECRETAIRE_GENERAL", "BATONNIER", "TRESORIERE", "ADMIN", "SECRETAIRE_ADJOINT", "CONSULTATION", "ACCUEIL"];
 
 // `type` : "personnel" (compte back-office, rôle + mot de passe) ou "avocat"
 // (accès espace, lien d'activation). Le toggle n'apparaît que pour une demande.

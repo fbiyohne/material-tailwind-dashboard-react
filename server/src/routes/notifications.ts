@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../prisma.js";
 import { asyncH } from "../middleware/error.js";
-import { requireAuth, requireRole } from "../middleware/auth.js";
+import { requireAuth, requireRole, requirePermission } from "../middleware/auth.js";
 import { emailEnSimulation, modeSimulationSms } from "../lib/notifications.js";
 
 /**
@@ -10,7 +10,7 @@ import { emailEnSimulation, modeSimulationSms } from "../lib/notifications.js";
  * configuration des canaux (simulation tant que les identifiants manquent).
  */
 export const notificationsRouter = Router();
-notificationsRouter.use(requireAuth, requireRole("SECRETAIRE_GENERAL", "ADMIN"));
+notificationsRouter.use(requireAuth, requirePermission("parametres"));
 
 notificationsRouter.get(
   "/",

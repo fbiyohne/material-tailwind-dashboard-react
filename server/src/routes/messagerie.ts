@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
-import { requireAuth, requireRole, type AuthRequest } from "../middleware/auth.js";
+import { requireAuth, requireRole, type AuthRequest, requirePermission } from "../middleware/auth.js";
 import { notifierNouveauMessage, emailsMembres } from "../lib/messagerieNotif.js";
 import { MESSAGE_DE_AVOCAT, compterNonLusParFil, totalNonLus, jamaisLu } from "../lib/messagerie.js";
 import { realtimeMembres } from "../lib/realtime.js";
@@ -13,7 +13,7 @@ import { realtimeMembres } from "../lib/realtime.js";
  * sont visibles ici. Les échanges entre confrères restent privés (jamais exposés).
  */
 export const messagerieRouter = Router();
-messagerieRouter.use(requireAuth, requireRole("SECRETAIRE_GENERAL", "BATONNIER", "TRESORIERE"));
+messagerieRouter.use(requireAuth, requirePermission("messagerie"));
 
 /** Nom lisible de l'agent connecté, figé sur le message émis. */
 async function monNomAdmin(req: AuthRequest) {

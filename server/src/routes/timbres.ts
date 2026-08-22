@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
-import { requireAuth, requireRole } from "../middleware/auth.js";
+import { requireAuth, requireRole, requirePermission } from "../middleware/auth.js";
 import { CANAUX } from "../lib/paiement.js";
 import { emettreTimbre } from "../lib/timbres.js";
 import { notifier, userDeMembre } from "../lib/centreNotifications.js";
@@ -14,7 +14,7 @@ import { notifier, userDeMembre } from "../lib/centreNotifications.js";
  * vérifiable via QR (page publique /verifier/timbre/:code). Données financières (RG-15).
  */
 export const timbresRouter = Router();
-timbresRouter.use(requireAuth, requireRole("SECRETAIRE_GENERAL", "TRESORIERE"));
+timbresRouter.use(requireAuth, requirePermission("finances"));
 
 const creerSchema = z.object({
   membreId: z.number().int(),

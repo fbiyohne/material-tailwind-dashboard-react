@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
-import { requireAuth, requireRole } from "../middleware/auth.js";
+import { requireAuth, requireRole, requirePermission } from "../middleware/auth.js";
 import { finaliserPaiement } from "../lib/encaissement.js";
 import { CANAUX, modeSandbox, nouvelleReference, initierPaiement, verifierSignatureWebhook } from "../lib/paiement.js";
 
@@ -37,7 +37,7 @@ paiementsRouter.post(
 );
 
 // ── Routes authentifiées (SG / Trésorière) ──────────────────────────────────
-paiementsRouter.use(requireAuth, requireRole("SECRETAIRE_GENERAL", "TRESORIERE"));
+paiementsRouter.use(requireAuth, requirePermission("finances"));
 
 const initierSchema = z.object({
   membreId: z.number().int(),

@@ -77,61 +77,73 @@ export const navSections = [
   {
     label: "Membres",
     items: [
-      { name: "Avocats inscrits", path: "/avocats", icon: UsersIcon, roles: INSTITUTIONNEL, element: <Avocats /> },
-      { name: "Avocats stagiaires", path: "/stagiaires", icon: AcademicCapIcon, roles: INSTITUTIONNEL, element: <Stagiaires /> },
-      { name: "Personnes morales", path: "/cabinets", icon: BuildingOffice2Icon, roles: INSTITUTIONNEL, element: <Cabinets /> },
-      { name: "Tableau de l'Ordre", path: "/tableau", icon: ClipboardDocumentListIcon, roles: INSTITUTIONNEL, element: <TableauOrdre /> },
-      { name: "Vérification des pièces", path: "/pieces", icon: ShieldCheckIcon, roles: INSTITUTIONNEL, element: <Pieces /> },
-      { name: "Corps électoral", path: "/corps-electoral", icon: CheckBadgeIcon, roles: INSTITUTIONNEL, element: <CorpsElectoral /> },
+      { name: "Avocats inscrits", path: "/avocats", icon: UsersIcon, perm: "membres", element: <Avocats /> },
+      { name: "Avocats stagiaires", path: "/stagiaires", icon: AcademicCapIcon, perm: "membres", element: <Stagiaires /> },
+      { name: "Personnes morales", path: "/cabinets", icon: BuildingOffice2Icon, perm: "membres", element: <Cabinets /> },
+      { name: "Tableau de l'Ordre", path: "/tableau", icon: ClipboardDocumentListIcon, perm: "membres", element: <TableauOrdre /> },
+      { name: "Vérification des pièces", path: "/pieces", icon: ShieldCheckIcon, perm: "membres", element: <Pieces /> },
+      { name: "Corps électoral", path: "/corps-electoral", icon: CheckBadgeIcon, perm: "corps_electoral", element: <CorpsElectoral /> },
     ],
   },
   {
     label: "Finances",
     items: [
-      { name: "Cotisations", path: "/cotisations", icon: BanknotesIcon, roles: FINANCES, element: <Cotisations /> },
-      { name: "Quitus", path: "/quitus", icon: DocumentCheckIcon, roles: FINANCES, element: <Quitus /> },
-      { name: "Reçus de paiement", path: "/recus", icon: ReceiptPercentIcon, roles: FINANCES, element: <Recus /> },
-      { name: "Droits de plaidoirie", path: "/droits-plaidoirie", icon: CurrencyDollarIcon, roles: FINANCES, element: <DroitsPlaidoirie /> },
-      { name: "Timbres de plaidoirie", path: "/timbres", icon: TicketIcon, roles: FINANCES, element: <Timbres /> },
+      { name: "Cotisations", path: "/cotisations", icon: BanknotesIcon, perm: "finances", element: <Cotisations /> },
+      { name: "Quitus", path: "/quitus", icon: DocumentCheckIcon, perm: "finances", element: <Quitus /> },
+      { name: "Reçus de paiement", path: "/recus", icon: ReceiptPercentIcon, perm: "finances", element: <Recus /> },
+      { name: "Droits de plaidoirie", path: "/droits-plaidoirie", icon: CurrencyDollarIcon, perm: "finances", element: <DroitsPlaidoirie /> },
+      { name: "Timbres de plaidoirie", path: "/timbres", icon: TicketIcon, perm: "finances", element: <Timbres /> },
     ],
   },
   {
     label: "Institutionnel",
     items: [
-      { name: "Réunions", path: "/reunions", icon: CalendarDaysIcon, roles: INSTITUTIONNEL, element: <Reunions /> },
-      { name: "Assemblées générales", path: "/assemblees", icon: BuildingLibraryIcon, roles: INSTITUTIONNEL, element: <Assemblees /> },
-      { name: "Discipline", path: "/discipline", icon: ScaleIcon, roles: INSTITUTIONNEL, element: <Discipline /> },
-      { name: "Élections", path: "/elections", icon: HandRaisedIcon, roles: INSTITUTIONNEL, element: <Elections /> },
-      { name: "Conseil de l'Ordre", path: "/conseil", icon: UserGroupIcon, roles: INSTITUTIONNEL, element: <Conseil /> },
-      { name: "Messagerie", path: "/messagerie", icon: ChatBubbleLeftRightIcon, roles: ["SECRETAIRE_GENERAL", "BATONNIER", "TRESORIERE"], element: <Messagerie /> },
+      { name: "Réunions", path: "/reunions", icon: CalendarDaysIcon, perm: "reunions_assemblees", element: <Reunions /> },
+      { name: "Assemblées générales", path: "/assemblees", icon: BuildingLibraryIcon, perm: "reunions_assemblees", element: <Assemblees /> },
+      { name: "Discipline", path: "/discipline", icon: ScaleIcon, perm: "discipline", element: <Discipline /> },
+      { name: "Élections", path: "/elections", icon: HandRaisedIcon, perm: "elections", element: <Elections /> },
+      { name: "Conseil de l'Ordre", path: "/conseil", icon: UserGroupIcon, perm: "elections", element: <Conseil /> },
+      { name: "Messagerie", path: "/messagerie", icon: ChatBubbleLeftRightIcon, perm: "messagerie", element: <Messagerie /> },
     ],
   },
   {
     label: "Documents",
     items: [
-      { name: "Archives", path: "/archives", icon: ArchiveBoxIcon, roles: INSTITUTIONNEL, element: <Archives /> },
+      { name: "Archives", path: "/archives", icon: ArchiveBoxIcon, perm: "documents", element: <Archives /> },
       { name: "Annuaire", path: "/annuaire", icon: BookOpenIcon, element: <Annuaire /> },
-      { name: "Publications", path: "/publications", icon: MegaphoneIcon, roles: INSTITUTIONNEL, element: <Publications /> },
-      { name: "Lettre du Bâtonnier", path: "/lettre-batonnier", icon: NewspaperIcon, roles: INSTITUTIONNEL, element: <LettreBatonnier /> },
+      { name: "Publications", path: "/publications", icon: MegaphoneIcon, perm: "documents", element: <Publications /> },
+      { name: "Lettre du Bâtonnier", path: "/lettre-batonnier", icon: NewspaperIcon, perm: "documents", element: <LettreBatonnier /> },
     ],
   },
   {
     label: "Système",
     items: [
-      { name: "Paramètres", path: "/parametres", icon: Cog6ToothIcon, roles: SYSTEME, element: <Parametres /> },
-      { name: "Utilisateurs", path: "/utilisateurs", icon: UserGroupIcon, roles: SYSTEME, element: <Utilisateurs /> },
-      { name: "Journal d'audit", path: "/journal-audit", icon: ShieldCheckIcon, roles: INSTITUTIONNEL, element: <JournalAudit /> },
+      { name: "Paramètres", path: "/parametres", icon: Cog6ToothIcon, perm: "parametres", element: <Parametres /> },
+      { name: "Utilisateurs", path: "/utilisateurs", icon: UserGroupIcon, perm: "utilisateurs", element: <Utilisateurs /> },
+      { name: "Journal d'audit", path: "/journal-audit", icon: ShieldCheckIcon, perm: "audit", element: <JournalAudit /> },
     ],
   },
 ];
 
-/** Un rôle a-t-il accès à un item ? (ADMIN toujours autorisé ; item sans `roles` = public.) */
-export const aAcces = (item, role) => !item.roles || role === "ADMIN" || item.roles.includes(role);
+/**
+ * L'utilisateur a-t-il accès à un item ? Basé sur la matrice de permissions :
+ * ADMIN et Secrétaire Général ont tout ; un item avec `perm` exige la permission
+ * correspondante ; un item avec `roles` (héritage) est vérifié par rôle ; sinon
+ * public. Accepte l'objet user ({ role, permissions }) ou, en repli, un rôle seul.
+ */
+export const aAcces = (item, user) => {
+  const u = typeof user === "string" ? { role: user } : user;
+  const role = u?.role;
+  if (role === "ADMIN" || role === "SECRETAIRE_GENERAL") return true;
+  if (item.perm) return !!u?.permissions?.includes(item.perm);
+  if (item.roles) return item.roles.includes(role);
+  return true;
+};
 
-/** Sections filtrées pour un rôle (sections vides retirées). */
-export const sectionsPourRole = (role) =>
+/** Sections filtrées pour un utilisateur (sections vides retirées). */
+export const sectionsPourUser = (user) =>
   navSections
-    .map((s) => ({ ...s, items: s.items.filter((i) => aAcces(i, role)) }))
+    .map((s) => ({ ...s, items: s.items.filter((i) => aAcces(i, user)) }))
     .filter((s) => s.items.length > 0);
 
 /** Liste à plat de tous les modules (pour le routage). */

@@ -3,14 +3,14 @@ import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { anneeDeRequete } from "../lib/requete.js";
 import { asyncH, HttpError } from "../middleware/error.js";
-import { requireAuth, requireRole } from "../middleware/auth.js";
+import { requireAuth, requireRole, requirePermission } from "../middleware/auth.js";
 import { droitDue, statutCotisation, tarifsActuels } from "../lib/business.js";
 import { encaisser, gardeVersement } from "../lib/encaissement.js";
 import { envoyerEmail, envoyerSms, emailEnSimulation } from "../lib/notifications.js";
 
 export const droitsRouter = Router();
 // Données financières restreintes (RG-15) : SG, Trésorière, Admin.
-droitsRouter.use(requireAuth, requireRole("SECRETAIRE_GENERAL", "TRESORIERE"));
+droitsRouter.use(requireAuth, requirePermission("finances"));
 
 /** POST /droits/relances?annee= — relance email/SMS des avocats au droit de plaidoirie impayé. */
 droitsRouter.post(

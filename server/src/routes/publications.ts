@@ -2,13 +2,13 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
-import { requireAuth, requireRole, type AuthRequest } from "../middleware/auth.js";
+import { requireAuth, requireRole, type AuthRequest, requirePermission } from "../middleware/auth.js";
 import { genererArticleLettre, iaDisponible } from "../lib/ia.js";
 import { notifier, usersAvocats } from "../lib/centreNotifications.js";
 
 export const publicationsRouter = Router();
 // Module institutionnel (Documents) : réservé SG/Bâtonnier comme au front (RG-15).
-publicationsRouter.use(requireAuth, requireRole("SECRETAIRE_GENERAL", "BATONNIER"));
+publicationsRouter.use(requireAuth, requirePermission("documents"));
 
 /** POST /publications/lettre/generer — projet d'article IA (FR-BAT-01 / CDC §2.15). */
 const lettreSchema = z.object({ mois: z.string().min(1), theme: z.string().min(1) });

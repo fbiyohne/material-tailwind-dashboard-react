@@ -40,3 +40,4 @@ export { CasierDiscipline } from "./CasierDiscipline";
 export { ClocheNotifications } from "./ClocheNotifications";
 export { EditeurDocument } from "./EditeurDocument";
 export { VignetteTimbre } from "./VignetteTimbre";
+export { MatriceAcces } from "./MatriceAcces";

@@ -2,14 +2,14 @@ import { Router } from "express";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../prisma.js";
 import { asyncH } from "../middleware/error.js";
-import { requireAuth, requireRole } from "../middleware/auth.js";
+import { requireAuth, requireRole, requirePermission } from "../middleware/auth.js";
 
 /**
  * Journal d'audit (RG-16 / NFR-09) — consultation filtrable et paginée des
  * actions sensibles. Réservé au Secrétaire Général / Bâtonnier (et Admin).
  */
 export const auditRouter = Router();
-auditRouter.use(requireAuth, requireRole("SECRETAIRE_GENERAL", "BATONNIER"));
+auditRouter.use(requireAuth, requirePermission("audit"));
 
 /** GET /audit — recherche (action/chemin/cible/acteur) + plage de dates + pagination. */
 auditRouter.get(

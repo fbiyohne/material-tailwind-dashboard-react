@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
-import { requireAuth, requireRole } from "../middleware/auth.js";
+import { requireAuth, requireRole, requirePermission } from "../middleware/auth.js";
 import { envoyerPdf } from "../lib/pdf.js";
 import { archiver } from "../lib/business.js";
 import { convocationAgHtml, pvAssembleeHtml } from "../lib/templates.js";
@@ -13,7 +13,7 @@ const TYPE_AG = { AGO: "Assemblée Générale Ordinaire", AGE: "Assemblée Gén�
 
 export const assembleesRouter = Router();
 // Module institutionnel : lecture SG/Bâtonnier (l'agenda public passe par /dashboard/agenda).
-assembleesRouter.use(requireAuth, requireRole("SECRETAIRE_GENERAL", "BATONNIER"));
+assembleesRouter.use(requireAuth, requirePermission("reunions_assemblees"));
 
 /** GET /assemblees/:id/convocation/pdf — convocation d'AG (PDF) + archivage auto (RG-14). */
 assembleesRouter.get("/:id/convocation/pdf", asyncH(async (req, res) => {

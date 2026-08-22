@@ -18,8 +18,8 @@ export function BarreauLayout() {
   const location = useLocation();
   const mainRef = useFocusAuChangementDeRoute();
   const { user } = useAuth();
-  const role = user?.role;
-  const peutInscrire = aAcces({ roles: ["SECRETAIRE_GENERAL", "ADMIN"] }, role);
+  // Action d'écriture (POST /membres) : reste restreinte au SG/Admin côté serveur.
+  const peutInscrire = aAcces({ roles: ["SECRETAIRE_GENERAL", "ADMIN"] }, user);
 
   // Titre de la barre : module exact, sinon module parent d'une page de détail.
   const moduleCourant = allModules.find((m) => m.path === location.pathname);
@@ -50,12 +50,12 @@ export function BarreauLayout() {
           {/* Suspense : les pages sont chargées à la demande (code-splitting par route). */}
           <Suspense fallback={<div className="py-16 text-center text-sm text-gris">Chargement…</div>}>
             <Routes>
-              {allModules.map(({ path, element, roles }) => (
+              {allModules.map(({ path, element, perm, roles }) => (
                 <Route
                   key={path}
                   path={path}
                   element={
-                    aAcces({ roles }, role) ? element : <Navigate to="/" replace />
+                    aAcces({ perm, roles }, user) ? element : <Navigate to="/" replace />
                   }
                 />
               ))}
@@ -68,7 +68,7 @@ export function BarreauLayout() {
                   <Route
                     key={path}
                     path={path}
-                    element={aAcces({ roles: moduleParent?.roles }, role) ? element : <Navigate to="/" replace />}
+                    element={aAcces({ perm: moduleParent?.perm, roles: moduleParent?.roles }, user) ? element : <Navigate to="/" replace />}
                   />
                 );
               })}
