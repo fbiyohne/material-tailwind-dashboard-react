@@ -3,7 +3,7 @@ import { Routes, Route, Navigate, NavLink, useLocation, useNavigate } from "reac
 import {
   ArrowRightOnRectangleIcon, HomeIcon, FolderIcon, BookOpenIcon,
   BuildingLibraryIcon, MegaphoneIcon, ArchiveBoxIcon, ScaleIcon, ChatBubbleLeftRightIcon, HandRaisedIcon,
-  Bars3Icon, XMarkIcon, UserCircleIcon,
+  Bars3Icon, XMarkIcon, UserCircleIcon, TicketIcon,
 } from "@heroicons/react/24/outline";
 import { Sceau, ClocheNotifications } from "../components";
 import { useAuth } from "../auth/AuthContext";
@@ -23,10 +23,12 @@ const EspaceDiscipline = lazy(() => import("../pages/espace/EspaceDiscipline"));
 const EspaceMessagerie = lazy(() => import("../pages/espace/EspaceMessagerie"));
 const EspaceScrutins = lazy(() => import("../pages/espace/EspaceScrutins"));
 const MonCompte = lazy(() => import("../pages/espace/MonCompte"));
+const MesTimbres = lazy(() => import("../pages/espace/MesTimbres"));
 
 const NAV = [
   { to: "/", label: "Ma situation", icon: HomeIcon, end: true },
   { to: "/documents", label: "Mes documents", icon: FolderIcon, end: false },
+  { to: "/timbres", label: "Timbres", icon: TicketIcon, end: false },
   { to: "/messagerie", label: "Messagerie", icon: ChatBubbleLeftRightIcon, end: false, badge: "messagerie" },
   { to: "/annuaire", label: "Annuaire", icon: BookOpenIcon, end: false },
   { to: "/assemblees", label: "Assemblées", icon: BuildingLibraryIcon, end: false },
@@ -173,6 +175,7 @@ export function EspaceAvocatLayout() {
           <Routes>
             <Route path="/" element={<MaSituation />} />
             <Route path="/documents" element={<MesDocuments />} />
+            <Route path="/timbres" element={<MesTimbres />} />
             <Route path="/messagerie" element={<EspaceMessagerie />} />
             <Route path="/annuaire" element={<EspaceAnnuaire />} />
             <Route path="/assemblees" element={<EspaceAssemblees />} />

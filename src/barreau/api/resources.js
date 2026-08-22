@@ -265,6 +265,10 @@ export const telechargerEspaceQuitusPdf = (id, numero) => telechargerPdf(`/espac
 // Attestations éditées en self-service par l'avocat (inscription / non-redevance).
 export const telechargerEspaceAttestationInscription = () => telechargerPdf("/espace/attestation/inscription/pdf", "Attestation-inscription.pdf");
 export const telechargerEspaceAttestationNonRedevance = () => telechargerPdf("/espace/attestation/non-redevance/pdf", "Attestation-non-redevance.pdf");
+// Timbres de plaidoirie (espace avocat)
+export const getEspaceTimbres = () => api("/espace/timbres");
+export const creerEspaceTimbre = (body) => api("/espace/timbres", { method: "POST", body });
+
 // Centre de notifications de l'avocat (espace)
 export const getEspaceNotifications = () => api("/espace/notifications");
 export const marquerEspaceNotifLue = (id) => api(`/espace/notifications/${id}/lu`, { method: "POST" });

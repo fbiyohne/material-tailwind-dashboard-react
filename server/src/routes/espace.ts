@@ -17,6 +17,7 @@ import { notifierNouveauMessage, emailsAdministration, emailsMembres } from "../
 import { messageNonDeMoi, compterNonLusParFil, totalNonLus, jamaisLu } from "../lib/messagerie.js";
 import { realtimeMembres, realtimeAdministration } from "../lib/realtime.js";
 import { notifier, usersSecretariat, listerNotifications, compterNonLus, marquerLu, marquerToutLu } from "../lib/centreNotifications.js";
+import { emettreTimbre, MONTANT_TIMBRE } from "../lib/timbres.js";
 
 /**
  * Espace avocat — surface en libre-service, strictement cloisonnée.
@@ -152,6 +153,37 @@ espaceRouter.get(
     const date = new Date();
     await archiver({ categorie: "Attestation de non-redevance", titre: `Attestation de non-redevance ${numero} — Me ${membre.nom}`, reference: numero, date, membreNom: membre.nom });
     await envoyerPdf(res, attestationNonRedevanceHtml(membre, numero, annee, date), `Attestation-non-redevance-${numero}.pdf`);
+  })
+);
+
+// — Timbres de plaidoirie : l'avocat émet les siens (paiement acquitté) —
+
+/** GET /espace/timbres — timbres de l'avocat connecté. */
+espaceRouter.get(
+  "/timbres",
+  asyncH(async (req: AuthRequest, res) => {
+    const timbres = await prisma.timbre.findMany({ where: { membreId: monMembreId(req) }, orderBy: { id: "desc" } });
+    res.json({ montant: MONTANT_TIMBRE, timbres });
+  })
+);
+
+const timbreEspaceSchema = z.object({
+  affaire: z.string().trim().min(1).max(200),
+  reference: z.string().trim().max(100).optional(),
+  juridiction: z.string().trim().max(160).optional(),
+  canal: z.enum(CANAUX).optional(),
+});
+
+/** POST /espace/timbres — l'avocat émet un timbre pour sa propre affaire. */
+espaceRouter.post(
+  "/timbres",
+  asyncH(async (req: AuthRequest, res) => {
+    const data = timbreEspaceSchema.parse(req.body);
+    const membre = await prisma.membre.findUnique({ where: { id: monMembreId(req) } });
+    if (!membre) throw new HttpError(404, "Fiche introuvable");
+    // Montant fixé par l'Ordre (non modifiable côté client).
+    const timbre = await emettreTimbre({ membre, affaire: data.affaire, reference: data.reference, juridiction: data.juridiction, montant: MONTANT_TIMBRE, canal: data.canal });
+    res.status(201).json(timbre);
   })
 );
 

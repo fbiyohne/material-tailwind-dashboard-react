@@ -91,6 +91,27 @@ export async function exporterPng(selector, filename) {
   a.click();
 }
 
+/**
+ * Copie un élément (ex. la vignette) dans le presse-papier en tant qu'image PNG,
+ * pour le coller directement dans un document Word/PDF. Renvoie true si la copie
+ * a réussi ; false si le navigateur ne le permet pas (l'appelant proposera alors
+ * le téléchargement).
+ */
+export async function copierPng(selector) {
+  const el = document.querySelector(selector);
+  if (!el || !navigator.clipboard || !window.ClipboardItem) return false;
+  const { default: html2canvas } = await import("html2canvas");
+  const canvas = await html2canvas(el, { scale: 3, backgroundColor: null, useCORS: true });
+  const blob = await new Promise((r) => canvas.toBlob(r, "image/png"));
+  if (!blob) return false;
+  try {
+    await navigator.clipboard.write([new window.ClipboardItem({ "image/png": blob })]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function exporterExcel(filename, lignes, sheetName = "Feuille1") {
   const XLSX = await import("xlsx");
   const ws = XLSX.utils.aoa_to_sheet(lignes);

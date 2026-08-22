@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { TicketIcon, ArrowDownTrayIcon, ShieldCheckIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { TicketIcon, ArrowDownTrayIcon, ShieldCheckIcon, TrashIcon, ClipboardDocumentIcon } from "@heroicons/react/24/outline";
 import { Badge, VignetteTimbre, PageHeader, DataTable, useToast, useConfirm } from "../components";
 import { QUALITE_LABEL } from "../data/derivations";
+import { canauxActifs } from "../data/config";
 import { formatFCFA, formatDate } from "../utils/format";
-import { exporterPng } from "../utils/exports";
+import { exporterPng, copierPng } from "../utils/exports";
 import { useAuth } from "../auth/AuthContext";
 import { listerMembres, listerTimbres, creerTimbre, annulerTimbre } from "../api/resources";
+
+const CANAL_LABEL = { MTN: "MTN Money", AIRTEL: "Airtel Money", CARTE: "Carte bancaire", VIREMENT: "Virement" };
 
 const DP_DEFAUT = 15000; // droit de plaidoirie par affaire (modifiable à l'émission)
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
@@ -32,6 +35,7 @@ export function Timbres() {
   const [reference, setReference] = useState("");
   const [juridiction, setJuridiction] = useState("");
   const [montant, setMontant] = useState(DP_DEFAUT);
+  const [canal, setCanal] = useState("MTN");
   const [emission, setEmission] = useState(false);
   const [succes, setSucces] = useState(null);
   const [registre, setRegistre] = useState([]);
@@ -62,7 +66,7 @@ export function Timbres() {
     if (!membre || !affaire.trim() || montant <= 0 || emission) return;
     setEmission(true);
     try {
-      const t = await creerTimbre({ membreId, affaire: affaire.trim(), reference: reference.trim() || undefined, juridiction: juridiction.trim() || undefined, montant: Number(montant) });
+      const t = await creerTimbre({ membreId, affaire: affaire.trim(), reference: reference.trim() || undefined, juridiction: juridiction.trim() || undefined, montant: Number(montant), canal });
       setSucces(t);
       chargerRegistre();
       toast.success(`Timbre N° ${t.numero} émis.`);
@@ -72,6 +76,14 @@ export function Timbres() {
   const telecharger = () => {
     if (!succes) return;
     exporterPng("#vignette-timbre", `Timbre-${succes.numero}`).catch((e) => toast.error(e.message));
+  };
+  const copier = async () => {
+    if (!succes) return;
+    try {
+      const ok = await copierPng("#vignette-timbre");
+      if (ok) toast.success("Timbre copié — collez-le dans votre document (Ctrl+V).");
+      else { toast.error("Copie non disponible sur ce navigateur — téléchargement du PNG."); telecharger(); }
+    } catch (e) { toast.error(e.message); }
   };
 
   const annuler = async (t) => {
@@ -101,12 +113,22 @@ export function Timbres() {
               <Champ label="Montant (FCFA)"><input type="number" min={0} step={500} value={montant} onChange={(e) => setMontant(e.target.value)} className="bpn-input-dark" /></Champ>
             </div>
             <Champ label="Juridiction"><input value={juridiction} onChange={(e) => setJuridiction(e.target.value)} className="bpn-input-dark" placeholder="TI de Tié-Tié" /></Champ>
+            <Champ label="Paiement">
+              <select value={canal} onChange={(e) => setCanal(e.target.value)} className="bpn-input-dark">
+                {(canauxActifs().length ? canauxActifs() : ["MTN", "AIRTEL", "CARTE", "VIREMENT"]).map((c) => <option key={c} value={c}>{CANAL_LABEL[c] ?? c}</option>)}
+              </select>
+            </Champ>
             <button type="button" onClick={emettre} disabled={!membre || !affaire.trim() || montant <= 0 || emission} className="bpn-btn bpn-btn-or w-full justify-center !py-2.5">
-              <TicketIcon className="h-4 w-4" /> {emission ? "Émission…" : "Émettre le timbre"}
+              <TicketIcon className="h-4 w-4" /> {emission ? "Émission…" : `Payer & émettre (${formatFCFA(Number(montant) || 0)})`}
             </button>
-            <button type="button" onClick={telecharger} disabled={!succes} title={succes ? "" : "Émettez d'abord le timbre"} className="bpn-btn bpn-btn-ghost w-full justify-center border-white/20 text-white/70 hover:bg-white/10 hover:text-white disabled:opacity-40">
-              <ArrowDownTrayIcon className="h-4 w-4" /> Télécharger (PNG)
-            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" onClick={telecharger} disabled={!succes} title={succes ? "" : "Émettez d'abord le timbre"} className="bpn-btn bpn-btn-ghost justify-center border-white/20 text-white/70 hover:bg-white/10 hover:text-white disabled:opacity-40">
+                <ArrowDownTrayIcon className="h-4 w-4" /> PNG
+              </button>
+              <button type="button" onClick={copier} disabled={!succes} title={succes ? "Copier pour coller dans Word/PDF" : "Émettez d'abord le timbre"} className="bpn-btn bpn-btn-ghost justify-center border-white/20 text-white/70 hover:bg-white/10 hover:text-white disabled:opacity-40">
+                <ClipboardDocumentIcon className="h-4 w-4" /> Copier
+              </button>
+            </div>
             {succes && (
               <a href={`/verifier/timbre/${encodeURIComponent(succes.code)}`} target="_blank" rel="noreferrer" className="block text-center text-xs text-white/60 underline hover:text-white">
                 Page de vérification publique

@@ -330,6 +330,8 @@ model Timbre {
   juridiction String?
   cabinet     String?
   montant     Int
+  canal       String? // moyen de paiement (MTN, AIRTEL, CARTE, VIREMENT, SANDBOX)
+  refPaiement String? // référence de la transaction (traçabilité)
   statut      String   @default("VALIDE") // VALIDE | ANNULE
   createdAt   DateTime @default(now())
 
