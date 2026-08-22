@@ -79,8 +79,19 @@
   }
 
   /* ─── Carte indicateur (stat card) ────────────────────────── */
+  /* Tuile : entrée en fondu montant + transition douce ; le survol (ombre/lift)
+     est renforcé sur les tuiles cliquables (cf. composant StatCard). */
   .bpn-stat {
     @apply rounded-lg border border-grisM border-l-[3px] bg-creme p-4;
+    animation: bpnTileIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+  .bpn-stat:hover {
+    @apply shadow-card;
+  }
+  @keyframes bpnTileIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
   }
   .bpn-stat-label {
     @apply mb-2 text-xs font-medium uppercase tracking-wide text-gris;

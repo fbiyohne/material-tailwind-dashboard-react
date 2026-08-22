@@ -165,10 +165,10 @@ export function Dashboard() {
 
       {/* 4 indicateurs (données réelles de la base) */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Avocats inscrits" value={membres?.inscrits ?? "…"} sub="au tableau" accent="or" valueAccent="navy" onClick={allerVers("/avocats")} />
-        <StatCard label="À jour" value={membres?.aJour ?? "…"} sub="avocats + stagiaires" accent="vert" onClick={allerVers("/cotisations?statut=ajour")} />
-        <StatCard label="En retard" value={membres?.enRetard ?? "…"} sub="relances nécessaires" accent="rouge" onClick={allerVers("/cotisations?statut=retard")} className={(membres?.enRetard ?? 0) > 0 ? "!border-rouge !bg-rougeL" : ""} />
-        <StatCard label="Stagiaires" value={membres?.stagiaires ?? "…"} sub="en cours" accent="navy" onClick={allerVers("/stagiaires")} />
+        <StatCard index={1} label="Avocats inscrits" value={membres?.inscrits ?? "…"} sub="au tableau" accent="or" valueAccent="navy" onClick={allerVers("/avocats")} />
+        <StatCard index={2} label="À jour" value={membres?.aJour ?? "…"} sub="avocats + stagiaires" accent="vert" onClick={allerVers("/cotisations?statut=ajour")} />
+        <StatCard index={3} label="En retard" value={membres?.enRetard ?? "…"} sub="relances nécessaires" accent="rouge" onClick={allerVers("/cotisations?statut=retard")} className={(membres?.enRetard ?? 0) > 0 ? "!border-rouge !bg-rougeL" : ""} />
+        <StatCard index={4} label="Stagiaires" value={membres?.stagiaires ?? "…"} sub="en cours" accent="navy" onClick={allerVers("/stagiaires")} />
       </div>
 
       {/* Indicateurs institutionnels / système — servis selon le rôle (disciplinaire

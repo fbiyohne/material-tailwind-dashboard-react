@@ -6,14 +6,14 @@ import PropTypes from "prop-types";
  * peut différer (`valueAccent`). Si `onClick` est fourni, la carte devient
  * cliquable (navigation vers une liste filtrée).
  */
-export function StatCard({ label, value, sub, accent = "or", valueAccent, onClick, className = "" }) {
+export function StatCard({ label, value, sub, accent = "or", valueAccent, onClick, className = "", index = 0 }) {
   const valueColor = valueAccent ?? accent;
   const Tag = onClick ? "button" : "div";
   return (
     <Tag
       onClick={onClick}
-      className={`bpn-stat block w-full text-left ${onClick ? "cursor-pointer transition hover:-translate-y-0.5 hover:shadow-card" : ""} ${className}`}
-      style={{ borderLeftColor: `var(--bpn-${accent})` }}
+      className={`bpn-stat block w-full text-left ${onClick ? "cursor-pointer hover:-translate-y-0.5 hover:border-or/40" : ""} ${className}`}
+      style={{ borderLeftColor: `var(--bpn-${accent})`, animationDelay: index ? `${Math.min(index, 8) * 55}ms` : undefined }}
     >
       <div className="bpn-stat-label">{label}</div>
       <div className="bpn-stat-value" style={{ color: `var(--bpn-${valueColor})` }}>
@@ -32,6 +32,7 @@ StatCard.propTypes = {
   valueAccent: PropTypes.string,
   onClick: PropTypes.func,
   className: PropTypes.string,
+  index: PropTypes.number,
 };
 
 export default StatCard;
