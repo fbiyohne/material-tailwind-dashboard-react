@@ -436,7 +436,7 @@ export function decisionDisciplineHtml(d: any): string {
       <p>Le Conseil de discipline de l'Ordre des Avocats du Barreau de Pointe-Noire, statuant sur le dossier <b>N° ${d.reference}</b> concernant <b>${qui}</b>${d.dateAudience ? `, à la suite de l'audience du <b>${fmtDate(d.dateAudience)}</b>` : ""},</p>
       <p style="margin:10px 0 4px"><b>Objet :</b> ${escapeHtml(d.objet ?? "—")}.</p>
       <p style="margin:14px 0 4px"><b>Décision :</b></p>
-      ${paragraphes(d.decision)}
+      ${corpsPv(d.decision)}
       ${sanction}`,
     signataire: { role: "Le Bâtonnier, Président du Conseil de discipline", nom: identite().batonnier },
     date: new Date(),

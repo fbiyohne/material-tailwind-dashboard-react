@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeftIcon, ShieldExclamationIcon, CheckIcon, ArrowDownTrayIcon, PaperClipIcon, PlusIcon, XMarkIcon, DocumentTextIcon, ScaleIcon } from "@heroicons/react/24/outline";
-import { Badge, DocumentModal, Notice, useToast, FormField, PageHeader, Tabs, ErrorState, TableSkeleton } from "../components";
+import { ArrowLeftIcon, ShieldExclamationIcon, CheckIcon, ArrowDownTrayIcon, PaperClipIcon, PlusIcon, XMarkIcon, DocumentTextIcon, ScaleIcon, PencilSquareIcon } from "@heroicons/react/24/outline";
+import { Badge, DocumentModal, EditeurDocument, Notice, useToast, FormField, PageHeader, Tabs, ErrorState, TableSkeleton } from "../components";
 import { STATUT_DOSSIER_META } from "../data/institutionnel";
 import { formatDate } from "../utils/format";
+import { assainirHtml } from "../utils/sanitizeHtml";
 import { getDossier, majDossier, archiverDoc, telechargerDecisionDisciplinePdf } from "../api/resources";
 
 const STATUTS = ["ouvert", "instruction", "audience", "decision", "classe"];
@@ -16,6 +17,7 @@ export function DossierDetail() {
   const [enregistre, setEnregistre] = useState(false);
   const [convocation, setConvocation] = useState(false);
   const [nouvellePiece, setNouvellePiece] = useState("");
+  const [editerDecision, setEditerDecision] = useState(false);
 
   // getDossier journalise la consultation côté serveur (RG-13).
   const charger = () => getDossier(Number(id)).then((d) => { setDossier(d); setForm(d); }).catch(() => setDossier(false));
@@ -168,7 +170,17 @@ export function DossierDetail() {
                     <input type="date" value={form.dateAudience ?? ""} onChange={set("dateAudience")} className="bpn-input" />
                   </FormField>
                   <FormField label="Décision rendue" full>
-                    <textarea rows={3} value={form.decision ?? ""} onChange={set("decision")} className="bpn-input" placeholder="Motifs et dispositif de la décision…" />
+                    <div className="rounded border border-grisM">
+                      <div className="flex items-center justify-between border-b border-grisM bg-grisL/50 px-3 py-1.5">
+                        <span className="text-xs text-gris">Motifs et dispositif</span>
+                        <button type="button" className="bpn-btn bpn-btn-ghost bpn-btn-sm" onClick={() => setEditerDecision(true)}>
+                          <PencilSquareIcon className="h-3.5 w-3.5" /> Rédiger
+                        </button>
+                      </div>
+                      {form.decision && assainirHtml(form.decision)
+                        ? <div className="bpn-doc px-3 py-2" dangerouslySetInnerHTML={{ __html: assainirHtml(form.decision) }} />
+                        : <p className="px-3 py-4 text-center text-sm text-gris">Aucune décision rédigée. Cliquez sur « Rédiger ».</p>}
+                    </div>
                   </FormField>
                   <FormField label="Sanction éventuelle" full>
                     <input value={form.sanction ?? ""} onChange={set("sanction")} className="bpn-input" placeholder="Avertissement, blâme, suspension, radiation…" />
@@ -212,6 +224,19 @@ export function DossierDetail() {
         <p className="mt-3">Objet : {dossier.objet}.</p>
         <p className="mt-3 text-xs text-gris">L'intéressé(e) pourra se faire assister du conseil de son choix.</p>
       </DocumentModal>
+
+      <EditeurDocument
+        open={editerDecision}
+        title={`Décision — dossier ${dossier.reference}`}
+        value={form.decision ?? ""}
+        note="Rédigez les motifs et le dispositif. L'en-tête institutionnel, la sanction et la signature du Bâtonnier avec cachet sont ajoutés automatiquement au PDF."
+        onSave={async (html) => {
+          await majDossier(dossier.id, { decision: html });
+          setForm({ ...form, decision: html });
+          toast.success("Décision enregistrée.");
+        }}
+        onClose={() => setEditerDecision(false)}
+      />
     </div>
   );
 }
