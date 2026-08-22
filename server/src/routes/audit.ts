@@ -30,6 +30,7 @@ auditRouter.get(
               { chemin: { contains: q, mode: "insensitive" } },
               { cible: { contains: q, mode: "insensitive" } },
               { userNom: { contains: q, mode: "insensitive" } },
+              { ip: { contains: q, mode: "insensitive" } },
             ],
           }
         : {}),
@@ -64,6 +65,7 @@ auditRouter.get(
         methode: e.methode,
         chemin: e.chemin,
         statut: e.statut,
+        ip: e.ip ?? null,
         acteur: e.userNom ?? (e.userId != null ? nomParId.get(e.userId) ?? "Utilisateur" : "Système"),
         quand: e.quand,
       })),

@@ -44,13 +44,16 @@ function libelle(methode: string, chemin: string): { action: string; cible: stri
  */
 export function audit(req: AuthRequest, res: Response, next: NextFunction) {
   if (req.method === "GET" || req.method === "OPTIONS" || req.method === "HEAD") return next();
+  // IP capturée à la réception (req.ip fiable via « trust proxy ») ; on retire le
+  // préfixe IPv4-mapped (::ffff:) pour un affichage lisible.
+  const ip = (req.ip ?? "").replace(/^::ffff:/, "") || null;
   res.on("finish", () => {
     if (res.statusCode >= 400) return;
     const { action, cible } = libelle(req.method, req.originalUrl.split("?")[0]);
     prisma.journalAudit
       .create({
         data: {
-          action, cible, methode: req.method, chemin: req.originalUrl.split("?")[0],
+          action, cible, methode: req.method, chemin: req.originalUrl.split("?")[0], ip,
           // userNom dénormalisé : l'entrée reste attribuable même après suppression
           // du compte, et la recherche par acteur (filtre) devient effective.
           statut: res.statusCode, userId: req.user?.id ?? null, userNom: req.user?.nom ?? null,

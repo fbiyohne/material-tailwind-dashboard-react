@@ -437,6 +437,7 @@ model JournalAudit {
   methode String
   chemin  String
   statut  Int
+  ip      String?
   userId  Int?
   userNom String?
   quand   DateTime @default(now())

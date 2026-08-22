@@ -61,7 +61,7 @@ export function JournalAudit() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="relative flex-1">
             <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gris" />
-            <input type="text" value={q} onChange={resetPage(setQ)} placeholder="Rechercher une action, un acteur, une cible…" className="bpn-input pl-9" />
+            <input type="text" value={q} onChange={resetPage(setQ)} placeholder="Rechercher une action, un acteur, une cible, une IP…" className="bpn-input pl-9" />
           </div>
           <label className="flex items-center gap-2 text-xs text-gris">Du <input type="date" lang="fr-FR" value={from} onChange={resetPage(setFrom)} className="bpn-input !w-auto !py-1.5" /></label>
           <label className="flex items-center gap-2 text-xs text-gris">Au <input type="date" lang="fr-FR" value={to} onChange={resetPage(setTo)} className="bpn-input !w-auto !py-1.5" /></label>
@@ -73,7 +73,7 @@ export function JournalAudit() {
 
       <div className="bpn-card overflow-hidden">
         {chargement ? (
-          <div className="p-4"><TableSkeleton rows={8} cols={4} /></div>
+          <div className="p-4"><TableSkeleton rows={8} cols={6} /></div>
         ) : erreur ? (
           <div className="p-6"><ErrorState title="Indisponible" description="Le journal d'audit n'a pas pu être chargé." onRetry={() => setNonce((n) => n + 1)} /></div>
         ) : items.length === 0 ? (
@@ -87,6 +87,7 @@ export function JournalAudit() {
                   <th>Acteur</th>
                   <th>Action</th>
                   <th>Cible</th>
+                  <th>Adresse IP</th>
                   <th className="text-right">Résultat</th>
                 </tr>
               </thead>
@@ -107,6 +108,7 @@ export function JournalAudit() {
                       </td>
                       <td className="text-encre/90">{e.action}</td>
                       <td>{e.cible ? <span className="rounded bg-grisL px-1.5 py-0.5 font-mono text-xs text-or-fonce">{e.cible}</span> : <span className="text-gris">—</span>}</td>
+                      <td>{e.ip ? <span className="font-mono text-xs text-gris">{e.ip}</span> : <span className="text-gris">—</span>}</td>
                       <td className="text-right" title={`Code HTTP ${e.statut}`}>
                         <Badge ton={echec ? "rouge" : "vert"} dot={false}>{echec ? "Échec" : "Réussi"}</Badge>
                       </td>
