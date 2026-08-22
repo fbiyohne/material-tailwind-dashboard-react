@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import { NavLink, useLocation } from "react-router-dom";
-import { XMarkIcon, ScaleIcon, ArrowRightOnRectangleIcon } from "@heroicons/react/24/outline";
+import { XMarkIcon, ArrowRightOnRectangleIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import { sectionsPourRole } from "../routes";
+import { Sceau } from "../components";
+import { identite } from "../data/config";
 import { useAuth } from "../auth/AuthContext";
 import { getCotisations, listerDossiers, getMessagerieNonLus, listerToutesPieces } from "../api/resources";
 import { onRealtime } from "../api/realtime";
@@ -89,17 +91,17 @@ export function Sidebar({ open, onClose }) {
         {/* Filet or supérieur */}
         <div className="h-px shrink-0 bg-gradient-to-r from-transparent via-or/50 to-transparent" />
 
-        {/* Bloc logo + emblème */}
+        {/* Bloc logo + emblème (source unique : Paramètres → identité/logo) */}
         <div className="relative flex shrink-0 items-center gap-3 border-b border-white/[0.08] px-4 pb-4 pt-5">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-or/40 bg-navy-2 shadow-[0_0_0_3px_rgba(196,153,10,0.06)]">
-            <ScaleIcon className="h-5 w-5 text-or-2" />
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white ring-1 ring-or/40 shadow-[0_0_0_4px_rgba(196,153,10,0.12)]">
+            <Sceau size={40} />
           </div>
           <div className="min-w-0">
-            <div className="mb-0.5 text-2xs font-medium uppercase tracking-[0.24em] text-or/80">
+            <div className="mb-0.5 truncate text-2xs font-medium uppercase tracking-[0.2em] text-or/80">
               République du Congo
             </div>
-            <div className="font-display text-sm font-semibold leading-[1.15] text-white">
-              Barreau de Pointe-Noire
+            <div className="truncate font-display text-sm font-semibold leading-[1.15] text-white">
+              {identite().denomination}
             </div>
             <div className="mt-0.5 text-xs tracking-wide text-white/45">Secrétariat Général</div>
           </div>
@@ -165,35 +167,39 @@ export function Sidebar({ open, onClose }) {
           ))}
         </nav>
 
-        {/* Carte d'identité utilisateur + déconnexion */}
-        <div className="shrink-0 border-t border-white/[0.08] p-3">
-          <div className="flex items-center gap-2.5 rounded-lg border border-white/[0.06] bg-white/[0.04] px-3 py-2.5">
-            <NavLink
-              to="/profil"
-              onClick={onClose}
-              className="flex min-w-0 flex-1 items-center gap-2.5 rounded transition hover:opacity-90"
-              title="Mon profil"
-            >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-or/30 bg-or/15 text-xs font-semibold text-or-2">
+        {/* Compte connecté : identité + déconnexion explicite */}
+        <div className="shrink-0 space-y-2 border-t border-white/[0.08] p-3">
+          <NavLink
+            to="/profil"
+            onClick={onClose}
+            className="group flex items-center gap-3 rounded-lg border border-white/[0.07] bg-white/[0.04] px-3 py-2.5 transition hover:border-or/30 hover:bg-white/[0.07]"
+            title="Voir mon profil"
+          >
+            <div className="relative shrink-0">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-or/25 to-navy-2 text-sm font-semibold text-or-2 ring-1 ring-or/40">
                 {initiales(user?.nom)}
               </div>
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-xs font-medium text-white/90">{user?.nom}</div>
-                <div className="text-2xs uppercase tracking-[0.12em] text-or/70">
+              {/* Indicateur de session active */}
+              <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-navy-3 bg-vert" aria-hidden="true" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-medium leading-tight text-white">{user?.nom}</div>
+              <div className="mt-1 inline-flex max-w-full items-center gap-1 rounded-full bg-or/[0.14] px-2 py-0.5">
+                <span className="truncate text-2xs font-semibold uppercase tracking-[0.1em] text-or-2">
                   {ROLE_LABEL[user?.role] ?? user?.role}
-                </div>
+                </span>
               </div>
-            </NavLink>
-            <button
-              type="button"
-              onClick={logout}
-              className="shrink-0 text-white/40 transition hover:text-rouge"
-              aria-label="Se déconnecter"
-              title="Se déconnecter"
-            >
-              <ArrowRightOnRectangleIcon className="h-4 w-4" />
-            </button>
-          </div>
+            </div>
+            <ChevronRightIcon className="h-4 w-4 shrink-0 text-white/30 transition group-hover:text-or-2" />
+          </NavLink>
+
+          <button
+            type="button"
+            onClick={logout}
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-white/[0.07] px-3 py-2 text-xs font-medium text-white/70 transition hover:border-rouge/40 hover:bg-rouge/10 hover:text-white"
+          >
+            <ArrowRightOnRectangleIcon className="h-4 w-4" /> Se déconnecter
+          </button>
         </div>
       </aside>
     </>
