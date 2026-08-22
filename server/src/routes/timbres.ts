@@ -5,6 +5,7 @@ import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { CANAUX } from "../lib/paiement.js";
 import { emettreTimbre } from "../lib/timbres.js";
+import { notifier, userDeMembre } from "../lib/centreNotifications.js";
 
 /**
  * Timbres / vignettes électroniques de droit de plaidoirie. Émission par le
@@ -32,6 +33,10 @@ timbresRouter.post(
     const membre = await prisma.membre.findUnique({ where: { id: data.membreId } });
     if (!membre) throw new HttpError(404, "Avocat introuvable");
     const timbre = await emettreTimbre({ membre, affaire: data.affaire, reference: data.reference, juridiction: data.juridiction, montant: data.montant, canal: data.canal });
+    // Alerte in-app de l'avocat : timbre émis pour son compte (best-effort).
+    void userDeMembre(membre.id)
+      .then((uid) => (uid ? notifier([uid], { type: "TIMBRE", titre: "Timbre disponible", message: `Votre timbre N° ${timbre.numero} (${data.affaire}) est disponible.`, lien: "/timbres" }) : 0))
+      .catch(() => {});
     res.status(201).json({ ...timbre, membre: { nom: membre.nom, num: membre.num } });
   })
 );

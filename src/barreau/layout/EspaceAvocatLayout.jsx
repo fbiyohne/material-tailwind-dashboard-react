@@ -6,6 +6,7 @@ import {
   Bars3Icon, XMarkIcon, UserCircleIcon, TicketIcon,
 } from "@heroicons/react/24/outline";
 import { Sceau, ClocheNotifications } from "../components";
+import { identite } from "../data/config";
 import { useAuth } from "../auth/AuthContext";
 import { useFocusAuChangementDeRoute } from "../hooks/useFocusAuChangementDeRoute";
 import { getEspaceMessagerieNonLus, getEspaceNotifications, marquerEspaceNotifLue, marquerToutesEspaceNotifsLues } from "../api/resources";
@@ -86,7 +87,7 @@ export function EspaceAvocatLayout() {
           <NavLink to="/" end className="flex shrink-0 items-center gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-or">
             <div className="shrink-0 rounded-full bg-white p-1.5"><Sceau size={36} /></div>
             <div className="hidden sm:block">
-              <div className="text-2xs uppercase tracking-[0.2em] text-or-2">Barreau de Pointe-Noire</div>
+              <div className="text-2xs uppercase tracking-[0.2em] text-or-2">{identite().denomination}</div>
               <div className="font-display text-base leading-tight">Espace avocat</div>
             </div>
           </NavLink>

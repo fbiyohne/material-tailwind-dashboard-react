@@ -3,6 +3,7 @@ import { ArrowDownTrayIcon, ScaleIcon, ShieldCheckIcon } from "@heroicons/react/
 import { Badge, PageHeader, useToast, TableSkeleton, ErrorState, EmptyState } from "../../components";
 import { STATUT_DOSSIER_META } from "../../data/institutionnel";
 import { formatDate } from "../../utils/format";
+import { assainirHtml } from "../../utils/sanitizeHtml";
 import { getEspaceDiscipline, telechargerEspaceDecisionPdf } from "../../api/resources";
 
 function Ligne({ label, valeur }) {
@@ -56,7 +57,12 @@ export function EspaceDiscipline() {
                 <Ligne label="Saisine" valeur={formatDate(d.dateSaisine)} />
                 <Ligne label="Convocation" valeur={d.dateConvocation ? formatDate(d.dateConvocation) : null} />
                 <Ligne label="Audience" valeur={d.dateAudience ? formatDate(d.dateAudience) : null} />
-                <Ligne label="Décision" valeur={d.decision} />
+                {d.decision && assainirHtml(d.decision) && (
+                  <div className="flex gap-2 text-sm">
+                    <span className="w-32 shrink-0 text-xs font-semibold uppercase tracking-wider text-gris">Décision</span>
+                    <div className="bpn-doc min-w-0 flex-1" dangerouslySetInnerHTML={{ __html: assainirHtml(d.decision) }} />
+                  </div>
+                )}
                 <Ligne label="Sanction" valeur={d.sanction} />
                 {d.decision && (
                   <div className="pt-1">
