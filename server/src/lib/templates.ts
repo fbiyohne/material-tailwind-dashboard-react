@@ -282,42 +282,82 @@ const paragraphes = (texte?: string | null) =>
     .map((bloc) => `<p style="margin:0 0 10px">${escapeHtml(bloc).replace(/\n/g, "<br>")}</p>`)
     .join("") || '<p style="color:#7A756A">— Procès-verbal non encore rédigé —</p>';
 
-/** Procès-verbal de réunion du Conseil de l'Ordre (CDC §2.9 / §6). */
+/** Titre de section numéroté d'un procès-verbal structuré. */
+const sectionPv = (num: string, texte: string) =>
+  `<h3 style="font-family:'Playfair Display',serif;color:#1A3A6B;font-size:15px;margin:16px 0 6px"><span style="color:#C4990A">${num}.</span> ${texte}</h3>`;
+
+/**
+ * Section « Présences et quorum » à partir de la feuille émargée {label: présent}.
+ * Le quorum est atteint dès que la moitié au moins des membres est présente.
+ */
+function presenceEtQuorum(presences: Record<string, boolean> | null | undefined): string {
+  const entrees = Object.entries(presences ?? {});
+  if (entrees.length === 0) return `<p style="color:#7A756A">Feuille de présence à compléter.</p>`;
+  const presents = entrees.filter(([, v]) => v).map(([n]) => escapeHtml(n));
+  const absents = entrees.filter(([, v]) => !v).map(([n]) => escapeHtml(n));
+  const total = entrees.length;
+  const quorum = presents.length * 2 >= total;
+  return `
+    <div class="row"><span class="l">Membres présents (${presents.length})</span><span>${presents.length ? presents.join(", ") : "—"}</span></div>
+    <div class="row"><span class="l">Membres absents (${absents.length})</span><span>${absents.length ? absents.join(", ") : "—"}</span></div>
+    <p style="margin:8px 0 0">Sur <b>${total}</b> membres composant le Conseil, <b>${presents.length}</b> sont présents. ${quorum
+      ? "La moitié au moins des membres étant présente, le <b>quorum est atteint</b> et le Conseil peut valablement délibérer."
+      : "Le <b>quorum n'est pas atteint</b> ; le Conseil sera de nouveau convoqué sur les points concernés."}</p>`;
+}
+
+/**
+ * Procès-verbal de réunion du Conseil de l'Ordre (CDC §2.9 / §6), structuré
+ * selon le modèle officiel : le squelette et les formules sont composés
+ * automatiquement, l'utilisateur ne saisit que les variables (présences, ODJ,
+ * délibérations). Sections I→V, signature du Secrétaire Général avec cachet.
+ */
 export function pvReunionHtml(reunion: any): string {
   const odj = (reunion.ordreDuJour ?? []).length
-    ? `<p style="margin:10px 0 4px"><b>Ordre du jour :</b></p>${liste(reunion.ordreDuJour)}`
-    : "";
+    ? liste(reunion.ordreDuJour)
+    : '<p style="color:#7A756A">Ordre du jour non renseigné.</p>';
   return documentHtml({
     org: "Conseil de l'Ordre",
     title: "Procès-verbal de réunion",
     reference: `Réunion du ${fmtDate(reunion.date)}`,
     bodyHtml: `
-      <p>L'an ${new Date(reunion.date).getFullYear()}, le <b>${fmtDate(reunion.date)}</b>${reunion.heure ? ` à <b>${escapeHtml(reunion.heure)}</b>` : ""}, le Conseil de l'Ordre des Avocats du Barreau de Pointe-Noire s'est réuni${reunion.lieu ? ` au <b>${escapeHtml(reunion.lieu)}</b>` : ""}.</p>
+      ${sectionPv("I", "Convocation et ouverture de la séance")}
+      <p>L'an ${new Date(reunion.date).getFullYear()}, le <b>${fmtDate(reunion.date)}</b>${reunion.heure ? ` à <b>${escapeHtml(reunion.heure)}</b>` : ""}, le Conseil de l'Ordre des Avocats du Barreau de Pointe-Noire, régulièrement convoqué par le Bâtonnier, s'est réuni${reunion.lieu ? ` au <b>${escapeHtml(reunion.lieu)}</b>` : ""}. La séance est présidée par le Bâtonnier.</p>
+      ${sectionPv("II", "Présences et vérification du quorum")}
+      ${presenceEtQuorum(reunion.presences)}
+      ${sectionPv("III", "Ordre du jour")}
       ${odj}
-      <p style="margin:14px 0 4px"><b>Délibérations :</b></p>
-      ${paragraphes(reunion.pv)}`,
+      ${sectionPv("IV", "Délibérations et décisions")}
+      ${paragraphes(reunion.pv)}
+      ${sectionPv("V", "Clôture")}
+      <p>Plus rien n'étant inscrit à l'ordre du jour, la séance est levée. Le présent procès-verbal est dressé pour être soumis à l'approbation du Conseil.</p>`,
     signataire: { role: "Le Secrétaire Général", nom: identite().secretaireGeneral },
     date: reunion.date,
   });
 }
 
-/** Procès-verbal d'assemblée générale (CDC §2.10 / §6). */
+/** Procès-verbal d'assemblée générale (CDC §2.10 / §6), structuré (sections I→V). */
 export function pvAssembleeHtml(a: any): string {
   const type = a.type === "AGE" ? "Assemblée Générale Extraordinaire" : "Assemblée Générale Ordinaire";
+  const odj = (a.ordreDuJour ?? []).length ? liste(a.ordreDuJour) : '<p style="color:#7A756A">Ordre du jour non renseigné.</p>';
   const decisions = (a.decisions ?? []).length
-    ? `<p style="margin:14px 0 4px"><b>Décisions adoptées :</b></p>${liste(a.decisions)}`
+    ? `<p style="margin:12px 0 4px"><b>Décisions adoptées :</b></p>${liste(a.decisions)}`
     : "";
-  const quorum = a.quorumPresent != null ? `<div class="row"><span class="l">Quorum présent</span><span>${a.quorumPresent}</span></div>` : "";
   return documentHtml({
     org: "Conseil de l'Ordre",
     title: "Procès-verbal d'Assemblée Générale",
     reference: `${a.type} du ${fmtDate(a.date)}`,
     bodyHtml: `
-      <p>L'an ${new Date(a.date).getFullYear()}, le <b>${fmtDate(a.date)}</b>, les membres du Barreau de Pointe-Noire se sont réunis en <b>${type}</b>${a.lieu ? ` au <b>${escapeHtml(a.lieu)}</b>` : ""}.</p>
-      ${quorum}
-      <p style="margin:14px 0 4px"><b>Délibérations :</b></p>
+      ${sectionPv("I", "Ouverture de la séance")}
+      <p>L'an ${new Date(a.date).getFullYear()}, le <b>${fmtDate(a.date)}</b>, les membres du Barreau de Pointe-Noire se sont réunis en <b>${type}</b>${a.lieu ? ` au <b>${escapeHtml(a.lieu)}</b>` : ""}, sous la présidence du Bâtonnier.</p>
+      ${sectionPv("II", "Quorum")}
+      <p>Nombre de membres présents : <b>${a.quorumPresent ?? 0}</b>.</p>
+      ${sectionPv("III", "Ordre du jour")}
+      ${odj}
+      ${sectionPv("IV", "Délibérations et décisions")}
       ${paragraphes(a.pv)}
-      ${decisions}`,
+      ${decisions}
+      ${sectionPv("V", "Clôture")}
+      <p>L'ordre du jour étant épuisé, la séance est levée. Le présent procès-verbal est dressé pour servir et valoir ce que de droit.</p>`,
     signataire: { role: "Le Bâtonnier", nom: identite().batonnier },
     date: a.date,
   });

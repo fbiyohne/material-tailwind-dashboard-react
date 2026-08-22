@@ -93,8 +93,12 @@ export function ReunionDetail() {
   };
   const sauverPresences = async () => {
     try {
-      await majReunion(reunion.id, { presences });
-      toast.success(`Présences enregistrées (${nbPresents}/${membresConseil.length}).`);
+      // Carte complète (chaque membre du Conseil présent OU absent) : le PV a
+      // besoin de connaître les absents et le total pour la section quorum.
+      const complet = Object.fromEntries(membresConseil.map((n) => [n, !!presences[n]]));
+      await majReunion(reunion.id, { presences: complet });
+      setPresences(complet);
+      toast.success(`Présences enregistrées (${Object.values(complet).filter(Boolean).length}/${membresConseil.length}).`);
     } catch (e) {
       toast.error(e.message);
     }
@@ -207,6 +211,14 @@ export function ReunionDetail() {
                     </li>
                   ))}
                 </ul>
+                {membresConseil.length > 0 && (
+                  <div className="mt-3 border-t border-grisL pt-3 text-sm">
+                    <Badge ton={nbPresents * 2 >= membresConseil.length ? "vert" : "rouge"} dot={false}>
+                      {nbPresents * 2 >= membresConseil.length ? "Quorum atteint" : "Quorum non atteint"}
+                    </Badge>
+                    <span className="ml-2 text-gris">{nbPresents}/{membresConseil.length} présents · quorum à {Math.ceil(membresConseil.length / 2)}</span>
+                  </div>
+                )}
               </Carte>
             ),
           },
