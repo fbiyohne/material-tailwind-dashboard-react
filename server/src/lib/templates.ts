@@ -54,7 +54,7 @@ export function documentHtml({ org, title, reference, bodyHtml, signataire, date
   .title { font-family:'Playfair Display',serif; font-size:26px; color:#1A3A6B; text-align:center; }
   .ref { font-family:'DM Mono',monospace; font-size:12px; color:#C4990A; text-align:center; margin:4px 0 22px; }
   .content { font-size:14px; line-height:1.9; }
-  .montant { background:#FDF6E3; border-left:3px solid #C4990A; border-radius:0 4px 4px 0; padding:12px 16px; margin:14px 0; }
+  .montant { background:#FDF6E3; border:1px solid #E9DFBD; border-radius:4px; padding:12px 16px; margin:14px 0; text-align:center; }
   .montant b { font-family:'Playfair Display',serif; font-size:19px; color:#1A3A6B; }
   .montant i { display:block; font-size:12px; color:#7A756A; margin-top:2px; }
   .row { display:flex; justify-content:space-between; border-bottom:1px dashed #E0DBD0; padding:7px 0; font-size:14px; }
