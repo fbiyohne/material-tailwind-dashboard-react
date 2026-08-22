@@ -97,10 +97,10 @@ export function Sidebar({ open, onClose }) {
             <Sceau size={40} />
           </div>
           <div className="min-w-0">
-            <div className="mb-0.5 truncate text-2xs font-medium uppercase tracking-[0.2em] text-or/80">
+            <div className="mb-0.5 text-[10px] font-medium uppercase leading-tight tracking-[0.12em] text-or/80">
               République du Congo
             </div>
-            <div className="truncate font-display text-sm font-semibold leading-[1.15] text-white">
+            <div className="font-display text-sm font-semibold leading-[1.15] text-white">
               {identite().denomination}
             </div>
             <div className="mt-0.5 text-xs tracking-wide text-white/45">Secrétariat Général</div>
@@ -183,14 +183,14 @@ export function Sidebar({ open, onClose }) {
               <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-navy-3 bg-vert" aria-hidden="true" />
             </div>
             <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-medium leading-tight text-white">{user?.nom}</div>
-              <div className="mt-1 inline-flex max-w-full items-center gap-1 rounded-full bg-or/[0.14] px-2 py-0.5">
-                <span className="truncate text-2xs font-semibold uppercase tracking-[0.1em] text-or-2">
+              <div className="text-sm font-medium leading-tight text-white">{user?.nom}</div>
+              <div className="mt-1 inline-flex items-center rounded-full bg-or/[0.14] px-2 py-0.5">
+                <span className="text-2xs font-semibold uppercase tracking-[0.08em] text-or-2">
                   {ROLE_LABEL[user?.role] ?? user?.role}
                 </span>
               </div>
             </div>
-            <ChevronRightIcon className="h-4 w-4 shrink-0 text-white/30 transition group-hover:text-or-2" />
+            <ChevronRightIcon className="h-4 w-4 shrink-0 self-center text-white/30 transition group-hover:text-or-2" />
           </NavLink>
 
           <button
