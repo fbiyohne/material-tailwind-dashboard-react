@@ -5,6 +5,7 @@ import { Badge, Pagination, useToast, useConfirm, PageHeader, TableSkeleton, Err
 import { useAuth } from "../auth/AuthContext";
 import { formatDate } from "../utils/format";
 import { infoStage } from "../data/derivations";
+import { identite } from "../data/config";
 import { telechargerCsv } from "../utils/exportCsv";
 import { listerMembres, supprimerMembre } from "../api/resources";
 
@@ -230,7 +231,7 @@ export function Stagiaires() {
       {/* Liste imprimable (FR-ST — génération de la liste des stagiaires) */}
       <div className="bpn-print-zone hidden print:block">
         <div className="mb-2 text-center font-display text-xl text-navy">
-          Liste des avocats stagiaires — Barreau de Pointe-Noire
+          Liste des avocats stagiaires — {identite().denomination}
         </div>
         <table className="w-full text-sm">
           <thead>

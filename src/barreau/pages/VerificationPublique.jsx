@@ -3,6 +3,7 @@ import PropTypes from "prop-types";
 import { CheckBadgeIcon, XCircleIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
 import { Sceau } from "../components/Sceau";
 import { formatFCFA, formatDate } from "../utils/format";
+import { identite } from "../data/config";
 
 const TYPE_LABEL = { quitus: "Quitus de cotisation", recu: "Reçu de paiement", timbre: "Timbre de plaidoirie" };
 
@@ -29,7 +30,7 @@ export function VerificationPublique({ type, numero }) {
     <main className="flex min-h-screen flex-col items-center justify-center bg-navy-3 px-4 py-10 text-white">
       <div className="mb-6 flex flex-col items-center text-center">
         <Sceau size={72} />
-        <h1 className="mt-3 font-display text-xl text-white">Barreau de Pointe-Noire</h1>
+        <h1 className="mt-3 font-display text-xl text-white">{identite().denomination}</h1>
         <p className="text-xs uppercase tracking-[0.2em] text-or">Vérification d'authenticité</p>
       </div>
 

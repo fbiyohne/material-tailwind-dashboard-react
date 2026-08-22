@@ -5,6 +5,7 @@ import { exporterExcel } from "../utils/exports";
 import { formatDate } from "../utils/format";
 import { telechargerCsv } from "../utils/exportCsv";
 import { EXERCICE_COURANT } from "../data/dashboard-data";
+import { identite } from "../data/config";
 import { getCorpsElectoral } from "../api/resources";
 
 const MOTIF_LABEL = {
@@ -106,7 +107,7 @@ export function CorpsElectoral() {
                 <div className="bpn-print-zone bpn-card">
                   <div className="bpn-card-header">
                     <span className="bpn-card-heading">
-                      Liste du corps électoral {exercice} — Barreau de Pointe-Noire
+                      Liste du corps électoral {exercice} — {identite().denomination}
                     </span>
                     <span className="font-mono text-xs text-gris">{electeurs.length} électeurs</span>
                   </div>

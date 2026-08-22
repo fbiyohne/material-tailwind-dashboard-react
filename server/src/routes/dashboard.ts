@@ -72,10 +72,11 @@ dashboardRouter.get(
     const voitSysteme = role === "SECRETAIRE_GENERAL" || role === "ADMIN";
 
     // Indicateurs institutionnels/système, servis selon le rôle (RG-13 / RG-15).
-    const [disciplineEnCours, sanctionsAnnee, demandesEnAttente] = await Promise.all([
+    const [disciplineEnCours, sanctionsAnnee, demandesEnAttente, timbresAnnee] = await Promise.all([
       voitInstitutionnel ? prisma.dossierDisciplinaire.count({ where: { statut: { not: "CLASSE" } } }) : Promise.resolve(0),
       voitInstitutionnel ? prisma.dossierDisciplinaire.count({ where: { sanction: { not: null }, dateSaisine: { gte: new Date(annee, 0, 1), lt: new Date(annee + 1, 0, 1) } } }) : Promise.resolve(0),
       voitSysteme ? prisma.demandeAcces.count({ where: { statut: "EN_ATTENTE" } }) : Promise.resolve(0),
+      voitFinances ? prisma.timbre.count({ where: { statut: "VALIDE", createdAt: { gte: new Date(annee, 0, 1), lt: new Date(annee + 1, 0, 1) } } }) : Promise.resolve(0),
     ]);
 
     res.json({
@@ -84,7 +85,7 @@ dashboardRouter.get(
       demographie: { parQualite, parStatut, parDecennie, parite, topCabinets, total: membres.length },
       ...(voitInstitutionnel ? { discipline: { enCours: disciplineEnCours, sanctionsAnnee } } : {}),
       ...(voitSysteme ? { demandesEnAttente } : {}),
-      ...(voitFinances ? { finances: { payees, impayees: du - payees, solde: du - payees } } : {}),
+      ...(voitFinances ? { finances: { payees, impayees: du - payees, solde: du - payees, timbresAnnee } } : {}),
     });
   })
 );

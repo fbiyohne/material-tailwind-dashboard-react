@@ -1,5 +1,6 @@
 import PropTypes from "prop-types";
 import { Sceau } from "../components";
+import { identite } from "../data/config";
 
 /** Texture guilloché — fines hachures dorées, fondues radialement (document officiel). */
 function Guilloche() {
@@ -37,7 +38,7 @@ export function AuthLayout({ devise, deviseAuteur, eyebrow, titre, sousTitre, ch
       >
         <Guilloche />
         <div className="relative auth-reveal" style={delay(60)}>
-          <div className="bpn-eyebrow !text-or-2">Ordre National des Avocats du Congo</div>
+          <div className="bpn-eyebrow !text-or-2">{identite().ordre}</div>
         </div>
 
         <div className="relative flex flex-col items-start">
@@ -69,7 +70,7 @@ export function AuthLayout({ devise, deviseAuteur, eyebrow, titre, sousTitre, ch
             <div className="shrink-0 rounded-full bg-white p-1.5"><Sceau size={42} /></div>
             <div>
               <div className="text-2xs uppercase tracking-[0.28em] text-or-2">Ordre National des Avocats</div>
-              <div className="font-display text-lg leading-tight">Barreau de Pointe-Noire</div>
+              <div className="font-display text-lg leading-tight">{identite().denomination}</div>
             </div>
           </div>
 

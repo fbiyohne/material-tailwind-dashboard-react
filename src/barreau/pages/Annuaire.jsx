@@ -3,6 +3,7 @@ import { MagnifyingGlassIcon, ArrowDownTrayIcon, PrinterIcon, BookOpenIcon } fro
 import { StatutBadge, PageHeader, DataTable } from "../components";
 import { exporterExcel } from "../utils/exports";
 import { listerMembres } from "../api/resources";
+import { identite } from "../data/config";
 
 export function Annuaire() {
   const [membres, setMembres] = useState([]);
@@ -65,7 +66,7 @@ export function Annuaire() {
       <div className="bpn-no-print bpn-card">
         <div className="bpn-card-header">
           <span className="bpn-card-heading">
-            Annuaire {interne ? "interne" : "public"} — Barreau de Pointe-Noire
+            Annuaire {interne ? "interne" : "public"} — {identite().denomination}
           </span>
           <span className="font-mono text-xs text-gris">{lignes.length} avocats</span>
         </div>
@@ -94,7 +95,7 @@ export function Annuaire() {
       {/* Impression : annuaire complet (toutes les lignes, non paginé). */}
       <div className="bpn-print-zone hidden print:block">
         <div className="mb-2 text-center font-display text-xl text-navy">
-          Annuaire {interne ? "interne" : "public"} — Barreau de Pointe-Noire
+          Annuaire {interne ? "interne" : "public"} — {identite().denomination}
         </div>
         <table className="w-full text-sm">
           <thead>
