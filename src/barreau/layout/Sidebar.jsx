@@ -172,25 +172,26 @@ export function Sidebar({ open, onClose }) {
           <NavLink
             to="/profil"
             onClick={onClose}
-            className="group flex items-center gap-3 rounded-lg border border-white/[0.07] bg-white/[0.04] px-3 py-2.5 transition hover:border-or/30 hover:bg-white/[0.07]"
+            className="group flex flex-col gap-2 rounded-lg border border-white/[0.07] bg-white/[0.04] px-3 py-2.5 transition hover:border-or/30 hover:bg-white/[0.07]"
             title="Voir mon profil"
           >
-            <div className="relative shrink-0">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-or/25 to-navy-2 text-sm font-semibold text-or-2 ring-1 ring-or/40">
-                {initiales(user?.nom)}
+            <div className="flex items-center gap-3">
+              <div className="relative shrink-0">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-or/25 to-navy-2 text-sm font-semibold text-or-2 ring-1 ring-or/40">
+                  {initiales(user?.nom)}
+                </div>
+                {/* Indicateur de session active */}
+                <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-navy-3 bg-vert" aria-hidden="true" />
               </div>
-              {/* Indicateur de session active */}
-              <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-navy-3 bg-vert" aria-hidden="true" />
+              <div className="min-w-0 flex-1 text-sm font-medium leading-tight text-white">{user?.nom}</div>
+              <ChevronRightIcon className="h-4 w-4 shrink-0 text-white/30 transition group-hover:text-or-2" />
             </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-sm font-medium leading-tight text-white">{user?.nom}</div>
-              <div className="mt-1 inline-flex items-center rounded-full bg-or/[0.14] px-2 py-0.5">
-                <span className="text-2xs font-semibold uppercase tracking-[0.08em] text-or-2">
-                  {ROLE_LABEL[user?.role] ?? user?.role}
-                </span>
-              </div>
+            {/* Titre du rôle — ligne dédiée pleine largeur, jamais de retour à la ligne. */}
+            <div className="inline-flex w-fit max-w-full items-center rounded-full bg-or/[0.14] px-2 py-0.5">
+              <span className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.06em] text-or-2">
+                {ROLE_LABEL[user?.role] ?? user?.role}
+              </span>
             </div>
-            <ChevronRightIcon className="h-4 w-4 shrink-0 self-center text-white/30 transition group-hover:text-or-2" />
           </NavLink>
 
           <button
