@@ -159,6 +159,11 @@ export const quitusEligibles = (annee) => api(`/quitus/eligibles?annee=${annee}`
 export const listerQuitus = () => api("/quitus");
 export const genererQuitus = (membreId, annee) => api("/quitus", { method: "POST", body: { membreId, annee } });
 export const genererQuitusLot = (annee) => api(`/quitus/lot?annee=${annee}`, { method: "POST" });
+
+// Timbres / vignettes électroniques de droit de plaidoirie
+export const listerTimbres = () => api("/timbres");
+export const creerTimbre = (body) => api("/timbres", { method: "POST", body });
+export const annulerTimbre = (id) => api(`/timbres/${id}/annuler`, { method: "POST" });
 export const supprimerQuitus = (id) => api(`/quitus/${id}`, { method: "DELETE" });
 
 // ─── Droits / Corps électoral / Dashboard ────────────────────────────────

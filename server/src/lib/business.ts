@@ -152,6 +152,16 @@ export async function prochainNumeroAttestation(): Promise<string> {
   return `ATT-${annee}-${pad(compteur.valeur, 3)}`;
 }
 
+/** N° séquentiel de timbre (compteur atomique global, monotone). */
+export async function prochainNumeroTimbre(): Promise<number> {
+  const compteur = await prisma.compteur.upsert({
+    where: { cle: "TIMBRE" },
+    create: { cle: "TIMBRE", valeur: 1 },
+    update: { valeur: { increment: 1 } },
+  });
+  return compteur.valeur;
+}
+
 // ─── Corps électoral (RG-04, RG-05) ──────────────────────────────────────────
 export function eligibiliteElectorale(
   membre: { qualite: Qualite; statut: string },

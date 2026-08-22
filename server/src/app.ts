@@ -22,6 +22,7 @@ import { cotisationsRouter } from "./routes/cotisations.js";
 import { recusRouter } from "./routes/recus.js";
 import { quitusRouter } from "./routes/quitus.js";
 import { droitsRouter } from "./routes/droits.js";
+import { timbresRouter } from "./routes/timbres.js";
 import { disciplineRouter } from "./routes/discipline.js";
 import { reunionsRouter } from "./routes/reunions.js";
 import { assembleesRouter } from "./routes/assemblees.js";
@@ -101,6 +102,7 @@ export function creerApp() {
   app.use("/api/recus", recusRouter);
   app.use("/api/quitus", quitusRouter);
   app.use("/api/droits", droitsRouter);
+  app.use("/api/timbres", timbresRouter);
   app.use("/api/discipline", disciplineRouter);
   app.use("/api/reunions", reunionsRouter);
   app.use("/api/assemblees", assembleesRouter);

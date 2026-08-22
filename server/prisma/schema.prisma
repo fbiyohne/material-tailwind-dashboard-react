@@ -138,6 +138,7 @@ model Membre {
   cotisations Cotisation[]
   recus       Recu[]
   quitus      Quitus[]
+  timbres     Timbre[]
   droitsPlaidoirie DroitPlaidoirie[]
   dossiers    DossierDisciplinaire[]
   pieces      PieceDossier[]
@@ -314,6 +315,25 @@ model Quitus {
   // Un seul quitus par avocat et par exercice — défense en profondeur (la garde
   // applicative existe déjà, cette contrainte la rend infaillible sous concurrence).
   @@unique([membreId, annee])
+}
+
+/// Timbre / vignette électronique de droit de plaidoirie, apposé par l'avocat sur
+/// ses actes. Preuve unique et vérifiable (QR → page publique) par affaire.
+model Timbre {
+  id          Int      @id @default(autoincrement())
+  numero      Int      @unique // N° séquentiel affiché (ex. « N° 45 »)
+  code        String   @unique // identifiant unique (barre noire) ; sert au QR/vérification
+  membre      Membre   @relation(fields: [membreId], references: [id], onDelete: Cascade)
+  membreId    Int
+  affaire     String
+  reference   String?
+  juridiction String?
+  cabinet     String?
+  montant     Int
+  statut      String   @default("VALIDE") // VALIDE | ANNULE
+  createdAt   DateTime @default(now())
+
+  @@index([membreId])
 }
 
 /// Compteur atomique par clé (ex. « ATT-2026 ») — numérotation officielle sûre

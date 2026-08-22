@@ -4,7 +4,7 @@ import { CheckBadgeIcon, XCircleIcon, ArrowPathIcon } from "@heroicons/react/24/
 import { Sceau } from "../components/Sceau";
 import { formatFCFA, formatDate } from "../utils/format";
 
-const TYPE_LABEL = { quitus: "Quitus de cotisation", recu: "Reçu de paiement" };
+const TYPE_LABEL = { quitus: "Quitus de cotisation", recu: "Reçu de paiement", timbre: "Timbre de plaidoirie" };
 
 /**
  * Page publique de vérification d'authenticité d'un document officiel
@@ -52,6 +52,8 @@ export function VerificationPublique({ type, numero }) {
               <Ligne label="Type" valeur={TYPE_LABEL[d.type] ?? d.type} />
               <Ligne label="Numéro" valeur={d.numero} mono />
               <Ligne label="Bénéficiaire" valeur={d.beneficiaire} />
+              {d.affaire && <Ligne label="Affaire" valeur={d.affaire} />}
+              {d.juridiction && <Ligne label="Juridiction" valeur={d.juridiction} />}
               {d.montant != null && <Ligne label="Montant" valeur={formatFCFA(d.montant)} />}
               {d.objet && <Ligne label="Objet" valeur={d.objet} />}
               {d.exercice && <Ligne label="Exercice" valeur={d.exercice} />}
@@ -68,12 +70,14 @@ export function VerificationPublique({ type, numero }) {
           <div className="flex flex-col items-center gap-2 px-6 py-12 text-center">
             <XCircleIcon className="h-14 w-14 text-rouge" />
             <p className="font-display text-xl text-rouge">
-              {etat.statut === "erreur" ? "Vérification impossible" : "Document introuvable"}
+              {etat.statut === "erreur" ? "Vérification impossible" : d?.motif === "annulé" ? "Document annulé" : "Document introuvable"}
             </p>
             <p className="max-w-xs text-sm text-gris">
               {etat.statut === "erreur"
                 ? "Le service de vérification est momentanément indisponible. Réessayez plus tard."
-                : `Aucun document officiel ne correspond au numéro ${numero}. Méfiez-vous d'un document falsifié.`}
+                : d?.motif === "annulé"
+                  ? "Ce document a été annulé par l'Ordre et n'est plus valable."
+                  : `Aucun document officiel ne correspond au numéro ${numero}. Méfiez-vous d'un document falsifié.`}
             </p>
           </div>
         )}

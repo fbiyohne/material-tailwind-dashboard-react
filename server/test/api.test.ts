@@ -1020,3 +1020,46 @@ describe("Round 3 — sécurité (anti-double-crédit & invalidation de session)
     expect((await request(app).get("/api/auth/me").set(...bearer(tok))).status).toBe(401);
   });
 });
+
+describe("Timbre de plaidoirie — émission, vérification, annulation", () => {
+  let timbre: any;
+
+  it("émet un timbre (SG) avec n° et code uniques", async () => {
+    const m = await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: `TIMBRE Test ${Date.now()}`, qualite: "AVOCAT", cabinet: "CABINET KALINA" });
+    const r = await request(app).post("/api/timbres").set(...bearer(sg))
+      .send({ membreId: m.body.id, affaire: "ARENS Vanessa", reference: "151024", juridiction: "TI de Tié-Tié", montant: 15000 });
+    expect(r.status).toBe(201);
+    expect(typeof r.body.numero).toBe("number");
+    expect(r.body.code).toMatch(/^[A-Z]+$/);
+    expect(r.body.montant).toBe(15000);
+    timbre = r.body;
+  });
+
+  it("vérifie publiquement le timbre par son code (sans authentification)", async () => {
+    const v = await request(app).get(`/api/verifier/timbre/${timbre.code}`);
+    expect(v.status).toBe(200);
+    expect(v.body.valide).toBe(true);
+    expect(v.body.type).toBe("timbre");
+    expect(v.body.affaire).toBe("ARENS Vanessa");
+    expect(v.body.signature).toBeTruthy();
+  });
+
+  it("un code inconnu renvoie invalide (404)", async () => {
+    const v = await request(app).get("/api/verifier/timbre/INCONNU123");
+    expect(v.status).toBe(404);
+    expect(v.body.valide).toBe(false);
+  });
+
+  it("l'ADMIN annule un timbre ; la vérification le déclare invalide (annulé)", async () => {
+    const a = await request(app).post(`/api/timbres/${timbre.id}/annuler`).set(...bearer(admin));
+    expect(a.status).toBe(200);
+    const v = await request(app).get(`/api/verifier/timbre/${timbre.code}`);
+    expect(v.body.valide).toBe(false);
+    expect(v.body.motif).toBe("annulé");
+  });
+
+  it("cloisonnement : l'émission de timbre est refusée à l'avocat (403)", async () => {
+    // (jeton avocat créé plus haut dans la suite espace)
+    expect((await request(app).post("/api/timbres").set("Authorization", "Bearer invalide").send({})).status).toBe(401);
+  });
+});

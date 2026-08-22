@@ -76,6 +76,21 @@ export async function telechargerDocumentPdf(rendreServeur, filename, selector =
   }
 }
 
+/**
+ * Exporte un élément (ex. la vignette du timbre) en image PNG téléchargeable —
+ * pratique pour coller le timbre dans un acte rédigé au cabinet.
+ */
+export async function exporterPng(selector, filename) {
+  const el = document.querySelector(selector);
+  if (!el) return;
+  const { default: html2canvas } = await import("html2canvas");
+  const canvas = await html2canvas(el, { scale: 3, backgroundColor: null, useCORS: true });
+  const a = document.createElement("a");
+  a.href = canvas.toDataURL("image/png");
+  a.download = filename.endsWith(".png") ? filename : `${filename}.png`;
+  a.click();
+}
+
 export async function exporterExcel(filename, lignes, sheetName = "Feuille1") {
   const XLSX = await import("xlsx");
   const ws = XLSX.utils.aoa_to_sheet(lignes);

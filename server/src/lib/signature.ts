@@ -71,3 +71,6 @@ export const quitusPayload = (q: { numero: string; membreId: number; annee: numb
 
 export const recuPayload = (r: { numero: string; membreId: number; annee: number; montant: number; date: Date | string }) =>
   `RECU|${r.numero}|${r.membreId}|${r.annee}|${r.montant}|${new Date(r.date).toISOString().slice(0, 10)}`;
+
+export const timbrePayload = (t: { numero: number; code: string; membreId: number; montant: number }) =>
+  `TIMBRE|${t.numero}|${t.code}|${t.membreId}|${t.montant}`;

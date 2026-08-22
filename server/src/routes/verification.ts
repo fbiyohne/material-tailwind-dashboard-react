@@ -2,7 +2,7 @@ import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import { prisma } from "../prisma.js";
 import { asyncH } from "../middleware/error.js";
-import { signerDocument, quitusPayload, recuPayload, empreinteCle } from "../lib/signature.js";
+import { signerDocument, quitusPayload, recuPayload, timbrePayload, empreinteCle } from "../lib/signature.js";
 
 /**
  * Vérification publique d'authenticité des documents officiels (quitus, reçus).
@@ -71,6 +71,36 @@ verificationRouter.get(
       objet: recu.objet ?? `Cotisation ordinale ${recu.annee}`,
       exercice: recu.annee,
       date: fmt(recu.date),
+      empreinteCle,
+      signature,
+    });
+  })
+);
+
+/** GET /verifier/timbre/:code — authenticité d'un timbre de droit de plaidoirie. */
+verificationRouter.get(
+  "/timbre/:code",
+  asyncH(async (req, res) => {
+    const timbre = await prisma.timbre.findUnique({
+      where: { code: req.params.code },
+      include: { membre: { select: { nom: true } } },
+    });
+    if (!timbre || timbre.statut === "ANNULE") {
+      return res.status(timbre ? 200 : 404).json({
+        valide: false, type: "timbre", numero: timbre ? String(timbre.numero) : req.params.code,
+        motif: timbre ? "annulé" : undefined,
+      });
+    }
+    const signature = signerDocument(timbrePayload(timbre));
+    res.json({
+      valide: true,
+      type: "timbre",
+      numero: String(timbre.numero),
+      beneficiaire: `Me ${timbre.membre.nom}`,
+      affaire: timbre.affaire,
+      juridiction: timbre.juridiction ?? "—",
+      montant: timbre.montant,
+      date: fmt(timbre.createdAt),
       empreinteCle,
       signature,
     });

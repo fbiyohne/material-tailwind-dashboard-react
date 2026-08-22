@@ -21,6 +21,7 @@ import {
   ClipboardDocumentListIcon,
   HandRaisedIcon,
   BuildingOffice2Icon,
+  TicketIcon,
 } from "@heroicons/react/24/outline";
 import { lazy } from "react";
 
@@ -28,6 +29,7 @@ const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Cotisations = lazy(() => import("./pages/Cotisations"));
 const Recus = lazy(() => import("./pages/Recus"));
 const Quitus = lazy(() => import("./pages/Quitus"));
+const Timbres = lazy(() => import("./pages/Timbres"));
 const Avocats = lazy(() => import("./pages/Avocats"));
 const Stagiaires = lazy(() => import("./pages/Stagiaires"));
 const Cabinets = lazy(() => import("./pages/Cabinets"));
@@ -90,6 +92,7 @@ export const navSections = [
       { name: "Quitus", path: "/quitus", icon: DocumentCheckIcon, roles: FINANCES, element: <Quitus /> },
       { name: "Reçus de paiement", path: "/recus", icon: ReceiptPercentIcon, roles: FINANCES, element: <Recus /> },
       { name: "Droits de plaidoirie", path: "/droits-plaidoirie", icon: CurrencyDollarIcon, roles: FINANCES, element: <DroitsPlaidoirie /> },
+      { name: "Timbres de plaidoirie", path: "/timbres", icon: TicketIcon, roles: FINANCES, element: <Timbres /> },
     ],
   },
   {
