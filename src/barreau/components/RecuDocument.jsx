@@ -4,6 +4,7 @@ import { QRCode } from "./QRCode";
 import { formatFCFA } from "../utils/format";
 import { montantEnLettresFCFA } from "../utils/nombreEnLettres";
 import { identite } from "../data/config";
+import cachetTresoriere from "../assets/cachets/tresoriere.png";
 
 const fmtDateFr = (d) =>
   d ? new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" }) : "—";
@@ -22,32 +23,6 @@ function Champ({ label, valeur, multiline = false }) {
       <span className="shrink-0 font-semibold text-encre">{label} :</span>
       <span className="flex-1 text-encre">{valeur || "—"}</span>
     </div>
-  );
-}
-
-/** Cachet circulaire « La Trésorerie » (SVG, encre marine). */
-function CachetTresorerie({ size = 132 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 180 180" role="img" aria-label="Cachet de la Trésorerie" className="opacity-80">
-      <defs>
-        <path id="recu-cachet-haut" d="M 30,90 A 60,60 0 0 1 150,90" />
-        <path id="recu-cachet-bas" d="M 150,92 A 60,60 0 0 1 30,92" />
-      </defs>
-      <circle cx="90" cy="90" r="80" fill="none" stroke="#1A3A6B" strokeWidth="3" />
-      <circle cx="90" cy="90" r="66" fill="none" stroke="#1A3A6B" strokeWidth="1" />
-      <text fill="#1A3A6B" fontSize="12" fontWeight="700" letterSpacing="1.4">
-        <textPath href="#recu-cachet-haut" startOffset="50%" textAnchor="middle">ORDRE DES AVOCATS</textPath>
-      </text>
-      <text fill="#1A3A6B" fontSize="10" fontWeight="600" letterSpacing="1">
-        <textPath href="#recu-cachet-bas" startOffset="50%" textAnchor="middle">BARREAU DE POINTE-NOIRE</textPath>
-      </text>
-      <g fill="#1A3A6B">
-        <text x="90" y="86" textAnchor="middle" fontSize="15" fontWeight="700" letterSpacing="0.5">LA</text>
-        <text x="90" y="104" textAnchor="middle" fontSize="15" fontWeight="700" letterSpacing="0.5">TRÉSORERIE</text>
-        <polygon points="62,72 66,68 70,72 66,76" />
-        <polygon points="110,72 114,68 118,72 114,76" />
-      </g>
-    </svg>
   );
 }
 
@@ -138,7 +113,7 @@ export function RecuDocument({ numero, membre, montant, exercice, mode, objet, d
           ) : (
             <div className="w-44" />
           )}
-          <CachetTresorerie />
+          <img src={cachetTresoriere} alt="Cachet officiel de la Trésorerie" className="h-32 w-32 object-contain" />
           <div className="text-center">
             <p className="text-[13px] font-semibold text-encre">La Trésorière de l'Ordre</p>
             <div className="mt-12 w-52 border-t border-dotted border-gris" />

@@ -2,6 +2,7 @@
 
 import { esc as escapeHtml, fmtDateFr as fmtDate } from "./documentsCommun.js";
 import { identite } from "./identiteDocuments.js";
+import { cachetPourRole } from "./cachets.js";
 
 /**
  * Logo officiel des documents — source unique (Paramètres). Si un logo a été
@@ -74,7 +75,7 @@ export function documentHtml({ org, title, reference, bodyHtml, signataire, date
       <div class="content">${bodyHtml}</div>
       <div class="foot">
         <div style="display:flex;align-items:flex-end;gap:12px">${sceau()}<div class="date">Fait à Pointe-Noire,<br>le ${fmtDate(date)}</div></div>
-        <div class="sign"><div class="role">${signataire.role}</div><div class="nom">${signataire.nom}</div></div>
+        <div class="sign"><div class="role">${signataire.role}</div>${(() => { const c = cachetPourRole(signataire.role); return c ? `<img src="${c}" alt="Cachet officiel" style="display:block;margin:2px 0 -18px auto;width:92px;height:92px;object-fit:contain" />` : ""; })()}<div class="nom">${signataire.nom}</div></div>
       </div>
     </div>
     <div class="mention">Document officiel · ${escapeHtml(identite().ordre)} · ${escapeHtml(identite().denomination)}</div>

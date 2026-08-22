@@ -3,6 +3,7 @@ import { CalendarDaysIcon } from "@heroicons/react/24/outline";
 import { Sceau } from "./Sceau";
 import { QRCode } from "./QRCode";
 import { identite } from "../data/config";
+import cachetBatonnier from "../assets/cachets/batonnier.png";
 
 const fmtDateFr = (d) =>
   d ? new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" }) : "—";
@@ -23,32 +24,6 @@ function Champ({ label, valeur, multiline = false }) {
       <span className="shrink-0 font-semibold text-encre">{label} :</span>
       <span className="flex-1 text-encre">{valeur || "—"}</span>
     </div>
-  );
-}
-
-/** Cachet circulaire « Le Bâtonnier » (SVG, encre marine). */
-function CachetBatonnier({ size = 132 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 180 180" role="img" aria-label="Cachet du Bâtonnier" className="opacity-80">
-      <defs>
-        <path id="cachet-haut" d="M 30,90 A 60,60 0 0 1 150,90" />
-        <path id="cachet-bas" d="M 150,92 A 60,60 0 0 1 30,92" />
-      </defs>
-      <circle cx="90" cy="90" r="80" fill="none" stroke="#1A3A6B" strokeWidth="3" />
-      <circle cx="90" cy="90" r="66" fill="none" stroke="#1A3A6B" strokeWidth="1" />
-      <text fill="#1A3A6B" fontSize="12" fontWeight="700" letterSpacing="1.5">
-        <textPath href="#cachet-haut" startOffset="50%" textAnchor="middle">ORDRE DES AVOCATS</textPath>
-      </text>
-      <text fill="#1A3A6B" fontSize="10" fontWeight="600" letterSpacing="1">
-        <textPath href="#cachet-bas" startOffset="50%" textAnchor="middle">BARREAU DE POINTE-NOIRE</textPath>
-      </text>
-      <g fill="#1A3A6B">
-        <text x="90" y="86" textAnchor="middle" fontSize="17" fontWeight="700" letterSpacing="0.5">LE</text>
-        <text x="90" y="104" textAnchor="middle" fontSize="17" fontWeight="700" letterSpacing="0.5">BÂTONNIER</text>
-        <polygon points="62,72 66,68 70,72 66,76" />
-        <polygon points="110,72 114,68 118,72 114,76" />
-      </g>
-    </svg>
   );
 }
 
@@ -147,7 +122,7 @@ export function QuitusDocument({ numero, membre, exercice, date }) {
             <div className="mt-9 w-52 border-t border-dotted border-gris" />
             <p className="mt-1 text-[12px] text-gris">{identite().tresoriere}</p>
           </div>
-          <CachetBatonnier />
+          <img src={cachetBatonnier} alt="Cachet officiel du Bâtonnier" className="h-32 w-32 object-contain" />
           <div className="text-center">
             <p className="text-[13px] font-semibold text-encre">Le Bâtonnier</p>
             <div className="mt-9 w-52 border-t border-dotted border-gris" />

@@ -1,9 +1,20 @@
 import PropTypes from "prop-types";
 import { Sceau } from "./Sceau";
 import { identite } from "../data/config";
+import cachetBatonnier from "../assets/cachets/batonnier.png";
+import cachetTresoriere from "../assets/cachets/tresoriere.png";
+import cachetSg from "../assets/cachets/sg.png";
 
 const fmtDate = (d) =>
   new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
+
+/** Cachet officiel du signataire, déduit de son rôle (repli : Bâtonnier). */
+const cachetPourRole = (role = "") => {
+  const r = role.toLowerCase();
+  if (r.includes("trésor") || r.includes("tresor")) return cachetTresoriere;
+  if (r.includes("secrétaire") || r.includes("secretaire")) return cachetSg;
+  return cachetBatonnier;
+};
 
 /**
  * Gabarit unifié des documents officiels (reçu, quitus, attestation,
@@ -49,7 +60,8 @@ export function DocumentChrome({
           <div className="flex gap-8">
             {signataires.map((s) => (
               <div key={s.role} className="text-right">
-                <div className="mb-6 text-2xs uppercase tracking-wide text-gris">{s.role}</div>
+                <div className="text-2xs uppercase tracking-wide text-gris">{s.role}</div>
+                <img src={cachetPourRole(s.role)} alt="Cachet officiel" className="ml-auto -mb-3 mt-1 h-20 w-20 object-contain" />
                 <div className="border-t border-grisM pt-1 text-xs font-medium text-navy">{s.nom}</div>
               </div>
             ))}

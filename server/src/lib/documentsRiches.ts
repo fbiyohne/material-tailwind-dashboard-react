@@ -9,6 +9,11 @@
 import { montantEnLettresFCFA } from "./montantEnLettres.js";
 import { esc, fmtFCFA, fmtDateFr } from "./documentsCommun.js";
 import { identite } from "./identiteDocuments.js";
+import { cachetBatonnier, cachetTresoriere } from "./cachets.js";
+
+/** Cachet officiel (image) ou rien si l'asset est absent. */
+const cachetImg = (src: string, size = 128) =>
+  src ? `<img src="${src}" alt="Cachet officiel" style="width:${size}px;height:${size}px;object-fit:contain" />` : `<div style="width:${size}px"></div>`;
 
 /**
  * Logo officiel — source unique (Paramètres). Logo téléversé (data URI image) s'il
@@ -32,21 +37,6 @@ const sceau = (size: number) => {
   </g>
 </svg>`;
 };
-
-/** Cachet circulaire (Trésorerie ou Bâtonnier). */
-const cachet = (l1: string, l2: string, size = 132) => `
-<svg width="${size}" height="${size}" viewBox="0 0 180 180" style="opacity:.8">
-  <defs><path id="c-h-${l2}" d="M 30,90 A 60,60 0 0 1 150,90"/><path id="c-b-${l2}" d="M 150,92 A 60,60 0 0 1 30,92"/></defs>
-  <circle cx="90" cy="90" r="80" fill="none" stroke="#1A3A6B" stroke-width="3"/>
-  <circle cx="90" cy="90" r="66" fill="none" stroke="#1A3A6B" stroke-width="1"/>
-  <text fill="#1A3A6B" font-size="12" font-weight="700" letter-spacing="1.4"><textPath href="#c-h-${l2}" startOffset="50%" text-anchor="middle">ORDRE DES AVOCATS</textPath></text>
-  <text fill="#1A3A6B" font-size="10" font-weight="600" letter-spacing="1"><textPath href="#c-b-${l2}" startOffset="50%" text-anchor="middle">BARREAU DE POINTE-NOIRE</textPath></text>
-  <g fill="#1A3A6B">
-    <text x="90" y="86" text-anchor="middle" font-size="15" font-weight="700">${l1}</text>
-    <text x="90" y="104" text-anchor="middle" font-size="15" font-weight="700">${l2}</text>
-    <polygon points="62,72 66,68 70,72 66,76"/><polygon points="110,72 114,68 118,72 114,76"/>
-  </g>
-</svg>`;
 
 /** Filet doré orné d'un losange central. */
 const filet = (w: number) =>
@@ -168,7 +158,7 @@ export function recuRicheHtml(recu: RecuLike, membre: MembreLike, qr: string, ho
       </div>
       <div class="sigrow" style="margin-top:40px;">
         ${verif(qr, host, `/verifier/recu/${recu.numero}`)}
-        ${cachet("LA", "TRÉSORERIE")}
+        ${cachetImg(cachetTresoriere)}
         <div class="sig">
           <div style="font-size:13px; font-weight:600;">La Trésorière de l'Ordre</div>
           <div class="line"></div>
@@ -223,7 +213,7 @@ export function quitusRicheHtml(quitus: { numero: string; annee: number; dateEmi
           <div class="line"></div>
           <div class="gris" style="margin-top:4px; font-size:12px;">${esc(identite().tresoriere)}</div>
         </div>
-        ${cachet("LE", "BÂTONNIER")}
+        ${cachetImg(cachetBatonnier)}
         <div class="sig">
           <div style="font-size:13px; font-weight:600;">Le Bâtonnier</div>
           <div class="line"></div>
