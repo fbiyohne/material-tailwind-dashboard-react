@@ -152,6 +152,21 @@
     @apply font-display text-base text-navy;
   }
 
+  /* ─── Contenu riche (éditeur de document + aperçu) : restaure listes,
+     titres et espacements que le reset Tailwind neutralise. ─── */
+  .bpn-doc {
+    @apply text-sm leading-relaxed text-encre;
+  }
+  .bpn-doc p { @apply my-2; }
+  .bpn-doc h3 { @apply mb-1 mt-4 font-display text-base font-semibold text-navy; }
+  .bpn-doc h4 { @apply mb-1 mt-3 font-semibold text-encre; }
+  .bpn-doc ul { @apply my-2 list-disc pl-6; }
+  .bpn-doc ol { @apply my-2 list-decimal pl-6; }
+  .bpn-doc li { @apply my-0.5; }
+  .bpn-doc strong, .bpn-doc b { @apply font-semibold; }
+  .bpn-doc em, .bpn-doc i { @apply italic; }
+  .bpn-doc u { @apply underline; }
+
   /* ─── Tableau institutionnel unifié (en-tête navy, lignes, hover) ─── */
   .bpn-table {
     @apply w-full text-sm;

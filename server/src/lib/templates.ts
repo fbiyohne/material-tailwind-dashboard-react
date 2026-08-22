@@ -54,6 +54,13 @@ export function documentHtml({ org, title, reference, bodyHtml, signataire, date
   .title { font-family:'Playfair Display',serif; font-size:26px; color:#1A3A6B; text-align:center; }
   .ref { font-family:'DM Mono',monospace; font-size:12px; color:#C4990A; text-align:center; margin:4px 0 22px; }
   .content { font-size:14px; line-height:1.9; }
+  .content h3 { font-family:'Playfair Display',serif; color:#1A3A6B; font-size:16px; margin:14px 0 4px; }
+  .content h4 { font-weight:600; margin:10px 0 4px; }
+  .content ul { margin:6px 0 6px 20px; list-style:disc; }
+  .content ol { margin:6px 0 6px 20px; list-style:decimal; }
+  .content li { margin:2px 0; }
+  .content p { margin:0 0 8px; }
+  .content b,.content strong{font-weight:700;} .content i,.content em{font-style:italic;} .content u{text-decoration:underline;}
   .montant { background:#FDF6E3; border:1px solid #E9DFBD; border-radius:4px; padding:12px 16px; margin:14px 0; text-align:center; }
   .montant b { font-family:'Playfair Display',serif; font-size:19px; color:#1A3A6B; }
   .montant i { display:block; font-size:12px; color:#7A756A; margin-top:2px; }
@@ -273,6 +280,20 @@ export function convocationDisciplineHtml(d: any): string {
   });
 }
 
+/**
+ * Corps de PV : rend le HTML riche (assaini) si le contenu est balisé, sinon
+ * traite le texte brut en paragraphes (rétrocompatible avec les anciens PV).
+ * Assainissement défensif : le front assainit déjà à la saisie (allowlist stricte) ;
+ * on retire ici tout <script>/<style>, gestionnaire on… et URL javascript:.
+ */
+const assainirHtmlServeur = (html: string) =>
+  html
+    .replace(/<\/?(?:script|style)\b[^>]*>/gi, "")
+    .replace(/\son\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "")
+    .replace(/javascript:/gi, "");
+const corpsPv = (texte?: string | null) =>
+  texte && /<[a-z][\s\S]*>/i.test(texte) ? assainirHtmlServeur(texte) : paragraphes(texte);
+
 /** Rend un texte libre (PV, décision) en paragraphes HTML échappés. */
 const paragraphes = (texte?: string | null) =>
   (texte ?? "")
@@ -327,7 +348,7 @@ export function pvReunionHtml(reunion: any): string {
       ${sectionPv("III", "Ordre du jour")}
       ${odj}
       ${sectionPv("IV", "Délibérations et décisions")}
-      ${paragraphes(reunion.pv)}
+      ${corpsPv(reunion.pv)}
       ${sectionPv("V", "Clôture")}
       <p>Plus rien n'étant inscrit à l'ordre du jour, la séance est levée. Le présent procès-verbal est dressé pour être soumis à l'approbation du Conseil.</p>`,
     signataire: { role: "Le Secrétaire Général", nom: identite().secretaireGeneral },
@@ -354,7 +375,7 @@ export function pvAssembleeHtml(a: any): string {
       ${sectionPv("III", "Ordre du jour")}
       ${odj}
       ${sectionPv("IV", "Délibérations et décisions")}
-      ${paragraphes(a.pv)}
+      ${corpsPv(a.pv)}
       ${decisions}
       ${sectionPv("V", "Clôture")}
       <p>L'ordre du jour étant épuisé, la séance est levée. Le présent procès-verbal est dressé pour servir et valoir ce que de droit.</p>`,

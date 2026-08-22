@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeftIcon, CalendarDaysIcon, MapPinIcon, CheckIcon, ArrowDownTrayIcon, TrashIcon, ListBulletIcon, UserGroupIcon, DocumentTextIcon, PaperAirplaneIcon } from "@heroicons/react/24/outline";
-import { Badge, DocumentModal, useToast, useConfirm, PageHeader, Tabs, ErrorState, TableSkeleton } from "../components";
+import { ArrowLeftIcon, CalendarDaysIcon, MapPinIcon, CheckIcon, ArrowDownTrayIcon, TrashIcon, ListBulletIcon, UserGroupIcon, DocumentTextIcon, PaperAirplaneIcon, PencilSquareIcon } from "@heroicons/react/24/outline";
+import { Badge, DocumentModal, EditeurDocument, useToast, useConfirm, PageHeader, Tabs, ErrorState, TableSkeleton } from "../components";
 import { formatDate } from "../utils/format";
+import { assainirHtml } from "../utils/sanitizeHtml";
 import { useAuth } from "../auth/AuthContext";
 import { getReunion, majReunion, archiverDoc, telechargerPvReunionPdf, getConseil, supprimerReunion, convoquerReunion } from "../api/resources";
 
@@ -38,6 +39,7 @@ export function ReunionDetail() {
   const [lieu, setLieu] = useState("");
   const [convocation, setConvocation] = useState(false);
   const [feuille, setFeuille] = useState(false);
+  const [editerPv, setEditerPv] = useState(false);
 
   const charger = () => getReunion(Number(id))
     .then((r) => {
@@ -229,15 +231,31 @@ export function ReunionDetail() {
             content: (
               <Carte titre="Procès-verbal" action={peutGerer ? (
                 <div className="flex gap-2">
+                  <button className="bpn-btn bpn-btn-primary bpn-btn-sm" onClick={() => setEditerPv(true)}><PencilSquareIcon className="h-3.5 w-3.5" /> Rédiger</button>
                   <button className="bpn-btn bpn-btn-ghost bpn-btn-sm" onClick={telechargerPv}><ArrowDownTrayIcon className="h-3.5 w-3.5" /> PDF</button>
                   <button className="bpn-btn bpn-btn-or bpn-btn-sm" onClick={sauverPv}><CheckIcon className="h-3.5 w-3.5" /> Enregistrer &amp; archiver</button>
                 </div>
               ) : undefined}>
-                <textarea rows={8} value={pv} onChange={(e) => setPv(e.target.value)} className="bpn-input" placeholder="Rédiger le procès-verbal de la réunion…" />
+                {pv && assainirHtml(pv)
+                  ? <div className="bpn-doc" dangerouslySetInnerHTML={{ __html: assainirHtml(pv) }} />
+                  : <p className="py-6 text-center text-sm text-gris">Aucun procès-verbal rédigé. Cliquez sur « Rédiger » pour ouvrir l'éditeur.</p>}
               </Carte>
             ),
           },
         ]}
+      />
+
+      <EditeurDocument
+        open={editerPv}
+        title={`Procès-verbal — réunion du ${formatDate(reunion.date)}`}
+        value={pv}
+        note="Le texte ci-dessous constitue les « Délibérations ». Les sections (convocation, présences & quorum, ordre du jour, clôture) et la signature avec cachet sont ajoutées automatiquement au PDF."
+        onSave={async (html) => {
+          await majReunion(reunion.id, { pv: html });
+          setPv(html);
+          toast.success("Procès-verbal enregistré.");
+        }}
+        onClose={() => setEditerPv(false)}
       />
 
       <DocumentModal
