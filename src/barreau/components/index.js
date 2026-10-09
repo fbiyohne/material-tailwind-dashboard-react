@@ -21,6 +21,7 @@ export { ErrorBoundary } from "./ErrorBoundary";
 export { ToastProvider, useToast } from "./Toast";
 export { ConfirmProvider, useConfirm } from "./ConfirmDialog";
 export { EditMembreModal } from "./EditMembreModal";
+export { ActeStatutModal } from "./ActeStatutModal";
 export { PaiementModal } from "./PaiementModal";
 export { PaiementEnLigneModal } from "./PaiementEnLigneModal";
 export { SortTh } from "./SortTh";

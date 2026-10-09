@@ -57,3 +57,15 @@ export function formatDateTime(valeur) {
   const heure = d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
   return `${date} à ${heure}`;
 }
+
+/** Date du jour (ou `d`) en AAAA-MM-JJ, en heure locale — pour `value`/`max` d'un <input type="date">. */
+export function dateLocaleISO(d = new Date()) {
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+/** « JJ/MM/AAAA » depuis une date AAAA-MM-JJ ou ISO, sans passer par le fuseau (pas de décalage de jour). */
+export function formatDateCourte(valeur) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(valeur ?? ""));
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : "—";
+}

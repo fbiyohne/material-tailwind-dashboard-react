@@ -7,6 +7,7 @@ import { FormSection } from "./FormSection";
 import { useToast } from "./Toast";
 import { useConfirm } from "./ConfirmDialog";
 import { modifierMembre } from "../api/resources";
+import { dateLocaleISO } from "../utils/format";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const champ = (error) => `bpn-input ${error ? "is-invalid" : ""}`;
@@ -63,9 +64,20 @@ export function EditMembreModal({ membre, open, onClose, onSaved }) {
     setLoading(true);
     try {
       const maj = await modifierMembre(membre.id, {
-        nom: form.nom, cabinet: form.cabinet, statut: form.statut, sexe: form.sexe || null,
-        tel: form.tel, email: form.email, adresse: form.adresse, rccm: form.rccm, cnss: form.cnss,
-        observations: form.observations, dateNaissance: form.dateNaissance, dateInscription: form.dateInscription,
+        nom: form.nom, statut: form.statut, sexe: form.sexe || null,
+        // Champs texte : le serveur attend une chaîne (jamais null) ; un champ
+        // absent de la fiche part vide, comme un champ effacé par l'utilisateur.
+        cabinet: form.cabinet ?? "", tel: form.tel ?? "", email: form.email ?? "", adresse: form.adresse ?? "",
+        rccm: form.rccm ?? "", cnss: form.cnss ?? "", observations: form.observations ?? "",
+        // Dates absentes : non envoyées (le serveur attend une chaîne, pas null).
+        dateNaissance: form.dateNaissance || undefined, dateInscription: form.dateInscription || undefined,
+        // Actes de statut (correction par le SG) : null efface côté serveur. Une
+        // date de décès n'a de sens que pour un décédé ; la date et la référence
+        // de radiation sont conservées telles quelles (historique d'un radié
+        // décédé ou réintégré — avis juridique C-01).
+        dateDeces: form.statut === "decede" ? form.dateDeces || null : null,
+        dateRadiation: form.dateRadiation || null,
+        motifRadiation: form.motifRadiation || null,
         // Champs de stage : envoyés seulement pour un stagiaire ; on n'envoie la
         // durée que si renseignée (le serveur exige un entier positif).
         ...(estStagiaire
@@ -106,6 +118,7 @@ export function EditMembreModal({ membre, open, onClose, onSaved }) {
               <option value="omis">Omis</option>
               <option value="honoraire">Honoraire</option>
               <option value="radie">Radié</option>
+              <option value="decede">Décédé</option>
             </select>
           </FormField>
           <FormField label="Sexe" hint="reporting de parité">
@@ -118,6 +131,23 @@ export function EditMembreModal({ membre, open, onClose, onSaved }) {
           <FormField label="Date de naissance">
             <input type="date" value={form.dateNaissance ?? ""} onChange={set("dateNaissance")} className="bpn-input" />
           </FormField>
+          {/* Champs de l'acte selon le statut ; ils gardent leur valeur si l'on change
+              de statut puis revient (spec T2 § 3.4). */}
+          {form.statut === "radie" && (
+            <>
+              <FormField label="Date de la décision" hint="radiation">
+                <input type="date" max={dateLocaleISO()} value={form.dateRadiation ?? ""} onChange={set("dateRadiation")} className="bpn-input" />
+              </FormField>
+              <FormField label="Référence et motif de la décision" hint="300 caractères" full>
+                <textarea rows={2} maxLength={300} value={form.motifRadiation ?? ""} onChange={set("motifRadiation")} className="bpn-input" />
+              </FormField>
+            </>
+          )}
+          {form.statut === "decede" && (
+            <FormField label="Date du décès" hint="date portée sur l'acte de décès">
+              <input type="date" max={dateLocaleISO()} value={form.dateDeces ?? ""} onChange={set("dateDeces")} className="bpn-input" />
+            </FormField>
+          )}
         </FormSection>
 
         <FormSection icon={PhoneIcon} titre="Coordonnées">

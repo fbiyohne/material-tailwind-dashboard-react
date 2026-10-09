@@ -121,7 +121,7 @@
     @apply bg-or-L text-or;
   }
   .bpn-badge-gris {
-    @apply bg-grisL text-gris;
+    @apply bg-grisL text-encre;
   }
   .bpn-badge-bleu {
     @apply bg-bleuL text-navy;

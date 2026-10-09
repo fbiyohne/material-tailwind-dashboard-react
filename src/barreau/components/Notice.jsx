@@ -1,11 +1,11 @@
 import PropTypes from "prop-types";
 
 const TONS = {
-  or: { box: "border-or bg-or-L text-gris", icon: "text-or" },
+  or: { box: "border-or bg-or-L text-encre", icon: "text-or" },
   rouge: { box: "border-rouge bg-rougeL text-rouge", icon: "text-rouge" },
   vert: { box: "border-vert bg-vertL text-vert", icon: "text-vert" },
   bleu: { box: "border-navy bg-bleuL text-navy", icon: "text-navy" },
-  gris: { box: "border-grisM bg-grisL text-gris", icon: "text-gris" },
+  gris: { box: "border-grisM bg-grisL text-encre", icon: "text-gris" },
 };
 
 /**

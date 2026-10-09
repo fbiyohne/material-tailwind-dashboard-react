@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeftIcon, DocumentPlusIcon, PencilSquareIcon, NoSymbolIcon, TrashIcon, IdentificationIcon, BanknotesIcon, FolderIcon, KeyIcon, AcademicCapIcon, ArrowDownTrayIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
+import { ArrowLeftIcon, DocumentPlusIcon, PencilSquareIcon, NoSymbolIcon, HeartIcon, TrashIcon, IdentificationIcon, BanknotesIcon, FolderIcon, KeyIcon, AcademicCapIcon, ArrowDownTrayIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
 import { ScaleIcon } from "@heroicons/react/24/outline";
-import { Badge, StatutBadge, AttestationModal, EditMembreModal, PiecesDossier, AccesActivationModal, StagePanel, CasierDiscipline, useConfirm, useToast, PageHeader, Tabs, TableSkeleton, ErrorState, DataTable } from "../components";
+import { Badge, StatutBadge, AttestationModal, EditMembreModal, ActeStatutModal, PiecesDossier, AccesActivationModal, StagePanel, CasierDiscipline, useConfirm, useToast, PageHeader, Tabs, TableSkeleton, ErrorState, DataTable } from "../components";
 import { QUALITE_LABEL, STATUT_META, infoStage } from "../data/derivations";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
-import { formatFCFA, formatDate } from "../utils/format";
-import { getMembre, radierMembre, supprimerMembre, getDroits, provisionnerAccesAvocat, telechargerQuitusPdf, telechargerRecuPdf } from "../api/resources";
+import { formatFCFA, formatDate, formatDateCourte } from "../utils/format";
+import { getMembre, supprimerMembre, getDroits, provisionnerAccesAvocat, telechargerQuitusPdf, telechargerRecuPdf } from "../api/resources";
 import { useAuth } from "../auth/AuthContext";
 
 const FINANCES = ["SECRETAIRE_GENERAL", "TRESORIERE", "ADMIN"];
@@ -23,7 +23,7 @@ function Carte({ titre, children }) {
 function Ligne({ label, value }) {
   return (
     <div className="flex justify-between gap-4 border-b border-grisL py-2 text-sm last:border-0">
-      <span className="text-gris">{label}</span>
+      <span className="shrink-0 text-gris">{label}</span>
       <span className="text-right font-medium text-encre">{value ?? "—"}</span>
     </div>
   );
@@ -47,6 +47,7 @@ export function AvocatDetail() {
   const [attestation, setAttestation] = useState(null);
   const [edition, setEdition] = useState(false);
   const [acces, setAcces] = useState(null); // { email, lien, renvoi } après provisionnement
+  const [acte, setActe] = useState(null); // "radiation" | "deces" : modale d'acte ouverte
 
   const charger = useCallback(() => {
     getMembre(Number(id)).then(setMembre).catch(() => setMembre(false));
@@ -111,6 +112,14 @@ export function AvocatDetail() {
   const telechargerDoc = (d) =>
     (d.kind === "quitus" ? telechargerQuitusPdf(d.id, d.ref) : telechargerRecuPdf(d.id, d.ref)).catch((e) => toast.error(e.message));
 
+  // Un radié ou un décédé n'a plus d'accès espace, d'attestation ni de radiation
+  // possible ; un radié peut encore décéder (H-09, spec T2 § 3.1).
+  const decede = membre.statut === "decede";
+  const auTableau = !decede && membre.statut !== "radie";
+  // Cibles tactiles ≥ 44 px sous `sm`, hauteur `bpn-btn` native sur bureau.
+  const btn = "bpn-btn min-h-[44px] sm:min-h-0";
+  const btnRouge = `${btn} bpn-btn-ghost text-rouge hover:!bg-rougeL hover:!text-rouge`;
+
   return (
     <div className="space-y-5">
       <PageHeader
@@ -125,24 +134,26 @@ export function AvocatDetail() {
         }
       >
         {peutGererFiche && (
-          <button className="bpn-btn bpn-btn-ghost" onClick={() => setEdition(true)}><PencilSquareIcon className="h-4 w-4" /> Modifier</button>
+          <button className={`${btn} bpn-btn-ghost`} onClick={() => setEdition(true)}><PencilSquareIcon className="h-4 w-4" /> Modifier</button>
         )}
-        {peutGererAcces && (
-          <button className="bpn-btn bpn-btn-ghost" onClick={creerAcces} title="Ouvrir l'accès à l'espace avocat"><KeyIcon className="h-4 w-4" /> Accès espace</button>
+        {peutGererAcces && auTableau && (
+          <button className={`${btn} bpn-btn-ghost`} onClick={creerAcces} title="Ouvrir l'accès à l'espace avocat"><KeyIcon className="h-4 w-4" /> Accès espace</button>
         )}
-        {peutGererFiche && membre.qualite !== "stagiaire" && (
-          <button className="bpn-btn bpn-btn-primary" onClick={() => setAttestation(membre)}><DocumentPlusIcon className="h-4 w-4" /> Attestation</button>
+        {peutGererFiche && membre.qualite !== "stagiaire" && auTableau && (
+          <button className={`${btn} bpn-btn-primary`} onClick={() => setAttestation(membre)}><DocumentPlusIcon className="h-4 w-4" /> Attestation</button>
         )}
-        {peutGererFiche && membre.statut !== "radie" && (
-          <button className="bpn-btn bpn-btn-ghost text-rouge hover:!bg-rougeL hover:!text-rouge" onClick={async () => {
-            const ok = await confirm({ title: "Radier cet avocat ?", message: `Me ${membre.nom} sera radié(e) du tableau et exclu(e) du corps électoral.`, confirmLabel: "Radier", danger: true });
-            if (ok) { try { await radierMembre(membre.id); toast.success(`Me ${membre.nom} a été radié(e).`); charger(); } catch (e) { toast.error(e.message); } }
-          }}>
+        {peutGererFiche && auTableau && (
+          <button className={btnRouge} onClick={() => setActe("radiation")}>
             <NoSymbolIcon className="h-4 w-4" /> Radier
           </button>
         )}
+        {peutGererFiche && !decede && (
+          <button className={btnRouge} onClick={() => setActe("deces")}>
+            <HeartIcon className="h-4 w-4" /> Déclarer le décès
+          </button>
+        )}
         {estAdmin && (
-          <button className="bpn-btn bpn-btn-ghost text-rouge" onClick={async () => {
+          <button className={btnRouge} onClick={async () => {
             const ok = await confirm({
               title: "Supprimer définitivement",
               message: `Me ${membre.nom} sera définitivement supprimé(e), ainsi que tout son historique financier (cotisations, droits, reçus, quitus, paiements). Cette action est irréversible.`,
@@ -170,6 +181,10 @@ export function AvocatDetail() {
                 <Carte titre="Identité & coordonnées">
                   <Ligne label="Cabinet" value={membre.cabinet} />
                   <Ligne label="Date d'inscription" value={formatDate(membre.dateInscription)} />
+                  {membre.statut === "radie" && (
+                    <Ligne label="Radié le" value={[formatDateCourte(membre.dateRadiation), membre.motifRadiation].filter(Boolean).join(" — ")} />
+                  )}
+                  {decede && <Ligne label="Décédé le" value={formatDateCourte(membre.dateDeces)} />}
                   <Ligne label="Date de naissance" value={formatDate(membre.dateNaissance)} />
                   <Ligne label="Adresse" value={membre.adresse} />
                   <Ligne label="Téléphone" value={membre.tel} />
@@ -325,6 +340,7 @@ export function AvocatDetail() {
 
       <AttestationModal membre={attestation} onClose={() => setAttestation(null)} />
       <EditMembreModal membre={edition ? membre : null} open={edition} onClose={() => setEdition(false)} onSaved={charger} />
+      {acte && <ActeStatutModal mode={acte} membre={membre} open onClose={() => setActe(null)} onDone={charger} />}
 
       {/* Lien d'activation de l'espace avocat (après provisionnement) */}
       <AccesActivationModal acces={acces} onClose={() => setAcces(null)} />
