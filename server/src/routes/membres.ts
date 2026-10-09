@@ -53,6 +53,9 @@ membresRouter.get(
       id: true, num: true, numInscription: true, nom: true, qualite: true,
       statut: true, sexe: true, cabinet: true, tel: true, email: true, dateInscription: true,
       dateServment: true, dureeMois: true, maitreStage: true,
+      // Dates de radiation/décès : exportables. motifRadiation : donnée disciplinaire
+      // (loi 29-2019 art. 16, RG-13), servie uniquement par la fiche GET /:id.
+      dateRadiation: true, dateDeces: true,
     } satisfies Prisma.MembreSelect;
 
     const [items, total] = await Promise.all([
@@ -259,7 +262,17 @@ membresRouter.post(
   })
 );
 
-const editSchema = inscriptionSchema.partial();
+/** Date « AAAA-MM-JJ » optionnelle et effaçable (null) : correction d'une saisie par le SG. */
+const dateNullable = z.string().date().nullable().optional();
+// Référence/objet de la décision du Conseil (loi 026-92, art. 36-39), pas un récit des faits.
+const motifRadiation = z.string().trim().max(300);
+const editSchema = inscriptionSchema.partial().extend({
+  dateRadiation: dateNullable,
+  motifRadiation: motifRadiation.nullable().optional(),
+  dateDeces: dateNullable,
+});
+/** undefined → champ non touché ; null → effacé ; chaîne → Date. */
+const versDate = (v: string | null | undefined) => (v == null ? v : new Date(v));
 
 /** PATCH /membres/:id — modification de la fiche (FR-AV-01). SG/Admin. */
 membresRouter.patch(
@@ -277,23 +290,56 @@ membresRouter.patch(
         // (sinon Prisma rejette). Permet de renseigner/corriger le serment d'un
         // stagiaire depuis sa fiche, sans passer par un ré-import.
         dateServment: data.dateServment ? new Date(data.dateServment) : undefined,
+        dateRadiation: versDate(data.dateRadiation),
+        dateDeces: versDate(data.dateDeces),
       },
     });
-    // L'accès espace suit le statut (suspendu/radié/omis → coupé ; régulier → rétabli).
+    // L'accès espace suit le statut (suspendu/radié/omis/décédé → coupé ; régulier → rétabli).
     await synchroniserAccesAuStatut(membre.id, membre.statut);
     res.json(membre);
   })
 );
 
-/** POST /membres/:id/radier — radiation (action sensible). SG/Admin. */
+/** Date « AAAA-MM-JJ » qui ne peut pas être postérieure à aujourd'hui (décision notifiée, acte de décès). */
+const datePassee = z.string().date().refine((d) => new Date(d) <= new Date(), "La date ne peut pas être postérieure à aujourd'hui");
+
+const radiationSchema = z.object({
+  dateRadiation: datePassee.optional(),
+  motifRadiation: motifRadiation.optional(),
+});
+
+/**
+ * POST /membres/:id/radier — enregistre une radiation prononcée par le Conseil
+ * (l'outil n'est qu'un registre d'exécution). Corps optionnel : date (défaut :
+ * aujourd'hui) et référence de la décision. SG/Admin.
+ */
 membresRouter.post(
   "/:id/radier",
   requireRole("SECRETAIRE_GENERAL"),
   asyncH(async (req, res) => {
+    const data = radiationSchema.parse(req.body ?? {});
     const membre = await prisma.membre.update({
       where: { id: Number(req.params.id) },
-      data: { statut: "RADIE" },
+      data: { statut: "RADIE", dateRadiation: data.dateRadiation ? new Date(data.dateRadiation) : new Date(), motifRadiation: data.motifRadiation ?? null },
     });
+    await synchroniserAccesAuStatut(membre.id, membre.statut);
+    res.json(membre);
+  })
+);
+
+/**
+ * POST /membres/:id/deces — déclaration de décès sur présentation de l'acte.
+ * Date obligatoire, non future. Statut DECEDE : compte espace désactivé et
+ * jetons révoqués (synchroniserAccesAuStatut). SG/Admin.
+ */
+membresRouter.post(
+  "/:id/deces",
+  requireRole("SECRETAIRE_GENERAL"),
+  asyncH(async (req, res) => {
+    const { dateDeces } = z.object({ dateDeces: datePassee }).parse(req.body ?? {});
+    const id = Number(req.params.id);
+    if (!(await prisma.membre.findUnique({ where: { id }, select: { id: true } }))) throw new HttpError(404, "Avocat introuvable");
+    const membre = await prisma.membre.update({ where: { id }, data: { statut: "DECEDE", dateDeces: new Date(dateDeces) } });
     await synchroniserAccesAuStatut(membre.id, membre.statut);
     res.json(membre);
   })
@@ -370,13 +416,13 @@ membresRouter.post(
 );
 
 /**
- * DELETE /membres/:id — suppression définitive d'un membre (avocat/stagiaire).
- * Réservé au super-administrateur (ADMIN). Efface en cascade tout l'historique
- * rattaché, en une transaction. Les relations à cascade déclarée (cotisations,
+ * DELETE /membres/:id — suppression définitive d'un membre (avocat/stagiaire),
+ * réservée aux erreurs de saisie et doublons. ADMIN seul. Refusée (409) dès
+ * qu'une pièce comptable existe (reçu, paiement, quitus) : l'AUDCIF OHADA
+ * impose leur conservation 10 ans — la radiation ou le décès sont alors la
+ * seule voie. Sans pièce, les relations à cascade déclarée (cotisations,
  * droits de plaidoirie, pièces du dossier) et la mise à NULL des dossiers
- * disciplinaires (qui gardent leur valeur probante propre) sont assurées au
- * niveau base par les contraintes FK ; on retire ici manuellement les seules
- * relations en RESTRICT (reçus, quitus, paiements) avant de supprimer la fiche.
+ * disciplinaires sont assurées au niveau base par les contraintes FK.
  */
 membresRouter.delete(
   "/:id",
@@ -385,12 +431,15 @@ membresRouter.delete(
     const id = Number(req.params.id);
     const membre = await prisma.membre.findUnique({ where: { id } });
     if (!membre) throw new HttpError(404, "Avocat introuvable");
-    await prisma.$transaction([
-      prisma.recu.deleteMany({ where: { membreId: id } }),
-      prisma.quitus.deleteMany({ where: { membreId: id } }),
-      prisma.paiement.deleteMany({ where: { membreId: id } }),
-      prisma.membre.delete({ where: { id } }),
+    const pieces = await Promise.all([
+      prisma.recu.count({ where: { membreId: id } }),
+      prisma.paiement.count({ where: { membreId: id } }),
+      prisma.quitus.count({ where: { membreId: id } }),
     ]);
+    if (pieces.some((n) => n > 0)) {
+      throw new HttpError(409, "Suppression impossible : pièces comptables à conserver 10 ans (OHADA) ; utilisez radiation ou décès");
+    }
+    await prisma.membre.delete({ where: { id } });
     res.json({ ok: true, nom: membre.nom });
   })
 );

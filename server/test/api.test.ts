@@ -119,11 +119,20 @@ describe("Super-administrateur — CRUD étendu (suppressions réservées à l'A
     await request(app).delete(`/api/membres/${id}`).set(...bearer(admin)); // nettoyage
   });
 
-  it("l'ADMIN supprime un avocat et tout son historique financier (cascade)", async () => {
-    const id = await creerAvocat("SUPPR-CASCADE");
-    // Génère cotisation + reçu (BR-03), puis un droit de plaidoirie.
+  it("C-06 : refuse la suppression (409) d'un avocat ayant un reçu — pièce comptable à conserver (OHADA)", async () => {
+    const id = await creerAvocat("SUPPR-RECU");
     await request(app).post("/api/cotisations/paiement").set(...bearer(sg)).send({ membreId: id, annee: 2026, montant: 150000, mode: "Espèces" });
-    await request(app).post("/api/droits/paiement").set(...bearer(sg)).send({ membreId: id, annee: 2026, montant: 1000, mode: "Espèces" });
+    const del = await request(app).delete(`/api/membres/${id}`).set(...bearer(admin));
+    expect(del.status).toBe(409);
+    expect(del.body.erreur).toMatch(/pièces comptables/);
+    expect((await request(app).get(`/api/membres/${id}`).set(...bearer(sg))).status).toBe(200);
+  });
+
+  it("l'ADMIN supprime un avocat sans pièce comptable et son historique non comptable (cascade)", async () => {
+    const id = await creerAvocat("SUPPR-CASCADE");
+    // Ligne de cotisation et droit de plaidoirie sans reçu : cascade FK, aucune pièce comptable.
+    await prisma.cotisation.create({ data: { membreId: id, annee: 2026, montantDu: 150000 } });
+    await prisma.droitPlaidoirie.create({ data: { membreId: id, annee: 2026, montantDu: 1000 } });
 
     const del = await request(app).delete(`/api/membres/${id}`).set(...bearer(admin));
     expect(del.status).toBe(200);
@@ -1152,5 +1161,119 @@ describe("Cycle de vie — statut DECEDE (migration T3)", () => {
     expect(r.body).toMatchObject({ total: 3, erreurs: [] });
     const stockes = await prisma.membre.findMany({ where: { num: { in: [990001, 990002, 990003] } }, select: { statut: true } });
     expect(stockes.map((m) => m.statut)).toEqual(["DECEDE", "DECEDE", "DECEDE"]);
+  });
+});
+
+describe("Cycle de vie — radiation motivée, décès, garde-fou DELETE, RBAC (T4)", () => {
+  const aujourdhui = new Date().toISOString().slice(0, 10);
+  const creer = async (nom: string) =>
+    (await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: `T4 ${nom} ${Date.now()}`, qualite: "AVOCAT" })).body.id as number;
+  // Le journal est écrit après l'envoi de la réponse : on attend l'entrée (≤ 3 s).
+  const attendreAudit = async (action: string, id: number) => {
+    for (let i = 0; i < 30; i++) {
+      const e = await prisma.journalAudit.findFirst({ where: { action: { startsWith: action }, cible: `#${id}` } });
+      if (e) return e;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    return null;
+  };
+
+  afterAll(async () => {
+    await prisma.membre.deleteMany({ where: { nom: { startsWith: "T4 " } } });
+  });
+
+  it("CA-01 : radiation avec date et motif → RADIE, valeurs conservées, journal « Radiation d'un avocat »", async () => {
+    const id = await creer("radiation");
+    const r = await request(app).post(`/api/membres/${id}/radier`).set(...bearer(sg)).send({ dateRadiation: "2026-10-01", motifRadiation: "Décision du Conseil n° 12" });
+    expect(r.status).toBe(200);
+    expect(r.body.statut).toBe("RADIE");
+    expect(r.body.dateRadiation).toMatch(/^2026-10-01/);
+    expect(r.body.motifRadiation).toBe("Décision du Conseil n° 12");
+    const audit = await attendreAudit("Radiation d'un avocat", id);
+    expect(audit?.action).toBe("Radiation d'un avocat — Avocat");
+  });
+
+  it("CA-01 : radiation sans corps → date du jour, motif null (compatibilité)", async () => {
+    const id = await creer("radiation-defaut");
+    const r = await request(app).post(`/api/membres/${id}/radier`).set(...bearer(sg));
+    expect(r.status).toBe(200);
+    expect(r.body.statut).toBe("RADIE");
+    expect(r.body.dateRadiation).toMatch(new RegExp(`^${aujourdhui}`));
+    expect(r.body.motifRadiation).toBeNull();
+    // Motif trop long refusé (≤ 300 caractères).
+    expect((await request(app).post(`/api/membres/${id}/radier`).set(...bearer(sg)).send({ motifRadiation: "x".repeat(301) })).status).toBe(400);
+  });
+
+  it("CA-02 : déclaration de décès — validations (400), 404, 403 Trésorière", async () => {
+    const id = await creer("deces-valid");
+    expect((await request(app).post(`/api/membres/${id}/deces`).set(...bearer(sg)).send({})).status).toBe(400);
+    expect((await request(app).post(`/api/membres/${id}/deces`).set(...bearer(sg)).send({ dateDeces: "2099-01-01" })).status).toBe(400);
+    expect((await request(app).post(`/api/membres/${id}/deces`).set(...bearer(tr)).send({ dateDeces: "2026-09-15" })).status).toBe(403);
+    expect((await request(app).post(`/api/membres/99999999/deces`).set(...bearer(sg)).send({ dateDeces: "2026-09-15" })).status).toBe(404);
+    expect((await request(app).get(`/api/membres/${id}`).set(...bearer(sg))).body.statut).toBe("INSCRIT");
+  });
+
+  it("CA-02 : décès par SG → DECEDE + dateDeces, journal « Déclaration de décès », compte espace coupé (login 401)", async () => {
+    const av = await creerAvocatEspace("t4-deces");
+    expect((await request(app).post("/api/auth/login").send({ email: av.email, password: "avocatpass8" })).status).toBe(200);
+    const r = await request(app).post(`/api/membres/${av.membreId}/deces`).set(...bearer(sg)).send({ dateDeces: "2026-09-15" });
+    expect(r.status).toBe(200);
+    expect(r.body.statut).toBe("DECEDE");
+    expect(r.body.dateDeces).toMatch(/^2026-09-15/);
+    const u = await prisma.user.findUnique({ where: { membreId: av.membreId } });
+    expect(u?.actif).toBe(false);
+    expect((await request(app).post("/api/auth/login").send({ email: av.email, password: "avocatpass8" })).status).toBe(401);
+    expect((await request(app).get("/api/espace/moi").set(...bearer(av.token))).status).toBe(401);
+    const audit = await attendreAudit("Déclaration de décès", av.membreId);
+    expect(audit?.action).toBe("Déclaration de décès — Avocat");
+    await request(app).delete(`/api/membres/${av.membreId}`).set(...bearer(admin));
+  });
+
+  it("C-03 : la liste n'expose jamais motifRadiation ; la fiche le renvoie avec les dates", async () => {
+    const id = await creer("motif");
+    await request(app).post(`/api/membres/${id}/radier`).set(...bearer(sg)).send({ dateRadiation: "2026-10-02", motifRadiation: "Décision n° 7" });
+    const liste = await request(app).get("/api/membres?statut=RADIE&pageSize=200").set(...bearer(sg));
+    expect(liste.status).toBe(200);
+    const ligne = liste.body.items.find((m: any) => m.id === id);
+    expect(ligne).toBeTruthy();
+    expect(ligne.dateRadiation).toMatch(/^2026-10-02/);
+    expect(ligne).toHaveProperty("dateDeces");
+    expect(liste.body.items.some((m: any) => "motifRadiation" in m)).toBe(false);
+    const fiche = await request(app).get(`/api/membres/${id}`).set(...bearer(sg));
+    expect(fiche.body.motifRadiation).toBe("Décision n° 7");
+  });
+
+  it("PATCH : correction d'une saisie — statut INSCRIT et dateDeces null (200)", async () => {
+    const id = await creer("correction");
+    await request(app).post(`/api/membres/${id}/deces`).set(...bearer(sg)).send({ dateDeces: "2026-09-15" });
+    const r = await request(app).patch(`/api/membres/${id}`).set(...bearer(sg)).send({ statut: "INSCRIT", dateDeces: null });
+    expect(r.status).toBe(200);
+    expect(r.body.statut).toBe("INSCRIT");
+    expect(r.body.dateDeces).toBeNull();
+    const r2 = await request(app).patch(`/api/membres/${id}`).set(...bearer(sg)).send({ statut: "RADIE", dateRadiation: "2026-10-03", motifRadiation: "Décision n° 8" });
+    expect(r2.status).toBe(200);
+    expect(r2.body.dateRadiation).toMatch(/^2026-10-03/);
+    expect(r2.body.motifRadiation).toBe("Décision n° 8");
+  });
+
+  it("O3 : aucun rôle non autorisé ne mute un membre (403 sur POST, PATCH, radier, deces, DELETE)", async () => {
+    const id = await creer("rbac");
+    const compte = async (role: string) => {
+      const email = `t4.${role.toLowerCase()}.${Date.now()}@barreau-pn.cg`;
+      await request(app).post("/api/users").set(...bearer(sg)).send({ nom: `T4 ${role}`, email, role, password: "motdepasse8" });
+      return (await request(app).post("/api/auth/login").send({ email, password: "motdepasse8" })).body.token as string;
+    };
+    const jetons = { TRESORIERE: tr, BATONNIER: bat, CONSULTATION: await compte("CONSULTATION"), ACCUEIL: await compte("ACCUEIL") };
+    for (const [role, jeton] of Object.entries(jetons)) {
+      expect(jeton, role).toBeTruthy();
+      expect((await request(app).post("/api/membres").set(...bearer(jeton)).send({ nom: "T4 interdit" })).status, `${role} POST`).toBe(403);
+      expect((await request(app).patch(`/api/membres/${id}`).set(...bearer(jeton)).send({ nom: "T4 interdit" })).status, `${role} PATCH`).toBe(403);
+      expect((await request(app).post(`/api/membres/${id}/radier`).set(...bearer(jeton))).status, `${role} radier`).toBe(403);
+      expect((await request(app).post(`/api/membres/${id}/deces`).set(...bearer(jeton)).send({ dateDeces: "2026-09-15" })).status, `${role} deces`).toBe(403);
+      expect((await request(app).delete(`/api/membres/${id}`).set(...bearer(jeton))).status, `${role} DELETE`).toBe(403);
+    }
+    expect((await request(app).delete(`/api/membres/${id}`).set(...bearer(sg))).status).toBe(403);
+    expect((await request(app).get(`/api/membres/${id}`).set(...bearer(sg))).body.statut).toBe("INSCRIT");
+    await prisma.user.deleteMany({ where: { nom: { startsWith: "T4 " } } });
   });
 });

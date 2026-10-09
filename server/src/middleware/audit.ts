@@ -24,11 +24,12 @@ const VERBES: Record<string, string> = { POST: "Création", PATCH: "Mise à jour
 function libelle(methode: string, chemin: string): { action: string; cible: string | null } {
   const segments = chemin.replace(/^\/api\//, "").split("/").filter(Boolean);
   const ressource = RESSOURCES[segments[0]] ?? segments[0] ?? "Ressource";
-  const sousAction = segments.find((s) => ["paiement", "valider", "radier", "relances", "statut", "attestation", "convocation", "pv", "decision", "login", "logout"].includes(s));
+  const sousAction = segments.find((s) => ["paiement", "valider", "radier", "deces", "import", "export", "relances", "statut", "attestation", "convocation", "pv", "decision", "login", "logout"].includes(s));
   const cibleId = segments[1] && /^\d+$/.test(segments[1]) ? `#${segments[1]}` : null;
   if (sousAction) {
     const map: Record<string, string> = {
       paiement: "Enregistrement d'un paiement", valider: "Validation Trésorière", radier: "Radiation d'un avocat",
+      deces: "Déclaration de décès", import: "Import du tableau", export: "Export de la liste des avocats",
       relances: "Lancement des relances", statut: "Changement de statut", attestation: "Génération d'attestation",
       convocation: "Génération de convocation", pv: "Génération de procès-verbal", decision: "Génération de décision",
       login: "Connexion", logout: "Déconnexion",
