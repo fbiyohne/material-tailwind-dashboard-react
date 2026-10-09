@@ -27,6 +27,8 @@ export function normaliserMembre(m) {
     statut: m.statut?.toLowerCase(),
     dateInscription: dateCourte(m.dateInscription),
     dateNaissance: dateCourte(m.dateNaissance),
+    dateRadiation: dateCourte(m.dateRadiation),
+    dateDeces: dateCourte(m.dateDeces),
     stage: m.dateServment
       ? { dateServment: dateCourte(m.dateServment), dureeMois: m.dureeMois ?? 24, maitreStage: m.maitreStage }
       : undefined,
@@ -63,7 +65,15 @@ export function modifierMembre(id, patch) {
   }).then(normaliserMembre);
 }
 
-export const radierMembre = (id) => api(`/membres/${id}/radier`, { method: "POST" }).then(normaliserMembre);
+/** Radiation : corps optionnel { dateRadiation: 'AAAA-MM-JJ', motifRadiation } (défaut serveur : aujourd'hui, sans motif). */
+export const radierMembre = (id, body = {}) => api(`/membres/${id}/radier`, { method: "POST", body }).then(normaliserMembre);
+/** Déclaration de décès (date de l'acte, AAAA-MM-JJ, obligatoire). SG/Admin. */
+export const declarerDeces = (id, dateDeces) => api(`/membres/${id}/deces`, { method: "POST", body: { dateDeces } }).then(normaliserMembre);
+/** Liste des avocats en PDF (rendu serveur) selon les filtres courants : { q, statut, qualite, qualiteNot, ids }. */
+export const telechargerAvocatsPdf = (params = {}) => {
+  const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v != null && v !== "")).toString();
+  return telechargerPdf(`/membres/export/pdf${qs ? `?${qs}` : ""}`, `Avocats-${new Date().toISOString().slice(0, 10)}.pdf`);
+};
 export const supprimerMembre = (id) => api(`/membres/${id}`, { method: "DELETE" });
 /** Provisionne (ou renvoie) l'accès à l'espace avocat d'un membre. SG/Admin. */
 export const provisionnerAccesAvocat = (membreId) => api(`/membres/${membreId}/acces`, { method: "POST" });

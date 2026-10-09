@@ -33,7 +33,7 @@ function formatQuand(v) {
 }
 
 const QUALITE_LABEL = { AVOCAT: "Avocats", STAGIAIRE: "Stagiaires", HONORAIRE: "Honoraires" };
-const STATUT_LABEL = { INSCRIT: "Inscrits", SUSPENDU: "Suspendus", OMIS: "Omis", RADIE: "Radiés", HONORAIRE: "Honoraires", STAGIAIRE: "Stagiaires" };
+const STATUT_LABEL = { INSCRIT: "Inscrits", SUSPENDU: "Suspendus", OMIS: "Omis", RADIE: "Radiés", HONORAIRE: "Honoraires", STAGIAIRE: "Stagiaires", DECEDE: "Décédés" };
 
 /** Barre de proportion (identité visuelle du Barreau : piste grise, remplissage accentué). */
 function Barre({ label, valeur, max, accent = "navy" }) {
@@ -129,7 +129,7 @@ export function Dashboard() {
   // Composition du Barreau (données démographiques, servies à tous les rôles).
   const demo = data?.demographie;
   const parQualite = demo ? Object.entries(demo.parQualite).map(([k, n]) => ({ label: QUALITE_LABEL[k] ?? k, valeur: n, accent: "navy" })) : [];
-  const parStatut = demo ? Object.entries(demo.parStatut).map(([k, n]) => ({ label: STATUT_LABEL[k] ?? k, valeur: n, accent: k === "INSCRIT" ? "vert" : k === "RADIE" || k === "SUSPENDU" ? "rouge" : "or" })) : [];
+  const parStatut = demo ? Object.entries(demo.parStatut).map(([k, n]) => ({ label: STATUT_LABEL[k] ?? k, valeur: n, accent: k === "INSCRIT" ? "vert" : k === "RADIE" || k === "SUSPENDU" ? "rouge" : k === "DECEDE" ? "gris" : "or" })) : [];
   const parDecennie = demo ? demo.parDecennie.map((d) => ({ label: `Années ${d.decennie}`, valeur: d.n, accent: "or" })) : [];
   const topCabinets = demo?.topCabinets ? demo.topCabinets.map((c) => ({ label: c.nom, valeur: c.effectif, accent: "vert" })) : [];
   const pariteConnue = demo ? demo.parite.H + demo.parite.F : 0;

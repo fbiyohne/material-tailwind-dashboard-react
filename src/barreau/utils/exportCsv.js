@@ -1,30 +1,45 @@
 /**
- * Export CSV léger (séparateur « ; » compatible Excel FR), sans dépendance.
- * `colonnes` : [{ label, valeur: (ligne) => any }]. Échappe selon RFC 4180.
+ * Export texte délimité léger, sans dépendance : CSV (séparateur « ; »
+ * compatible Excel FR) et TXT (tabulations, lisible dans Bloc-notes, collable
+ * dans Word/Excel). `colonnes` : [{ label, valeur: (ligne) => any }].
+ * Échappement RFC 4180 : une valeur contenant le séparateur, un guillemet ou
+ * un retour à la ligne est entourée de guillemets (guillemets doublés).
  */
-function echapper(v) {
+function echapper(v, sep) {
   if (v === null || v === undefined) return "";
   const s = String(v);
-  if (/[";\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  if (s.includes(sep) || /["\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
   return s;
 }
 
-export function versCsv(colonnes, lignes) {
-  const entete = colonnes.map((c) => echapper(c.label)).join(";");
-  const corps = lignes.map((l) => colonnes.map((c) => echapper(c.valeur(l))).join(";"));
+export function versDelimite(colonnes, lignes, sep) {
+  const entete = colonnes.map((c) => echapper(c.label, sep)).join(sep);
+  const corps = lignes.map((l) => colonnes.map((c) => echapper(c.valeur(l), sep)).join(sep));
   return [entete, ...corps].join("\r\n");
 }
 
-/** Déclenche le téléchargement d'un CSV (BOM UTF-8 pour Excel). */
-export function telechargerCsv(nomFichier, colonnes, lignes) {
-  const csv = "﻿" + versCsv(colonnes, lignes);
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
+export const versCsv = (colonnes, lignes) => versDelimite(colonnes, lignes, ";");
+
+/** Déclenche le téléchargement d'un contenu texte sous le nom donné. */
+export function telechargerTexte(nomFichier, contenu, mime) {
+  const url = URL.createObjectURL(new Blob([contenu], { type: mime }));
   const a = document.createElement("a");
   a.href = url;
-  a.download = nomFichier.endsWith(".csv") ? nomFichier : `${nomFichier}.csv`;
+  a.download = nomFichier;
   document.body.appendChild(a);
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
+}
+
+const avecExtension = (nom, ext) => (nom.endsWith(ext) ? nom : `${nom}${ext}`);
+
+/** Téléchargement CSV (BOM UTF-8 pour qu'Excel reconnaisse l'encodage). */
+export function telechargerCsv(nomFichier, colonnes, lignes) {
+  telechargerTexte(avecExtension(nomFichier, ".csv"), "\uFEFF" + versCsv(colonnes, lignes), "text/csv;charset=utf-8;");
+}
+
+/** Téléchargement TXT à tabulations, UTF-8 sans BOM (ré-importable tel quel). */
+export function telechargerTxt(nomFichier, colonnes, lignes) {
+  telechargerTexte(avecExtension(nomFichier, ".txt"), versDelimite(colonnes, lignes, "\t"), "text/plain;charset=utf-8;");
 }

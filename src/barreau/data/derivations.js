@@ -21,6 +21,7 @@ const STATUT_MEMBRE_META_DEFAUT = {
   omis: { label: "Omis", ton: "gris" },
   honoraire: { label: "Honoraire", ton: "or" },
   stagiaire: { label: "Stagiaire", ton: "bleu" },
+  decede: { label: "Décédé", ton: "gris" },
 };
 
 /** Libellé + ton de badge par statut de cotisation (jamais la couleur seule). */

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { versCsv } from "../exportCsv";
+import { versCsv, versDelimite } from "../exportCsv";
 
 describe("versCsv", () => {
   const colonnes = [
@@ -28,5 +28,30 @@ describe("versCsv", () => {
   it("gère les valeurs nulles", () => {
     const csv = versCsv([{ label: "X", valeur: (r) => r.x }], [{ x: null }, { x: undefined }]);
     expect(csv.split("\r\n").slice(1)).toEqual(["", ""]);
+  });
+});
+
+describe("versDelimite (TXT à tabulations)", () => {
+  const colonnes = [
+    { label: "A", valeur: (r) => r.a },
+    { label: "B", valeur: (r) => r.b },
+  ];
+
+  it("produit en-tête + lignes séparés par tabulation et CRLF", () => {
+    expect(versDelimite(colonnes, [{ a: 1, b: 2 }], "\t")).toBe("A\tB\r\n1\t2");
+  });
+
+  it("entoure de guillemets une valeur contenant une tabulation ou un retour à la ligne", () => {
+    const txt = versDelimite(colonnes, [{ a: "x\ty", b: "l1\nl2" }], "\t");
+    expect(txt.split("\r\n")[1]).toBe('"x\ty"\t"l1\nl2"');
+  });
+
+  it("n'échappe pas le point-virgule quand le séparateur est la tabulation", () => {
+    expect(versDelimite(colonnes, [{ a: "Cabinet; SCPA", b: "" }], "\t").split("\r\n")[1]).toBe("Cabinet; SCPA\t");
+  });
+
+  it("versCsv équivaut à versDelimite avec « ; »", () => {
+    const lignes = [{ a: 'Q"uote', b: "x;y" }];
+    expect(versCsv(colonnes, lignes)).toBe(versDelimite(colonnes, lignes, ";"));
   });
 });
