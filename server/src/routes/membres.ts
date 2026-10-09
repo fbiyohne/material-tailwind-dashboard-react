@@ -1,7 +1,7 @@
 import path from "node:path";
 import { Router } from "express";
 import { z } from "zod";
-import type { Prisma } from "@prisma/client";
+import type { Prisma, StatutMembre } from "@prisma/client";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole, type AuthRequest } from "../middleware/auth.js";
@@ -207,8 +207,10 @@ const importRowSchema = z.object({
 });
 
 const QUALITES: Record<string, "AVOCAT" | "STAGIAIRE" | "HONORAIRE"> = { avocat: "AVOCAT", stagiaire: "STAGIAIRE", honoraire: "HONORAIRE" };
-const STATUTS: Record<string, "INSCRIT" | "SUSPENDU" | "RADIE" | "OMIS" | "HONORAIRE" | "STAGIAIRE"> = {
+// Typé sur l'enum Prisma : toute nouvelle valeur de StatutMembre est acceptée ici sans retouche du type.
+const STATUTS: Record<string, StatutMembre> = {
   inscrit: "INSCRIT", suspendu: "SUSPENDU", radie: "RADIE", "radié": "RADIE", omis: "OMIS", honoraire: "HONORAIRE", stagiaire: "STAGIAIRE",
+  decede: "DECEDE", "décédé": "DECEDE", "décédée": "DECEDE", "decedee": "DECEDE",
 };
 // Normalise le sexe importé (« H »/« Homme »/« M »/« Masculin » → H ; « F »/« Femme » → F).
 const SEXES: Record<string, "H" | "F"> = { h: "H", homme: "H", m: "H", masculin: "H", f: "F", femme: "F", feminin: "F", "féminin": "F" };

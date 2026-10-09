@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import request from "supertest";
 import { creerApp } from "../src/app.js";
 import { prisma } from "../src/prisma.js";
@@ -1110,6 +1110,11 @@ describe("RBAC — matrice de rôles/permissions & nouveaux profils", () => {
 });
 
 describe("Cycle de vie — statut DECEDE (migration T3)", () => {
+  // Nettoyage en afterAll : le bloc reste rejouable même après un échec d'assertion intermédiaire.
+  afterAll(async () => {
+    await prisma.membre.deleteMany({ where: { OR: [{ nom: { startsWith: "DECEDE Test " } }, { num: { gte: 990000 } }] } });
+  });
+
   it("reconnaît le filtre statut=DECEDE, l'accepte à l'inscription et l'exclut du corps électoral", async () => {
     // Le filtre est reconnu (liste vide), pas ignoré (liste complète).
     const vide = await request(app).get("/api/membres?statut=DECEDE").set(...bearer(sg));
@@ -1133,7 +1138,19 @@ describe("Cycle de vie — statut DECEDE (migration T3)", () => {
     expect(tableau.body.sections.flatMap((s: any) => s.membres).some((x: any) => x.id === m.body.id)).toBe(false);
     expect(STATUTS_HORS_TABLEAU).toEqual(["RADIE", "DECEDE"]);
     expect(eligibiliteElectorale({ qualite: "AVOCAT", statut: "DECEDE" }, null)).toEqual({ eligible: false, raison: "statut" });
+  });
 
-    await request(app).delete(`/api/membres/${m.body.id}`).set(...bearer(admin));
+  it("import : le statut « décédé » (toutes graphies) est stocké DECEDE, pas réinscrit", async () => {
+    const r = await request(app).post("/api/membres/import").set(...bearer(sg)).send({
+      membres: [
+        { num: 990001, nom: "DECEDE Test import 1", statut: "décédé" },
+        { num: 990002, nom: "DECEDE Test import 2", statut: "DECEDE" },
+        { num: 990003, nom: "DECEDE Test import 3", statut: "Decede" },
+      ],
+    });
+    expect(r.status).toBe(200);
+    expect(r.body).toMatchObject({ total: 3, erreurs: [] });
+    const stockes = await prisma.membre.findMany({ where: { num: { in: [990001, 990002, 990003] } }, select: { statut: true } });
+    expect(stockes.map((m) => m.statut)).toEqual(["DECEDE", "DECEDE", "DECEDE"]);
   });
 });
