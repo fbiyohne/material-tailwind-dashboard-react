@@ -4,7 +4,7 @@ import { prisma } from "../prisma.js";
 import { anneeDeRequete } from "../lib/requete.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole, requirePermission } from "../middleware/auth.js";
-import { cotisationDue, montantDuAvec, statutCotisation, tarifsActuels } from "../lib/business.js";
+import { cotisationDue, montantDuAvec, statutCotisation, tarifsActuels, STATUTS_HORS_TABLEAU } from "../lib/business.js";
 import { encaisser, gardeVersement } from "../lib/encaissement.js";
 import { envoyerEmail, envoyerSms, emailEnSimulation } from "../lib/notifications.js";
 
@@ -20,7 +20,7 @@ cotisationsRouter.post(
     const annee = anneeDeRequete(req);
     const [tarifs, membres] = await Promise.all([
       tarifsActuels(),
-      prisma.membre.findMany({ include: { cotisations: { where: { annee } } } }),
+      prisma.membre.findMany({ where: { statut: { notIn: [...STATUTS_HORS_TABLEAU] } }, include: { cotisations: { where: { annee } } } }),
     ]);
     const cibles = membres.filter((m) => {
       const c = m.cotisations[0];
@@ -101,7 +101,7 @@ cotisationsRouter.post(
     const [tarifs, membres] = await Promise.all([
       tarifsActuels(),
       prisma.membre.findMany({
-        where: { statut: { not: "RADIE" } },
+        where: { statut: { notIn: [...STATUTS_HORS_TABLEAU] } },
         include: { cotisations: { where: { annee } } },
       }),
     ]);

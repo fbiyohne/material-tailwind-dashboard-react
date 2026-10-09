@@ -162,6 +162,9 @@ export async function prochainNumeroTimbre(): Promise<number> {
   return compteur.valeur;
 }
 
+/** Statuts définitivement hors du tableau de l'Ordre : exclus du tableau, des cotisations, des relances et des convocations. */
+export const STATUTS_HORS_TABLEAU = ["RADIE", "DECEDE"] as const;
+
 // ─── Corps électoral (RG-04, RG-05) ──────────────────────────────────────────
 export function eligibiliteElectorale(
   membre: { qualite: Qualite; statut: string },
@@ -170,7 +173,7 @@ export function eligibiliteElectorale(
 ): { eligible: boolean; raison: string | null } {
   if (membre.qualite === "HONORAIRE") return { eligible: false, raison: "honoraire" };
   if (membre.qualite === "STAGIAIRE") return { eligible: false, raison: "stagiaire" };
-  if (["SUSPENDU", "RADIE", "OMIS"].includes(membre.statut)) return { eligible: false, raison: "statut" };
+  if (["SUSPENDU", "OMIS", ...STATUTS_HORS_TABLEAU].includes(membre.statut)) return { eligible: false, raison: "statut" };
   // Avec les tarifs courants (Paramètres), le dû d'un membre sans ligne persistée est
   // calculé sur le barème réel via cotisationDue (une exonération à 0 est ainsi respectée) ;
   // à défaut, on retombe sur le barème statique (rétrocompatibilité).

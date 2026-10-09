@@ -24,7 +24,7 @@ membresRouter.get(
     // Filtres d'énumération validés : une valeur hors énum est ignorée (→ undefined)
     // plutôt que transmise à Prisma, qui lèverait une 500 sur une valeur inconnue.
     const QUALITES = ["AVOCAT", "STAGIAIRE", "HONORAIRE"];
-    const STATUTS = ["INSCRIT", "SUSPENDU", "RADIE", "OMIS", "HONORAIRE", "STAGIAIRE"];
+    const STATUTS = ["INSCRIT", "SUSPENDU", "RADIE", "OMIS", "HONORAIRE", "STAGIAIRE", "DECEDE"];
     const dansEnum = (v: unknown, set: string[]) => (typeof v === "string" && set.includes(v) ? v : undefined);
     const qualite = dansEnum(req.query.qualite, QUALITES);
     const qualiteNot = dansEnum(req.query.qualiteNot, QUALITES);
@@ -128,7 +128,7 @@ membresRouter.post(
 const inscriptionSchema = z.object({
   nom: z.string().min(1),
   qualite: z.enum(["AVOCAT", "STAGIAIRE", "HONORAIRE"]).default("AVOCAT"),
-  statut: z.enum(["INSCRIT", "SUSPENDU", "RADIE", "OMIS", "HONORAIRE", "STAGIAIRE"]).default("INSCRIT"),
+  statut: z.enum(["INSCRIT", "SUSPENDU", "RADIE", "OMIS", "HONORAIRE", "STAGIAIRE", "DECEDE"]).default("INSCRIT"),
   sexe: z.enum(["H", "F"]).nullable().optional(),
   cabinet: z.string().optional(),
   tel: z.string().optional(),

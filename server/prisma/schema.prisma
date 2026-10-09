@@ -45,6 +45,7 @@ enum StatutMembre {
   OMIS
   HONORAIRE
   STAGIAIRE
+  DECEDE // décès constaté (acte de décès) : hors tableau, corps électoral, cotisations et espace avocat
 }
 
 enum TypeAssemblee {
@@ -140,6 +141,9 @@ model Membre {
   adresse         String?
   dateNaissance   DateTime?
   dateInscription DateTime?
+  dateRadiation   DateTime? // date de la décision de radiation (loi 026-92, art. 36-39)
+  motifRadiation  String?   // référence/objet de la décision — donnée disciplinaire, jamais exportée (RG-13)
+  dateDeces       DateTime? // date de l'acte de décès
   observations    String?
   // Stage (avocats stagiaires)
   dateServment    DateTime?

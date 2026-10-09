@@ -3,6 +3,7 @@ import request from "supertest";
 import { creerApp } from "../src/app.js";
 import { prisma } from "../src/prisma.js";
 import { tableauOrdreHtml } from "../src/lib/templates.js";
+import { eligibiliteElectorale, STATUTS_HORS_TABLEAU } from "../src/lib/business.js";
 
 const app = creerApp();
 const bearer = (t: string) => ["Authorization", `Bearer ${t}`] as const;
@@ -1105,5 +1106,34 @@ describe("RBAC — matrice de rôles/permissions & nouveaux profils", () => {
     // Restaure les défauts (retire finances) pour ne pas polluer les autres tests.
     await request(app).put("/api/rbac").set(...bearer(admin)).send({ role: "CONSULTATION", permissions: ["membres", "corps_electoral", "documents", "audit"] });
     expect((await request(app).get("/api/cotisations?annee=2026").set(...bearer(consult))).status).toBe(403);
+  });
+});
+
+describe("Cycle de vie — statut DECEDE (migration T3)", () => {
+  it("reconnaît le filtre statut=DECEDE, l'accepte à l'inscription et l'exclut du corps électoral", async () => {
+    // Le filtre est reconnu (liste vide), pas ignoré (liste complète).
+    const vide = await request(app).get("/api/membres?statut=DECEDE").set(...bearer(sg));
+    expect(vide.status).toBe(200);
+    expect(vide.body.total).toBe(0);
+    expect(vide.body.items).toEqual([]);
+
+    const m = await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: `DECEDE Test ${Date.now()}`, qualite: "AVOCAT", statut: "DECEDE" });
+    expect(m.status).toBe(201);
+    expect(m.body.statut).toBe("DECEDE");
+    const liste = await request(app).get("/api/membres?statut=DECEDE").set(...bearer(sg));
+    expect(liste.body.total).toBeGreaterThanOrEqual(1);
+    expect(liste.body.items.every((x: any) => x.statut === "DECEDE")).toBe(true);
+
+    const dash = await request(app).get("/api/dashboard").set(...bearer(sg));
+    expect(dash.status).toBe(200);
+
+    // Exclusions : tableau de l'Ordre et corps électoral.
+    const tableau = await request(app).get("/api/tableau").set(...bearer(sg));
+    expect(tableau.status).toBe(200);
+    expect(tableau.body.sections.flatMap((s: any) => s.membres).some((x: any) => x.id === m.body.id)).toBe(false);
+    expect(STATUTS_HORS_TABLEAU).toEqual(["RADIE", "DECEDE"]);
+    expect(eligibiliteElectorale({ qualite: "AVOCAT", statut: "DECEDE" }, null)).toEqual({ eligible: false, raison: "statut" });
+
+    await request(app).delete(`/api/membres/${m.body.id}`).set(...bearer(admin));
   });
 });

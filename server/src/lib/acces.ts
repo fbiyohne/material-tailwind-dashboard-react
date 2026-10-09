@@ -7,7 +7,7 @@ import { envoyerEmail } from "./notifications.js";
 import { revoquerTousLesJetons } from "./tokens.js";
 
 /** Statuts pour lesquels l'accès à l'espace avocat est suspendu. */
-const STATUTS_BLOQUANTS = ["SUSPENDU", "RADIE", "OMIS"];
+const STATUTS_BLOQUANTS = ["SUSPENDU", "RADIE", "OMIS", "DECEDE"];
 
 /**
  * Synchronise l'activation du compte espace avec le statut du membre : un avocat
