@@ -14,7 +14,7 @@ bash install.sh
 
 Le script : installe Docker si absent, demande le **domaine** (pour le HTTPS
 automatique), génère les secrets (`.env`), construit et lance les conteneurs
-(**app + PostgreSQL + Chromium + Caddy**). La base démarre **vide**.
+(**app + PostgreSQL + Chromium + Caddy**, gabarit `deploy/docker-compose.vps.yml`). La base démarre **vide**.
 
 > Pré-requis HTTPS : le domaine doit pointer (DNS A/AAAA) vers l'IP du VPS ;
 > Caddy obtient alors un certificat Let's Encrypt automatiquement.
@@ -48,7 +48,7 @@ Trois volumes Docker conservent les données entre les redémarrages et les mise
 
 Sauvegarde de la base recommandée :
 ```bash
-docker compose exec db pg_dump -U barreau barreau_pn > sauvegarde-$(date +%F).sql
+docker compose --project-directory . -f deploy/docker-compose.vps.yml exec db pg_dump -U barreau barreau_pn > sauvegarde-$(date +%F).sql
 ```
 Pour une sauvegarde complète, archiver aussi les volumes `app-uploads` et
 `app-secrets` (p. ex. `docker run --rm -v barreau_app-secrets:/v -v "$PWD":/o alpine tar czf /o/secrets.tgz -C /v .`).
@@ -56,7 +56,7 @@ Pour une sauvegarde complète, archiver aussi les volumes `app-uploads` et
 ## Mise à jour
 
 ```bash
-git pull && docker compose up -d --build
+git pull && docker compose --project-directory . -f deploy/docker-compose.vps.yml up -d --build
 ```
 Les migrations s'appliquent au démarrage. L'assistant ne réapparaît pas (un
 admin existe déjà).

@@ -38,7 +38,7 @@ fi
 
 # 4. Build + lancement
 echo "Construction et démarrage des conteneurs…"
-docker compose up -d --build
+docker compose --project-directory . -f deploy/docker-compose.vps.yml up -d --build
 
 echo ""
 echo "== Terminé =="
