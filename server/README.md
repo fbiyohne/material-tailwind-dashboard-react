@@ -109,6 +109,27 @@ Réponse : `{ "total": 3, "crees": 1, "maj": 1, "erreurs": [{ "ligne": 3, "messa
 ### Chromium pour le PDF
 `trouverChromium` (`src/lib/pdf.ts`) cherche dans l'ordre : `PUPPETEER_EXECUTABLE_PATH`, le cache Puppeteer, Playwright, les binaires Linux (`/usr/bin/chromium`, `google-chrome`…), puis sous Windows `C:/Program Files/Google/Chrome/Application/chrome.exe` et `C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe`. Sans binaire, les routes PDF répondent en erreur et les tests PDF s'ignorent.
 
+## Permissions d'action (RBAC, R-42 provisoire)
+
+En plus des modules (`membres`, `finances`…), la matrice `RolePermission` porte
+des **actions d'enregistrement** (`lib/rbac.ts`, catalogue `ACTIONS`) :
+`discipline_decider`, `discipline_saisir`, `stage_valider`, `omission_prononcer`,
+`admission_directe`. Le logiciel enregistre les décisions des organes compétents,
+il ne les prononce pas.
+
+- Défauts : décision disciplinaire, validation du stage et omission → **bâtonnier** ;
+  saisine et admission directe → **SG et bâtonnier**. L'ADMIN a toujours tout
+  (anti-verrouillage) ; le SG garde tous les modules mais ses actions sont fixes.
+- Vérification : `requirePermission("discipline_decider")` comme pour un module.
+- `PUT /rbac` accepte les clés de modules et d'actions dans `permissions` ; une
+  clé inconnue renvoie 400. `GET /rbac` expose `actions` et la matrice par rôle.
+- Repli **par catégorie** : un rôle qui a des lignes de modules en base mais
+  aucune ligne d'action retombe sur les actions par défaut (bases existantes
+  non amorcées). Conséquence : on ne peut pas retirer *toutes* les actions d'un
+  rôle, le minimum étant les défauts.
+
+Tests : `test/rbac-actions.test.ts`.
+
 ## Sécurité & production
 - **Auth** : access token (15 min) + refresh token (7 j, rotation), `/auth/refresh`, `/auth/logout`
 - **Rate-limit** sur `/auth/login` + limiteur global par IP (600 requêtes / 15 min sans jeton ou avec jeton invalide ; 3000 avec un JWT valide, vérifié par signature ; `/health`, `/notifications` et `/mes-notifications` exclus ; mesuré : environ 13 appels `/api` par page en rechargement complet, soit plus de 200 pages / 15 min) ; 429 = `{ erreur, retryAfter }` + en-tête `Retry-After`, le client ne déconnecte que sur 401 ; en-têtes **helmet**

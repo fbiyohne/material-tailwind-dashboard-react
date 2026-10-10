@@ -5,7 +5,7 @@ import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import {
-  PERMISSIONS, PERMISSION_CLES, ROLES_MATRICE, ROLES_COMPLET, ROLE_LABELS,
+  PERMISSIONS, PERMISSION_CLES, ACTIONS, ACTION_CLES, ROLES_MATRICE, ROLES_COMPLET, ROLE_LABELS,
   permissionsDeRole, rafraichirMatrice,
 } from "../lib/rbac.js";
 
@@ -24,6 +24,7 @@ rbacRouter.get(
     const matrice = Object.fromEntries(ROLES_MATRICE.map((r) => [r, permissionsDeRole(r)]));
     res.json({
       permissions: PERMISSIONS,
+      actions: ACTIONS,
       rolesEditables: ROLES_MATRICE.map((r) => ({ cle: r, libelle: ROLE_LABELS[r] ?? r })),
       rolesComplet: ROLES_COMPLET.map((r) => ({ cle: r, libelle: ROLE_LABELS[r] ?? r })),
       matrice,
@@ -33,10 +34,12 @@ rbacRouter.get(
 
 const majSchema = z.object({
   role: z.string(),
-  permissions: z.array(z.string()),
+  permissions: z.array(z.string().max(64)).max(100),
 });
 
-/** PUT /rbac — remplace les permissions d'un rôle éditable. */
+const CLES_CONNUES = new Set([...PERMISSION_CLES, ...ACTION_CLES]);
+
+/** PUT /rbac — remplace les permissions (modules et actions) d'un rôle éditable. Clé inconnue : 400. */
 rbacRouter.put(
   "/",
   asyncH(async (req, res) => {
@@ -44,7 +47,9 @@ rbacRouter.put(
     if (!ROLES_MATRICE.includes(role as Role)) {
       throw new HttpError(400, "Ce rôle n'est pas modifiable dans la matrice.");
     }
-    const cles = [...new Set(permissions.filter((p) => PERMISSION_CLES.includes(p)))];
+    const inconnues = permissions.filter((p) => !CLES_CONNUES.has(p));
+    if (inconnues.length) throw new HttpError(400, `Permission(s) inconnue(s) : ${inconnues.join(", ")}`);
+    const cles = [...new Set(permissions)];
     await prisma.$transaction([
       prisma.rolePermission.deleteMany({ where: { role: role as Role } }),
       prisma.rolePermission.createMany({ data: cles.map((permission) => ({ role: role as Role, permission })) }),

@@ -28,6 +28,20 @@ export const PERMISSIONS: ModulePermission[] = [
 export const PERMISSION_CLES = PERMISSIONS.map((p) => p.cle);
 
 /**
+ * Actions d'enregistrement (R-42, provisoire) : distinctes des modules, elles
+ * séparent le bâtonnier du secrétaire général. Le logiciel ENREGISTRE les
+ * décisions des organes compétents, il ne les prononce pas.
+ */
+export const ACTIONS: ModulePermission[] = [
+  { cle: "discipline_decider", libelle: "Enregistrer une décision disciplinaire", description: "Sanction du conseil de discipline, radiation comprise (bâtonnier par défaut)." },
+  { cle: "discipline_saisir", libelle: "Enregistrer une saisine disciplinaire", description: "Ouverture et instruction d'un dossier (SG et bâtonnier par défaut)." },
+  { cle: "stage_valider", libelle: "Valider un stage", description: "Enregistrement du certificat de fin de stage et passage au tableau (bâtonnier par défaut)." },
+  { cle: "omission_prononcer", libelle: "Enregistrer une omission", description: "Omission et réinscription décidées par le Conseil national (bâtonnier par défaut)." },
+  { cle: "admission_directe", libelle: "Admission directe", description: "Inscription directe au tableau sans stage (SG et bâtonnier par défaut)." },
+];
+export const ACTION_CLES = ACTIONS.map((a) => a.cle);
+
+/**
  * Rôles pilotables par la matrice. SG et ADMIN gardent un accès complet non
  * modifiable (invariant de sûreté : on ne peut pas se verrouiller soi-même) ;
  * l'AVOCAT relève de l'espace cloisonné, hors matrice.
@@ -58,6 +72,13 @@ const DEFAUTS: Record<string, string[]> = {
   ACCUEIL: ["membres", "documents"],
   AVOCAT: [],
 };
+// Défauts des actions (R-42 ajusté, HJ-G) : décider, valider le stage et enregistrer
+// l'omission reviennent au bâtonnier ; saisir et admettre directement au SG aussi.
+const ACTIONS_DEFAUT: Record<string, string[]> = {
+  ADMIN: [...ACTION_CLES],
+  BATONNIER: [...ACTION_CLES],
+  SECRETAIRE_GENERAL: ["discipline_saisir", "admission_directe"],
+};
 
 // Cache mémoire : rôle → ensemble de permissions. Remplacé d'un bloc (lecture sûre).
 let cache: Record<string, Set<string>> = {};
@@ -86,18 +107,27 @@ export async function rafraichirMatrice(): Promise<void> {
   }
 }
 
-/** Permissions effectives d'un rôle (ADMIN = tout ; repli sur les défauts). */
-export function permissionsDeRole(role: string): string[] {
-  if (role === "ADMIN" || role === "SECRETAIRE_GENERAL") return [...TOUT];
+/**
+ * Clés effectives d'une catégorie (modules ou actions) : lignes en base si le
+ * rôle en a dans cette catégorie, sinon les défauts. Le repli est PAR CATÉGORIE :
+ * une base qui ne contient que des lignes de modules ne retire aucune action.
+ * ponytail: conséquence, un rôle ne peut pas être privé de TOUTES ses actions
+ * (aucune ligne = défauts) ; ajouter une ligne sentinelle si ce besoin apparaît.
+ */
+function effectives(role: string, catalogue: string[], defauts: Record<string, string[]>): string[] {
   const set = cache[role];
-  if (set && set.size) return [...set];
-  return DEFAUTS[role] ?? [];
+  const enBase = set ? catalogue.filter((c) => set.has(c)) : [];
+  return enBase.length ? enBase : defauts[role] ?? [];
 }
 
-/** Vrai si le rôle possède la permission (ADMIN toujours). */
+/** Permissions effectives d'un rôle (modules + actions). ADMIN = tout ; le SG a tous les modules et ses actions R-42 fixes. */
+export function permissionsDeRole(role: string): string[] {
+  if (role === "ADMIN") return [...TOUT, ...ACTION_CLES];
+  if (role === "SECRETAIRE_GENERAL") return [...TOUT, ...ACTIONS_DEFAUT.SECRETAIRE_GENERAL];
+  return [...effectives(role, PERMISSION_CLES, DEFAUTS), ...effectives(role, ACTION_CLES, ACTIONS_DEFAUT)];
+}
+
+/** Vrai si le rôle possède la permission (module ou action). L'ADMIN a toujours tout. */
 export function aLaPermission(role: string, permission: string): boolean {
-  if (role === "ADMIN" || role === "SECRETAIRE_GENERAL") return true;
-  const set = cache[role];
-  if (set && set.size) return set.has(permission);
-  return (DEFAUTS[role] ?? []).includes(permission);
+  return permissionsDeRole(role).includes(permission);
 }
