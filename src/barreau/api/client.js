@@ -74,7 +74,7 @@ export async function api(path, opts = {}) {
   if (res.status === 401) {
     clearSession();
     onUnauthorized?.();
-    throw new Error("Session expirée — veuillez vous reconnecter.");
+    throw Object.assign(new Error("Session expirée — veuillez vous reconnecter."), { status: 401 });
   }
   const data = res.status === 204 ? null : await res.json().catch(() => null);
   if (!res.ok) {

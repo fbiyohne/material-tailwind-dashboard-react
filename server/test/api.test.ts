@@ -1645,10 +1645,29 @@ describe("Revue sécurité T10 — données disciplinaires, extraction en masse,
   });
 });
 
-describe("Limiteur global — appels de fond exclus (R1-12)", () => {
-  it("ne limite pas les notifications et renvoie un message français avec Retry-After sur 429", async () => {
+describe("Limiteur global (R1-12)", () => {
+  it("/api/health reste hors compteur", async () => {
     const r = await request(app).get("/api/health");
     expect(r.status).toBe(200);
-    expect(r.headers["ratelimit-limit"]).toBeUndefined(); // route de fond : hors compteur
+    expect(r.headers["ratelimit-limit"]).toBeUndefined();
+  });
+
+  it("anonyme et jeton bidon : 429 en français avec Retry-After ; jeton valide : limite plus haute", async () => {
+    const petite = creerApp({ anonyme: 2, authentifie: 4 });
+    const jeton = sg;
+    for (const auth of [undefined, "Bearer bidon"]) {
+      const agent = () => { const r = request(petite).get("/api/membres"); return auth ? r.set("Authorization", auth) : r; };
+      await agent(); await agent();
+      const r = await agent();
+      expect(r.status).toBe(429);
+      expect(r.body.erreur).toMatch(/^Trop de requêtes, réessayez dans \d+ s\.$/);
+      expect(typeof r.body.retryAfter).toBe("number");
+      expect(Number(r.headers["retry-after"])).toBeGreaterThan(0);
+    }
+    const p2 = creerApp({ anonyme: 1, authentifie: 4 });
+    const codes: number[] = [];
+    for (let i = 0; i < 5; i++) codes.push((await request(p2).get("/api/membres").set("Authorization", `Bearer ${jeton}`)).status);
+    expect(codes.slice(0, 4)).toEqual([200, 200, 200, 200]);
+    expect(codes[4]).toBe(429);
   });
 });

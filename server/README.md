@@ -109,7 +109,7 @@ Réponse : `{ "total": 3, "crees": 1, "maj": 1, "erreurs": [{ "ligne": 3, "messa
 
 ## Sécurité & production
 - **Auth** : access token (15 min) + refresh token (7 j, rotation), `/auth/refresh`, `/auth/logout`
-- **Rate-limit** sur `/auth/login` + limiteur global ; en-têtes **helmet**
+- **Rate-limit** sur `/auth/login` + limiteur global par IP (600 requêtes / 15 min sans jeton ou avec jeton invalide ; 3000 avec un JWT valide, vérifié par signature ; `/health`, `/notifications` et `/mes-notifications` exclus ; mesuré : environ 13 appels `/api` par page en rechargement complet, soit plus de 200 pages / 15 min) ; 429 = `{ erreur, retryAfter }` + en-tête `Retry-After`, le client ne déconnecte que sur 401 ; en-têtes **helmet**
 - **PDF serveur** (Puppeteer) : `GET /recus/:id/pdf`, `GET /quitus/:id/pdf` (vectoriel)
 - **Relances email** : `POST /cotisations/relances?annee=` (SMTP réel ou simulation)
 - **Signature électronique** (HMAC) : `GET /quitus/:id/signature`, `POST /signatures/verifier`

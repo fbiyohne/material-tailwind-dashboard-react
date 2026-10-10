@@ -3,6 +3,7 @@ import path from "node:path";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import jwt from "jsonwebtoken";
 import { pinoHttp } from "pino-http";
 import { randomUUID } from "node:crypto";
 import { env } from "./env.js";
@@ -44,7 +45,21 @@ import { espaceRouter } from "./routes/espace.js";
 import { messagerieRouter } from "./routes/messagerie.js";
 import { installationRouter } from "./routes/installation.js";
 
-export function creerApp() {
+/** Vrai si l'en-tête Authorization porte un JWT valide (un jeton bidon ne relève pas la limite). */
+function jetonValide(req: express.Request): boolean {
+  const h = req.headers.authorization;
+  if (!h?.startsWith("Bearer ")) return false;
+  try {
+    jwt.verify(h.slice(7), env.jwtSecret, { algorithms: ["HS256"] });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Limites par 15 min : anonyme / jeton valide (surchargeables, utile aux tests). */
+export function creerApp(limites: { anonyme?: number; authentifie?: number } = {}) {
+  const { anonyme = 600, authentifie = 3000 } = limites;
   const app = express();
   // Nombre de proxys de confiance pour dériver req.ip (rate-limiting par IP).
   // Doit correspondre à la topologie réelle : une valeur trop permissive laisse
@@ -85,12 +100,12 @@ export function creerApp() {
   app.use("/api", audit);
   // Limiteur global (protection DoS basique).
   // Les appels de fond du SPA (notifications, non-lus) ne comptent pas ; un jeton présent
-  // relève la limite (le SPA enchaîne plusieurs appels par page). Anonyme : 600 / 15 min.
+  // relève la limite (le SPA enchaîne plusieurs appels par page). Anonyme ou jeton invalide : 600 / 15 min.
   app.use(
     "/api",
     rateLimit({
       windowMs: 15 * 60 * 1000,
-      limit: (req) => (req.headers.authorization ? 3000 : 600),
+      limit: (req) => (jetonValide(req) ? authentifie : anonyme),
       standardHeaders: true,
       legacyHeaders: false,
       skip: (req) => /^\/(health|notifications|mes-notifications)(\/|$)/.test(req.path),
