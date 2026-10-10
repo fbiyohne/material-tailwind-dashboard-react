@@ -127,6 +127,14 @@ export function Discipline() {
     { key: "avocat", label: "Avocat mis en cause", sortable: true, sortValue: (d) => (d.avocatNom ?? "").toLowerCase(),
       cell: (d) => d.avocatNom === "Confidentiel" ? <span className="italic text-gris">Confidentiel</span> : <span className="font-medium">Me {d.avocatNom}</span> },
     { key: "objet", label: "Objet", cell: (d) => <span className="text-gris">{d.objet}</span> },
+    { key: "sanction", label: "Décision", sortable: true, sortValue: (d) => d.sanction ?? "",
+      cell: (d) => d.sanctionCode ? (
+        <ul className="space-y-0.5 text-xs">
+          <li className="font-medium text-encre">{d.sanction}</li>
+          {d.sursis && <li><Badge ton="or">Avec sursis</Badge></li>}
+          <li className="text-gris">Décision du {formatDate(d.dateDecision)}</li>
+        </ul>
+      ) : <span className="text-xs text-gris">—</span> },
     { key: "saisine", label: "Saisine", sortable: true, sortValue: (d) => d.dateSaisine,
       cell: (d) => <span className="text-xs text-gris">{formatDate(d.dateSaisine)}</span> },
     { key: "audience", label: "Audience", cell: (d) => <span className="text-xs text-gris">{formatDate(d.dateAudience)}</span> },

@@ -1,17 +1,112 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeftIcon, ShieldExclamationIcon, CheckIcon, ArrowDownTrayIcon, PaperClipIcon, PlusIcon, XMarkIcon, DocumentTextIcon, ScaleIcon, PencilSquareIcon } from "@heroicons/react/24/outline";
-import { Badge, DocumentModal, EditeurDocument, Notice, useToast, FormField, PageHeader, Tabs, ErrorState, TableSkeleton } from "../components";
+import { Badge, DocumentModal, EditeurDocument, Notice, MentionJuridique, useToast, useConfirm, FormField, PageHeader, Tabs, ErrorState, TableSkeleton } from "../components";
+import { useAuth } from "../auth/AuthContext";
 import { STATUT_DOSSIER_META } from "../data/institutionnel";
 import { formatDate } from "../utils/format";
 import { assainirHtml } from "../utils/sanitizeHtml";
-import { getDossier, majDossier, archiverDoc, telechargerDecisionDisciplinePdf } from "../api/resources";
+import { getDossier, majDossier, archiverDoc, telechargerDecisionDisciplinePdf, getParametres, enregistrerDecisionDossier } from "../api/resources";
 
 const STATUTS = ["ouvert", "instruction", "audience", "decision", "classe"];
+const DECISION_VIDE = { sanctionCode: "", dureeMois: "", sursis: false, peineAccessoireMois: "", motivation: "", decidePar: "", dateDecision: new Date().toISOString().slice(0, 10), dateNotification: "" };
+
+/**
+ * Formulaire « Enregistrer la décision » (C-07). Le logiciel enregistre la décision
+ * du conseil de discipline ; il ne la prononce pas. Catalogue lu en Paramètres.
+ */
+function DecisionForm({ dossier, regles, onDone }) {
+  const toast = useToast();
+  const confirm = useConfirm();
+  const [f, setF] = useState(DECISION_VIDE);
+  const [envoi, setEnvoi] = useState(false);
+  const set = (k) => (e) => setF({ ...f, [k]: e.target.type === "checkbox" ? e.target.checked : e.target.value });
+  const peine = regles.sanctions.find((s) => s.code === f.sanctionCode);
+  const avecDuree = peine?.effet === "SUSPENSION";
+  const sursisOffert = regles.sursisAutorise && peine?.sursisPossible;
+  const pret = peine && f.motivation.trim().length >= 10 && (!avecDuree || Number(f.dureeMois) > 0) && !envoi;
+
+  const valider = async () => {
+    const ok = await confirm({
+      title: "Enregistrer la décision",
+      message: `Enregistrer « ${peine.libelle} » sur le dossier ${dossier.reference} ? L'effet sur la situation de l'avocat est appliqué immédiatement et la décision ne pourra plus être modifiée ici.`,
+      confirmLabel: "Enregistrer",
+    });
+    if (!ok) return;
+    setEnvoi(true);
+    try {
+      await enregistrerDecisionDossier(dossier.id, {
+        sanctionCode: f.sanctionCode,
+        dureeMois: avecDuree ? Number(f.dureeMois) : undefined,
+        sursis: !!(f.sursis && sursisOffert),
+        peineAccessoireMois: f.peineAccessoireMois ? Number(f.peineAccessoireMois) : undefined,
+        motivation: f.motivation.trim(),
+        decidePar: f.decidePar.trim() || undefined,
+        dateDecision: f.dateDecision || undefined,
+        dateNotification: f.dateNotification || undefined,
+      });
+      toast.success("Décision enregistrée.");
+      onDone();
+    } catch (e) {
+      toast.error(e.message);
+    } finally {
+      setEnvoi(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <MentionJuridique type="sanction" />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <FormField label="Peine (art. 36)" required>
+          <select value={f.sanctionCode} onChange={(e) => setF({ ...f, sanctionCode: e.target.value, dureeMois: "", sursis: false })} className="bpn-input">
+            <option value="">— Choisir —</option>
+            {regles.sanctions.map((s) => <option key={s.code} value={s.code}>{s.libelle}</option>)}
+          </select>
+        </FormField>
+        {avecDuree && (
+          <FormField label="Durée (mois)" required hint={peine.dureeMaxMois ? `${peine.dureeMaxMois} mois au plus` : undefined}>
+            <input type="number" min="1" max={peine.dureeMaxMois ?? undefined} value={f.dureeMois} onChange={set("dureeMois")} className="bpn-input" />
+          </FormField>
+        )}
+        {sursisOffert && (
+          <div className="space-y-2 sm:col-span-2">
+            <label className="flex items-center gap-2 text-sm text-encre">
+              <input type="checkbox" checked={f.sursis} onChange={set("sursis")} /> Avec sursis (l'avocat reste au tableau)
+            </label>
+            <MentionJuridique type="sursis" />
+          </div>
+        )}
+        <FormField label="Peine accessoire d'inéligibilité (mois)" hint={`${regles.peineAccessoireMaxMois} mois au plus`}>
+          <input type="number" min="1" max={regles.peineAccessoireMaxMois} value={f.peineAccessoireMois} onChange={set("peineAccessoireMois")} className="bpn-input" />
+        </FormField>
+        <FormField label="Organe décideur" hint="par défaut : conseil de discipline">
+          <input value={f.decidePar} onChange={set("decidePar")} className="bpn-input" placeholder="Conseil de discipline (art. 36, loi n° 026-92)" />
+        </FormField>
+        <FormField label="Date de la décision">
+          <input type="date" value={f.dateDecision} onChange={set("dateDecision")} className="bpn-input" />
+        </FormField>
+        <FormField label="Date de notification">
+          <input type="date" value={f.dateNotification} onChange={set("dateNotification")} className="bpn-input" />
+        </FormField>
+        <FormField label="Motivation" required hint="10 caractères au moins" full>
+          <textarea rows={3} value={f.motivation} onChange={set("motivation")} className="bpn-input" />
+        </FormField>
+      </div>
+      <div className="flex justify-end">
+        <button type="button" className="bpn-btn bpn-btn-danger" onClick={valider} disabled={!pret}>Enregistrer la décision</button>
+      </div>
+    </div>
+  );
+}
 
 export function DossierDetail() {
   const { id } = useParams();
   const toast = useToast();
+  const { user } = useAuth();
+  // Enregistrer la décision : action discipline_decider (bâtonnier par défaut), pas le SG.
+  const peutDecider = !!user?.permissions?.includes("discipline_decider");
+  const [regles, setRegles] = useState(null);
   const [dossier, setDossier] = useState(null);
   const [form, setForm] = useState(null);
   const [enregistre, setEnregistre] = useState(false);
@@ -22,6 +117,7 @@ export function DossierDetail() {
   // getDossier journalise la consultation côté serveur (RG-13).
   const charger = () => getDossier(Number(id)).then((d) => { setDossier(d); setForm(d); }).catch(() => setDossier(false));
   useEffect(() => { charger(); }, [id]);
+  useEffect(() => { if (peutDecider) getParametres().then((p) => setRegles(p.regles)).catch(() => {}); }, [peutDecider]);
 
   if (dossier === false) {
     return (
@@ -57,6 +153,10 @@ export function DossierDetail() {
         decision: form.decision, sanction: form.sanction, pieces: form.pieces ?? [],
         plaignant: form.plaignant ?? "", rapporteur: form.rapporteur ?? "",
         recours: form.recours ?? "", dateRecours: form.dateRecours || undefined,
+        origine: form.origine ?? "", conclusionRapport: form.conclusionRapport ?? "",
+        orientation: form.orientation || undefined, juridiction: form.juridiction ?? "",
+        dateDesignationRapporteur: form.dateDesignationRapporteur || undefined,
+        dateRapport: form.dateRapport || undefined, dateNotification: form.dateNotification || undefined,
       });
       setEnregistre(true);
       toast.success("Dossier mis à jour.");
@@ -153,7 +253,7 @@ export function DossierDetail() {
                 <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2">
                   <FormField label="Statut de la procédure">
                     <select value={form.statut} onChange={set("statut")} className="bpn-input">
-                      {STATUTS.map((s) => <option key={s} value={s}>{STATUT_DOSSIER_META[s].label}</option>)}
+                      {STATUTS.filter((s) => s !== "decision" || peutDecider || form.statut === "decision").map((s) => <option key={s} value={s}>{STATUT_DOSSIER_META[s].label}</option>)}
                     </select>
                   </FormField>
                   <div />
@@ -162,6 +262,31 @@ export function DossierDetail() {
                   </FormField>
                   <FormField label="Rapporteur">
                     <input value={form.rapporteur ?? ""} onChange={set("rapporteur")} className="bpn-input" placeholder="Membre chargé de l'instruction" />
+                  </FormField>
+                  <FormField label="Origine de la saisine">
+                    <input value={form.origine ?? ""} onChange={set("origine")} className="bpn-input" placeholder="Plainte, saisine d'office, parquet…" />
+                  </FormField>
+                  <FormField label="Date de désignation du rapporteur">
+                    <input type="date" value={form.dateDesignationRapporteur ?? ""} onChange={set("dateDesignationRapporteur")} className="bpn-input" />
+                  </FormField>
+                  <FormField label="Date du rapport">
+                    <input type="date" value={form.dateRapport ?? ""} onChange={set("dateRapport")} className="bpn-input" />
+                  </FormField>
+                  <FormField label="Orientation">
+                    <select value={form.orientation ?? ""} onChange={set("orientation")} className="bpn-input">
+                      <option value="">— Non arrêtée —</option>
+                      <option value="CLASSEMENT">Classement</option>
+                      <option value="POURSUITE">Poursuite</option>
+                    </select>
+                  </FormField>
+                  <FormField label="Conclusion du rapport" full>
+                    <textarea rows={2} value={form.conclusionRapport ?? ""} onChange={set("conclusionRapport")} className="bpn-input" />
+                  </FormField>
+                  <FormField label="Juridiction saisie" hint="le cas échéant">
+                    <input value={form.juridiction ?? ""} onChange={set("juridiction")} className="bpn-input" />
+                  </FormField>
+                  <FormField label="Date de notification">
+                    <input type="date" value={form.dateNotification ?? ""} onChange={set("dateNotification")} className="bpn-input" />
                   </FormField>
                   <FormField label="Date de convocation">
                     <input type="date" value={form.dateConvocation ?? ""} onChange={set("dateConvocation")} className="bpn-input" />
@@ -173,18 +298,41 @@ export function DossierDetail() {
                     <div className="rounded border border-grisM">
                       <div className="flex items-center justify-between border-b border-grisM bg-grisL/50 px-3 py-1.5">
                         <span className="text-xs text-gris">Motifs et dispositif</span>
-                        <button type="button" className="bpn-btn bpn-btn-ghost bpn-btn-sm" onClick={() => setEditerDecision(true)}>
-                          <PencilSquareIcon className="h-3.5 w-3.5" /> Rédiger
-                        </button>
+                        {peutDecider && (
+                          <button type="button" className="bpn-btn bpn-btn-ghost bpn-btn-sm" onClick={() => setEditerDecision(true)}>
+                            <PencilSquareIcon className="h-3.5 w-3.5" /> Rédiger
+                          </button>
+                        )}
                       </div>
                       {form.decision && assainirHtml(form.decision)
                         ? <div className="bpn-doc px-3 py-2" dangerouslySetInnerHTML={{ __html: assainirHtml(form.decision) }} />
                         : <p className="px-3 py-4 text-center text-sm text-gris">Aucune décision rédigée. Cliquez sur « Rédiger ».</p>}
                     </div>
                   </FormField>
-                  <FormField label="Sanction éventuelle" full>
-                    <input value={form.sanction ?? ""} onChange={set("sanction")} className="bpn-input" placeholder="Avertissement, blâme, suspension, radiation…" />
-                  </FormField>
+                  <div className="space-y-3 sm:col-span-2">
+                    <p className="text-sm font-medium text-navy">Décision du conseil de discipline</p>
+                    {dossier.sanctionCode ? (
+                      <>
+                        <Notice ton="vert" icon={CheckIcon} className="text-sm">
+                          <p className="font-medium text-encre">Décision enregistrée : {dossier.sanction}</p>
+                          <ul className="mt-1 space-y-0.5 text-gris">
+                            <li>Organe : {dossier.decidePar}</li>
+                            <li>Date de la décision : {formatDate(dossier.dateDecision)}{dossier.dateNotification ? ` · notifiée le ${formatDate(dossier.dateNotification)}` : ""}</li>
+                            <li>Référence : <span className="font-mono">{dossier.reference}</span></li>
+                            <li>Pièce : décision en PDF (bouton « Décision (PDF) »)</li>
+                            {dossier.peineAccessoireMois ? <li>Peine accessoire d'inéligibilité : {dossier.peineAccessoireMois} mois</li> : null}
+                          </ul>
+                          {dossier.motivation && <p className="mt-1 text-encre">Motivation : {dossier.motivation}</p>}
+                        </Notice>
+                        {dossier.sursis && <MentionJuridique type="sursis" />}
+                      </>
+                    ) : peutDecider ? (
+                      regles ? <DecisionForm dossier={dossier} regles={regles} onDone={charger} />
+                        : <p className="text-sm text-gris">Chargement du catalogue des peines…</p>
+                    ) : (
+                      <Notice ton="gris" className="text-sm">L'enregistrement de la décision est réservé au bâtonnier. Vous pouvez instruire le dossier (rapport, orientation, convocation).</Notice>
+                    )}
+                  </div>
                   <FormField label="Recours (appel)" hint="le cas échéant" full>
                     <textarea rows={2} value={form.recours ?? ""} onChange={set("recours")} className="bpn-input" placeholder="Recours formé devant la Cour d'appel : objet, référence…" />
                   </FormField>

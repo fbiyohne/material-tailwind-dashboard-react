@@ -128,7 +128,10 @@ export const publierTableau = () => api("/tableau/publier", { method: "POST" });
 export const listerRapportsStage = (membreId) => api(`/membres/${membreId}/rapports`);
 export const ajouterRapportStage = (membreId, body) => api(`/membres/${membreId}/rapports`, { method: "POST", body });
 export const supprimerRapportStage = (membreId, rid) => api(`/membres/${membreId}/rapports/${rid}`, { method: "DELETE" });
-export const validerStage = (membreId) => api(`/membres/${membreId}/valider-stage`, { method: "POST" });
+/** Fin de stage : corps facultatif { dateDecision, dateDemande, dateCertificat, refCertificat }. */
+export const validerStage = (membreId, body = {}) => api(`/membres/${membreId}/valider-stage`, { method: "POST", body });
+/** Admission directe au tableau (sans stage) : { nom, cas, ancienneteAns, reference, dateDecision, … }. */
+export const admettreDirectement = (body) => api("/membres/admission-directe", { method: "POST", body }).then(normaliserMembre);
 
 export const listerPieces = (membreId) => api(`/membres/${membreId}/pieces`);
 export const listerToutesPieces = (statut) => api(`/pieces${statut ? `?statut=${statut}` : ""}`);
@@ -217,12 +220,18 @@ const normDossier = (d) => ({
   dateConvocation: dateCourte(d.dateConvocation),
   dateAudience: dateCourte(d.dateAudience),
   dateRecours: dateCourte(d.dateRecours),
+  dateDesignationRapporteur: dateCourte(d.dateDesignationRapporteur),
+  dateRapport: dateCourte(d.dateRapport),
+  dateNotification: dateCourte(d.dateNotification),
+  dateDecision: dateCourte(d.dateDecision),
 });
 export const listerDossiers = () => api("/discipline").then((a) => a.map(normDossier));
 export const getDossier = (id) => api(`/discipline/${id}`).then(normDossier);
 export const ouvrirDossier = (data) => api("/discipline", { method: "POST", body: data }).then(normDossier);
 export const majDossier = (id, patch) =>
   api(`/discipline/${id}`, { method: "PATCH", body: { ...patch, statut: patch.statut ? patch.statut.toUpperCase() : undefined } }).then(normDossier);
+// Décision structurée (art. 36) : réservée à l'action discipline_decider côté serveur.
+export const enregistrerDecisionDossier = (id, body) => api(`/discipline/${id}/decision`, { method: "POST", body }).then(normDossier);
 export const supprimerDossier = (id) => api(`/discipline/${id}`, { method: "DELETE" });
 export const journalDiscipline = () => api("/discipline/journal");
 
