@@ -12,7 +12,8 @@ const ANNEE = 2033; // exercice isolé
 
 beforeAll(async () => {
   sg = (await request(app).post("/api/auth/login").send({ email: "sg@barreau-pn.cg", password: "barreau" })).body.token;
-  const num = 960000 + Math.floor(Math.random() * 30000);
+  // num au-delà du maximum présent : aucune collision avec les restes de barreau_pn_test (un tirage aléatoire sur 960000-989999 en rencontrait).
+  const num = ((await prisma.membre.aggregate({ _max: { num: true } }))._max.num ?? 960000) + 1;
   membreId = (await prisma.membre.create({ data: { num, nom: `TABLEAU DASH ${num}`, qualite: "STAGIAIRE", statut: "STAGIAIRE" } as never })).id;
 });
 afterAll(async () => { await prisma.membre.deleteMany({ where: { id: membreId } }); });
