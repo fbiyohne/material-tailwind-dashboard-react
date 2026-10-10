@@ -20,7 +20,8 @@ const lignes = [
 
 beforeAll(async () => {
   sg = (await request(app).post("/api/auth/login").send({ email: "sg@barreau-pn.cg", password: "barreau" })).body.token;
-  const num = 970000 + Math.floor(Math.random() * 20000);
+  // num au-delà du maximum présent : la plage 970000-989999 compte des milliers de restes de tests (collision aléatoire, même sous le verrou).
+  const num = ((await prisma.membre.aggregate({ _max: { num: true } }))._max.num ?? 970000) + 1;
   membreId = (await prisma.membre.create({ data: { num, nom: `TIMBRE EXT ${num}`, qualite: "AVOCAT" } as never })).id;
 });
 
