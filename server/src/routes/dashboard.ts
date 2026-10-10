@@ -30,6 +30,11 @@ dashboardRouter.get(
     let stagiaires = 0;
     let aJour = 0;
     let enRetard = 0;
+    // Ventilation par qualité (avocats / stagiaires) : effectif actif, à jour, retardataires.
+    const parQualiteCot = {
+      avocats: { effectif: 0, aJour: 0, enRetard: 0 },
+      stagiaires: { effectif: 0, aJour: 0, enRetard: 0 },
+    };
     let payees = 0;
     let du = 0;
 
@@ -57,8 +62,10 @@ dashboardRouter.get(
       du += montantDuM;
       payees += paye;
       const st = statutCotisation(montantDuM, paye);
-      if (st === "ajour") aJour += 1;
-      else if (st === "retard" || st === "partiel") enRetard += 1;
+      const v = m.qualite === "AVOCAT" ? parQualiteCot.avocats : m.qualite === "STAGIAIRE" ? parQualiteCot.stagiaires : null;
+      if (v && actif) v.effectif += 1;
+      if (st === "ajour") { aJour += 1; if (v) v.aJour += 1; }
+      else if (st === "retard" || st === "partiel") { enRetard += 1; if (v) v.enRetard += 1; }
     }
 
     const parDecennie = Object.entries(parDecennieMap)
@@ -82,7 +89,7 @@ dashboardRouter.get(
 
     res.json({
       annee,
-      membres: { inscrits, stagiaires, aJour, enRetard },
+      membres: { inscrits, stagiaires, aJour, enRetard, parQualite: parQualiteCot },
       demographie: { parQualite, parStatut, parDecennie, parite, topCabinets, total: membres.length },
       ...(voitInstitutionnel ? { discipline: { enCours: disciplineEnCours, sanctionsAnnee } } : {}),
       ...(voitSysteme ? { demandesEnAttente } : {}),

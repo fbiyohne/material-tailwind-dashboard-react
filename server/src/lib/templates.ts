@@ -154,7 +154,7 @@ function cabinetsTable(cabinets: CabinetPdf[]): string {
 export function tableauOrdreHtml(
   sections: { qualite: string; membres: any[] }[],
   date: Date | string,
-  extras?: { conseil?: ConseilPdf; cabinets?: CabinetPdf[] },
+  extras?: { conseil?: ConseilPdf; cabinets?: CabinetPdf[]; miseAJour?: Date | null },
 ): string {
   const numRomain = ["I", "II", "III", "IV"];
   const section = (s: { qualite: string; membres: any[] }, i: number) => `
@@ -174,7 +174,7 @@ export function tableauOrdreHtml(
   const signataire = extras?.conseil?.batonnier || identite().batonnier;
   const nbInscrits = sections.reduce((n, s) => n + s.membres.length, 0);
   const nbPM = extras?.cabinets?.length ?? 0;
-  const contexte = `<div style="text-align:center;font-size:11px;color:#7A756A;margin:-10px 0 18px">${nbInscrits} inscrit${nbInscrits > 1 ? "s" : ""} au tableau · ${nbPM} personne${nbPM > 1 ? "s" : ""} morale${nbPM > 1 ? "s" : ""} · arrêté au ${fmtDate(date)}</div>`;
+  const contexte = `<div style="text-align:center;font-size:11px;color:#7A756A;margin:-10px 0 18px">${nbInscrits} inscrit${nbInscrits > 1 ? "s" : ""} au tableau · ${nbPM} personne${nbPM > 1 ? "s" : ""} morale${nbPM > 1 ? "s" : ""} · arrêté au ${fmtDate(date)}${extras?.miseAJour ? ` · mis à jour le ${fmtDate(extras.miseAJour)}` : ""}</div>`;
   return documentHtml({
     org: "Le Bâtonnier",
     title: "Tableau de l'Ordre",

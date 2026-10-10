@@ -21,21 +21,23 @@ async function composer() {
   const membres = await prisma.membre.findMany({
     where: { statut: { notIn: [...STATUTS_SORTIS] } },
     orderBy: [{ dateInscription: "asc" }, { num: "asc" }],
-    select: { id: true, num: true, numInscription: true, nom: true, qualite: true, statut: true, cabinet: true, dateInscription: true },
+    select: { id: true, num: true, numInscription: true, nom: true, qualite: true, statut: true, cabinet: true, dateInscription: true, updatedAt: true },
   });
+  // « Mis à jour le » : modification la plus récente parmi les membres présents au tableau.
+  const miseAJour = membres.reduce<Date | null>((max, m) => (!max || m.updatedAt > max ? m.updatedAt : max), null);
   const sections = ORDRE_QUALITES.map((q) => ({
     qualite: q,
-    membres: membres.filter((m) => m.qualite === q).map((m, i) => ({ ...m, rang: i + 1 })),
+    membres: membres.filter((m) => m.qualite === q).map(({ updatedAt: _u, ...m }, i) => ({ ...m, rang: i + 1 })),
   })).filter((s) => s.membres.length > 0);
-  return { total: membres.length, sections };
+  return { total: membres.length, sections, miseAJour };
 }
 
 /** GET /tableau — tableau de l'Ordre (données). */
 tableauRouter.get(
   "/",
   asyncH(async (_req, res) => {
-    const { total, sections } = await composer();
-    res.json({ genereLe: new Date(), total, sections });
+    const { total, sections, miseAJour } = await composer();
+    res.json({ genereLe: new Date(), miseAJour, total, sections });
   })
 );
 
@@ -79,8 +81,8 @@ async function composerCabinets(): Promise<CabinetPdf[]> {
 tableauRouter.get(
   "/pdf",
   asyncH(async (_req, res) => {
-    const [{ sections }, conseil, cabinets] = await Promise.all([composer(), composerConseil(), composerCabinets()]);
-    await envoyerPdf(res, tableauOrdreHtml(sections, new Date(), { conseil, cabinets }), `Tableau-de-l-Ordre-${new Date().toISOString().slice(0, 10)}.pdf`);
+    const [{ sections, miseAJour }, conseil, cabinets] = await Promise.all([composer(), composerConseil(), composerCabinets()]);
+    await envoyerPdf(res, tableauOrdreHtml(sections, new Date(), { conseil, cabinets, miseAJour }), `Tableau-de-l-Ordre-${new Date().toISOString().slice(0, 10)}.pdf`);
   })
 );
 

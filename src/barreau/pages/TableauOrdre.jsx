@@ -3,6 +3,7 @@ import { ArrowDownTrayIcon, CheckBadgeIcon } from "@heroicons/react/24/outline";
 import { Badge, PageHeader, useToast, useConfirm, TableSkeleton, ErrorState, DataTable } from "../components";
 import { formatDate } from "../utils/format";
 import { useAuth } from "../auth/AuthContext";
+import { onRealtime } from "../api/realtime";
 import { getTableau, telechargerTableauPdf, publierTableau } from "../api/resources";
 
 const QUALITE = { AVOCAT: "Avocats", STAGIAIRE: "Avocats stagiaires", HONORAIRE: "Avocats honoraires" };
@@ -43,6 +44,8 @@ export function TableauOrdre() {
     getTableau().then(setData).catch(() => setErreur(true));
   }, []);
   useEffect(() => { charger(); }, [charger]);
+  // Signal « tableau » (changement de situation) : recharge l'état autoritatif.
+  useEffect(() => onRealtime((evt) => { if (evt?.type === "tableau") charger(); }), [charger]);
 
   const publier = async () => {
     const ok = await confirm({ title: "Publier le tableau ?", message: "Le tableau de l'Ordre du jour sera arrêté et archivé au registre documentaire.", confirmLabel: "Publier" });
@@ -56,7 +59,7 @@ export function TableauOrdre() {
 
   return (
     <div className="space-y-5">
-      <PageHeader eyebrow="Membres" titre="Tableau de l'Ordre" sousTitre={`Registre officiel des membres, dressé par ordre d'ancienneté — ${data.total} inscrits.`}>
+      <PageHeader eyebrow="Membres" titre="Tableau de l'Ordre" sousTitre={`Registre officiel des membres, dressé par ordre d'ancienneté — ${data.total} inscrits.${data.miseAJour ? ` Mis à jour le ${formatDate(data.miseAJour)}.` : ""}`}>
         <button className="bpn-btn bpn-btn-ghost" onClick={() => telechargerTableauPdf().catch((e) => toast.error(e.message))}>
           <ArrowDownTrayIcon className="h-4 w-4" /> Télécharger le PDF
         </button>

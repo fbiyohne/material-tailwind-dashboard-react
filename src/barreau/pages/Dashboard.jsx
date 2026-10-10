@@ -171,6 +171,14 @@ export function Dashboard() {
         <StatCard index={4} label="Stagiaires" value={membres?.stagiaires ?? "…"} sub="en cours" accent="navy" onClick={allerVers("/stagiaires")} />
       </div>
 
+      {/* Ventilation par qualité : retardataires parmi les avocats et les stagiaires */}
+      {membres?.parQualite && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <StatCard label="Avocats en retard" value={membres.parQualite.avocats.enRetard} sub={`sur ${membres.parQualite.avocats.effectif} avocats inscrits`} accent="rouge" onClick={allerVers("/cotisations?statut=retard")} />
+          <StatCard label="Stagiaires en retard" value={membres.parQualite.stagiaires.enRetard} sub={`sur ${membres.parQualite.stagiaires.effectif} stagiaires`} accent="rouge" onClick={allerVers("/cotisations?statut=retard")} />
+        </div>
+      )}
+
       {/* Indicateurs institutionnels / système — servis selon le rôle (disciplinaire
           pour SG/Bâtonnier, demandes d'accès pour SG/Admin). */}
       {(data?.discipline || data?.demandesEnAttente != null || finances?.timbresAnnee != null) && (
