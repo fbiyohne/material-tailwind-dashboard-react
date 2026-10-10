@@ -30,10 +30,12 @@ describe("Tableau daté", () => {
     expect(new Date(apres.miseAJour).getTime()).toBe(max._max.updatedAt!.getTime());
   });
 
+  // Le PDF rend TOUT le tableau : sa durée croît avec le volume de barreau_pn_test (4 600+ inscrits
+  // accumulés, PDF de 8 Mo : 5 à 12 s seul, plus de 30 s sous charge concurrente). Délai propre à ce test.
   it("le PDF reste généré", async () => {
     const r = await request(app).get("/api/tableau/pdf").set(...bearer(sg));
     expect(r.status).toBe(200);
-  });
+  }, 120_000);
 });
 
 describe("Dashboard par qualité", () => {
