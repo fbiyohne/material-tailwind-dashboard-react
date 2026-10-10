@@ -12,13 +12,18 @@ const STATUTS_BLOQUANTS = ["SUSPENDU", "RADIE", "OMIS", "DECEDE"];
 /**
  * Synchronise l'activation du compte espace avec le statut du membre : un avocat
  * suspendu / radié / omis perd l'accès (et ses sessions sont coupées) ; il le
- * retrouve automatiquement au retour à un statut régulier. Les comptes encore en
- * attente d'activation ne sont pas touchés (le flux d'activation s'en charge).
+ * retrouve automatiquement au retour à un statut régulier. Un compte en attente
+ * d'activation voit son lien invalidé si le statut est bloquant.
  */
 export async function synchroniserAccesAuStatut(membreId: number, statut: string): Promise<void> {
   const user = await prisma.user.findUnique({ where: { membreId }, select: { id: true, actif: true, activationToken: true } });
-  if (!user || user.activationToken) return;
+  if (!user) return;
   const doitEtreActif = !STATUTS_BLOQUANTS.includes(statut);
+  // Compte en attente d'activation : un statut bloquant invalide le lien (sinon /auth/activer le contournerait).
+  if (user.activationToken) {
+    if (!doitEtreActif) await prisma.user.update({ where: { id: user.id }, data: { activationToken: null, activationExpire: null, actif: false } });
+    return;
+  }
   if (user.actif === doitEtreActif) return;
   await prisma.user.update({ where: { id: user.id }, data: { actif: doitEtreActif } });
   if (!doitEtreActif) await revoquerTousLesJetons(user.id);
@@ -40,6 +45,7 @@ export interface AccesProvisionne {
 export async function provisionnerAccesEspace(membreId: number): Promise<AccesProvisionne> {
   const membre = await prisma.membre.findUnique({ where: { id: membreId } });
   if (!membre) throw new HttpError(404, "Avocat introuvable");
+  if (STATUTS_BLOQUANTS.includes(membre.statut)) throw new HttpError(409, "Accès impossible : membre radié, omis, suspendu ou décédé");
   if (!membre.email) throw new HttpError(400, "Renseignez d'abord l'email de l'avocat sur sa fiche");
 
   const existant = await prisma.user.findUnique({ where: { membreId } });

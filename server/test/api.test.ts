@@ -1237,6 +1237,22 @@ describe("Cycle de vie — radiation motivée, décès, garde-fou DELETE, RBAC (
     await request(app).delete(`/api/membres/${av.membreId}`).set(...bearer(admin));
   });
 
+  it("R1-3 : un lien d'activation en attente est invalidé par le décès (404) et on ne provisionne plus un décédé (409)", async () => {
+    const email = `e2e.r13.${Date.now()}@barreau-pn.cg`;
+    const m = await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: `E2E r13 ${Date.now()}`, qualite: "AVOCAT", email });
+    const membreId = m.body.id as number;
+    const prov = await request(app).post(`/api/membres/${membreId}/acces`).set(...bearer(sg));
+    expect(prov.status).toBe(201);
+    const token = prov.body.lien.split("/activer/")[1];
+    expect((await request(app).post(`/api/membres/${membreId}/deces`).set(...bearer(sg)).send({ dateDeces: "2026-09-15" })).status).toBe(200);
+    expect((await request(app).post("/api/auth/activer").send({ token, password: "avocatpass8" })).status).toBe(404);
+    const u = await prisma.user.findUnique({ where: { membreId } });
+    expect(u?.actif).toBe(false);
+    expect(u?.activationToken).toBeNull();
+    expect((await request(app).post(`/api/membres/${membreId}/acces`).set(...bearer(sg))).status).toBe(409);
+    await request(app).delete(`/api/membres/${membreId}`).set(...bearer(admin));
+  });
+
   it("C-03 : la liste n'expose jamais motifRadiation ; la fiche le renvoie avec les dates", async () => {
     const id = await creer("motif");
     await request(app).post(`/api/membres/${id}/radier`).set(...bearer(sg)).send({ dateRadiation: "2026-10-02", motifRadiation: "Décision n° 7" });
