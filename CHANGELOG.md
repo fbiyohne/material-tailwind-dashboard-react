@@ -1,5 +1,15 @@
 # Change Log
 
+## [2.2.0] 2026-10-10 — Barreau PN : cycle de vie des avocats
+- Radiation motivée : date de la décision et référence/motif (300 caractères) ; corps de `POST /api/membres/:id/radier` optionnel.
+- Décès : nouveau statut `DECEDE` + date de décès (`POST /api/membres/:id/deces`), badge « Décédé », filtre sur la page Avocats ; compte espace désactivé et jetons révoqués.
+- Migration Prisma additive `20261009120000_membre_deces_radiation` (valeur d'enum + 3 colonnes nullables).
+- Export de la liste filtrée ou de la sélection en CSV, Excel, TXT et PDF (serveur `GET /api/membres/export/pdf`, repli client) ; mention de confidentialité ; export journalisé ; motif de radiation jamais exporté.
+- Import étendu : `.txt`, statut « décédé », dates de radiation et de décès, motif ; aperçu des lignes ignorées ; erreurs par ligne sans rejet du lot ; aller-retour export → import sans modification.
+- **Changement de comportement — relances** : `POST /cotisations/relances` n'excluait aucun statut ; les membres RADIE et DECEDE n'en reçoivent plus (constante `STATUTS_HORS_TABLEAU`, aussi appliquée au tableau, aux cotisations, aux convocations et au corps électoral).
+- **Changement de comportement — suppression** : `DELETE /api/membres/:id` répond désormais **409** si le membre a des reçus, paiements ou quitus (conservation comptable 10 ans, OHADA) ; utiliser la radiation ou le décès.
+- Documentation : `server/README.md`, `src/barreau/README.md`, `docs/juridique/cycle-de-vie-avocats.md`.
+
 ## [2.1.0] 2023-11-14
 - Upgrade to Material Tailwind `v2`
 
