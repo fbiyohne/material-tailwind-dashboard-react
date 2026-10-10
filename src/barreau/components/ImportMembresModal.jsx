@@ -54,6 +54,19 @@ function mapperLigne(obj) {
 }
 
 /**
+ * Lignes d'une feuille sous forme d'objets { en-tête: valeur }. L'en-tête est la première ligne
+ * qui contient à la fois une colonne « num » et une colonne « nom » : les exports commencent par
+ * une mention de confidentialité qu'il faut sauter pour que l'aller-retour export → import fonctionne.
+ */
+export function tableauDepuisFeuille(XLSX, ws) {
+  const lignes = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "", blankrows: false });
+  const i = lignes.findIndex((r) => { const c = r.map((x) => LOOKUP[cle(x)]); return c.includes("num") && c.includes("nom"); });
+  if (i < 0) return [];
+  const [entete, ...suite] = lignes.slice(i);
+  return suite.map((r) => Object.fromEntries(entete.map((k, j) => [k, r[j] ?? ""])));
+}
+
+/**
  * Import du tableau du Barreau depuis un fichier .xlsx, .xls, .csv ou .txt (NFR-10).
  * Le fichier est analysé côté client puis transmis au serveur qui upsert par
  * numéro d'inscription. Colonnes reconnues : num, nom, qualité, statut, cabinet,
@@ -78,7 +91,7 @@ export function ImportMembresModal({ open, onClose, onDone, qualiteDefaut, title
       const texte = /.(csv|txt)$/i.test(file.name);
       const wb = texte ? XLSX.read(await file.text(), { type: "string", raw: true }) : XLSX.read(await file.arrayBuffer(), { type: "array" });
       const ws = wb.Sheets[wb.SheetNames[0]];
-      const json = XLSX.utils.sheet_to_json(ws, { defval: "" });
+      const json = tableauDepuisFeuille(XLSX, ws);
       const mappees = json.map(mapperLigne).filter((r) => r.num && r.nom);
       if (mappees.length === 0) {
         toast.error("Aucune ligne valide (colonnes « num » et « nom » requises).");
