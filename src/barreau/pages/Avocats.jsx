@@ -1,12 +1,13 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { MagnifyingGlassIcon, ArrowUpTrayIcon, ArrowDownTrayIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { MagnifyingGlassIcon, ArrowUpTrayIcon, ArrowDownTrayIcon, ChevronDownIcon, DocumentIcon, DocumentTextIcon, TableCellsIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { Badge, StatutBadge, AttestationModal, useToast, useConfirm, ImportMembresModal, PageHeader, DataTable } from "../components";
 import { useAuth } from "../auth/AuthContext";
-import { STATUT_META, QUALITE_LABEL } from "../data/derivations";
+import { STATUT_META, STATUT_MEMBRE_META_CLES, QUALITE_LABEL } from "../data/derivations";
 import { EXERCICE_COURANT } from "../data/dashboard-data";
-import { telechargerCsv } from "../utils/exportCsv";
-import { listerMembres, getCotisations, supprimerMembre } from "../api/resources";
+import { versDelimite, telechargerTexte } from "../utils/exportCsv";
+import { exporterExcel, exporterPdf } from "../utils/exports";
+import { listerMembres, getCotisations, supprimerMembre, telechargerAvocatsPdf } from "../api/resources";
 
 const FILTRES = [
   { value: "tous", label: "Tous les statuts" },
@@ -14,19 +15,87 @@ const FILTRES = [
   { value: "suspendu", label: "Suspendu" },
   { value: "omis", label: "Omis" },
   { value: "radie", label: "Radié" },
+  { value: "decede", label: "Décédé" },
   { value: "honoraire", label: "Honoraire" },
 ];
 
 // Le tableau du Barreau (≈ 139 inscrits) tient sous le plafond serveur (pageSize 200) :
 // un seul appel ramène toute la liste filtrée, puis le DataTable trie/pagine/sélectionne
 // côté client (sélection inter-pages + export de la sélection).
-const COLONNES_CSV = [
+
+// Colonnes des exports (identiques en CSV, TXT, XLSX et PDF). Projection « annuaire » :
+// ni motif de radiation, ni adresse, naissance, RCCM, CNSS (loi 29-2019, art. 16 et 63).
+// Nom brut (sans « Me ») et statut au libellé par défaut non surchargeable : ré-importable tel quel.
+export const COLONNES_EXPORT = [
   { label: "N°", valeur: (m) => m.num },
-  { label: "Avocat", valeur: (m) => `Me ${m.nom}` },
+  { label: "N° inscription", valeur: (m) => m.numInscription },
+  { label: "Nom", valeur: (m) => m.nom },
+  { label: "Qualité", valeur: (m) => QUALITE_LABEL[m.qualite] ?? m.qualite },
+  { label: "Statut", valeur: (m) => STATUT_MEMBRE_META_CLES[m.statut]?.label ?? m.statut },
   { label: "Cabinet", valeur: (m) => m.cabinet },
-  { label: "Qualité", valeur: (m) => QUALITE_LABEL[m.qualite] },
-  { label: "Statut", valeur: (m) => m.statut },
+  { label: "Téléphone", valeur: (m) => m.tel },
+  { label: "Email", valeur: (m) => m.email },
+  { label: "Date d'inscription", valeur: (m) => m.dateInscription },
+  { label: "Date de radiation", valeur: (m) => m.dateRadiation },
+  { label: "Date de décès", valeur: (m) => m.dateDeces },
 ];
+
+const FORMATS = [
+  { id: "xlsx", label: "Excel", ext: ".xlsx", Icon: TableCellsIcon },
+  { id: "csv", label: "CSV", ext: ".csv", Icon: DocumentTextIcon },
+  { id: "txt", label: "Texte", ext: ".txt", Icon: DocumentTextIcon },
+  { id: "pdf", label: "PDF", ext: ".pdf", Icon: DocumentIcon },
+];
+
+const aujourdhui = () => new Date().toISOString().slice(0, 10);
+const jjmmaaaa = (iso) => iso.split("-").reverse().join("/");
+// Mention de confidentialité : première ligne de chaque export (spec § 4.2, texte mot pour mot).
+export const mention = () =>
+  `Barreau de Pointe-Noire — Document interne confidentiel — Liste arrêtée au ${jjmmaaaa(aujourdhui())} — Diffusion interdite hors des organes de l'Ordre.`;
+
+/** Menu « Exporter » natif (<details>) : 4 formats, état d'attente par entrée. */
+function MenuExport({ libelle, petit = false, onExport }) {
+  const [ouvert, setOuvert] = useState(false);
+  const [occupe, setOccupe] = useState(null);
+  const resume = useRef(null);
+  const fermer = () => { setOuvert(false); resume.current?.focus(); };
+  const lancer = async (id) => {
+    setOccupe(id);
+    try { await onExport(id); } finally { setOccupe(null); fermer(); }
+  };
+  return (
+    <details open={ouvert} className="relative"
+      onToggle={(e) => setOuvert(e.currentTarget.open)}
+      onKeyDown={(e) => { if (e.key === "Escape" && ouvert) { e.stopPropagation(); fermer(); } }}>
+      <summary ref={resume} aria-label={libelle}
+        className={`bpn-btn bpn-btn-ghost list-none cursor-pointer ${petit ? "bpn-btn-sm" : ""}`}>
+        <ArrowDownTrayIcon className="h-4 w-4" aria-hidden="true" /> {libelle}
+        <ChevronDownIcon className="h-3 w-3" aria-hidden="true" />
+      </summary>
+      <div role="group" aria-label="Formats d'export"
+        className="absolute right-0 z-20 mt-1 w-56 rounded border border-grisM bg-white p-1 text-left shadow-card">
+        {FORMATS.map(({ id, label, ext, Icon }) => (
+          <button key={id} type="button" disabled={occupe !== null} aria-busy={occupe === id}
+            onClick={() => lancer(id)}
+            className="inline-flex min-h-[44px] w-full items-center gap-2 rounded px-3 text-sm text-encre hover:bg-grisL disabled:opacity-60">
+            {occupe === id
+              ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-grisM border-t-navy" aria-hidden="true" />
+              : <Icon className="h-4 w-4" aria-hidden="true" />}
+            <span className="flex-1 text-left">{occupe === id && id === "pdf" ? "Génération du PDF…" : label}</span>
+            <span className="font-mono text-xs text-gris">{ext}</span>
+          </button>
+        ))}
+      </div>
+    </details>
+  );
+}
+
+/** Bouton inerte tant que la liste est vide ou en chargement (pas de menu focalisable). */
+const ExporterInactif = ({ libelle }) => (
+  <button type="button" className="bpn-btn bpn-btn-ghost" disabled>
+    <ArrowDownTrayIcon className="h-4 w-4" aria-hidden="true" /> {libelle}
+  </button>
+);
 
 export function Avocats() {
   const navigate = useNavigate();
@@ -43,6 +112,7 @@ export function Avocats() {
   const [statutCot, setStatutCot] = useState({});
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState(false);
+  const [zonePdf, setZonePdf] = useState([]);
 
   const filtre = params.get("statut") || "tous";
   const recherche = params.get("q") || "";
@@ -93,6 +163,44 @@ export function Avocats() {
     catch (e) { toast.error(e.message); }
   };
 
+  // Export de `lignes` (liste filtrée ou sélection) dans le format demandé.
+  const exporter = async (format, lignes, { selection = false } = {}) => {
+    const nom = selection ? "Avocats-selection" : "Avocats";
+    try {
+      if (format === "csv") {
+        telechargerTexte(`${nom}.csv`, `﻿${mention()}\r\n${versDelimite(COLONNES_EXPORT, lignes, ";")}`, "text/csv;charset=utf-8;");
+      } else if (format === "txt") {
+        telechargerTexte(`${nom}.txt`, `${mention()}\r\n${versDelimite(COLONNES_EXPORT, lignes, "\t")}`, "text/plain;charset=utf-8;");
+      } else if (format === "xlsx") {
+        await exporterExcel(nom, [
+          [mention()],
+          COLONNES_EXPORT.map((c) => c.label),
+          ...lignes.map((m) => COLONNES_EXPORT.map((c) => c.valeur(m) ?? "")),
+        ], "Avocats");
+      } else {
+        try {
+          await telechargerAvocatsPdf({
+            qualiteNot: "STAGIAIRE",
+            ...(selection
+              ? { ids: lignes.map((m) => m.id).join(",") }
+              : { ...(recherche ? { q: recherche } : {}), ...(filtre !== "tous" ? { statut: filtre.toUpperCase() } : {}) }),
+          });
+        } catch {
+          // Repli : PDF capturé sur l'appareil (qualité réduite) si le serveur échoue.
+          setZonePdf(lignes);
+          await new Promise((r) => setTimeout(r, 80));
+          await exporterPdf(`${nom}-${aujourdhui()}`, "#zone-impression-avocats");
+          setZonePdf([]);
+          toast.info("PDF généré sur cet appareil (serveur indisponible) : qualité réduite.");
+        }
+      }
+    } catch (e) {
+      setZonePdf([]);
+      toast.error(`Export impossible : ${e.message}.`);
+    }
+  };
+  const peutExporter = !chargement && !erreur && membres.length > 0;
+
   const colonnes = [
     { key: "num", label: "N°", sortable: true, sortValue: (m) => m.num,
       cell: (m) => <span className="font-mono text-xs text-gris">{m.num}</span> },
@@ -132,13 +240,12 @@ export function Avocats() {
   return (
     <div className="space-y-5">
       <PageHeader eyebrow="Membres" titre="Avocats inscrits" sousTitre="Tableau du Barreau — recherche multicritères, fiche individuelle et attestation d'inscription.">
-        <button className="bpn-btn bpn-btn-ghost" disabled={membres.length === 0}
-          onClick={() => telechargerCsv("Avocats", COLONNES_CSV, membres)}>
-          <ArrowDownTrayIcon className="h-4 w-4" /> Export CSV
-        </button>
+        {peutExporter
+          ? <MenuExport libelle="Exporter" onExport={(f) => exporter(f, membres)} />
+          : <ExporterInactif libelle="Exporter" />}
         {peutImporter && (
           <button className="bpn-btn bpn-btn-ghost" onClick={() => setImportOuvert(true)}>
-            <ArrowUpTrayIcon className="h-4 w-4" /> Importer (Excel/CSV)
+            <ArrowUpTrayIcon className="h-4 w-4" /> Importer (Excel/CSV/TXT)
           </button>
         )}
       </PageHeader>
@@ -167,14 +274,24 @@ export function Avocats() {
           libelle="avocats"
           initialSort={{ key: "num", dir: "asc" }}
           renderBulkActions={(ids) => (
-            <button type="button" className="bpn-btn bpn-btn-ghost !py-1 text-xs"
-              onClick={() => telechargerCsv("Avocats-selection", COLONNES_CSV, membres.filter((m) => ids.includes(m.id)))}>
-              <ArrowDownTrayIcon className="h-3.5 w-3.5" /> Exporter la sélection (CSV)
-            </button>
+            <MenuExport libelle="Exporter la sélection" petit
+              onExport={(f) => exporter(f, membres.filter((m) => ids.includes(m.id)), { selection: true })} />
           )}
         />
       </div>
 
+      {zonePdf.length > 0 && (
+        <div id="zone-impression-avocats" aria-hidden="true"
+          style={{ position: "absolute", left: -9999, top: 0, width: 1100, background: "#fff", color: "#14213D", padding: 16, fontSize: 11 }}>
+          <p style={{ marginBottom: 8 }}>{mention()}</p>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead><tr>{COLONNES_EXPORT.map((c) => <th key={c.label} style={{ border: "1px solid #E0DBD0", padding: 4, textAlign: "left" }}>{c.label}</th>)}</tr></thead>
+            <tbody>{zonePdf.map((m) => (
+              <tr key={m.id}>{COLONNES_EXPORT.map((c) => <td key={c.label} style={{ border: "1px solid #E0DBD0", padding: 4 }}>{c.valeur(m) ?? ""}</td>)}</tr>
+            ))}</tbody>
+          </table>
+        </div>
+      )}
       <AttestationModal membre={attestation} onClose={() => setAttestation(null)} />
       <ImportMembresModal open={importOuvert} onClose={() => setImportOuvert(false)} onDone={() => setRefresh((n) => n + 1)} />
     </div>
