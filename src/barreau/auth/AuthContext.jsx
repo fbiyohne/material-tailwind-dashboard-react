@@ -24,11 +24,21 @@ export function AuthProvider({ children }) {
     (async () => {
       if (getToken()) {
         try {
-          setUser(await api("/auth/me"));
+          let moi;
+          try {
+            moi = await api("/auth/me");
+          } catch (e) {
+            // Limite atteinte : on attend le délai annoncé puis on réessaie une fois, sans perdre la session.
+            if (e.status !== 429) throw e;
+            await new Promise((r) => setTimeout(r, Math.min(e.retryAfter, 30) * 1000));
+            moi = await api("/auth/me");
+          }
+          setUser(moi);
           await chargerReglages();
           connecterRealtime();
-        } catch {
-          clearSession();
+        } catch (e) {
+          // Le jeton n'est effacé que sur 401 (déjà traité par api()) : jamais sur 429/5xx/réseau.
+          if (e.status === 401) clearSession();
         }
       }
       setLoading(false);

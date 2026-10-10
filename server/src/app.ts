@@ -84,7 +84,22 @@ export function creerApp() {
   // Journal d'audit transverse des mutations (RG-16 / NFR-09).
   app.use("/api", audit);
   // Limiteur global (protection DoS basique).
-  app.use("/api", rateLimit({ windowMs: 15 * 60 * 1000, limit: 600, standardHeaders: true, legacyHeaders: false }));
+  // Les appels de fond du SPA (notifications, non-lus) ne comptent pas ; un jeton présent
+  // relève la limite (le SPA enchaîne plusieurs appels par page). Anonyme : 600 / 15 min.
+  app.use(
+    "/api",
+    rateLimit({
+      windowMs: 15 * 60 * 1000,
+      limit: (req) => (req.headers.authorization ? 3000 : 600),
+      standardHeaders: true,
+      legacyHeaders: false,
+      skip: (req) => /^\/(health|notifications|mes-notifications)(\/|$)/.test(req.path),
+      handler: (_req, res) => {
+        const n = Number(res.getHeader("Retry-After")) || 60;
+        res.status(429).json({ erreur: `Trop de requêtes, réessayez dans ${n} s.`, retryAfter: n });
+      },
+    })
+  );
   // Cloisonnement : un jeton AVOCAT est confiné à /api/espace et /api/auth.
   app.use("/api", confinementAvocat);
 

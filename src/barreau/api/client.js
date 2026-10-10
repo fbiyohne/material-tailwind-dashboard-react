@@ -77,7 +77,16 @@ export async function api(path, opts = {}) {
     throw new Error("Session expirée — veuillez vous reconnecter.");
   }
   const data = res.status === 204 ? null : await res.json().catch(() => null);
-  if (!res.ok) throw new Error(data?.erreur || `Erreur ${res.status}`);
+  if (!res.ok) {
+    // Le statut est porté par l'erreur : seul un 401 met fin à la session (jamais 429/5xx).
+    const err = new Error(data?.erreur || `Erreur ${res.status}`);
+    err.status = res.status;
+    if (res.status === 429) {
+      err.retryAfter = Number(res.headers.get("Retry-After")) || data?.retryAfter || 60;
+      if (!data?.erreur) err.message = `Trop de requêtes, réessayez dans ${err.retryAfter} s.`;
+    }
+    throw err;
+  }
   return data;
 }
 

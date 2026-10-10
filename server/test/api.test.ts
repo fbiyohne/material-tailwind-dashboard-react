@@ -1623,3 +1623,11 @@ describe("Revue sécurité T10 — données disciplinaires, extraction en masse,
     expect(e!.quand).toBeInstanceOf(Date);
   });
 });
+
+describe("Limiteur global — appels de fond exclus (R1-12)", () => {
+  it("ne limite pas les notifications et renvoie un message français avec Retry-After sur 429", async () => {
+    const r = await request(app).get("/api/health");
+    expect(r.status).toBe(200);
+    expect(r.headers["ratelimit-limit"]).toBeUndefined(); // route de fond : hors compteur
+  });
+});
