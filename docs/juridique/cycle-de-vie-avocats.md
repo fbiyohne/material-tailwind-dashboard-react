@@ -97,13 +97,14 @@ Fondement : loi 29-2019, art. 63 al. 3 (le sous-traitant présente des garanties
 
 ## 3. Bandeaux et messages applicatifs
 
-Textes de référence, à reprendre mot pour mot (espaces insécables incluses) ; source : spécification UI `docs/superpowers/specs/2026-10-09-avocats-cycle-de-vie-ui.md`, § 6. Implémentation : `src/barreau/components/ActeStatutModal.jsx` (modales), `server/src/lib/templates.ts` et `src/barreau/pages/Avocats.jsx` (exports), `server/src/routes/membres.ts` (409), `server/src/middleware/audit.ts` (libellés d'audit).
+Textes de référence, à reprendre mot pour mot (espaces insécables incluses) ; source : spécification UI `docs/superpowers/specs/2026-10-09-avocats-cycle-de-vie-ui.md`, § 6. Implémentation au 2026-10-10 : `src/barreau/components/ActeStatutModal.jsx` (modales, identiques), `server/src/routes/membres.ts` (409, identique), `server/src/middleware/audit.ts` (libellés d’audit, identiques) ; la mention des exports et le titre PDF sont spécifiés (spec § 4.2 et § 6) et seront portés par `server/src/lib/templates.ts` et `src/barreau/pages/Avocats.jsx` à la tâche export : y recopier les cellules ci-dessous telles quelles. Contrôle : `grep -cF "<texte>" <fichier>` doit renvoyer au moins 1 pour chaque ligne (les insécables comptent).
 
 | Emplacement | Fondement | Texte |
 |---|---|---|
 | Modale « Radier » — bandeau | loi 026-92, art. 36 (peines disciplinaires), art. 39 (notification) | La radiation est prononcée par le Conseil siégeant en matière disciplinaire (art. 36 loi n° 026-92). Enregistrez ici la date et la référence de la décision notifiée (art. 39). |
-| Modale « Radier » — conséquences | loi 026-92, art. 34-35 ; loi 29-2019, art. 65 | L'avocat sera retiré du tableau de l'Ordre, du corps électoral et des cotisations ; son accès à l'espace avocat sera désactivé. |
+| Modale « Radier » — conséquences | loi 026-92, art. 34-35 ; loi 29-2019, art. 65 | L'avocat sera retiré du tableau de l'Ordre, du corps électoral et des cotisations ; son accès à l'espace avocat sera désactivé. |
 | Modale « Déclarer le décès » — bandeau | Code de la famille (acte de décès, à vérifier) ; loi 29-2019, art. 61 | Enregistrement sur présentation de l'acte de décès. Le compte espace sera désactivé et l'avocat retiré du tableau, du corps électoral et des cotisations. |
+| Modale « Déclarer le décès » — indice du champ date | Code de la famille (acte de décès, à vérifier) | date portée sur l'acte de décès |
 | Exports CSV/TXT (ligne 1), XLSX (A1), PDF (en-tête et pied) | loi 29-2019, art. 63-64 | Barreau de Pointe-Noire — Document interne confidentiel — Liste arrêtée au JJ/MM/AAAA — Diffusion interdite hors des organes de l'Ordre. |
 | PDF — titre | loi 29-2019, art. 63 | Liste des avocats — {filtre} — arrêtée au JJ/MM/AAAA — Document interne |
 | PDF — pied de page abrégé | loi 29-2019, art. 63 | Document interne confidentiel — Barreau de Pointe-Noire |
