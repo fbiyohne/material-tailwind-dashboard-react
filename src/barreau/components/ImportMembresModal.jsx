@@ -2,6 +2,7 @@ import { useState } from "react";
 import PropTypes from "prop-types";
 import { ArrowUpTrayIcon } from "@heroicons/react/24/outline";
 import { Modal } from "./Modal";
+import { DataTable } from "./DataTable";
 import { useToast } from "./Toast";
 import { importerMembres } from "../api/resources";
 
@@ -84,9 +85,10 @@ export function ImportMembresModal({ open, onClose, onDone, qualiteDefaut, title
   const [nomFichier, setNomFichier] = useState("");
   const [ignorees, setIgnorees] = useState(0);
   const [resume, setResume] = useState(null);
+  const [apercu, setApercu] = useState(null); // résultat de la simulation serveur (rien d'écrit)
   const [enCours, setEnCours] = useState(false);
 
-  const reset = () => { setRows([]); setNomFichier(""); setResume(null); setIgnorees(0); };
+  const reset = () => { setRows([]); setNomFichier(""); setResume(null); setApercu(null); setIgnorees(0); };
 
   const lireFichier = async (file) => {
     if (!file) return;
@@ -108,10 +110,14 @@ export function ImportMembresModal({ open, onClose, onDone, qualiteDefaut, title
       setIgnorees(json.length - mappees.length);
       setNomFichier(file.name);
       setResume(null);
+      setApercu(null);
+      setApercu(await importerMembres(mappees, qualiteDefaut, true));
     } catch (e) {
       toast.error(`Lecture impossible : ${e.message}`);
     }
   };
+
+  const annuler = () => { setRows([]); setNomFichier(""); setApercu(null); };
 
   const lancer = async () => {
     setEnCours(true);
@@ -136,8 +142,9 @@ export function ImportMembresModal({ open, onClose, onDone, qualiteDefaut, title
       footer={
         <>
           <button className="bpn-btn bpn-btn-ghost" onClick={() => { reset(); onClose(); }}>Fermer</button>
-          <button className="bpn-btn bpn-btn-primary" disabled={rows.length === 0 || enCours} onClick={lancer}>
-            {enCours ? "Import en cours…" : `Importer ${rows.length || ""} ligne${rows.length > 1 ? "s" : ""}`}
+          {rows.length > 0 && !resume && <button className="bpn-btn bpn-btn-ghost" onClick={annuler}>Annuler l'aperçu</button>}
+          <button className="bpn-btn bpn-btn-primary" disabled={rows.length === 0 || !apercu || enCours} onClick={lancer}>
+            {enCours ? "Import en cours…" : `Confirmer l'import de ${rows.length || ""} ligne${rows.length > 1 ? "s" : ""}`}
           </button>
         </>
       }
@@ -154,6 +161,10 @@ export function ImportMembresModal({ open, onClose, onDone, qualiteDefaut, title
             </>
           )}
         </p>
+
+        <a href="/modeles/modele-import-membres.csv" download className="inline-block text-sm text-navy underline">
+          Télécharger le modèle d'import (.csv)
+        </a>
 
         <label className="flex cursor-pointer items-center justify-center gap-2 rounded border-2 border-dashed border-grisM bg-grisL/40 px-4 py-6 text-sm text-gris transition hover:border-or hover:text-encre">
           <ArrowUpTrayIcon className="h-5 w-5" />
@@ -184,6 +195,28 @@ export function ImportMembresModal({ open, onClose, onDone, qualiteDefaut, title
               </table>
               {rows.length > 8 && <div className="px-3 py-1.5 text-xs text-gris">… et {rows.length - 8} autre(s).</div>}
             </div>
+          </div>
+        )}
+
+        {apercu && !resume && (
+          <div className="space-y-2 rounded border border-grisL bg-grisL/40 p-3 text-sm" data-testid="apercu-simulation">
+            <p className="font-medium text-encre">Simulation : rien n'est encore enregistré</p>
+            <p className="text-gris">{apercu.crees} à créer, {apercu.maj} à mettre à jour, {apercu.erreurs.length} erreur(s), {apercu.doublons.length} doublon(s) possible(s).</p>
+            {apercu.colonnes.manquantes.length > 0 && <p className="text-rouge">Colonne(s) obligatoire(s) manquante(s) : {apercu.colonnes.manquantes.join(", ")}</p>}
+            {apercu.colonnes.inconnues.length > 0 && <p className="text-gris">Colonne(s) non reconnue(s), ignorée(s) : {apercu.colonnes.inconnues.join(", ")}</p>}
+            {apercu.erreurs.filter((e) => e.ligne > 0).slice(0, 5).map((e) => <p key={e.ligne} className="text-rouge">Ligne {e.ligne} : {e.message}</p>)}
+            {apercu.doublons.length > 0 && (
+              <DataTable
+                paginate={false} density="compact" libelle="doublons" getRowId={(d) => `${d.ligne}-${d.type}`}
+                columns={[
+                  { key: "ligne", label: "Ligne", cell: (d) => d.ligne },
+                  { key: "type", label: "Doublon", cell: (d) => (d.type === "num" ? "Numéro" : "Nom") },
+                  { key: "nom", label: "Nom", cell: (d) => d.nom },
+                  { key: "avec", label: "Avec", cell: (d) => (d.avec === "base" ? "la base" : "le fichier") },
+                ]}
+                rows={apercu.doublons}
+              />
+            )}
           </div>
         )}
 

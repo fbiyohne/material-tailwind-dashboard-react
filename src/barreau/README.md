@@ -78,6 +78,18 @@ Dates au format `AAAA-MM-JJ`. Jamais exportés : motif de radiation, adresse, da
 - Aperçu avant validation : « N ligne(s) retenue(s), M ligne(s) ignorée(s) (sans numéro ou sans nom) ». Plafond : 2 000 lignes par import.
 - Rapport après import : créés / mis à jour / erreurs avec numéro de ligne. Relancer après une coupure ne crée aucun doublon.
 
+### Simulation, doublons et modèle (T10, F-08)
+- Dès le fichier choisi, l'écran appelle `POST /membres/import?simulation=1` : même validation que l'import réel, **aucune écriture**. L'aperçu affiche à créer / à mettre à jour / erreurs, les colonnes obligatoires manquantes (`num`, `nom`), les colonnes non reconnues (ignorées) et les doublons possibles (numéro répété dans le fichier ; numéro de la base porté par un autre nom ; nom identique une fois normalisé — casse, accents, ordre des mots — dans le fichier ou face à la base).
+- « Annuler l'aperçu » abandonne sans rien appeler d'autre ; « Confirmer l'import » lance l'import réel. Il n'y a pas de retour arrière après confirmation (point ouvert si le Barreau l'exige).
+- Modèle à télécharger : `public/modeles/modele-import-membres.csv` (lignes fictives à remplacer), servi à `/modeles/modele-import-membres.csv`.
+
+### Convertir une liste PDF source (sans OCR)
+L'application ne lit pas les PDF ni les scans. Procédure, hors application :
+1. Utiliser un PDF à texte sélectionnable (sinon demander la liste au secrétariat sous forme de tableur). Pas d'OCR : un scan n'est pas converti.
+2. Extraire le tableau avec un outil externe (copier-coller du PDF dans Excel, `pdftotext -layout`, ou l'export tableur d'un lecteur PDF).
+3. Mettre en colonnes selon le modèle CSV : au minimum `num` et `nom`, puis qualité, statut, cabinet, téléphone, e-mail, dates (AAAA-MM-JJ ou JJ/MM/AAAA).
+4. Enregistrer en CSV (UTF-8, séparateur « ; ») ou XLSX, puis importer : relire l'aperçu (erreurs, doublons) avant de confirmer.
+
 ### Aller-retour
 Un fichier exporté en CSV, TXT ou XLSX se ré-importe tel quel : 0 créé, N mis à jour, 0 erreur, sans modification des valeurs.
 

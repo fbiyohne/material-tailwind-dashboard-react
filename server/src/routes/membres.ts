@@ -325,10 +325,16 @@ const toDate = (v?: string) => {
   return Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== iso.slice(0, 10) ? undefined : d;
 };
 
+/** Nom comparable : sans casse, accents ni ponctuation, mots triés (« Jean DUPONT » = « Dupont, Jean »). */
+const nomNorm = (n: string) => n.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, " ").trim().split(" ").sort().join(" ");
+const COLONNES_IMPORT = Object.keys(importRowSchema.shape);
+
 membresRouter.post(
   "/import",
   requireRole("SECRETAIRE_GENERAL"),
   asyncH(async (req, res) => {
+    // ?simulation=1 : même validation, aucune écriture (aperçu avant confirmation, F-08).
+    const simulation = req.query.simulation === "1";
     // Plafond sur le lot ; chaque ligne est validée à part : une ligne invalide (ex. num non numérique) est rapportée dans erreurs[] sans bloquer les autres.
     const rows = z.array(z.unknown()).max(2000).parse(req.body?.membres ?? []);
     // Qualité par défaut des lignes sans colonne « qualité » explicite. Permet à la
@@ -338,6 +344,32 @@ membresRouter.post(
     let crees = 0;
     let maj = 0;
     const erreurs: { ligne: number; message: string }[] = [];
+    // Colonnes : une colonne obligatoire absente de tout le fichier est nommée ; les inconnues sont signalées.
+    const cles = new Set(rows.flatMap((r) => (r && typeof r === "object" ? Object.keys(r) : [])));
+    const manquantes = rows.length ? ["num", "nom"].filter((c) => !cles.has(c)) : [];
+    const inconnues = [...cles].filter((c) => !COLONNES_IMPORT.includes(c));
+    for (const c of manquantes) erreurs.push({ ligne: 0, message: `Colonne obligatoire manquante : « ${c} »` });
+    // Doublons : numéro répété dans le fichier ; nom identique (normalisé) dans le fichier ou face à la base.
+    const doublons: { ligne: number; type: "num" | "nom"; avec: "fichier" | "base"; num: number; nom: string; autreNum?: number }[] = [];
+    const base = await prisma.membre.findMany({ select: { num: true, nom: true } });
+    const baseParNom = new Map(base.map((m) => [nomNorm(m.nom), m.num]));
+    const baseParNum = new Map(base.map((m) => [m.num, m.nom]));
+    const vuNum = new Set<number>();
+    const vuNom = new Map<string, number>();
+    rows.forEach((raw, i) => {
+      const v = importRowSchema.safeParse(raw);
+      if (!v.success) return;
+      const { num, nom } = v.data;
+      const n = nomNorm(nom);
+      if (vuNum.has(num)) doublons.push({ ligne: i + 1, type: "num", avec: "fichier", num, nom });
+      // Numéro déjà en base sous un autre nom : collision suspecte (même nom = simple mise à jour).
+      else if (baseParNum.has(num) && nomNorm(baseParNum.get(num)!) !== n) doublons.push({ ligne: i + 1, type: "num", avec: "base", num, nom });
+      const autre = vuNom.get(n) ?? baseParNom.get(n);
+      if (autre !== undefined && autre !== num) doublons.push({ ligne: i + 1, type: "nom", avec: vuNom.has(n) ? "fichier" : "base", num, nom, autreNum: autre });
+      vuNum.add(num);
+      if (!vuNom.has(n)) vuNom.set(n, num);
+    });
+    const creesSim = new Set<number>(); // simulation : une ligne créée plus haut rend la suivante « mise à jour »
     for (let i = 0; i < rows.length; i++) {
       const valide = importRowSchema.safeParse(rows[i]);
       if (!valide.success) {
@@ -370,7 +402,10 @@ membresRouter.post(
           erreurs.push({ ligne: i + 1, message: "Changement de statut vers ou depuis un statut de sortie (radié, décédé, démissionnaire, retraité, cessation) interdit à l'import : utilisez la fiche de l'avocat (Radier / Déclarer le décès / Modifier)." });
           continue;
         }
-        if (existant) {
+        if (simulation) {
+          if (existant || creesSim.has(r.num)) maj += 1;
+          else { creesSim.add(r.num); crees += 1; }
+        } else if (existant) {
           // Colonne statut absente du fichier : le statut existant n'est pas écrasé.
           // Aller-retour export → import : l'export écrit le seul jour (AAAA-MM-JJ) ; si le jour est
           // inchangé, l'horodatage existant est conservé (aucune perte de précision).
@@ -392,8 +427,8 @@ membresRouter.post(
       }
     }
     // Détail ajouté à la ligne JournalAudit « Import du tableau » (middleware audit, C-05).
-    res.locals.auditDetail = `${rows.length} ligne(s), ${crees} créé(s), ${maj} mis à jour, ${erreurs.length} erreur(s)`;
-    res.json({ total: rows.length, crees, maj, erreurs });
+    res.locals.auditDetail = `${simulation ? "Simulation : " : ""}${rows.length} ligne(s), ${crees} créé(s), ${maj} mis à jour, ${erreurs.length} erreur(s)`;
+    res.json({ total: rows.length, crees, maj, erreurs, doublons, colonnes: { manquantes, inconnues }, simulation });
   })
 );
 

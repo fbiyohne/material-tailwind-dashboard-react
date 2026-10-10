@@ -79,8 +79,8 @@ export const journaliserExport = (body) => api("/membres/export", { method: "POS
 export const supprimerMembre = (id) => api(`/membres/${id}`, { method: "DELETE" });
 /** Provisionne (ou renvoie) l'accès à l'espace avocat d'un membre. SG/Admin. */
 export const provisionnerAccesAvocat = (membreId) => api(`/membres/${membreId}/acces`, { method: "POST" });
-export const importerMembres = (membres, qualiteDefaut) =>
-  api("/membres/import", { method: "POST", body: { membres, ...(qualiteDefaut ? { qualiteDefaut } : {}) } });
+export const importerMembres = (membres, qualiteDefaut, simulation = false) =>
+  api(`/membres/import${simulation ? "?simulation=1" : ""}`, { method: "POST", body: { membres, ...(qualiteDefaut ? { qualiteDefaut } : {}) } });
 export const genererAttestation = (id) => api(`/membres/${id}/attestation`, { method: "POST" });
 
 // ─── Pièces du dossier (vérification documentaire) ───────────────────────────
