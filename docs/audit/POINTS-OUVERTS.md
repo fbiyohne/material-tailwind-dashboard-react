@@ -91,7 +91,7 @@ Toutes les entrées ont pour interlocutrice Me Kalina MENGA, qui valide ou trans
 
 - **Texte** : la loi ne connaît pas le Secrétaire général ; art. 19 : le bâtonnier peut déléguer à des membres du Conseil.
 - **Question** : quelles actions d'enregistrement le SG peut-il faire, et sur quelle délégation ?
-- **Valeur provisoire retenue** : décision disciplinaire et certificat de stage : bâtonnier ; saisine et admission directe : SG et bâtonnier ; omission : SG ; modifiable par l'ADMIN dans la matrice (R-42).
+- **Valeur provisoire retenue** : décision disciplinaire et certificat de stage : bâtonnier ; saisine et admission directe : SG et bâtonnier ; omission et réinscription : bâtonnier (enregistre la décision du Conseil de l'Ordre national), paramétrable ; modifiable par l'ADMIN dans la matrice (R-42).
 - **Interlocutrice** : Me Kalina MENGA.
 
 ### PO-13 — Timbre de plaidoirie : base juridique

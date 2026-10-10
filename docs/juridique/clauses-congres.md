@@ -110,3 +110,39 @@ Emplacement : contrat entre l'Ordre et l'agrégateur ; hors logiciel, hors démo
 > 2. **Fonds** — Les sommes encaissées sont créditées directement sur le compte de l'Ordre [ou du Barreau]. Aucune somme ne transite par Creatic Technologies ni par un compte tiers.
 > 3. **Rapprochement** — Le prestataire met à disposition un relevé quotidien des opérations permettant le rapprochement avec les reçus émis par la plateforme.
 > 4. **Données** — Le prestataire agit comme sous-traitant au sens de l'article 63 de la loi n° 29-2019 : il ne traite les données que sur instruction de l'Ordre, en assure la sécurité et la confidentialité, et notifie toute violation dans les 24 heures.
+
+---
+
+## Clauses complémentaires (avis juridique du 2026-10-10)
+
+Cinq textes ajoutés après les 14 clauses C-01 à C-14. Ils portent des intitulés nommés (et non C-nn) : `verifier-referentiel.mjs` contrôle leur présence mot pour mot. Les crochets sont à compléter.
+
+### Clause INFORMATION
+
+Emplacement : espace avocat (page d'information) et politique de confidentialité. Fondement : loi 29-2019, droits des personnes (art. 46 et suivants).
+
+> Le Barreau [nom], responsable du traitement, enregistre vos données d'identité, de contact, d'inscription, de cotisation et de situation au tableau pour tenir le tableau et le registre de l'Ordre (loi n° 026-92), gérer les cotisations, les élections et la messagerie professionnelle. Le tableau est public ; les autres données ne sont accessibles qu'aux organes de l'Ordre habilités. Vous pouvez demander l'accès à vos données et leur rectification auprès du secrétariat du Barreau (loi n° 29-2019 du 10 octobre 2019). Les données sont conservées tant que vous êtes membre, puis selon les durées indiquées dans la politique de confidentialité.
+
+### Clause SOUS-TRAITANCE
+
+Emplacement : contrat Creatic Technologies – Barreau, à signer avant toute production. Fondement : loi 29-2019, art. 63 et 74.
+
+> Creatic Technologies traite les données pour le seul compte du Barreau et sur ses seules instructions écrites. Elle n'a pas accès au contenu des messages ni aux pièces, sauf demande écrite du Bâtonnier pour une opération de maintenance déterminée, tracée. Elle assure la sécurité et la confidentialité des données, fait signer à ses intervenants un engagement écrit de confidentialité, notifie au Barreau toute violation de données dans les 24 heures de sa connaissance, n'héberge pas les données hors de [pays] sans accord écrit du Barreau, et restitue puis efface les données en fin de contrat. Elle tient le registre des traitements effectués pour le Barreau.
+
+### Clause DONNÉES DE DÉMONSTRATION
+
+Emplacement : en tête du scénario et à l'écran d'accueil de l'instance de démonstration.
+
+> Instance de démonstration. Toutes les personnes, cabinets, montants et décisions sont fictifs. Toute ressemblance avec une personne réelle est fortuite. Les règles signalées « Provisoire » ne sont pas des règles officielles de l'Ordre.
+
+### Clause IDENTITÉ D'UN BARREAU TIERS
+
+Emplacement : lettre d'accord à faire signer avant la bascule d'identité vers un barreau réel (PO-22).
+
+> Le Barreau de [ville] autorise Creatic Technologies à afficher sa dénomination et son logo dans une démonstration du logiciel lors du congrès de [date], sans engagement de sa part et sans que cette présentation vaille partenariat ou adoption du logiciel.
+
+### Clause TIMBRE ET VOTE
+
+Emplacement : complément oral et écrit du bandeau C-11, dans le scénario.
+
+> Prototype présenté à titre expérimental : aucun timbre émis ni aucun paiement réel ; le vote électronique n'est pas prévu par la loi n° 026-92 et ne peut servir à un scrutin officiel sans délibération de l'Ordre.
