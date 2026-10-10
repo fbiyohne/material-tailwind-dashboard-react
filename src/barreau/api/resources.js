@@ -341,3 +341,7 @@ export const creerUser = (data) => api("/users", { method: "POST", body: data })
 export const majUser = (id, patch) => api(`/users/${id}`, { method: "PATCH", body: patch });
 export const resetPasswordUser = (id, password) => api(`/users/${id}/password`, { method: "POST", body: { password } });
 export const supprimerUser = (id) => api(`/users/${id}`, { method: "DELETE" });
+
+// Timbre autonome (prototype) — import des timbres vendus hors application et statistiques
+export const importerTimbresExternes = (lignes) => api("/timbres/externes", { method: "POST", body: { lignes } });
+export const statsTimbres = (annee) => api(`/timbres/stats?annee=${annee}`);

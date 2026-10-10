@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole, requirePermission } from "../middleware/auth.js";
@@ -38,6 +39,51 @@ timbresRouter.post(
       .then((uid) => (uid ? notifier([uid], { type: "TIMBRE", titre: "Timbre disponible", message: `Votre timbre N° ${timbre.numero} (${data.affaire}) est disponible.`, lien: "/timbres" }) : 0))
       .catch(() => {});
     res.status(201).json({ ...timbre, membre: { nom: membre.nom, num: membre.num } });
+  })
+);
+
+const externesSchema = z.object({
+  lignes: z.array(z.object({
+    reference: z.string().trim().min(1).max(100),
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}/).refine((d) => !Number.isNaN(Date.parse(d))),
+    montant: z.number().int().nonnegative().max(100_000_000),
+    canal: z.string().trim().min(1).max(30).transform((c) => c.toUpperCase()),
+    avocatNom: z.string().trim().max(160).optional(),
+  })).min(1).max(5000),
+  source: z.string().trim().min(1).max(30).default("MTN"),
+});
+
+/** POST /timbres/externes — import mensuel (dispositif MTN). Idempotent par référence unique. */
+timbresRouter.post(
+  "/externes",
+  asyncH(async (req, res) => {
+    const { lignes, source } = externesSchema.parse(req.body);
+    const uniques = [...new Map(lignes.map((l) => [l.reference, l])).values()]; // doublons dans le fichier
+    const r = await prisma.timbreExterne.createMany({
+      data: uniques.map((l) => ({ ...l, date: new Date(l.date), source, importePar: req.user?.nom })),
+      skipDuplicates: true,
+    });
+    res.status(201).json({ importes: r.count, doublons: lignes.length - r.count });
+  })
+);
+
+/** GET /timbres/stats?annee= — volumes et montants par mois et par canal, internes et externes. */
+timbresRouter.get(
+  "/stats",
+  asyncH(async (req, res) => {
+    const annee = z.coerce.number().int().min(2000).max(2100).parse(req.query.annee ?? new Date().getFullYear());
+    const du = new Date(Date.UTC(annee, 0, 1));
+    const au = new Date(Date.UTC(annee + 1, 0, 1));
+    type L = { mois: number; canal: string; source: string; nombre: number; montant: number };
+    const [internes, externes] = await Promise.all([
+      prisma.$queryRaw<L[]>(Prisma.sql`SELECT EXTRACT(MONTH FROM "createdAt")::int AS mois, COALESCE("canal", 'INCONNU') AS canal, 'interne' AS source,
+        COUNT(*)::int AS nombre, COALESCE(SUM("montant"), 0)::int AS montant FROM "Timbre"
+        WHERE "statut" = 'VALIDE' AND "createdAt" >= ${du} AND "createdAt" < ${au} GROUP BY 1, 2 ORDER BY 1, 2`),
+      prisma.$queryRaw<L[]>(Prisma.sql`SELECT EXTRACT(MONTH FROM "date")::int AS mois, "canal", 'externe' AS source,
+        COUNT(*)::int AS nombre, COALESCE(SUM("montant"), 0)::int AS montant FROM "TimbreExterne"
+        WHERE "date" >= ${du} AND "date" < ${au} GROUP BY 1, 2 ORDER BY 1, 2`),
+    ]);
+    res.json({ annee, lignes: [...internes, ...externes] });
   })
 );
 

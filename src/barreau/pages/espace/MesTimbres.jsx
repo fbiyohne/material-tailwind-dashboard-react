@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { TicketIcon, ArrowDownTrayIcon, ClipboardDocumentIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
-import { Badge, VignetteTimbre, PageHeader, FormField, Notice, useToast, TableSkeleton, ErrorState, EmptyState } from "../../components";
+import { Badge, VignetteTimbre, PageHeader, BandeauExperimental, FormField, Notice, useToast, TableSkeleton, ErrorState, EmptyState } from "../../components";
 import { canauxActifs } from "../../data/config";
 import { formatFCFA, formatDate } from "../../utils/format";
 import { exporterPng, copierPng } from "../../utils/exports";
@@ -67,6 +67,7 @@ export function MesTimbres() {
   return (
     <div className="space-y-5">
       <PageHeader eyebrow="Mon espace" titre="Mes timbres de plaidoirie" sousTitre="Émettez un timbre par affaire, réglez le droit de plaidoirie, puis téléchargez-le ou copiez-le dans vos actes." />
+      <BandeauExperimental />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[340px_1fr]">
         {/* Émission */}

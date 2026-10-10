@@ -4,6 +4,7 @@ import { CheckBadgeIcon, XCircleIcon, ArrowPathIcon } from "@heroicons/react/24/
 import { Sceau } from "../components/Sceau";
 import { formatFCFA, formatDate } from "../utils/format";
 import { identite } from "../data/config";
+import { BandeauExperimental } from "../components/BandeauExperimental";
 
 const TYPE_LABEL = { quitus: "Quitus de cotisation", recu: "Reçu de paiement", timbre: "Timbre de plaidoirie" };
 
@@ -34,6 +35,8 @@ export function VerificationPublique({ type, numero }) {
         <p className="text-xs uppercase tracking-[0.2em] text-or">Vérification d'authenticité</p>
       </div>
 
+      {type === "timbre" && <div className="mb-4 w-full max-w-md"><BandeauExperimental /></div>}
+
       <div className="w-full max-w-md overflow-hidden rounded-xl bg-white text-encre shadow-modal">
         {etat.statut === "chargement" && (
           <div className="flex flex-col items-center gap-3 px-6 py-14 text-gris">
@@ -52,10 +55,10 @@ export function VerificationPublique({ type, numero }) {
             <dl className="divide-y divide-grisL px-6 py-2 text-sm">
               <Ligne label="Type" valeur={TYPE_LABEL[d.type] ?? d.type} />
               <Ligne label="Numéro" valeur={d.numero} mono />
-              <Ligne label="Bénéficiaire" valeur={d.beneficiaire} />
-              {d.affaire && <Ligne label="Affaire" valeur={d.affaire} />}
-              {d.juridiction && <Ligne label="Juridiction" valeur={d.juridiction} />}
-              {d.montant != null && <Ligne label="Montant" valeur={formatFCFA(d.montant)} />}
+              {d.beneficiaire && <Ligne label="Bénéficiaire" valeur={d.beneficiaire} />}
+              {d.type !== "timbre" && d.affaire && <Ligne label="Affaire" valeur={d.affaire} />}
+              {d.type !== "timbre" && d.juridiction && <Ligne label="Juridiction" valeur={d.juridiction} />}
+              {d.type !== "timbre" && d.montant != null && <Ligne label="Montant" valeur={formatFCFA(d.montant)} />}
               {d.objet && <Ligne label="Objet" valeur={d.objet} />}
               {d.exercice && <Ligne label="Exercice" valeur={d.exercice} />}
               <Ligne label="Date de délivrance" valeur={formatDate(d.date)} />

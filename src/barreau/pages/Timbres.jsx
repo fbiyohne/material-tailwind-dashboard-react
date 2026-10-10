@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { TicketIcon, ArrowDownTrayIcon, ShieldCheckIcon, TrashIcon, ClipboardDocumentIcon } from "@heroicons/react/24/outline";
-import { Badge, VignetteTimbre, PageHeader, DataTable, useToast, useConfirm } from "../components";
+import { Badge, VignetteTimbre, PageHeader, DataTable, Tabs, BandeauExperimental, useToast, useConfirm } from "../components";
+import { StatsTimbres } from "./StatsTimbres";
 import { QUALITE_LABEL } from "../data/derivations";
 import { canauxActifs } from "../data/config";
 import { formatFCFA, formatDate } from "../utils/format";
@@ -96,7 +97,10 @@ export function Timbres() {
   return (
     <div className="space-y-5">
       <PageHeader eyebrow="Finances" titre="Timbres de plaidoirie" sousTitre="Émission d'un timbre électronique par affaire — preuve vérifiable (QR) à apposer sur les actes." />
-
+      <BandeauExperimental />
+      <Tabs ariaLabel="Timbres" tabs={[
+        { id: "emission", label: "Émission et registre", content: (
+    <div className="space-y-5">
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[340px_1fr]">
         {/* Formulaire d'émission */}
         <div className="rounded-lg bg-navy-3 p-5">
@@ -180,6 +184,10 @@ export function Timbres() {
           initialSort={{ key: "numero", dir: "desc" }}
         />
       </div>
+    </div>
+        ) },
+        { id: "stats", label: "Statistiques", content: <StatsTimbres /> },
+      ]} />
     </div>
   );
 }

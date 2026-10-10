@@ -81,10 +81,7 @@ verificationRouter.get(
 verificationRouter.get(
   "/timbre/:code",
   asyncH(async (req, res) => {
-    const timbre = await prisma.timbre.findUnique({
-      where: { code: req.params.code },
-      include: { membre: { select: { nom: true } } },
-    });
+    const timbre = await prisma.timbre.findUnique({ where: { code: req.params.code } });
     if (!timbre || timbre.statut === "ANNULE") {
       return res.status(timbre ? 200 : 404).json({
         valide: false, type: "timbre", numero: timbre ? String(timbre.numero) : req.params.code,
@@ -96,10 +93,9 @@ verificationRouter.get(
       valide: true,
       type: "timbre",
       numero: String(timbre.numero),
-      beneficiaire: `Me ${timbre.membre.nom}`,
+      // R-64 / C-12 : ni nom de l'avocat, ni juridiction, ni montant. ponytail: `affaire` reste
+      // exposée car un test existant (api.test.ts) l'exige ; à retirer dès que ce test est levé.
       affaire: timbre.affaire,
-      juridiction: timbre.juridiction ?? "—",
-      montant: timbre.montant,
       date: fmt(timbre.createdAt),
       empreinteCle,
       signature,
