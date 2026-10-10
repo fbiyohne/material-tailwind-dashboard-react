@@ -29,7 +29,7 @@ Fondement : loi 29-2019, art. 67 à 69 (tenue d'un registre des traitements par 
 
 ## 2. Clauses prêtes à coller
 
-Les crochets [ ] sont à compléter par le secrétariat de l'Ordre.
+Les crochets [ ] sont à compléter par le secrétariat de l'Ordre. Les clauses de la messagerie, des accusés, de la discipline, des bandeaux du congrès et de la démonstration sont dans `clauses-congres.md` ; les valeurs juridiques (légales ou provisoires) dans `regles-reference.md`.
 
 ### 2.1 Mentions légales (site et pied des PDF)
 
@@ -55,6 +55,18 @@ Les crochets [ ] sont à compléter par le secrétariat de l'Ordre.
 > **7. Transfert et hébergement** (loi 29-2019, art. 23 à 25, 63 al. 3) — Les données sont hébergées chez [hébergeur] en [pays/région]. Ce transfert est encadré par un contrat imposant à l'hébergeur les obligations de sécurité et de confidentialité de l'article 63 ; il sera déclaré à la Commission de protection des données dès son installation.
 >
 > **8. Sécurité** (loi 29-2019, art. 63-64, 74) — Accès par compte nominatif, journalisation des opérations sensibles, chiffrement des échanges, sauvegardes. Toute violation de données vous concernant vous sera notifiée ainsi qu'à la Commission dans les 72 heures.
+
+### 2.2.1 Politique de confidentialité — Messagerie
+
+Ajout du 2026-10-10 (mission M-20261010-audit-ordre-avocats, clause C-03 de `clauses-congres.md`). Fondement : loi 026-92, art. 52 ; loi 29-2019, art. 7, 63-65. Condition de publication : la première phrase suppose le test CA10 au vert ; le chiffrement et l'hébergement ne sont décrits que selon `docs/audit/CONFIDENTIALITE-EFFECTIVE.md`.
+
+> **9. Messagerie** — Le contenu des messages et des pièces n'est accessible qu'à leurs expéditeurs et destinataires. Les administrateurs de la plateforme et l'Ordre n'y ont pas accès par l'application ; le journal d'audit ne conserve que les métadonnées (auteur, destinataire, date, empreinte). Les messages sont conservés tant que le compte est actif, puis [12 mois] après sa fermeture, sauf les pièces versées à un dossier, conservées selon la durée de ce dossier. [Ne décrire le chiffrement et l'hébergement que selon CONFIDENTIALITE-EFFECTIVE.md.]
+
+### 2.2.2 Politique de confidentialité — Dossier disciplinaire et pièces du dossier professionnel
+
+Ajout du 2026-10-10 (clause C-04 de `clauses-congres.md`). Fondement : loi 026-92, art. 24 et 35-1° ; loi 29-2019, art. 14 et 16. Complète le point 2 ci-dessus.
+
+> **10. Dossier disciplinaire et pièces du dossier professionnel** — Les données relatives aux procédures et sanctions disciplinaires et le casier judiciaire déposé au dossier d'admission (art. 24 de la loi n° 026-92) sont traitées par les seuls organes de l'Ordre dans leurs attributions (loi n° 29-2019, art. 16). Chaque consultation est enregistrée. Aucune donnée médicale n'est enregistrée au titre d'une omission (art. 35-1°).
 
 ### 2.3 CGU de l'espace avocat — clause d'accès et de suspension
 
@@ -136,7 +148,7 @@ Règles d'écriture : le logiciel enregistre une décision, il ne la prononce ja
 
 | Texte | Articles mobilisés | Vérifié | Source / où vérifier |
 |---|---|---|---|
-| Loi n° 026-92 du 20 août 1992 portant organisation de la profession d'avocat | 8, 33-35, 36-39, 40-43 | oui (texte intégral lu le 2026-10-09) | https://liziba.cg/wp-content/uploads/2024/12/Loi-n°026-92-du-20-aout-1992-portant-organisation-de-la-profession-davocat.pdf |
+| Loi n° 026-92 du 20 août 1992 portant organisation de la profession d'avocat | 5-6, 8, 15-16, 18-23, 24-32, 33-35, 36-43, 47, 52, 54, 61, 65-66 (détail dans `regles-reference.md`) | oui (texte intégral lu le 2026-10-09, relu le 2026-10-10 ; recopie non officielle à recouper avec le JO de 1992) | https://liziba.cg/wp-content/uploads/2024/12/Loi-n°026-92-du-20-aout-1992-portant-organisation-de-la-profession-davocat.pdf |
 | Loi n° 29-2019 du 10 octobre 2019 portant protection des données à caractère personnel | 6-8, 14-16, 23-25, 31, 33-37, 43-46, 50-61, 63-69, 74, 83-91, 92-100 | oui (JO n° 45-2019 du 7 novembre 2019 lu le 2026-10-09) | https://www.sgg.cg/JO/2019/congo-jo-2019-45.pdf |
 | AUDCIF (OHADA, 26 janvier 2017) | art. 24 — conservation 10 ans des livres et pièces | **à vérifier** : règle des 10 ans certaine, numéro d'article cité de mémoire | https://www.ohada.com (texte officiel de l'acte uniforme) |
 | Loi congolaise relative aux transactions électroniques (2019, numéro probable 24-2019) | écrit et signature électroniques — non requis par la mission | **à vérifier** (numéro et contenu) | https://www.sgg.cg/JO/2019/ |
