@@ -5,7 +5,8 @@ import { StatutMembre, type Prisma } from "@prisma/client";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole, requirePermission, type AuthRequest } from "../middleware/auth.js";
-import { prochainNumInscription, prochainNumeroAttestation, archiver, avecRejeuUnicite, STATUTS_HORS_TABLEAU, STATUTS_SORTIS } from "../lib/business.js";
+import { prochainNumInscription, prochainNumeroAttestation, archiver, avecRejeuUnicite, STATUTS_HORS_TABLEAU, STATUTS_SORTIS, tarifsActuels, cotisationDue, statutCotisation } from "../lib/business.js";
+import { aLaPermission } from "../lib/rbac.js";
 import { enregistrerFichier } from "../lib/storage.js";
 import { envoyerPdf, htmlVersPdf } from "../lib/pdf.js";
 import { attestationHtml, listeAvocatsHtml, STATUT_FR, QUALITE_FR } from "../lib/templates.js";
@@ -492,6 +493,127 @@ membresRouter.post(
     const date = new Date(dateDeces);
     const { membre } = await changerSituation({ membreId: id, type: "DECES", demande: { statut: "DECEDE", dateDeces: date }, dateEffet: date, acteur: acteurDe(req) });
     res.json(membre);
+  })
+);
+
+// ── Circuit d'omission, réinscription, sorties volontaires et reprise (T9, D8) ──
+
+/** Étapes du circuit des impayés, dans l'ordre (R-16, provisoire) ; l'omission les clôt. */
+const ETAPES_IMPAYES = ["RAPPEL", "MISE_EN_DEMEURE", "TRANSMISSION", "OMISSION"] as const;
+/** Causes légales d'omission codées par article (R-12) ; 35-4° = contribution non acquittée (R-14). */
+const CAUSES_OMISSION = ["35-1", "35-2", "35-3", "35-4", "35-5"] as const;
+/** Organe qui décide l'omission et la réinscription ; le logiciel enregistre (R-10, R-13). */
+const ORGANE_OMISSION = "Conseil de l'Ordre national (loi n° 026-92, art. 8-2° et 35)";
+const SORTIES_VOLONTAIRES = ["DEMISSIONNAIRE", "RETRAITE", "CESSATION"] as const;
+const JOUR_MS = 86_400_000;
+
+const evenementSchema = z.object({
+  type: z.enum([...ETAPES_IMPAYES, "REINSCRIPTION", ...SORTIES_VOLONTAIRES, "REPRISE"]),
+  dateEffet: datePassee.optional(),
+  annee: z.coerce.number().int().min(2000).max(2100).optional(),
+  cause: z.enum(CAUSES_OMISSION).optional(),
+  motif: z.string().trim().min(1).max(500).optional(),
+  reference: z.string().trim().min(1).max(120).optional(),
+  pieceId: z.coerce.number().int().positive().max(2_147_483_647).optional(),
+});
+
+/** GET /membres/:id/evenements — historique des situations, le plus récent d'abord (SG / Bâtonnier, comme la fiche). */
+membresRouter.get(
+  "/:id/evenements",
+  requireRole("SECRETAIRE_GENERAL", "BATONNIER"),
+  asyncH(async (req, res) => {
+    const membreId = Number(req.params.id);
+    if (!Number.isInteger(membreId)) throw new HttpError(400, "Identifiant invalide");
+    res.json(await prisma.evenementSituation.findMany({ where: { membreId }, orderBy: [{ dateEffet: "desc" }, { id: "desc" }] }));
+  })
+);
+
+/**
+ * POST /membres/:id/evenements — enregistre une étape ou une décision de situation.
+ *  - RAPPEL, MISE_EN_DEMEURE, TRANSMISSION (permission finances) : statut inchangé ;
+ *    refus (409) si le membre est à jour pour l'exercice ou sorti du tableau ;
+ *  - OMISSION, REINSCRIPTION (permission omission_prononcer) : décision du Conseil de
+ *    l'Ordre national saisie à la main, référence obligatoire, aucun automatisme.
+ *    Cause 35-4° (défaut) : les trois étapes du même exercice, dans l'ordre et avec
+ *    les délais de regles.impayes relus à chaque appel, sinon 409 ;
+ *  - DEMISSIONNAIRE, RETRAITE, CESSATION, REPRISE (fin de suspension) : SG seul.
+ * Chaque étape exige la précédente du même exercice, datée au plus tard de (sa date −
+ * délai) et postérieure à la dernière réinscription du membre.
+ */
+membresRouter.post(
+  "/:id/evenements",
+  asyncH(async (req: AuthRequest, res) => {
+    const membreId = Number(req.params.id);
+    if (!Number.isInteger(membreId)) throw new HttpError(400, "Identifiant invalide");
+    const c = evenementSchema.parse(req.body ?? {});
+    const role = req.user!.role;
+    const etape = (ETAPES_IMPAYES as readonly string[]).indexOf(c.type);
+    const decision = c.type === "OMISSION" || c.type === "REINSCRIPTION";
+    const recouvrement = etape >= 0 && !decision;
+    const permis =
+      role === "ADMIN" ||
+      (decision ? aLaPermission(role, "omission_prononcer") : recouvrement ? aLaPermission(role, "finances") : role === "SECRETAIRE_GENERAL");
+    if (!permis) throw new HttpError(403, "Accès refusé pour votre profil");
+
+    const membre = await prisma.membre.findUnique({ where: { id: membreId }, select: { statut: true, qualite: true } });
+    if (!membre) throw new HttpError(404, "Avocat introuvable");
+    if (c.pieceId && !(await prisma.pieceDossier.findFirst({ where: { id: c.pieceId, membreId }, select: { id: true } })))
+      throw new HttpError(400, "Pièce introuvable dans le dossier de ce membre");
+    const dateEffet = c.dateEffet ? new Date(c.dateEffet) : new Date();
+    const annee = c.annee ?? dateEffet.getUTCFullYear();
+    const sorti = (STATUTS_SORTIS as readonly string[]).includes(membre.statut);
+    const cause = c.type === "OMISSION" ? c.cause ?? "35-4" : undefined;
+
+    if (decision && !c.reference) throw new HttpError(400, `La référence de la décision du ${ORGANE_OMISSION} est obligatoire.`);
+    // R-15 : une omission pour maladie s'enregistre par son seul code d'article.
+    if (cause === "35-1" && c.motif) throw new HttpError(400, "Omission pour maladie ou infirmité : n'inscrivez ici aucune donnée médicale, le code d'article suffit.");
+    if (c.type === "REINSCRIPTION" && membre.statut !== "OMIS") throw new HttpError(409, "Seul un avocat omis peut être réinscrit.");
+    if (c.type === "REPRISE" && membre.statut !== "SUSPENDU") throw new HttpError(409, "La reprise ne concerne qu'un avocat suspendu.");
+    if (c.type === "OMISSION" && (sorti || membre.statut === "OMIS")) throw new HttpError(409, "Omission impossible : membre déjà omis ou sorti du tableau.");
+    if ((SORTIES_VOLONTAIRES as readonly string[]).includes(c.type) && sorti) throw new HttpError(409, "Ce membre est déjà sorti du tableau.");
+
+    if (recouvrement) {
+      if (sorti) throw new HttpError(409, "Membre sorti du tableau : aucune étape de recouvrement.");
+      const [tarifs, ligne] = await Promise.all([tarifsActuels(), prisma.cotisation.findUnique({ where: { membreId_annee: { membreId, annee } } })]);
+      const st = statutCotisation(cotisationDue(ligne, tarifs, membre.qualite), ligne?.montantPaye ?? 0);
+      if (st === "ajour" || st === "exonere") throw new HttpError(409, `Membre à jour de sa cotisation ${annee} : aucune étape de recouvrement.`);
+    }
+    if (etape > 0 && (recouvrement || cause === "35-4")) {
+      const { impayes } = await reglesActuelles();
+      const delais = [impayes.delaiRappelJours, impayes.delaiMiseEnDemeureJours, 0]; // délai entre l'étape k et k+1
+      const reinscription = await prisma.evenementSituation.findFirst({ where: { membreId, type: "REINSCRIPTION" }, orderBy: { dateEffet: "desc" } });
+      let curseur = dateEffet;
+      for (let k = etape - 1; k >= 0; k--) {
+        const limite = new Date(curseur.getTime() - delais[k] * JOUR_MS);
+        const prec = await prisma.evenementSituation.findFirst({
+          where: { membreId, annee, type: ETAPES_IMPAYES[k], dateEffet: { lte: limite, ...(reinscription ? { gt: reinscription.dateEffet } : {}) } },
+          orderBy: { dateEffet: "desc" },
+        });
+        if (!prec)
+          throw new HttpError(409, `Étape ${ETAPES_IMPAYES[k]} de l'exercice ${annee} manquante ou trop récente : ${delais[k]} jour(s) au moins avant ${ETAPES_IMPAYES[k + 1]} (règles provisoires, Paramètres).`);
+        curseur = prec.dateEffet;
+      }
+    }
+
+    const acteur = acteurDe(req);
+    if (recouvrement) {
+      // Étape de recouvrement : la fiche n'est pas modifiée (la date de mise à jour du tableau ne bouge pas).
+      const evenement = await prisma.evenementSituation.create({
+        data: {
+          membreId, type: c.type, statutAvant: membre.statut, statutApres: membre.statut, dateEffet, annee,
+          motif: c.motif ?? null, reference: c.reference ?? null, pieceId: c.pieceId ?? null, acteurId: acteur.id, acteurNom: acteur.nom,
+        },
+      });
+      return res.status(201).json({ evenement });
+    }
+    const statut = (c.type === "OMISSION" ? "OMIS" : decision || c.type === "REPRISE" ? "INSCRIT" : c.type) as StatutMembre;
+    const r = await changerSituation({
+      membreId, type: c.type, demande: { statut }, dateEffet, reference: c.reference ?? null, pieceId: c.pieceId ?? null, acteur,
+      annee: c.type === "OMISSION" ? annee : null,
+      motif: cause ? `Art. ${cause}° loi n° 026-92${c.motif ? ` — ${c.motif}` : ""}` : c.motif ?? null,
+      details: decision ? { organe: ORGANE_OMISSION, ...(cause ? { cause } : {}) } : undefined,
+    });
+    res.status(201).json(r);
   })
 );
 

@@ -114,6 +114,22 @@ Réponse : `{ "total": 3, "crees": 1, "maj": 1, "erreurs": [{ "ligne": 3, "messa
 - `PATCH /api/membres/:id` : si le statut change, écriture par `changerSituation` (événement `RADIATION`, `DECES` ou `CHANGEMENT_STATUT`) ; sinon mise à jour simple, sans événement. `/radier` (événement `RADIATION`, référence = motif de la décision) et `/deces` (événement `DECES`, sans motif : donnée de santé) passent aussi par `changerSituation`.
 - Tests : `test/situation-stage.test.ts`.
 
+### Circuit d'omission, réinscription et sorties volontaires (T9, CA7, CA8)
+Le logiciel **enregistre** les décisions, il ne les prononce pas : aucune omission automatique (R-13, R-16).
+- `GET /api/membres/:id/evenements` — historique des situations, le plus récent d'abord (SG / bâtonnier, comme la fiche).
+- `POST /api/membres/:id/evenements` — corps `{ type, dateEffet?, annee?, cause?, motif?, reference?, pieceId? }` (`dateEffet` non future, défaut aujourd'hui ; `annee` = exercice, défaut année de `dateEffet` ; `pieceId` doit appartenir au dossier du membre). Réponse 201 : `{ evenement }` pour une étape, `{ membre, evenement }` pour un changement de statut.
+
+| Type | Droit | Effet |
+|---|---|---|
+| `RAPPEL`, `MISE_EN_DEMEURE`, `TRANSMISSION` | permission `finances` | Statut et fiche inchangés. 409 si le membre est à jour (ou exonéré) pour l'exercice, ou sorti. |
+| `OMISSION` | action `omission_prononcer` (bâtonnier par défaut) | → `OMIS`. `reference` obligatoire (400). `cause` ∈ `35-1`…`35-5` (défaut `35-4`, impayés). Motif enregistré : « Art. 35-x° loi n° 026-92 » ; en `35-1` (maladie), tout motif libre est refusé (R-15). `details.organe` = Conseil de l'Ordre national. |
+| `REINSCRIPTION` | action `omission_prononcer` | `OMIS` → `INSCRIT` (409 sinon), `reference` obligatoire. |
+| `DEMISSIONNAIRE`, `RETRAITE`, `CESSATION` | SG (et ADMIN) | Sortie volontaire hors tableau ; 409 si déjà sorti. |
+| `REPRISE` | SG (et ADMIN) | Fin de suspension : `SUSPENDU` → `INSCRIT` (409 sinon). |
+
+Ordre et délais (cause 35-4° et chaque étape) : l'étape *k* exige l'étape *k−1* **du même exercice**, datée au plus tard de (sa date − délai), postérieure à la dernière `REINSCRIPTION` du membre. Délais relus à chaque appel dans `regles.impayes` (Paramètres) : `delaiRappelJours` (rappel → mise en demeure, 30 j), `delaiMiseEnDemeureJours` (mise en demeure → transmission, 15 j) ; l'omission suit la transmission sans délai. Sinon **409**. Une omission revérifie toute la chaîne avec les règles du moment. `POST /api/cotisations/relances` (e-mail aux retardataires) est inchangé et n'écrit aucune étape.
+- Tests : `test/omission.test.ts`.
+
 ### Constante et libellés d'audit
 - `STATUTS_SORTIS = ["RADIE", "DECEDE", "DEMISSIONNAIRE", "RETRAITE", "CESSATION"]` (`src/lib/business.ts`) : exclus du tableau de l'Ordre, des convocations, de la génération de cotisations **et des relances**, inéligibles au corps électoral (raison `statut`), sans attestation ni accès à l'espace avocat, et sans validation de stage possible (`POST /membres/:id/valider-stage` → 409). `STATUTS_HORS_TABLEAU = ["RADIE", "DECEDE"]` ne désigne plus que les actes datés (radiation, décès) contrôlés à l'import.
 - `STATUTS_ANNUAIRE = ["INSCRIT", "STAGIAIRE", "HONORAIRE"]` : statuts visibles dans l'annuaire de l'espace avocat (X-01).
