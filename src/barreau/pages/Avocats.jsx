@@ -19,9 +19,8 @@ const FILTRES = [
   { value: "honoraire", label: "Honoraire" },
 ];
 
-// Le tableau du Barreau (≈ 139 inscrits) tient sous le plafond serveur (pageSize 200) :
-// un seul appel ramène toute la liste filtrée, puis le DataTable trie/pagine/sélectionne
-// côté client (sélection inter-pages + export de la sélection).
+// La liste filtrée est chargée intégralement (pages serveur de 200 enchaînées), puis le
+// DataTable trie/pagine/sélectionne côté client (sélection inter-pages + export complet).
 
 // Colonnes des exports (identiques en CSV, TXT, XLSX et PDF). Projection « annuaire » :
 // ni motif de radiation, ni adresse, naissance, RCCM, CNSS (loi 29-2019, art. 16 et 63).
@@ -104,6 +103,7 @@ export function Avocats() {
   const { user } = useAuth();
   const peutImporter = user?.role === "SECRETAIRE_GENERAL" || user?.role === "ADMIN";
   const estAdmin = user?.role === "ADMIN";
+  const voitFinances = peutImporter || !!user?.permissions?.includes("finances");
   const [params, setParams] = useSearchParams();
   const [attestation, setAttestation] = useState(null);
   const [importOuvert, setImportOuvert] = useState(false);
@@ -129,13 +129,18 @@ export function Avocats() {
   const charger = useCallback(() => {
     setChargement(true);
     setErreur(false);
-    listerMembres({
+    const params = {
       qualiteNot: "STAGIAIRE",
       ...(recherche ? { q: recherche } : {}),
       ...(filtre !== "tous" ? { statut: filtre.toUpperCase() } : {}),
       pageSize: 200,
-    })
-      .then((d) => setMembres(d.items ?? []))
+    };
+    (async () => {
+      const d = await listerMembres(params);
+      const items = [...(d.items ?? [])];
+      for (let page = 2; page <= (d.totalPages ?? 1); page++) items.push(...((await listerMembres({ ...params, page })).items ?? []));
+      setMembres(items);
+    })()
       .catch(() => setErreur(true))
       .finally(() => setChargement(false));
   }, [recherche, filtre]);
@@ -145,10 +150,12 @@ export function Avocats() {
   // Indépendant des filtres/recherche : on le charge une fois (et à chaque
   // rafraîchissement explicite), pas à chaque rechargement de la liste.
   useEffect(() => {
+    // Sans permission « finances » (ex. Bâtonnier) l'API répond 403 : appel évité.
+    if (!voitFinances) return;
     getCotisations(EXERCICE_COURANT)
       .then((lignes) => setStatutCot(Object.fromEntries(lignes.map((l) => [l.membre.id, l.statut]))))
       .catch(() => toast.error("Statuts de cotisation indisponibles."));
-  }, [toast, refresh]);
+  }, [toast, refresh, voitFinances]);
 
   // Suppression définitive d'un membre (cascade) — réservée au super-administrateur (ADMIN).
   const supprimer = async (m) => {

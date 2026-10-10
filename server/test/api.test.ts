@@ -1392,6 +1392,16 @@ describe("Import du tableau — décès, dates, accès espace, audit (T6)", () =
     expect(r3.body.erreurs[0].ligne).toBe(2);
   });
 
+  it("aller-retour : même jour de dateInscription → horodatage conservé ; autre jour → mis à jour", async () => {
+    const n = num + 7;
+    const horodatage = new Date("2025-03-04T14:35:12.000Z");
+    await prisma.membre.create({ data: { num: n, numInscription: `T${n}`, nom: "T6 Horodatage", qualite: "AVOCAT", statut: "INSCRIT", dateInscription: horodatage } });
+    await importer([{ num: n, nom: "T6 Horodatage", dateInscription: "2025-03-04" }]);
+    expect((await prisma.membre.findUnique({ where: { num: n } }))?.dateInscription.toISOString()).toBe(horodatage.toISOString());
+    await importer([{ num: n, nom: "T6 Horodatage", dateInscription: "2025-03-05" }]);
+    expect((await prisma.membre.findUnique({ where: { num: n } }))?.dateInscription.toISOString().slice(0, 10)).toBe("2025-03-05");
+  });
+
   it("statut absent du fichier : le statut existant n'est pas écrasé ; radiation importée", async () => {
     await importer([{ num: num + 2, nom: "T6 Radié", statut: "radié", dateRadiation: "2026-03-01", motifRadiation: "Décision n° 4" }]);
     const r = await importer([{ num: num + 2, nom: "T6 Radié", cabinet: "Cabinet X" }]);

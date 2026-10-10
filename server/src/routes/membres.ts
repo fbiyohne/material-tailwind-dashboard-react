@@ -328,7 +328,11 @@ membresRouter.post(
         const existant = await prisma.membre.findUnique({ where: { num: r.num } });
         if (existant) {
           // Colonne statut absente du fichier : le statut existant n'est pas écrasé.
-          const data = { ...base, statut: r.statut?.trim() ? statut : undefined, dateInscription: toDate(r.dateInscription) };
+          // Aller-retour export → import : l'export écrit le seul jour (AAAA-MM-JJ) ; si le jour est
+          // inchangé, l'horodatage existant est conservé (aucune perte de précision).
+          const dIns = toDate(r.dateInscription);
+          const memeJour = dIns && existant.dateInscription && dIns.toISOString().slice(0, 10) === existant.dateInscription.toISOString().slice(0, 10);
+          const data = { ...base, statut: r.statut?.trim() ? statut : undefined, dateInscription: memeJour ? undefined : dIns };
           const m = await prisma.membre.update({ where: { num: r.num }, data });
           // Cohérence de l'espace avocat (décédé/radié → compte coupé ; rétabli sinon).
           if (m.statut !== existant.statut) await synchroniserAccesAuStatut(m.id, m.statut);
