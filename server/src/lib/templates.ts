@@ -36,10 +36,12 @@ interface DocOptions {
   reference?: string;
   bodyHtml: string;
   signataire: { role: string; nom: string };
+  /** Apposer le cachet officiel du signataire (défaut : oui). */
+  cachet?: boolean;
   date: Date | string;
 }
 
-export function documentHtml({ org, title, reference, bodyHtml, signataire, date }: DocOptions): string {
+export function documentHtml({ org, title, reference, bodyHtml, signataire, date, cachet = true }: DocOptions): string {
   return `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600&family=DM+Mono&display=swap" rel="stylesheet">
 <style>
@@ -82,7 +84,7 @@ export function documentHtml({ org, title, reference, bodyHtml, signataire, date
       <div class="content">${bodyHtml}</div>
       <div class="foot">
         <div style="display:flex;align-items:flex-end;gap:12px">${sceau()}<div class="date">Fait à Pointe-Noire,<br>le ${fmtDate(date)}</div></div>
-        <div class="sign"><div class="role">${signataire.role}</div>${(() => { const c = cachetPourRole(signataire.role); return c ? `<img src="${c}" alt="Cachet officiel" style="display:block;margin:2px 0 -18px auto;width:92px;height:92px;object-fit:contain" />` : ""; })()}<div class="nom">${signataire.nom}</div></div>
+        <div class="sign"><div class="role">${signataire.role}</div>${(() => { const c = cachet ? cachetPourRole(signataire.role) : null; return c ? `<img src="${c}" alt="Cachet officiel" style="display:block;margin:2px 0 -18px auto;width:92px;height:92px;object-fit:contain" />` : ""; })()}<div class="nom">${signataire.nom}</div></div>
       </div>
     </div>
     <div class="mention">Document officiel · ${escapeHtml(identite().ordre)} · ${escapeHtml(identite().denomination)}</div>
@@ -440,5 +442,38 @@ export function decisionDisciplineHtml(d: any): string {
       ${sanction}`,
     signataire: { role: "Le Bâtonnier, Président du Conseil de discipline", nom: identite().batonnier },
     date: new Date(),
+  });
+}
+
+const STATUT_FR: Record<string, string> = {
+  INSCRIT: "Inscrit", SUSPENDU: "Suspendu", RADIE: "Radié", OMIS: "Omis",
+  HONORAIRE: "Honoraire", STAGIAIRE: "Stagiaire", DECEDE: "Décédé",
+};
+const QUALITE_FR: Record<string, string> = { AVOCAT: "Avocat", STAGIAIRE: "Stagiaire", HONORAIRE: "Honoraire" };
+const jour = (d?: Date | string | null) => (d ? new Date(d).toISOString().slice(0, 10) : "");
+
+/**
+ * Liste de travail des avocats (export PDF). Projection « annuaire » uniquement :
+ * le motif de radiation (donnée disciplinaire, loi 29-2019 art. 16) n'y figure jamais.
+ * Sans cachet : ce n'est pas un acte officiel.
+ */
+export function listeAvocatsHtml(membres: any[], libelleFiltre: string, date: Date | string): string {
+  const d = new Date(date).toLocaleDateString("fr-FR");
+  const th = ["N°", "N° inscription", "Nom", "Qualité", "Statut", "Cabinet", "Téléphone", "Email", "Date d'inscription", "Date de radiation", "Date de décès"]
+    .map((c) => `<th style="padding:4px 3px">${c}</th>`).join("");
+  const td = (v: unknown) => `<td style="padding:4px 3px;border-bottom:1px solid #E0DBD0">${escapeHtml(String(v ?? ""))}</td>`;
+  const lignes = membres
+    .map((m) => `<tr>${[m.num, m.numInscription, m.nom, QUALITE_FR[m.qualite] ?? m.qualite, STATUT_FR[m.statut] ?? m.statut, m.cabinet, m.tel, m.email, jour(m.dateInscription), jour(m.dateRadiation), jour(m.dateDeces)].map(td).join("")}</tr>`)
+    .join("");
+  const titre = `Liste des avocats — ${escapeHtml(libelleFiltre)} — arrêtée au ${d} — Document interne`;
+  return documentHtml({
+    org: "Le Secrétaire Général",
+    title: `<span style="font-size:17px">${titre}</span>`,
+    reference: `${membres.length} ligne${membres.length > 1 ? "s" : ""}`,
+    bodyHtml: `<table style="width:100%;border-collapse:collapse;font-size:8px;line-height:1.3"><thead><tr style="border-bottom:1.5px solid #1A3A6B;color:#7A756A;text-align:left">${th}</tr></thead><tbody>${lignes}</tbody></table>
+      <p style="margin-top:14px;font-size:9px;color:#7A756A;text-align:center">Barreau de Pointe-Noire — Document interne confidentiel — Diffusion interdite hors des organes de l'Ordre.</p>`,
+    signataire: { role: "Le Secrétaire Général", nom: escapeHtml(identite().secretaireGeneral) },
+    date,
+    cachet: false,
   });
 }

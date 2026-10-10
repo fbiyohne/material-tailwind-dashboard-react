@@ -4,11 +4,11 @@ import { z } from "zod";
 import type { Prisma, StatutMembre } from "@prisma/client";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
-import { requireAuth, requireRole, type AuthRequest } from "../middleware/auth.js";
+import { requireAuth, requireRole, requirePermission, type AuthRequest } from "../middleware/auth.js";
 import { prochainNumInscription, prochainNumeroAttestation, archiver, avecRejeuUnicite } from "../lib/business.js";
 import { enregistrerFichier } from "../lib/storage.js";
 import { envoyerPdf } from "../lib/pdf.js";
-import { attestationHtml } from "../lib/templates.js";
+import { attestationHtml, listeAvocatsHtml } from "../lib/templates.js";
 import { provisionnerAccesEspace, synchroniserAccesAuStatut } from "../lib/acces.js";
 
 export const membresRouter = Router();
@@ -16,32 +16,33 @@ membresRouter.use(requireAuth);
 
 const TRI_AUTORISE = new Set(["num", "nom", "cabinet", "statut"]);
 
+/** Filtres communs à la liste et à l'export PDF. Une valeur hors énum est ignorée
+ *  (→ undefined) plutôt que transmise à Prisma, qui lèverait une 500. */
+function whereMembres(query: Record<string, unknown>): Prisma.MembreWhereInput {
+  const q = String(query.q ?? "").trim();
+  const QUALITES = ["AVOCAT", "STAGIAIRE", "HONORAIRE"];
+  const STATUTS = ["INSCRIT", "SUSPENDU", "RADIE", "OMIS", "HONORAIRE", "STAGIAIRE", "DECEDE"];
+  const dansEnum = (v: unknown, set: string[]) => (typeof v === "string" && set.includes(v) ? v : undefined);
+  const qualite = dansEnum(query.qualite, QUALITES);
+  const qualiteNot = dansEnum(query.qualiteNot, QUALITES);
+  const statut = dansEnum(query.statut, STATUTS);
+  return {
+    ...(qualite ? { qualite: qualite as any } : {}),
+    ...(qualiteNot ? { qualite: { not: qualiteNot as any } } : {}),
+    ...(statut ? { statut: statut as any } : {}),
+    ...(q ? { OR: [{ nom: { contains: q, mode: "insensitive" } }, { cabinet: { contains: q, mode: "insensitive" } }] } : {}),
+  };
+}
+
 /** GET /membres — liste filtrée, triée et paginée côté serveur (FR-AV-02/03). */
 membresRouter.get(
   "/",
   asyncH(async (req, res) => {
-    const q = String(req.query.q ?? "").trim();
-    // Filtres d'énumération validés : une valeur hors énum est ignorée (→ undefined)
-    // plutôt que transmise à Prisma, qui lèverait une 500 sur une valeur inconnue.
-    const QUALITES = ["AVOCAT", "STAGIAIRE", "HONORAIRE"];
-    const STATUTS = ["INSCRIT", "SUSPENDU", "RADIE", "OMIS", "HONORAIRE", "STAGIAIRE", "DECEDE"];
-    const dansEnum = (v: unknown, set: string[]) => (typeof v === "string" && set.includes(v) ? v : undefined);
-    const qualite = dansEnum(req.query.qualite, QUALITES);
-    const qualiteNot = dansEnum(req.query.qualiteNot, QUALITES);
-    const statut = dansEnum(req.query.statut, STATUTS);
+    const where = whereMembres(req.query);
     const page = Math.max(1, Number(req.query.page ?? 1));
     const pageSize = Math.min(200, Math.max(1, Number(req.query.pageSize ?? 20)));
     const sort = String(req.query.sort ?? "num");
     const order = req.query.order === "desc" ? "desc" : "asc";
-
-    const where: Prisma.MembreWhereInput = {
-      ...(qualite ? { qualite: qualite as any } : {}),
-      ...(qualiteNot ? { qualite: { not: qualiteNot as any } } : {}),
-      ...(statut ? { statut: statut as any } : {}),
-      ...(q
-        ? { OR: [{ nom: { contains: q, mode: "insensitive" } }, { cabinet: { contains: q, mode: "insensitive" } }] }
-        : {}),
-    };
 
     const orderBy = { [TRI_AUTORISE.has(sort) ? sort : "num"]: order } as Prisma.MembreOrderByWithRelationInput;
 
@@ -63,6 +64,48 @@ membresRouter.get(
       prisma.membre.count({ where }),
     ]);
     res.json({ items, total, page, pageSize, totalPages: Math.max(1, Math.ceil(total / pageSize)) });
+  })
+);
+
+const exportPdfQuery = z.object({
+  q: z.string().max(100).optional(),
+  statut: z.string().max(20).optional(),
+  qualite: z.string().max(20).optional(),
+  qualiteNot: z.string().max(20).optional(),
+  ids: z.string().regex(/^\d{1,9}(,\d{1,9})*$/).refine((v) => v.split(",").length <= 200, "200 identifiants maximum").optional(),
+});
+
+/**
+ * GET /membres/export/pdf — liste (filtrée ou sélection par ids) en PDF.
+ * Extraction en masse : permission « membres » (l'AVOCAT est déjà bloqué par
+ * confinementAvocat) ; projection annuaire sans motifRadiation ; journalisée (C-04).
+ */
+membresRouter.get(
+  "/export/pdf",
+  requirePermission("membres"),
+  asyncH(async (req: AuthRequest, res) => {
+    const p = exportPdfQuery.safeParse(req.query);
+    if (!p.success) throw new HttpError(400, "Paramètres d'export invalides");
+    const ids = p.data.ids?.split(",").map(Number);
+    const where: Prisma.MembreWhereInput = { ...whereMembres(p.data), ...(ids ? { id: { in: ids } } : {}) };
+    const membres = await prisma.membre.findMany({
+      where, orderBy: { num: "asc" },
+      select: { num: true, numInscription: true, nom: true, qualite: true, statut: true, cabinet: true, tel: true, email: true, dateInscription: true, dateRadiation: true, dateDeces: true },
+    });
+    const filtre = [
+      ids ? `sélection de ${ids.length}` : "",
+      p.data.statut ? `statut ${p.data.statut}` : "",
+      p.data.qualite ? `qualité ${p.data.qualite}` : "",
+      p.data.q ? `recherche « ${p.data.q} »` : "",
+    ].filter(Boolean).join(", ") || "tous";
+    await envoyerPdf(res, listeAvocatsHtml(membres, filtre, new Date()), `Avocats-${new Date().toISOString().slice(0, 10)}.pdf`);
+    await prisma.journalAudit.create({
+      data: {
+        action: "Export de la liste des avocats", cible: `format=pdf; filtre=${filtre}; lignes=${membres.length}`.slice(0, 250),
+        methode: "GET", chemin: "/api/membres/export/pdf", statut: 200,
+        ip: (req.ip ?? "").replace(/^::ffff:/, "") || null, userId: req.user?.id ?? null, userNom: req.user?.nom ?? null,
+      },
+    });
   })
 );
 

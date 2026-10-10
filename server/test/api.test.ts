@@ -2,7 +2,8 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import request from "supertest";
 import { creerApp } from "../src/app.js";
 import { prisma } from "../src/prisma.js";
-import { tableauOrdreHtml } from "../src/lib/templates.js";
+import { tableauOrdreHtml, listeAvocatsHtml } from "../src/lib/templates.js";
+import { trouverChromium } from "../src/lib/pdf.js";
 import { eligibiliteElectorale, STATUTS_HORS_TABLEAU } from "../src/lib/business.js";
 
 const app = creerApp();
@@ -1276,4 +1277,67 @@ describe("Cycle de vie — radiation motivée, décès, garde-fou DELETE, RBAC (
     expect((await request(app).get(`/api/membres/${id}`).set(...bearer(sg))).body.statut).toBe("INSCRIT");
     await prisma.user.deleteMany({ where: { nom: { startsWith: "T4 " } } });
   });
+});
+
+describe("Export PDF de la liste des avocats (T5, CA-08)", () => {
+  const pdf = (qs: string, t?: string) => {
+    const r = request(app).get(`/api/membres/export/pdf${qs}`).buffer(true).parse((res, cb) => {
+      const c: Buffer[] = [];
+      res.on("data", (d: Buffer) => c.push(d));
+      res.on("end", () => cb(null, Buffer.concat(c)));
+    });
+    return t ? r.set(...bearer(t)) : r;
+  };
+
+  it("sans jeton → 401 ; ids invalides → 400 ; plus de 200 ids → 400", async () => {
+    expect((await pdf("")).status).toBe(401);
+    expect((await pdf("?ids=abc", sg)).status).toBe(400);
+    expect((await pdf(`?ids=${Array.from({ length: 201 }, (_, i) => i + 1).join(",")}`, sg)).status).toBe(400);
+  });
+
+  it("un compte AVOCAT → 403", async () => {
+    const email = `export.avocat.${Date.now()}@barreau-pn.cg`;
+    const m = await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: `T5 Export ${Date.now()}`, qualite: "AVOCAT", email });
+    const acces = await request(app).post(`/api/membres/${m.body.id}/acces`).set(...bearer(sg));
+    const token = acces.body.lien.split("/activer/")[1];
+    await request(app).post("/api/auth/activer").send({ token, password: "avocatpass8" });
+    const jwt = (await request(app).post("/api/auth/login").send({ email, password: "avocatpass8" })).body.token;
+    expect((await pdf("?statut=INSCRIT", jwt)).status).toBe(403);
+    await prisma.user.deleteMany({ where: { email } });
+    await prisma.membre.deleteMany({ where: { nom: { startsWith: "T5 " } } });
+  });
+
+  it("listeAvocatsHtml : encode les champs libres, une ligne par membre, sans motif", () => {
+    const html = listeAvocatsHtml(
+      [{ num: 1, numInscription: "PN-1", nom: "<script>alert(1)</script>", qualite: "AVOCAT", statut: "DECEDE", cabinet: "A&B", dateDeces: new Date("2026-09-15") }],
+      "<script>", new Date("2026-10-10"),
+    );
+    expect(html).not.toContain("<script>");
+    expect(html).toContain("&lt;script&gt;");
+    expect(html).toContain("Décédé");
+    expect(html).toContain("2026-09-15");
+    expect(html).toContain("Document interne confidentiel");
+    expect(html.match(/<tbody>.*<\/tbody>/s)![0].match(/<tr>/g)).toHaveLength(1);
+  });
+
+  it("le nombre de lignes du gabarit égale celui de GET /api/membres (mêmes filtres)", async () => {
+    const liste = await request(app).get("/api/membres?statut=INSCRIT&pageSize=200").set(...bearer(sg));
+    const html = listeAvocatsHtml(liste.body.items, "statut INSCRIT", new Date());
+    expect(html.match(/<tbody>.*<\/tbody>/s)![0].match(/<tr>/g)).toHaveLength(liste.body.items.length);
+  });
+
+  it.skipIf(!trouverChromium())("SG : 200, application/pdf, %PDF, sélection ids, journal d'audit", async () => {
+    const liste = await request(app).get("/api/membres?pageSize=3").set(...bearer(sg));
+    const ids = liste.body.items.map((m: any) => m.id).join(",");
+    const avant = await prisma.journalAudit.count({ where: { action: "Export de la liste des avocats" } });
+    const r = await pdf(`?ids=${ids}`, sg);
+    expect(r.status).toBe(200);
+    expect(r.headers["content-type"]).toContain("application/pdf");
+    expect(r.headers["content-disposition"]).toMatch(/Avocats-\d{4}-\d{2}-\d{2}\.pdf/);
+    expect((r.body as Buffer).subarray(0, 4).toString()).toBe("%PDF");
+    const e = await prisma.journalAudit.findFirst({ where: { action: "Export de la liste des avocats" }, orderBy: { id: "desc" } });
+    expect(await prisma.journalAudit.count({ where: { action: "Export de la liste des avocats" } })).toBe(avant + 1);
+    expect(e!.cible).toContain("format=pdf");
+    expect(e!.cible).toContain("lignes=3");
+  }, 60000);
 });

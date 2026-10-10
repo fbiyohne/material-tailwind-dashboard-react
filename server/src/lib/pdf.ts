@@ -35,7 +35,7 @@ function chromeDans(racine: string, prefixes: string[]): string | null {
  *  4. Chromium/Chrome installé au niveau système (VPS, Docker).
  * Le chemin codé en dur précédent cassait dès que la version de Chromium changeait.
  */
-function trouverChromium(): string | null {
+export function trouverChromium(): string | null {
   if (existe(process.env.PUPPETEER_EXECUTABLE_PATH)) return process.env.PUPPETEER_EXECUTABLE_PATH!;
 
   const cache = process.env.PUPPETEER_CACHE_DIR || path.join(os.homedir(), ".cache", "puppeteer");
@@ -45,7 +45,7 @@ function trouverChromium(): string | null {
   const playwright = chromeDans(process.env.PLAYWRIGHT_BROWSERS_PATH || "/opt/pw-browsers", ["chromium-", "chromium_headless_shell-"]);
   if (playwright) return playwright;
 
-  for (const p of ["/usr/bin/chromium", "/usr/bin/chromium-browser", "/usr/bin/google-chrome", "/usr/bin/google-chrome-stable"]) {
+  for (const p of ["/usr/bin/chromium", "/usr/bin/chromium-browser", "/usr/bin/google-chrome", "/usr/bin/google-chrome-stable", "C:/Program Files/Google/Chrome/Application/chrome.exe", "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"]) {
     if (existe(p)) return p;
   }
   return null;
