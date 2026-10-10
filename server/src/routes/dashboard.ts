@@ -3,7 +3,7 @@ import { prisma } from "../prisma.js";
 import { anneeDeRequete } from "../lib/requete.js";
 import { asyncH } from "../middleware/error.js";
 import { requireAuth, type AuthRequest } from "../middleware/auth.js";
-import { cotisationDue, statutCotisation, tarifsActuels } from "../lib/business.js";
+import { cotisationDueSuivi, statutCotisation, tarifsActuels, STATUTS_HORS_TABLEAU } from "../lib/business.js";
 
 export const dashboardRouter = Router();
 dashboardRouter.use(requireAuth);
@@ -40,8 +40,9 @@ dashboardRouter.get(
     const parite = { H: 0, F: 0, nr: 0 };
 
     for (const m of membres) {
-      if (m.qualite === "AVOCAT") inscrits += 1;
-      if (m.qualite === "STAGIAIRE") stagiaires += 1;
+      const actif = !(STATUTS_HORS_TABLEAU as readonly string[]).includes(m.statut);
+      if (m.qualite === "AVOCAT" && actif) inscrits += 1;
+      if (m.qualite === "STAGIAIRE" && actif) stagiaires += 1;
       parQualite[m.qualite] = (parQualite[m.qualite] ?? 0) + 1;
       parStatut[m.statut] = (parStatut[m.statut] ?? 0) + 1;
       if (m.sexe === "H") parite.H += 1;
@@ -51,7 +52,7 @@ dashboardRouter.get(
         const dec = Math.floor(m.dateServment.getFullYear() / 10) * 10;
         parDecennieMap[dec] = (parDecennieMap[dec] ?? 0) + 1;
       }
-      const montantDuM = cotisationDue(m.cotisations[0], tarifs, m.qualite);
+      const montantDuM = cotisationDueSuivi(m, m.cotisations[0], tarifs);
       const paye = m.cotisations[0]?.montantPaye ?? 0;
       du += montantDuM;
       payees += paye;

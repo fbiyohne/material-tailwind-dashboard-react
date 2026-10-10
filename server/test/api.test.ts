@@ -1180,6 +1180,24 @@ describe("Cycle de vie — statut DECEDE (migration T3)", () => {
     expect(eligibiliteElectorale({ qualite: "AVOCAT", statut: "DECEDE" }, null)).toEqual({ eligible: false, raison: "statut" });
   });
 
+  it("R1-7 : un décédé/radié sans ligne réelle n'a aucun dû calculé (cotisations, dashboard)", async () => {
+    const annee = 2031;
+    const cree = async (statut: string) =>
+      (await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: `DECEDE Test r17 ${statut} ${Date.now()}`, qualite: "AVOCAT", statut })).body.id as number;
+    const [idDeces, idRadie, idOk] = [await cree("DECEDE"), await cree("RADIE"), await cree("INSCRIT")];
+    const avant = (await request(app).get(`/api/dashboard?annee=${annee}`).set(...bearer(sg))).body;
+    const cot = await request(app).get(`/api/cotisations?annee=${annee}`).set(...bearer(sg));
+    const ligne = (id: number) => cot.body.lignes.find((l: any) => l.membre.id === id);
+    expect(ligne(idDeces)).toMatchObject({ montantDu: 0, solde: 0, statut: "exonere" });
+    expect(ligne(idRadie)).toMatchObject({ montantDu: 0, solde: 0, statut: "exonere" });
+    expect(ligne(idOk).montantDu).toBeGreaterThan(0);
+    // Le dashboard ne compte ni inscrit ni retard pour eux : supprimer les deux hors-tableau ne change rien.
+    await prisma.membre.deleteMany({ where: { id: { in: [idDeces, idRadie] } } });
+    const apres = (await request(app).get(`/api/dashboard?annee=${annee}`).set(...bearer(sg))).body;
+    expect(avant.membres).toEqual(apres.membres);
+    expect(avant.finances).toEqual(apres.finances);
+  });
+
   it("import : le statut « décédé » (toutes graphies) est stocké DECEDE, pas réinscrit", async () => {
     const r = await request(app).post("/api/membres/import").set(...bearer(sg)).send({
       membres: [

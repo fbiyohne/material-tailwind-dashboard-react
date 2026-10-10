@@ -61,6 +61,12 @@ export function cotisationDue(ligne: { montantDu: number } | null | undefined, t
   return ligne?.montantDu ?? montantDuAvec(tarifs, qualite);
 }
 
+/** Cotisation due pour le suivi : un radié/décédé n'a aucun dû calculé à la volée, seulement sa ligne réelle éventuelle. */
+export function cotisationDueSuivi(m: { statut: string; qualite: Qualite }, ligne: { montantDu: number } | null | undefined, tarifs: Tarifs): number {
+  if (!ligne && (STATUTS_HORS_TABLEAU as readonly string[]).includes(m.statut)) return 0;
+  return cotisationDue(ligne, tarifs, m.qualite);
+}
+
 /** Droit de plaidoirie dû EFFECTIF : ligne réelle prioritaire, sinon barème (miroir de cotisationDue). */
 export function droitDue(ligne: { montantDu: number } | null | undefined, tarifs: Tarifs, qualite: Qualite): number {
   return ligne?.montantDu ?? droitDuAvec(tarifs, qualite);

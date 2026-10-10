@@ -4,7 +4,7 @@ import { prisma } from "../prisma.js";
 import { anneeDeRequete } from "../lib/requete.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole, requirePermission } from "../middleware/auth.js";
-import { cotisationDue, montantDuAvec, statutCotisation, tarifsActuels, STATUTS_HORS_TABLEAU } from "../lib/business.js";
+import { cotisationDue, cotisationDueSuivi, montantDuAvec, statutCotisation, tarifsActuels, STATUTS_HORS_TABLEAU } from "../lib/business.js";
 import { encaisser, gardeVersement } from "../lib/encaissement.js";
 import { envoyerEmail, envoyerSms, emailEnSimulation } from "../lib/notifications.js";
 
@@ -68,7 +68,7 @@ cotisationsRouter.get(
     ]);
     const lignes = membres.map((m) => {
       const c = m.cotisations[0];
-      const du = cotisationDue(c, tarifs, m.qualite);
+      const du = cotisationDueSuivi(m, c, tarifs);
       const paye = c?.montantPaye ?? 0;
       return {
         membre: { id: m.id, num: m.num, nom: m.nom, qualite: m.qualite, cabinet: m.cabinet },
