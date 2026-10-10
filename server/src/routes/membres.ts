@@ -297,7 +297,7 @@ const QUALITES: Record<string, "AVOCAT" | "STAGIAIRE" | "HONORAIRE"> = { avocat:
 // Typé sur l'enum Prisma : toute nouvelle valeur de StatutMembre est acceptée ici sans retouche du type.
 const STATUTS: Record<string, StatutMembre> = {
   inscrit: "INSCRIT", suspendu: "SUSPENDU", radie: "RADIE", "radié": "RADIE", "radiée": "RADIE", "radiee": "RADIE",
-  suspendue: "SUSPENDU", omise: "OMIS", inscrite: "INSCRIT", honoraire: "HONORAIRE", stagiaire: "STAGIAIRE",
+  suspendue: "SUSPENDU", omis: "OMIS", omise: "OMIS", honoraires: "HONORAIRE", stagiaires: "STAGIAIRE", inscrite: "INSCRIT", honoraire: "HONORAIRE", stagiaire: "STAGIAIRE",
   decede: "DECEDE", "décédé": "DECEDE", "décédée": "DECEDE", "decedee": "DECEDE",
 };
 // Normalise le sexe importé (« H »/« Homme »/« M »/« Masculin » → H ; « F »/« Femme » → F).

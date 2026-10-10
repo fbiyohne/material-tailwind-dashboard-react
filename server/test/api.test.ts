@@ -1594,6 +1594,18 @@ describe("Import du tableau — décès, dates, accès espace, audit (T6)", () =
     expect((await prisma.membre.findUnique({ where: { num: n2 } }))?.statut).toBe("INSCRIT");
   });
 
+  it("R2-5 : aller-retour — les 7 libellés de statut exportés se ré-importent sans erreur", async () => {
+    const cas: [string, string][] = [["Inscrit", "INSCRIT"], ["Suspendu", "SUSPENDU"], ["Omis", "OMIS"], ["Radié", "RADIE"], ["Honoraire", "HONORAIRE"], ["Stagiaire", "STAGIAIRE"], ["Décédé", "DECEDE"]];
+    for (const [i, [libelle, statut]] of cas.entries()) {
+      const n = num + 20 + i;
+      await prisma.membre.create({ data: { num: n, numInscription: `T${n}`, nom: `R25 ${libelle}`, qualite: "AVOCAT", statut: statut as any } });
+      const r = await importer([{ num: n, nom: `R25 ${libelle}`, statut: libelle }]);
+      expect(r.body.erreurs, libelle).toEqual([]);
+      expect(r.body.maj, libelle).toBe(1);
+      expect((await prisma.membre.findUnique({ where: { num: n } }))?.statut).toBe(statut);
+    }
+  });
+
   it("R1-9 : membre existant importé « décédé » ou « radié » : refusé, statut et compte espace inchangés ; sortie de RADIE refusée aussi", async () => {
     const c = await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: `T6 Espace ${Date.now()}`, qualite: "AVOCAT", email: `t6-${Date.now()}@test.cg` });
     const id = c.body.id as number;
