@@ -3,14 +3,19 @@ import PropTypes from "prop-types";
 import { PlusIcon, TrashIcon, CheckBadgeIcon, AcademicCapIcon } from "@heroicons/react/24/outline";
 import { Badge } from "./Badge";
 import { Notice } from "./Notice";
+import { Modal } from "./Modal";
+import { FormField } from "./FormField";
+import { MentionJuridique } from "./MentionJuridique";
 import { useToast } from "./Toast";
 import { useConfirm } from "./ConfirmDialog";
 import { useAuth } from "../auth/AuthContext";
 import { formatDate } from "../utils/format";
 import { infoStage } from "../data/derivations";
-import { listerRapportsStage, ajouterRapportStage, supprimerRapportStage, validerStage } from "../api/resources";
+import { listerRapportsStage, ajouterRapportStage, supprimerRapportStage, validerStage, getParametres } from "../api/resources";
 
 const vide = { periode: "", appreciation: "", note: "" };
+const aujourdhui = () => new Date().toISOString().slice(0, 10);
+const videFin = () => ({ dateDecision: aujourdhui(), dateDemande: "", dateCertificat: "", refCertificat: "" });
 
 /**
  * Suivi du stage d'un avocat stagiaire : rapports/évaluations périodiques (SG)
@@ -21,12 +26,24 @@ export function StagePanel({ membre, onChange }) {
   const confirm = useConfirm();
   const { user } = useAuth();
   const peutGerer = ["SECRETAIRE_GENERAL", "ADMIN"].includes(user?.role);
-  const peutValider = ["BATONNIER", "ADMIN"].includes(user?.role);
+  // Droit d'enregistrer la fin de stage : action stage_valider (matrice d'accès, /auth/me).
+  const peutValider = user?.role === "ADMIN" || !!user?.permissions?.includes("stage_valider");
 
   const [rapports, setRapports] = useState([]);
   const [form, setForm] = useState(vide);
   const [busy, setBusy] = useState(false);
+  const [finOuverte, setFinOuverte] = useState(false);
+  const [fin, setFin] = useState(videFin);
+  const [certificatObligatoire, setCertificatObligatoire] = useState(false);
   const stage = infoStage(membre);
+
+  // Règle lue en Paramètres : le certificat n'est exigé que si l'Ordre l'a décidé.
+  useEffect(() => {
+    if (!peutValider) return;
+    getParametres().then((p) => setCertificatObligatoire(!!p.stage?.certificatObligatoire)).catch(() => {});
+  }, [peutValider]);
+  const setFinF = (k) => (e) => setFin((f) => ({ ...f, [k]: e.target.value }));
+  const finIncomplete = !fin.dateDecision || (certificatObligatoire && (!fin.dateCertificat || !fin.refCertificat.trim()));
 
   const charger = useCallback(() => {
     listerRapportsStage(membre.id).then(setRapports).catch((e) => toast.error(e.message));
@@ -54,16 +71,20 @@ export function StagePanel({ membre, onChange }) {
   };
 
   const valider = async () => {
-    if (busy) return;
-    const ok = await confirm({
-      title: "Valider la fin de stage ?",
-      message: `Me ${membre.nom} passera du statut d'avocat stagiaire à celui d'avocat inscrit au tableau, à la date d'aujourd'hui. Le certificat de fin de stage est délivré par le Bâtonnier national (loi n° 026-92, art. 29) : le logiciel enregistre la décision.`,
-      confirmLabel: "Valider la fin de stage",
-    });
-    if (!ok) return;
+    if (busy || finIncomplete) return;
     setBusy(true);
-    try { await validerStage(membre.id); toast.success("Fin de stage validée — inscription au tableau des avocats."); onChange?.(); }
-    catch (e) { toast.error(e.message); }
+    try {
+      await validerStage(membre.id, {
+        dateDecision: fin.dateDecision,
+        ...(fin.dateDemande ? { dateDemande: fin.dateDemande } : {}),
+        ...(fin.dateCertificat ? { dateCertificat: fin.dateCertificat } : {}),
+        ...(fin.refCertificat.trim() ? { refCertificat: fin.refCertificat.trim() } : {}),
+      });
+      toast.success("Fin de stage enregistrée — inscription au tableau des avocats.");
+      setFinOuverte(false);
+      setFin(videFin());
+      onChange?.();
+    } catch (e) { toast.error(e.message); }
     finally { setBusy(false); }
   };
 
@@ -84,11 +105,11 @@ export function StagePanel({ membre, onChange }) {
           <div className="h-2 overflow-hidden rounded bg-grisM"><div className="h-full rounded" style={{ width: `${stage?.progression ?? 0}%`, backgroundColor: stage?.termine ? "var(--bpn-vert)" : "var(--bpn-or)" }} /></div>
         </div>
         {peutValider && (
-          <button className="bpn-btn bpn-btn-or mt-4 w-full justify-center" onClick={valider} disabled={busy}>
-            <CheckBadgeIcon className="h-4 w-4" /> {busy ? "Validation…" : "Valider la fin de stage"}
+          <button className="bpn-btn bpn-btn-or mt-4 w-full justify-center" onClick={() => setFinOuverte(true)} disabled={busy}>
+            <CheckBadgeIcon className="h-4 w-4" /> Valider la fin de stage
           </button>
         )}
-        {!peutValider && <Notice ton="or" className="mt-4">La validation de fin de stage est un acte du Bâtonnier.</Notice>}
+        {!peutValider && <Notice ton="or" className="mt-4">La fin de stage est enregistrée par le Bâtonnier national.</Notice>}
       </div>
 
       {/* Rapports / évaluations */}
@@ -130,6 +151,39 @@ export function StagePanel({ membre, onChange }) {
           </ul>
         )}
       </div>
+
+      <Modal
+        open={finOuverte}
+        onClose={() => setFinOuverte(false)}
+        title="Valider la fin de stage"
+        footer={
+          <button className="bpn-btn bpn-btn-or" onClick={valider} disabled={busy || finIncomplete}>
+            <CheckBadgeIcon className="h-4 w-4" /> {busy ? "Validation…" : "Valider la fin de stage"}
+          </button>
+        }
+      >
+        <p className="mb-4 text-sm text-encre">
+          Me {membre.nom} passera du statut d'avocat stagiaire à celui d'avocat inscrit au tableau, à la date de la décision.
+          Le certificat de fin de stage est délivré par le <strong>Bâtonnier national</strong> (loi n° 026-92, art. 29) : le logiciel enregistre la décision.
+        </p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormField label="Date de la décision" required>
+            <input type="date" value={fin.dateDecision} max={aujourdhui()} onChange={setFinF("dateDecision")} className="bpn-input" />
+          </FormField>
+          <FormField label="Date de la demande" hint="facultative">
+            <input type="date" value={fin.dateDemande} max={aujourdhui()} onChange={setFinF("dateDemande")} className="bpn-input" />
+          </FormField>
+          <FormField label="Date du certificat" required={certificatObligatoire} hint={certificatObligatoire ? undefined : "facultative"}>
+            <input type="date" value={fin.dateCertificat} max={aujourdhui()} onChange={setFinF("dateCertificat")} className="bpn-input" />
+          </FormField>
+          <FormField label="Référence du certificat" required={certificatObligatoire} hint={certificatObligatoire ? undefined : "facultative"}>
+            <input value={fin.refCertificat} maxLength={120} onChange={setFinF("refCertificat")} className="bpn-input" />
+          </FormField>
+        </div>
+        <MentionJuridique nature="provisoire" article="Règles du stage · Paramètres" className="mt-4">
+          Provisoire, à confirmer par les textes : la durée du stage et l'exigence du certificat se règlent en Paramètres. {certificatObligatoire ? "Le certificat est actuellement exigé." : "Le certificat n'est pas exigé actuellement."}
+        </MentionJuridique>
+      </Modal>
     </div>
   );
 }

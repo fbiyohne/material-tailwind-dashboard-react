@@ -5,6 +5,7 @@ import { Badge, StatutBadge, AttestationModal, useToast, useConfirm, ImportMembr
 import { useAuth } from "../auth/AuthContext";
 import { STATUT_META, STATUT_MEMBRE_META_CLES, QUALITE_LABEL } from "../data/derivations";
 import { EXERCICE_COURANT } from "../data/dashboard-data";
+import { formatDate } from "../utils/format";
 import { versDelimite, telechargerTexte } from "../utils/exportCsv";
 import { exporterExcel, exporterPdf } from "../utils/exports";
 import { listerMembres, getCotisations, supprimerMembre, telechargerAvocatsPdf, journaliserExport } from "../api/resources";
@@ -116,6 +117,7 @@ export function Avocats() {
 
   const filtre = params.get("statut") || "tous";
   const recherche = params.get("q") || "";
+  const tri = params.get("tri") === "dateInscription" ? "dateInscription" : "num";
   const setParam = (k, v, vide) => {
     setParams((prev) => {
       const p = new URLSearchParams(prev);
@@ -133,6 +135,8 @@ export function Avocats() {
       qualiteNot: "STAGIAIRE",
       ...(recherche ? { q: recherche } : {}),
       ...(filtre !== "tous" ? { statut: filtre.toUpperCase() } : {}),
+      // Tri serveur (paramètre `sort` de GET /membres) : l'ordre des pages enchaînées reste cohérent.
+      ...(tri !== "num" ? { sort: tri } : {}),
       pageSize: 200,
     };
     (async () => {
@@ -143,7 +147,7 @@ export function Avocats() {
     })()
       .catch(() => setErreur(true))
       .finally(() => setChargement(false));
-  }, [recherche, filtre]);
+  }, [recherche, filtre, tri]);
   useEffect(() => { charger(); }, [charger, refresh]);
 
   // Statut de cotisation de l'exercice courant (jointure côté client).
@@ -218,6 +222,8 @@ export function Avocats() {
   const colonnes = [
     { key: "num", label: "N°", sortable: true, sortValue: (m) => m.num,
       cell: (m) => <span className="font-mono text-xs text-gris">{m.num}</span> },
+    { key: "dateInscription", label: "Inscription", sortable: true, sortValue: (m) => m.dateInscription,
+      cell: (m) => <span className="text-gris">{m.dateInscription ? formatDate(m.dateInscription) : "—"}</span> },
     { key: "nom", label: "Avocat", sortable: true, sortValue: (m) => m.nom,
       cell: (m) => <span className="font-medium">Me {m.nom}</span> },
     { key: "cabinet", label: "Cabinet", sortable: true, sortValue: (m) => m.cabinet,
@@ -272,10 +278,15 @@ export function Avocats() {
         <select value={filtre} onChange={(e) => setParam("statut", e.target.value, "tous")} aria-label="Filtrer par statut" className="bpn-input sm:w-56">
           {FILTRES.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
         </select>
+        <select value={tri} onChange={(e) => setParam("tri", e.target.value, "num")} aria-label="Trier par" className="bpn-input sm:w-56">
+          <option value="num">Tri : numéro</option>
+          <option value="dateInscription">Tri : date d'inscription</option>
+        </select>
       </div>
 
       <div className="bpn-card">
         <DataTable
+          key={tri}
           columns={colonnes}
           rows={membres}
           getRowId={(m) => m.id}
@@ -286,7 +297,7 @@ export function Avocats() {
           emptyDescription="Aucun avocat ne correspond à votre recherche."
           selectable
           libelle="avocats"
-          initialSort={{ key: "num", dir: "asc" }}
+          initialSort={{ key: tri, dir: "asc" }}
           renderBulkActions={(ids) => (
             <MenuExport libelle="Exporter la sélection" petit
               onExport={(f) => exporter(f, membres.filter((m) => ids.includes(m.id)), { selection: true })} />
