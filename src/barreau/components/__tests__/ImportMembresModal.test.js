@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import * as XLSX from "xlsx";
-import { tableauDepuisFeuille } from "../ImportMembresModal";
+import { tableauDepuisFeuille, decoderTexte } from "../ImportMembresModal";
 
 const MENTION = "Barreau de Pointe-Noire — Document interne confidentiel — Liste arrêtée au 10/10/2026 — Diffusion interdite.";
 const ENTETE = ["N°", "N° inscription", "Nom", "Qualité", "Statut"];
@@ -28,5 +28,15 @@ describe("tableauDepuisFeuille — aller-retour des exports (CA-10)", () => {
   it("feuille XLSX avec mention en A1", () => {
     const ws = XLSX.utils.aoa_to_sheet([[MENTION], ENTETE, LIGNES[0], LIGNES[2]]);
     expect(tableauDepuisFeuille(XLSX, ws)).toHaveLength(2);
+  });
+});
+
+describe("decoderTexte — encodage des CSV", () => {
+  it("décode l'UTF-8", () => {
+    expect(decoderTexte(new TextEncoder().encode("Mé").buffer)).toBe("Mé");
+  });
+  it("repli Windows-1252 (Excel FR) sans U+FFFD", () => {
+    const cp1252 = new Uint8Array([0x4d, 0xe9]).buffer; // « Mé »
+    expect(decoderTexte(cp1252)).toBe("Mé");
   });
 });

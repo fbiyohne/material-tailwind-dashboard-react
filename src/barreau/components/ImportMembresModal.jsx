@@ -58,6 +58,12 @@ function mapperLigne(obj) {
  * qui contient à la fois une colonne « num » et une colonne « nom » : les exports commencent par
  * une mention de confidentialité qu'il faut sauter pour que l'aller-retour export → import fonctionne.
  */
+// Décode un fichier texte : UTF-8 strict, sinon Windows-1252 (CSV d'Excel FR).
+export function decoderTexte(buf) {
+  try { return new TextDecoder("utf-8", { fatal: true }).decode(buf); }
+  catch { return new TextDecoder("windows-1252").decode(buf); }
+}
+
 export function tableauDepuisFeuille(XLSX, ws) {
   const lignes = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "", blankrows: false });
   const i = lignes.findIndex((r) => { const c = r.map((x) => LOOKUP[cle(x)]); return c.includes("num") && c.includes("nom"); });
@@ -88,8 +94,9 @@ export function ImportMembresModal({ open, onClose, onDone, qualiteDefaut, title
       const XLSX = await import("xlsx");
       // Texte délimité (.csv/.txt) : lu en UTF-8, séparateur (; , tabulation) auto-détecté ;
       // raw:true conserve les valeurs telles quelles (zéro initial des téléphones, dates AAAA-MM-JJ).
-      const texte = /.(csv|txt)$/i.test(file.name);
-      const wb = texte ? XLSX.read(await file.text(), { type: "string", raw: true }) : XLSX.read(await file.arrayBuffer(), { type: "array" });
+      const texte = /\.(csv|txt)$/i.test(file.name);
+      const buf = await file.arrayBuffer();
+      const wb = texte ? XLSX.read(decoderTexte(buf), { type: "string", raw: true }) : XLSX.read(buf, { type: "array" });
       const ws = wb.Sheets[wb.SheetNames[0]];
       const json = tableauDepuisFeuille(XLSX, ws);
       const mappees = json.map(mapperLigne).filter((r) => r.num && r.nom);
