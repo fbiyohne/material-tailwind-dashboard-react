@@ -284,7 +284,8 @@ const importRowSchema = z.object({
 const QUALITES: Record<string, "AVOCAT" | "STAGIAIRE" | "HONORAIRE"> = { avocat: "AVOCAT", stagiaire: "STAGIAIRE", honoraire: "HONORAIRE" };
 // Typé sur l'enum Prisma : toute nouvelle valeur de StatutMembre est acceptée ici sans retouche du type.
 const STATUTS: Record<string, StatutMembre> = {
-  inscrit: "INSCRIT", suspendu: "SUSPENDU", radie: "RADIE", "radié": "RADIE", omis: "OMIS", honoraire: "HONORAIRE", stagiaire: "STAGIAIRE",
+  inscrit: "INSCRIT", suspendu: "SUSPENDU", radie: "RADIE", "radié": "RADIE", "radiée": "RADIE", "radiee": "RADIE",
+  suspendue: "SUSPENDU", omise: "OMIS", inscrite: "INSCRIT", honoraire: "HONORAIRE", stagiaire: "STAGIAIRE",
   decede: "DECEDE", "décédé": "DECEDE", "décédée": "DECEDE", "decedee": "DECEDE",
 };
 // Normalise le sexe importé (« H »/« Homme »/« M »/« Masculin » → H ; « F »/« Femme » → F).
@@ -314,6 +315,11 @@ membresRouter.post(
       }
       const r = valide.data;
       try {
+        // Statut présent mais inconnu (faute de frappe) : erreur de ligne, jamais de retour silencieux à INSCRIT.
+        if (r.statut?.trim() && !STATUTS[r.statut.trim().toLowerCase()]) {
+          erreurs.push({ ligne: i + 1, message: `Statut inconnu : ${r.statut}` });
+          continue;
+        }
         const qualite = norm(r.qualite, QUALITES, qualiteDefaut);
         const statut = norm(r.statut, STATUTS, qualite === "STAGIAIRE" ? "STAGIAIRE" : qualite === "HONORAIRE" ? "HONORAIRE" : "INSCRIT");
         const base = {

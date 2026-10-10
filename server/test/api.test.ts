@@ -1413,6 +1413,15 @@ describe("Import du tableau — décès, dates, accès espace, audit (T6)", () =
     expect(m?.motifRadiation).toBe("Décision n° 4");
   });
 
+  it("R1-2 : « Radiée » → RADIE ; statut inconnu → erreur de ligne, membre inchangé", async () => {
+    const n2 = num + 7;
+    await importer([{ num: n2, nom: "T6 Statut", statut: "Radiée" }]);
+    expect((await prisma.membre.findUnique({ where: { num: n2 } }))?.statut).toBe("RADIE");
+    const r = await importer([{ num: n2, nom: "T6 Statut", statut: "Radiee x" }]);
+    expect(r.body.erreurs).toEqual([{ ligne: 1, message: "Statut inconnu : Radiee x" }]);
+    expect((await prisma.membre.findUnique({ where: { num: n2 } }))?.statut).toBe("RADIE");
+  });
+
   it("membre existant importé « décédé » : compte espace actif désactivé", async () => {
     const c = await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: `T6 Espace ${Date.now()}`, qualite: "AVOCAT", email: `t6-${Date.now()}@test.cg` });
     const id = c.body.id as number;
