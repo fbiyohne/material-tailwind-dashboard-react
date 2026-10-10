@@ -153,6 +153,27 @@ describe("Super-administrateur — CRUD étendu (suppressions réservées à l'A
     expect(await prisma.archive.count({ where: { categorie: "Attestation d'inscription" } })).toBe(avant);
   });
 
+  it("R1-8 : l'espace avocat refuse aussi l'attestation (409) à un radié ou décédé avec jeton encore valide", async () => {
+    const cats = ["Attestation d'inscription", "Attestation de non-redevance"];
+    const avant = await prisma.archive.count({ where: { categorie: { in: cats } } });
+    for (const statut of ["RADIE", "DECEDE"] as const) {
+      const mail = `attest.${statut.toLowerCase()}.${Date.now()}@barreau-pn.cg`;
+      const id = (await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: `ESPATT ${statut} ${Date.now()}`, qualite: "AVOCAT", email: mail })).body.id;
+      const lien = (await request(app).post(`/api/membres/${id}/acces`).set(...bearer(sg))).body.lien as string;
+      await request(app).post("/api/auth/activer").send({ token: lien.split("/activer/")[1], password: "avocatpass8" });
+      const jwt = (await request(app).post("/api/auth/login").send({ email: mail, password: "avocatpass8" })).body.token;
+      // Changement direct en base : le jeton reste valide, seule la garde de la route protège.
+      await prisma.membre.update({ where: { id }, data: { statut } });
+      for (const chemin of ["inscription", "non-redevance"]) {
+        const r = await request(app).get(`/api/espace/attestation/${chemin}/pdf`).set(...bearer(jwt));
+        expect(r.status).toBe(409);
+        expect(r.body.erreur).toMatch(/Attestation impossible/);
+      }
+      await request(app).delete(`/api/membres/${id}`).set(...bearer(admin));
+    }
+    expect(await prisma.archive.count({ where: { categorie: { in: cats } } })).toBe(avant);
+  });
+
   it("l'ADMIN supprime un avocat sans pièce comptable et son historique non comptable (cascade)", async () => {
     const id = await creerAvocat("SUPPR-CASCADE");
     // Ligne de cotisation et droit de plaidoirie sans reçu : cascade FK, aucune pièce comptable.
