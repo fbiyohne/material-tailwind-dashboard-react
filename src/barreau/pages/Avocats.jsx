@@ -68,12 +68,12 @@ function MenuExport({ libelle, petit = false, onExport }) {
       onToggle={(e) => setOuvert(e.currentTarget.open)}
       onKeyDown={(e) => { if (e.key === "Escape" && ouvert) { e.stopPropagation(); fermer(); } }}>
       <summary ref={resume} aria-label={libelle}
-        className={`bpn-btn bpn-btn-ghost list-none cursor-pointer ${petit ? "bpn-btn-sm" : ""}`}>
+        className={`bpn-btn bpn-btn-ghost list-none cursor-pointer ${petit ? "bpn-btn-sm" : "min-h-[44px] sm:min-h-0"}`}>
         <ArrowDownTrayIcon className="h-4 w-4" aria-hidden="true" /> {libelle}
         <ChevronDownIcon className="h-3 w-3" aria-hidden="true" />
       </summary>
       <div role="group" aria-label="Formats d'export"
-        className="absolute right-0 z-20 mt-1 w-56 rounded border border-grisM bg-white p-1 text-left shadow-card">
+        className={`absolute z-20 mt-1 w-56 max-w-[calc(100vw-2rem)] ${petit ? "right-0" : "left-0 sm:left-auto sm:right-0"} rounded border border-grisM bg-white p-1 text-left shadow-card`}>
         {FORMATS.map(({ id, label, ext, Icon }) => (
           <button key={id} type="button" disabled={occupe !== null} aria-busy={occupe === id}
             onClick={() => lancer(id)}
@@ -225,7 +225,7 @@ export function Avocats() {
       cell: (m) => (
         <div className="flex items-center justify-end gap-1.5">
           <button type="button" onClick={() => navigate(`/avocats/${m.id}`)} className="bpn-btn bpn-btn-ghost bpn-btn-sm">Fiche</button>
-          {peutImporter && (
+          {peutImporter && m.statut !== "radie" && m.statut !== "decede" && (
             <button type="button" onClick={() => setAttestation(m)} className="bpn-btn bpn-btn-ghost bpn-btn-sm">Attestation</button>
           )}
           {estAdmin && (
