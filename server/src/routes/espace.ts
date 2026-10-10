@@ -6,7 +6,7 @@ import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireAvocat, type AuthRequest } from "../middleware/auth.js";
 import { enregistrerFichier, lireFichier, supprimerFichier } from "../lib/storage.js";
-import { cotisationDue, droitDue, statutCotisation, tarifsActuels, eligibiliteElectorale, prochainNumeroAttestation, archiver, STATUTS_SORTIS } from "../lib/business.js";
+import { cotisationDue, droitDue, statutCotisation, tarifsActuels, eligibiliteElectorale, prochainNumeroAttestation, archiver, STATUTS_SORTIS, STATUTS_ANNUAIRE } from "../lib/business.js";
 import { finaliserPaiement } from "../lib/encaissement.js";
 import { CANAUX, modeSandbox, nouvelleReference, initierPaiement } from "../lib/paiement.js";
 import QRCode from "qrcode";
@@ -336,7 +336,9 @@ espaceRouter.get(
  * GET /espace/annuaire — annuaire du Barreau accessible à tout membre.
  * Projection professionnelle (nom, cabinet, coordonnées) pour permettre à un
  * avocat de joindre un confrère ; aucune donnée personnelle sensible (adresse,
- * RCCM, CNSS, finances…) n'est exposée.
+ * RCCM, CNSS, finances…) n'est exposée. Seuls les membres de l'annuaire
+ * (STATUTS_ANNUAIRE) y figurent : les coordonnées des radiés, décédés, omis,
+ * suspendus et sortis ne sont jamais servies (X-01, minimisation, loi n° 29-2019).
  */
 espaceRouter.get(
   "/annuaire",
@@ -346,6 +348,7 @@ espaceRouter.get(
       // Annuaire des confrères : on exclut sa propre fiche.
       where: {
         id: { not: monMembreId(req) },
+        statut: { in: [...STATUTS_ANNUAIRE] },
         ...(q ? { OR: [{ nom: { contains: q, mode: "insensitive" } }, { cabinet: { contains: q, mode: "insensitive" } }] } : {}),
       },
       orderBy: { nom: "asc" },
@@ -682,8 +685,10 @@ espaceRouter.post(
     const participantsData: { membreId: number }[] = [{ membreId: moi }];
     if (!avecAdministration) {
       if (!destinataireMembreId || destinataireMembreId === moi) throw new HttpError(400, "Destinataire invalide.");
-      const dest = await prisma.membre.findUnique({ where: { id: destinataireMembreId }, select: { id: true } });
+      const dest = await prisma.membre.findUnique({ where: { id: destinataireMembreId }, select: { id: true, statut: true } });
       if (!dest) throw new HttpError(404, "Confrère introuvable.");
+      // X-01 : le destinataire doit figurer dans l'annuaire (un id deviné ne contourne pas le filtre de GET /annuaire).
+      if (!(STATUTS_ANNUAIRE as readonly string[]).includes(dest.statut)) throw new HttpError(403, "Ce confrère ne figure pas dans l'annuaire.");
       participantsData.push({ membreId: destinataireMembreId });
     }
 
