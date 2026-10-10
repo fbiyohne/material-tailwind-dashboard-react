@@ -232,12 +232,30 @@ DATABASE_URL=postgresql://barreau:barreau_dev@localhost:5432/barreau_pn_test npm
 npm test          # vitest + supertest (auth, BR-01/03, RBAC, RG-13)
 ```
 
-Certains blocs de `api.test.ts` (RELDROIT, R25, VS) laissent des membres RADIE à
-chaque exécution ; passé 200 RADIE, le test C-03 (`pageSize=200`) échoue, et un reçu
-accroché à « T10 Hostile » bloque le `afterAll` du bloc T10. Purge de ces seules
-fixtures, garde-fou sur le nom de base `barreau_pn_test` :
-`npx tsx prisma/purger-restes-tests.ts` (simulation), puis `--executer` après
-validation (suppression de données). Ne pas la lancer pendant une exécution de la suite.
+La base de test `barreau_pn_test` est celle du socle Docker `creatic-shared`
+(conteneur `creatic-postgres`, publié sur `127.0.0.1:5432`) : `TEST_DATABASE_URL`
+par défaut la vise, et `test/globalSetup.ts` y applique les migrations sous un verrou
+consultatif qui sérialise les suites concurrentes. Le serveur MCP `creatic-postgres-dev`
+interroge une autre instance (172.18.0.2, 279 membres) : ses mesures ne décrivent pas
+la base vue par la suite.
+
+Plusieurs blocs de `api.test.ts` n'ont pas de `afterAll` et laissent leurs fixtures en
+base à chaque exécution (mesuré le 2026-10-10 : 4 679 fixtures pour 20 membres réels du
+seed). Effets : passé 200 RADIE le test C-03 (`pageSize=200`) échoue, les restes « R25 »
+entrent en collision de `numInscription` avec R2-5, et un reçu accroché à « T10 Hostile »
+bloque le `afterAll` de T10. `prisma/purger-restes-tests.ts` supprime les seuls membres
+dont le nom porte un préfixe de fixture (liste `PREFIXES_FIXTURES`), tous statuts
+confondus, avec leurs reçus, paiements et quitus ; les membres du seed ne sont jamais
+touchés et toute base autre que `barreau_pn_test` est refusée.
+
+```bash
+npx tsx prisma/purger-restes-tests.ts              # simulation : effectifs ciblés, rien supprimé
+npx tsx prisma/purger-restes-tests.ts --executer   # suppression (validation de Fabrice)
+PURGER_RESTES_TESTS=1 npx vitest run               # purge automatique avant la suite, sous le verrou
+```
+
+Sans `PURGER_RESTES_TESTS=1`, `globalSetup` se contente d'afficher les effectifs de
+restes. Ne pas lancer la purge manuelle pendant une exécution de la suite.
 
 ## Variables d'environnement complémentaires
 `ACCESS_TTL`, `REFRESH_TTL_DAYS`, `PUPPETEER_EXECUTABLE_PATH`, `SMTP_*`,

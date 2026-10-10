@@ -4,6 +4,7 @@ import { creerApp } from "../src/app.js";
 import { prisma } from "../src/prisma.js";
 import { changerSituation, situationADate } from "../src/lib/cycleVie.js";
 import { estRecuDroit, STATUTS_ANNUAIRE, STATUTS_SORTIS, eligibiliteElectorale } from "../src/lib/business.js";
+import { STATUT_FR } from "../src/lib/templates.js";
 
 /**
  * T5 — cycle de vie : situation d'un membre à une date (fonction pure, D10) et
@@ -149,6 +150,24 @@ describe("changerSituation et tableau (base de test)", () => {
     expect(r.status).toBe(200);
     const presents = new Set(r.body.sections.flatMap((s: { membres: { id: number }[] }) => s.membres.map((x) => x.id)));
     for (const id of ids.slice(1)) expect(presents.has(id)).toBe(false);
+  });
+
+  it("aller-retour export → import : les 3 libellés de sortie volontaire se ré-importent sans erreur (D6)", async () => {
+    for (const [i, statut] of (["DEMISSIONNAIRE", "RETRAITE", "CESSATION"] as const).entries()) {
+      const num = base + 10 + i;
+      const m = await prisma.membre.create({ data: { num, numInscription: `T5-${num}`, nom: `T5 Export ${statut}`, qualite: "AVOCAT", statut } });
+      ids.push(m.id);
+      const libelle = STATUT_FR[statut];
+      expect(libelle, statut).toBeTruthy();
+      const r = await request(app).post("/api/membres/import").set(...bearer(sg)).send({ membres: [{ num, nom: m.nom, statut: libelle }] });
+      expect(r.body.erreurs, statut).toEqual([]);
+      expect(r.body.maj, statut).toBe(1);
+      expect((await prisma.membre.findUnique({ where: { id: m.id } }))?.statut).toBe(statut);
+      // Quitter un statut de sortie par import : refusé, comme pour radié/décédé (la fiche fait foi).
+      const r2 = await request(app).post("/api/membres/import").set(...bearer(sg)).send({ membres: [{ num, nom: m.nom, statut: "Inscrit" }] });
+      expect(r2.body.erreurs[0]?.message, statut).toMatch(/interdit à l'import/);
+      expect((await prisma.membre.findUnique({ where: { id: m.id } }))?.statut).toBe(statut);
+    }
   });
 
   it("valider-stage refuse un stagiaire démissionnaire (409, rien modifié) : contrôle sur STATUTS_SORTIS", async () => {

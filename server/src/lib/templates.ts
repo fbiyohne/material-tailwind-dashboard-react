@@ -445,9 +445,12 @@ export function decisionDisciplineHtml(d: any): string {
   });
 }
 
+// Libellé de chaque valeur de StatutMembre (export, PDF) ; la carte d'import de membres.ts
+// accepte chacun de ces libellés en retour (aller-retour export → import, R2-5).
 export const STATUT_FR: Record<string, string> = {
   INSCRIT: "Inscrit", SUSPENDU: "Suspendu", RADIE: "Radié", OMIS: "Omis",
   HONORAIRE: "Honoraire", STAGIAIRE: "Stagiaire", DECEDE: "Décédé",
+  DEMISSIONNAIRE: "Démissionnaire", RETRAITE: "Retraité", CESSATION: "Cessation d'activité",
 };
 export const QUALITE_FR: Record<string, string> = { AVOCAT: "Avocat", STAGIAIRE: "Stagiaire", HONORAIRE: "Honoraire" };
 const jour = (d?: Date | string | null) => (d ? new Date(d).toISOString().slice(0, 10) : "");

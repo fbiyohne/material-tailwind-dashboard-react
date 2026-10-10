@@ -299,6 +299,9 @@ const STATUTS: Record<string, StatutMembre> = {
   inscrit: "INSCRIT", suspendu: "SUSPENDU", radie: "RADIE", "radié": "RADIE", "radiée": "RADIE", "radiee": "RADIE",
   suspendue: "SUSPENDU", omis: "OMIS", omise: "OMIS", honoraires: "HONORAIRE", stagiaires: "STAGIAIRE", inscrite: "INSCRIT", honoraire: "HONORAIRE", stagiaire: "STAGIAIRE",
   decede: "DECEDE", "décédé": "DECEDE", "décédée": "DECEDE", "decedee": "DECEDE",
+  demissionnaire: "DEMISSIONNAIRE", "démissionnaire": "DEMISSIONNAIRE",
+  retraite: "RETRAITE", "retraité": "RETRAITE", "retraitée": "RETRAITE", retraitee: "RETRAITE",
+  cessation: "CESSATION", "cessation d'activité": "CESSATION", "cessation d'activite": "CESSATION",
 };
 // Normalise le sexe importé (« H »/« Homme »/« M »/« Masculin » → H ; « F »/« Femme » → F).
 const SEXES: Record<string, "H" | "F"> = { h: "H", homme: "H", m: "H", masculin: "H", f: "F", femme: "F", feminin: "F", "féminin": "F" };
@@ -353,11 +356,12 @@ membresRouter.post(
           // et ignorées) : les actes passent par /radier, /deces ou PATCH (machine à états cycleVie).
         };
         const existant = await prisma.membre.findUnique({ where: { num: r.num } });
-        // RADIE/DECEDE ne s'obtiennent (ni ne se quittent) par import : seuls /radier, /deces et PATCH
-        // valident la date d'acte et laissent une trace d'audit individuelle. Même statut = aller-retour autorisé.
-        const horsTableau = (s: StatutMembre) => (STATUTS_HORS_TABLEAU as readonly string[]).includes(s);
-        if (r.statut?.trim() && (existant ? existant.statut !== statut : true) && (horsTableau(statut) || (existant && horsTableau(existant.statut)))) {
-          erreurs.push({ ligne: i + 1, message: "Changement de statut vers ou depuis radié/décédé interdit à l'import : utilisez la fiche de l'avocat (Radier / Déclarer le décès / Modifier)." });
+        // Les statuts de sortie (radié, décédé, démissionnaire, retraité, cessation) ne s'obtiennent
+        // (ni ne se quittent) par import : seuls /radier, /deces, /evenements et PATCH valident la date
+        // d'acte et laissent une trace d'audit individuelle. Même statut = aller-retour autorisé.
+        const sorti = (s: StatutMembre) => (STATUTS_SORTIS as readonly string[]).includes(s);
+        if (r.statut?.trim() && (existant ? existant.statut !== statut : true) && (sorti(statut) || (existant && sorti(existant.statut)))) {
+          erreurs.push({ ligne: i + 1, message: "Changement de statut vers ou depuis un statut de sortie (radié, décédé, démissionnaire, retraité, cessation) interdit à l'import : utilisez la fiche de l'avocat (Radier / Déclarer le décès / Modifier)." });
           continue;
         }
         if (existant) {
