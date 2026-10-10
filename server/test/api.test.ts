@@ -783,6 +783,29 @@ describe("Archives — registre documentaire (RG-14, suppression SG)", () => {
 });
 
 describe("Droits de plaidoirie — paiement & reçu (miroir BR-03)", () => {
+  it("R1-6 : un avocat décédé ou radié n'est ni relancé ni compté dans le suivi des droits", async () => {
+    const annee = new Date().getFullYear();
+    const tag = Date.now();
+    const ids: Record<string, number> = {};
+    for (const statut of ["INSCRIT", "DECEDE", "RADIE"]) {
+      const m = await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: `RELDROIT ${statut} ${tag}`, qualite: "AVOCAT", email: `reldroit-${statut.toLowerCase()}-${tag}@test.cg` });
+      ids[statut] = m.body.id;
+    }
+    await prisma.membre.updateMany({ where: { id: { in: [ids.DECEDE, ids.RADIE] } }, data: { statut: "DECEDE" } });
+    await prisma.membre.update({ where: { id: ids.RADIE }, data: { statut: "RADIE" } });
+    const rel = await request(app).post(`/api/droits/relances?annee=${annee}`).set(...bearer(sg));
+    expect(rel.status).toBe(200);
+    const emails: string[] = rel.body.destinataires.map((d: any) => d.email);
+    expect(emails).toContain(`reldroit-inscrit-${tag}@test.cg`);
+    expect(emails).not.toContain(`reldroit-decede-${tag}@test.cg`);
+    expect(emails).not.toContain(`reldroit-radie-${tag}@test.cg`);
+    const grille = await request(app).get(`/api/droits?annee=${annee}`).set(...bearer(tr));
+    const idsGrille = grille.body.lignes.map((l: any) => l.membre.id);
+    expect(idsGrille).toContain(ids.INSCRIT);
+    expect(idsGrille).not.toContain(ids.DECEDE);
+    expect(idsGrille).not.toContain(ids.RADIE);
+  });
+
   it("enregistre un paiement et reflète le solde ; montant négatif rejeté (400)", async () => {
     const m = await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: `DROIT Test ${Date.now()}`, qualite: "AVOCAT" });
     const membreId = m.body.id;
