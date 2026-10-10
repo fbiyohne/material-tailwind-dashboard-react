@@ -190,7 +190,7 @@ export const getAgenda = () => api("/dashboard/agenda");
 // ─── Compte courant (libre-service) ───────────────────────────────────────
 export const changerMotDePasse = (currentPassword, newPassword) =>
   api("/auth/password", { method: "POST", body: { currentPassword, newPassword } });
-export const getCorpsElectoral = (annee) => api(`/corps-electoral?annee=${annee}`);
+export const getCorpsElectoral = (annee, date) => api(date ? `/corps-electoral?date=${date}` : `/corps-electoral?annee=${annee}`);
 export const getJournalAudit = (limit = 12) => api(`/dashboard/journal?limit=${limit}`);
 
 // ─── Réunions ─────────────────────────────────────────────────────────────

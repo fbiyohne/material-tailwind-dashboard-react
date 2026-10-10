@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { CheckBadgeIcon, MegaphoneIcon } from "@heroicons/react/24/outline";
-import { Badge, Notice, PageHeader, useToast, TableSkeleton, ErrorState, EmptyState } from "../../components";
+import { Badge, BandeauExperimental, Notice, PageHeader, useToast, TableSkeleton, ErrorState, EmptyState } from "../../components";
 import { getEspaceScrutins, voterScrutin } from "../../api/resources";
 
-const TYPE = { CONSEIL: "Conseil de l'Ordre", BATONNIER: "Bâtonnier", AUTRE: "Scrutin" };
+const TYPE = { CONSEIL: "Conseil de l'Ordre", CONSEIL_BARREAU: "Conseil du barreau", BATONNIER: "Bâtonnier", AUTRE: "Scrutin" };
 
 /** Espace avocat — vote en ligne aux scrutins ouverts (confidentiel et unique). */
 export function EspaceScrutins() {
@@ -43,7 +43,9 @@ export function EspaceScrutins() {
 
   return (
     <div className="space-y-5">
-      <PageHeader eyebrow="Mon espace" titre="Élections" sousTitre="Votez aux scrutins de l'Ordre. Votre vote est confidentiel." />
+      <PageHeader eyebrow="Mon espace" titre="Élections" sousTitre="Votez aux scrutins de l'Ordre. Prototype de vote en ligne." />
+
+      <BandeauExperimental />
 
       {scrutins.length === 0 ? (
         <div className="bpn-card p-4"><EmptyState icon={MegaphoneIcon} title="Aucun scrutin" description="Aucun scrutin n'est ouvert au vote pour le moment." /></div>

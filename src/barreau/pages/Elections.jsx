@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PlusIcon, TrashIcon, LockOpenIcon, LockClosedIcon, MegaphoneIcon, CheckBadgeIcon, UsersIcon, DocumentArrowDownIcon } from "@heroicons/react/24/outline";
-import { Badge, Modal, FormField, PageHeader, useToast, useConfirm, TableSkeleton, ErrorState, EmptyState } from "../components";
+import { Badge, BandeauExperimental, Notice, Modal, FormField, PageHeader, useToast, useConfirm, TableSkeleton, ErrorState, EmptyState } from "../components";
+import { formatDate } from "../utils/format";
 import { useAuth } from "../auth/AuthContext";
 import {
   listerScrutins, getScrutin, creerScrutin, ajouterCandidat, supprimerCandidat,
   ouvrirScrutin, saisirVoix, cloreScrutin, publierScrutin, supprimerScrutin, telechargerPvScrutinPdf,
 } from "../api/resources";
 
-const TYPE = { CONSEIL: "Conseil de l'Ordre", BATONNIER: "Bâtonnier", AUTRE: "Autre scrutin" };
+const TYPE = { CONSEIL: "Conseil de l'Ordre", CONSEIL_BARREAU: "Conseil du barreau", BATONNIER: "Bâtonnier", AUTRE: "Autre scrutin" };
 const MODALITE = { PRESENTIEL: "Présentiel (saisie)", EN_LIGNE: "Vote en ligne" };
 const STATUT = {
   PREPARATION: { label: "En préparation", ton: "gris" },
@@ -15,7 +16,7 @@ const STATUT = {
   CLOS: { label: "Clôturé", ton: "or" },
   PUBLIE: { label: "Publié", ton: "bleu" },
 };
-const videForm = { titre: "", type: "CONSEIL", modalite: "EN_LIGNE", nbSieges: 1 };
+const videForm = { titre: "", type: "CONSEIL", modalite: "EN_LIGNE", nbSieges: 1, dateScrutin: "" };
 
 export function Elections() {
   const toast = useToast();
@@ -59,7 +60,7 @@ export function Elections() {
 
   const creer = async () => {
     try {
-      const s = await creerScrutin({ ...form, nbSieges: Number(form.nbSieges) || 1 });
+      const s = await creerScrutin({ ...form, nbSieges: Number(form.nbSieges) || 1, dateScrutin: form.dateScrutin || undefined });
       toast.success("Scrutin créé.");
       setModal(false); setForm(videForm); charger(); ouvrirDetail(s.id);
     } catch (e) { toast.error(e.message); }
@@ -88,6 +89,8 @@ export function Elections() {
         {peutGerer && <button className="bpn-btn bpn-btn-or" onClick={() => setModal(true)}><PlusIcon className="h-4 w-4" /> Nouveau scrutin</button>}
       </PageHeader>
 
+      <BandeauExperimental />
+
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[20rem_1fr]">
         {/* Liste des scrutins */}
         <div className="space-y-2">
@@ -109,7 +112,7 @@ export function Elections() {
           {!detail ? (
             <p className="py-10 text-center text-sm text-gris">Sélectionnez un scrutin pour le gérer.</p>
           ) : (
-            <ScrutinDetail detail={detail} peutGerer={peutGerer} action={action} confirm={confirm} nomCand={nomCand} setNomCand={setNomCand} nonce={nonce} toast={toast} onSupprime={supprimer} />
+            <ScrutinDetail detail={detail} peutGerer={peutGerer} action={action} confirm={confirm} nomCand={nomCand} setNomCand={setNomCand} nonce={nonce} toast={toast} rafraichir={rafraichir} onSupprime={supprimer} />
           )}
         </div>
       </div>
@@ -121,6 +124,7 @@ export function Elections() {
           <FormField label="Type"><select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="bpn-input">{Object.entries(TYPE).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></FormField>
           <FormField label="Modalité"><select value={form.modalite} onChange={(e) => setForm({ ...form, modalite: e.target.value })} className="bpn-input">{Object.entries(MODALITE).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></FormField>
           <FormField label="Sièges à pourvoir"><input type="number" min="1" value={form.nbSieges} onChange={(e) => setForm({ ...form, nbSieges: e.target.value })} className="bpn-input" /></FormField>
+          <FormField label="Date du scrutin" hint="Le corps électoral est calculé à cette date."><input type="date" value={form.dateScrutin} onChange={(e) => setForm({ ...form, dateScrutin: e.target.value })} className="bpn-input" /></FormField>
         </div>
       </Modal>
     </div>
@@ -128,19 +132,27 @@ export function Elections() {
 }
 
 /** Détail + gestion d'un scrutin selon son statut. */
-function ScrutinDetail({ detail, peutGerer, action, confirm, nomCand, setNomCand, nonce, toast, onSupprime }) {
+function ScrutinDetail({ detail, peutGerer, action, confirm, nomCand, setNomCand, nonce, toast, onSupprime, rafraichir }) {
   const s = detail;
   const total = s.candidats.reduce((a, c) => a + c.voix, 0);
   const resultatsVisibles = s.statut === "CLOS" || s.statut === "PUBLIE";
 
-  const ajouter = () => { if (nomCand.trim()) { action(() => ajouterCandidat(s.id, { nom: nomCand.trim() }), "Candidat ajouté."); setNomCand(""); } };
+  const [refus, setRefus] = useState(null);
+  // Un refus de candidature (409 motivé : ancienneté, peine accessoire…) reste affiché, pas seulement en toast.
+  const ajouter = async () => {
+    const nom = nomCand.trim();
+    if (!nom) return;
+    setRefus(null);
+    try { await ajouterCandidat(s.id, { nom }); toast.success("Candidat ajouté."); setNomCand(""); rafraichir(); }
+    catch (e) { setRefus(e.message); }
+  };
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h3 className="font-display text-lg font-semibold text-encre">{s.titre}</h3>
-          <div className="mt-0.5 text-xs text-gris">{TYPE[s.type]} · {MODALITE[s.modalite]} · {s.nbSieges} siège(s) · {s._count.emargements} votant(s)</div>
+          <div className="mt-0.5 text-xs text-gris">{TYPE[s.type]} · {MODALITE[s.modalite]} · {s.nbSieges} siège(s){s.dateScrutin ? ` · scrutin du ${formatDate(s.dateScrutin)}` : ""} · {s._count.emargements} votant(s)</div>
         </div>
         <Badge ton={STATUT[s.statut].ton} dot={false}>{STATUT[s.statut].label}</Badge>
       </div>
@@ -152,6 +164,8 @@ function ScrutinDetail({ detail, peutGerer, action, confirm, nomCand, setNomCand
           <button className="bpn-btn bpn-btn-primary" onClick={ajouter} disabled={!nomCand.trim()}><PlusIcon className="h-4 w-4" /> Ajouter</button>
         </div>
       )}
+
+      {refus && <Notice ton="rouge" role="alert">{refus}</Notice>}
 
       {/* Candidats / résultats */}
       {s.candidats.length === 0 ? (

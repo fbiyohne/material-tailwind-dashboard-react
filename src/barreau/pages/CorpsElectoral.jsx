@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { PrinterIcon, ArrowDownTrayIcon, CheckBadgeIcon, NoSymbolIcon } from "@heroicons/react/24/outline";
-import { StatCard, Badge, PageHeader, Tabs, SelecteurExercice, DataTable } from "../components";
+import { StatCard, Badge, PageHeader, Tabs, SelecteurExercice, DataTable, FormField, MentionJuridique } from "../components";
 import { exporterExcel } from "../utils/exports";
 import { formatDate } from "../utils/format";
 import { telechargerCsv } from "../utils/exportCsv";
@@ -10,7 +10,7 @@ import { getCorpsElectoral } from "../api/resources";
 
 const MOTIF_LABEL = {
   cotisation: { label: "Cotisations non à jour", ton: "rouge" },
-  statut: { label: "Suspension / radiation / omission", ton: "gris" },
+  statut: { label: "Suspension, radiation, omission, décès ou sortie", ton: "gris" },
   autre: { label: "Honoraire / autre motif", ton: "or" },
 };
 
@@ -36,6 +36,7 @@ const COLONNES_CSV = [
 
 export function CorpsElectoral() {
   const [exercice, setExercice] = useState(EXERCICE_COURANT);
+  const [date, setDate] = useState(""); // vide = fin de l'exercice choisi
   const [data, setData] = useState({ electeurs: [], exclusCotisation: [], exclusStatut: [], exclusAutre: [] });
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState(false);
@@ -43,11 +44,11 @@ export function CorpsElectoral() {
   const charger = useCallback(() => {
     setChargement(true);
     setErreur(false);
-    getCorpsElectoral(exercice)
+    getCorpsElectoral(exercice, date)
       .then(setData)
       .catch(() => setErreur(true))
       .finally(() => setChargement(false));
-  }, [exercice]);
+  }, [exercice, date]);
   useEffect(() => { charger(); }, [charger]);
 
   const { electeurs, exclusCotisation, exclusStatut, exclusAutre = [] } = data;
@@ -70,13 +71,20 @@ export function CorpsElectoral() {
     <div className="space-y-5">
       <PageHeader className="bpn-no-print" eyebrow="Membres" titre="Corps électoral" sousTitre="Liste générée automatiquement : avocats inscrits, à jour de cotisations et non suspendus (RG-04 à RG-06).">
         <SelecteurExercice valeur={exercice} onChange={setExercice} />
+        <FormField label="Situation à la date du">
+          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="bpn-input" />
+        </FormField>
       </PageHeader>
+
+      <MentionJuridique nature="provisoire" article="PO-20" className="bpn-no-print">
+        La situation à une date passée s'appuie sur l'historique des situations, tenu depuis sa mise en service ; pour un membre sans événement enregistré, c'est son statut actuel qui est retenu. Provisoire, à confirmer par les textes.
+      </MentionJuridique>
 
       {/* Statistiques (FR-CE) */}
       <div className="bpn-no-print grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Électeurs qualifiés" value={electeurs.length} sub="aptes à voter" accent="vert" />
         <StatCard label="Exclus — cotisations" value={exclusCotisation.length} sub="non à jour" accent="rouge" />
-        <StatCard label="Exclus — statut" value={exclusStatut.length} sub="suspendu / radié / omis" accent="gris" />
+        <StatCard label="Exclus — statut" value={exclusStatut.length} sub="suspendu, radié, omis, décédé, sorti" accent="gris" />
         <StatCard label="Exclus — honoraires / autre" value={exclusAutre.length} sub="non électeurs" accent="or" />
       </div>
 
@@ -107,7 +115,7 @@ export function CorpsElectoral() {
                 <div className="bpn-print-zone bpn-card">
                   <div className="bpn-card-header">
                     <span className="bpn-card-heading">
-                      Liste du corps électoral {exercice} — {identite().denomination}
+                      Liste du corps électoral {date ? `au ${formatDate(date)}` : exercice} — {identite().denomination}
                     </span>
                     <span className="font-mono text-xs text-gris">{electeurs.length} électeurs</span>
                   </div>
