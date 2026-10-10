@@ -1,7 +1,7 @@
 import path from "node:path";
 import { Router } from "express";
 import { z } from "zod";
-import type { Prisma, StatutMembre } from "@prisma/client";
+import { StatutMembre, type Prisma } from "@prisma/client";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole, requirePermission, type AuthRequest } from "../middleware/auth.js";
@@ -22,7 +22,7 @@ const TRI_AUTORISE = new Set(["num", "nom", "cabinet", "statut"]);
 function whereMembres(query: Record<string, unknown>): Prisma.MembreWhereInput {
   const q = String(query.q ?? "").trim();
   const QUALITES = ["AVOCAT", "STAGIAIRE", "HONORAIRE"];
-  const STATUTS = ["INSCRIT", "SUSPENDU", "RADIE", "OMIS", "HONORAIRE", "STAGIAIRE", "DECEDE"];
+  const STATUTS: string[] = Object.values(StatutMembre); // dérivé de l'enum Prisma, jamais dupliqué (D6)
   const dansEnum = (v: unknown, set: string[]) => (typeof v === "string" && set.includes(v) ? v : undefined);
   const qualite = dansEnum(query.qualite, QUALITES);
   const qualiteNot = dansEnum(query.qualiteNot, QUALITES);
@@ -209,7 +209,7 @@ membresRouter.post(
 const inscriptionSchema = z.object({
   nom: z.string().min(1),
   qualite: z.enum(["AVOCAT", "STAGIAIRE", "HONORAIRE"]).default("AVOCAT"),
-  statut: z.enum(["INSCRIT", "SUSPENDU", "RADIE", "OMIS", "HONORAIRE", "STAGIAIRE", "DECEDE"]).default("INSCRIT"),
+  statut: z.nativeEnum(StatutMembre).default("INSCRIT"),
   sexe: z.enum(["H", "F"]).nullable().optional(),
   cabinet: z.string().optional(),
   tel: z.string().optional(),
@@ -543,9 +543,9 @@ membresRouter.post(
     const membre = await prisma.membre.findUnique({ where: { id: membreId } });
     if (!membre) throw new HttpError(404, "Avocat introuvable");
     if (membre.qualite !== "STAGIAIRE") throw new HttpError(409, "Ce membre n'est pas un avocat stagiaire.");
-    // Un radié ou un décédé ne revient pas au tableau par une validation de stage.
-    if (membre.statut === "RADIE" || membre.statut === "DECEDE")
-      throw new HttpError(409, "Validation impossible : le stagiaire est radié ou décédé. Rétablissez d'abord son statut par la fiche.");
+    // Un stagiaire sorti (radié, décédé, démissionnaire, retraité, cessation) ne revient pas au tableau par une validation de stage.
+    if ((STATUTS_SORTIS as readonly string[]).includes(membre.statut))
+      throw new HttpError(409, "Validation impossible : le stagiaire est sorti du barreau (radié, décédé ou sortie volontaire). Rétablissez d'abord son statut par la fiche.");
     const acteur = await nomActeur(req.user!.id);
     const maj = await prisma.membre.update({
       where: { id: membreId },

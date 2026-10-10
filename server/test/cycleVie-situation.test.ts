@@ -150,4 +150,13 @@ describe("changerSituation et tableau (base de test)", () => {
     const presents = new Set(r.body.sections.flatMap((s: { membres: { id: number }[] }) => s.membres.map((x) => x.id)));
     for (const id of ids.slice(1)) expect(presents.has(id)).toBe(false);
   });
+
+  it("valider-stage refuse un stagiaire démissionnaire (409, rien modifié) : contrôle sur STATUTS_SORTIS", async () => {
+    const admin = (await request(app).post("/api/auth/login").send({ email: "admin@barreau-pn.cg", password: "barreau" })).body.token;
+    const s = await prisma.membre.create({ data: { num: base + 4, numInscription: `T5-${base + 4}`, nom: "T5 STAGIAIRE DEMISSIONNAIRE", qualite: "STAGIAIRE", statut: "DEMISSIONNAIRE" } });
+    ids.push(s.id);
+    const r = await request(app).post(`/api/membres/${s.id}/valider-stage`).set(...bearer(admin));
+    expect(r.status).toBe(409);
+    expect(await prisma.membre.findUnique({ where: { id: s.id } })).toMatchObject({ qualite: "STAGIAIRE", statut: "DEMISSIONNAIRE", stageValideAt: null });
+  });
 });

@@ -108,7 +108,7 @@ Réponse : `{ "total": 3, "crees": 1, "maj": 1, "erreurs": [{ "ligne": 3, "messa
 - Tests : `test/cycleVie-situation.test.ts`.
 
 ### Constante et libellés d'audit
-- `STATUTS_SORTIS = ["RADIE", "DECEDE", "DEMISSIONNAIRE", "RETRAITE", "CESSATION"]` (`src/lib/business.ts`) : exclus du tableau de l'Ordre, des convocations, de la génération de cotisations **et des relances**, inéligibles au corps électoral (raison `statut`), sans attestation ni accès à l'espace avocat. `STATUTS_HORS_TABLEAU = ["RADIE", "DECEDE"]` ne désigne plus que les actes datés (radiation, décès) contrôlés à l'import.
+- `STATUTS_SORTIS = ["RADIE", "DECEDE", "DEMISSIONNAIRE", "RETRAITE", "CESSATION"]` (`src/lib/business.ts`) : exclus du tableau de l'Ordre, des convocations, de la génération de cotisations **et des relances**, inéligibles au corps électoral (raison `statut`), sans attestation ni accès à l'espace avocat, et sans validation de stage possible (`POST /membres/:id/valider-stage` → 409). `STATUTS_HORS_TABLEAU = ["RADIE", "DECEDE"]` ne désigne plus que les actes datés (radiation, décès) contrôlés à l'import.
 - `STATUTS_ANNUAIRE = ["INSCRIT", "STAGIAIRE", "HONORAIRE"]` : statuts visibles dans l'annuaire de l'espace avocat (X-01).
 - `estRecuDroit(objet)` : règle unique « l'objet du reçu contient *droit* → droit de plaidoirie, sinon cotisation » (annulation de reçu, corps électoral à une date).
 - Libellés ajoutés dans `src/middleware/audit.ts` : « Radiation d'un avocat », « Déclaration de décès », « Import du tableau », « Export de la liste des avocats ».

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
-import { requireAuth, requireRole, requirePermission } from "../middleware/auth.js";
+import { requireAuth, requireRole, requirePermission, type AuthRequest } from "../middleware/auth.js";
 import { CANAUX } from "../lib/paiement.js";
 import { emettreTimbre } from "../lib/timbres.js";
 import { notifier, userDeMembre } from "../lib/centreNotifications.js";
@@ -56,7 +56,7 @@ const externesSchema = z.object({
 /** POST /timbres/externes — import mensuel (dispositif MTN). Idempotent par référence unique. */
 timbresRouter.post(
   "/externes",
-  asyncH(async (req, res) => {
+  asyncH(async (req: AuthRequest, res) => {
     const { lignes, source } = externesSchema.parse(req.body);
     const uniques = [...new Map(lignes.map((l) => [l.reference, l])).values()]; // doublons dans le fichier
     const r = await prisma.timbreExterne.createMany({
