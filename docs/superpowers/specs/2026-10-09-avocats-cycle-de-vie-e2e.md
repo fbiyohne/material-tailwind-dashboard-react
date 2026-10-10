@@ -1,82 +1,100 @@
-# Cycle de vie des avocats — scénarios de bout en bout (T14)
+# Cycle de vie des avocats — scénarios de bout en bout (T14, révision 3)
 
-Exécutés le 2026-10-10 avec le MCP Playwright (Chromium) sur l'environnement de test : http://localhost:4100 (Express servant `dist/`), base `barreau_pn_test` du socle (127.0.0.1:5432), branche `feat/avocats-cycle-de-vie`. Aucune dépendance Playwright n'est ajoutée au projet.
-Captures : `docs/captures/T14-<étape>-1280.png` et `-360.png`.
+Rejoués intégralement le 2026-10-10 avec le MCP Playwright (Chromium) sur le build final de la branche `feat/avocats-cycle-de-vie` (dernier commit de code `3938c9d`) : http://localhost:4100 (Express servant `dist/`), base `barreau_pn_test` du socle (127.0.0.1:5432). Aucune dépendance Playwright n'est ajoutée au projet.
+Captures : `docs/captures/T14-<étape>-1280.png` et `-360.png` (deux largeurs pour chaque étape).
 
-## Préconditions
+## Préconditions (reproductibles)
 
-- Socle Docker démarré, 31 migrations appliquées, `npm run build` à jour (le bundle doit contenir le correctif `cc9dbbe`).
-- Comptes (mot de passe `barreau`) : `sg@barreau-pn.cg`, `admin@barreau-pn.cg`, `batonnier@barreau-pn.cg`.
-- Instantané de base : script Prisma lisant `Membre` (id, num, nom, qualite, statut, cabinet, tel, email, dateInscription, dateRadiation, dateDeces, motifRadiation), exécuté avant et après.
-- Les données créées portent le préfixe `E2E` : `E2E RADIE Alpha` (n° 590), `E2E DOUBLON Gamma` (n° 591, supprimé au parcours 6), `E2E DECEDE Beta` (n° 592). Alpha (id 1236) et Beta (id 1238) restent en base ; Gamma (id 1237) est supprimé.
+1. Socle Docker démarré, 31 migrations appliquées (`npx prisma migrate deploy` dans `server/`), `npm run build` à la racine.
+2. Serveur de test : dans `server/`, `DATABASE_URL=postgresql://barreau:barreau_dev@127.0.0.1:5432/barreau_pn_test?schema=public PORT=4100 STATIC_DIR=../dist npm start` (sans `STATIC_DIR`, le front n'est pas servi : 404).
+3. Comptes (mot de passe `barreau`) : `sg@barreau-pn.cg`, `admin@barreau-pn.cg`, `batonnier@barreau-pn.cg`.
+4. Préfixe des données de ce rejeu : `E2E R3`. Créer par API (SG) le doublon et le membre avec reçu :
+   ```
+   POST /api/auth/login {"email":"sg@barreau-pn.cg","password":"barreau"}      -> token
+   POST /api/membres {"nom":"E2E R3 Gamma doublon","qualite":"AVOCAT","statut":"INSCRIT","cabinet":"SCPA E2E"}
+   POST /api/membres {"nom":"E2E R3 Recu","qualite":"AVOCAT","statut":"INSCRIT","cabinet":"SCPA E2E"}   -> id R
+   POST /api/cotisations/paiement {"membreId":R,"annee":2026,"montant":150000,"mode":"Espèces"}        -> crée le reçu
+   ```
+5. Script d'instantané `instantane.mjs`, à copier dans `server/` puis exécuter `DATABASE_URL=<base test> node instantane.mjs <sortie.json>` :
+   ```js
+   import { PrismaClient } from "@prisma/client";
+   import { writeFileSync } from "node:fs";
+   import { createHash } from "node:crypto";
+   const p = new PrismaClient();
+   const m = await p.membre.findMany({
+     orderBy: { id: "asc" },
+     select: { id: true, num: true, nom: true, qualite: true, statut: true, cabinet: true, tel: true, email: true, dateInscription: true, dateRadiation: true, dateDeces: true, motifRadiation: true },
+   });
+   const json = JSON.stringify(m, null, 1);
+   writeFileSync(process.argv[2], json);
+   console.log(m.length, "membres", createHash("sha256").update(json).digest("hex"));
+   await p.$disconnect();
+   ```
+6. Contenu exact du fichier `p5.txt` (UTF-8, séparateur tabulation `<TAB>`, fin de ligne LF) :
+   ```
+   num<TAB>nom<TAB>statut<TAB>date décès
+   9101<TAB>E2E R3 Delta<TAB>décédé<TAB>2026-09-15
+   <TAB>E2E R3 Sans numéro<TAB>inscrit<TAB>
+   9102<TAB>E2E R3 Epsilon<TAB>inscrit<TAB>
+   ```
+   (les n° 9101 et 9102 doivent être libres ; sinon l'import les met à jour au lieu de les créer).
 
-## P1 — Inscription puis radiation motivée (SG)
+Données créées lors du rejeu du 2026-10-10 (ids propres à cette base) : Alpha 1496 (n° 698), Beta 1497 (n° 699), Gamma doublon 1498 (n° 700, supprimé en P6.2), Recu 1499 (n° 701), Delta 1500 (n° 9101), Epsilon 1501 (n° 9102).
 
-1. `/avocats`, bouton « Avocat » (en-tête) : saisir nom `E2E RADIE Alpha`, cabinet, téléphone, email ; « Inscrire au tableau ».
-   Attendu : redirection vers la fiche, statut Inscrit, n° PN-AAAA-NNN attribué.
-2. Fiche : « Radier » ; date pré-remplie à aujourd'hui, champ « Référence et motif de la décision » : `E2E - Décision du Conseil n° 12/2026 du 01/10/2026` ; confirmer « Radier ».
-   Attendu : badge « Radié », ligne « Radié le 10/10/2026 — E2E - Décision… », boutons Radier / Attestation / Accès espace absents, « Déclarer le décès » encore proposé.
-   Obtenu : conforme. En base : statut RADIE, dateRadiation 2026-10-10, motif conservé.
-   Captures : `p1-inscription-1280`, `p1-fiche-inscrit`, `p1-modale-radiation`, `p1-fiche-radie`.
+## P1 — Inscription puis radiation motivée (SG) — réussi
 
-## P2 — Décès, exclusions du tableau et du corps électoral (SG)
+1. `sg@barreau-pn.cg` se connecte ; `/avocats`, bouton « Avocat » de l'en-tête : nom `E2E R3 Alpha`, cabinet `SCPA E2E`, téléphone `+242 06 000 00 01`, email `e2e.alpha@example.test` ; « Inscrire au tableau ».
+   Attendu/obtenu : redirection vers `/avocats/1496`, statut Inscrit, PN-2026-698 ; boutons Modifier, Accès espace, Attestation, Radier, Déclarer le décès.
+2. « Radier », date pré-remplie, champ « Référence et motif de la décision » : `E2E - Décision du Conseil n° 12/2026 du 01/10/2026`, confirmer « Radier ».
+   Attendu/obtenu : badge « Radié », ligne « Radié le 10/10/2026 — E2E - Décision du Conseil n° 12/2026 du 01/10/2026 », seuls Modifier et Déclarer le décès restent. Base : RADIE, dateRadiation 2026-10-10, motif conservé.
+   Captures : `p1-inscription`, `p1-fiche-inscrit`, `p1-modale-radiation`, `p1-fiche-radie`. Console : 0 erreur, 0 réponse ≥ 400.
 
-1. Créer `E2E DECEDE Beta` (comme P1), fiche : « Déclarer le décès », date `2026-09-15`, confirmer.
-   Attendu : badge « Décédé », « Décédé le 15/09/2026 », seul « Modifier » reste (ni Attestation, ni Accès espace, ni Radier, ni Décès). Obtenu : conforme.
-2. `/tableau`, section Avocats (550 membres, 55 pages) : parcourir toutes les pages.
-   Attendu : Alpha (radié) et Beta (décédé) absents, le témoin Gamma (inscrit) présent (page 25). Obtenu : conforme.
-3. `/corps-electoral`, onglet « Exclusions » : Alpha et Beta listés avec le motif « Suspension / radiation / omission » (raison statut) ; Gamma avec « Cotisations non à jour ». Obtenu : conforme.
-   Constat mineur : le libellé de motif ne cite pas le décès.
-   Captures : `p2-fiche-inscrit-avant`, `p2-modale-deces`, `p2-fiche-decede`, `p2-tableau`, `p2-corps-electoral-exclus`.
+## P2 — Décès, tableau de l'Ordre, corps électoral (SG) — réussi
 
-## P3 — Export de la liste (SG)
+1. Inscrire `E2E R3 Beta` (comme P1) puis « Déclarer le décès », date `2026-09-15`, confirmer.
+   Attendu/obtenu : badge « Décédé », « Décédé le 15/09/2026 », seul « Modifier » reste (ni Attestation, ni Accès espace, ni Radier, ni Décès).
+2. `/tableau`, section Avocats : parcourir les 66 pages avec « Page suivante ». Obtenu : 651 lignes ; présents : Gamma doublon (n° 650) et Recu (n° 651) ; absents : Alpha (radié) et Beta (décédé).
+3. `/corps-electoral`, onglet « Exclusions » (50 pages) : Alpha et Beta listés avec le motif « Suspension / radiation / omission » (raison statut) ; Gamma avec « Cotisations non à jour ».
+   Réserve (non corrigée, hors périmètre du test) : le libellé de motif de `CorpsElectoral.jsx` (l. 13) ne cite pas le décès ; la raison « statut » est exacte, l'affichage pourrait devenir « Suspension / radiation / décès / omission ».
+   Captures : `p2-fiche-inscrit-avant`, `p2-modale-deces`, `p2-fiche-decede`, `p2-tableau`, `p2-corps-electoral-exclus`. Console : 0 erreur.
 
-`/avocats`, menu « Exporter » : Excel, CSV, Texte, PDF, pour la liste complète puis pour la recherche `E2E`.
-Attendu : 4 téléchargements ; CSV/TXT/XLSX = ligne de mention de confidentialité + 11 en-têtes (N°, N° inscription, Nom, Qualité, Statut, Cabinet, Téléphone, Email, Date d'inscription, Date de radiation, Date de décès) + une ligne par avocat affiché ; XLSX à une feuille « Avocats » ; PDF A4 « Liste des avocats — … — Document interne ».
-Obtenu : conforme pour les formats et les en-têtes (11 colonnes, le « 10 » de la mission est un décompte erroné, motif exclu). Le motif de radiation n'apparaît dans aucun fichier.
-Correctif (révision 2) : la page Avocats enchaîne désormais les pages serveur de 200 jusqu'à `totalPages` ; la liste complète est exportée. Base de test au 2026-10-10 : 612 avocats (hors stagiaires) ; CSV, TXT, XLSX = 612 lignes de données, PDF serveur « 612 lignes », 11 en-têtes dans les trois formats texte/tableur.
-Captures : `p3-menu-exporter`.
+## P3 — Export de la liste complète (SG) — réussi
 
-## P4 — Aller-retour export → import (SG) — CA-10
+`/avocats`, menu « Exporter » : Excel, CSV, Texte, PDF (aucun filtre). Fichiers produits : `Avocats.xlsx`, `Avocats.csv`, `Avocats.txt`, `Avocats-2026-10-10.pdf`.
+Obtenu : 656 avocats (697 membres en base − 41 stagiaires) ; CSV (BOM, `;`), TXT (tabulations), XLSX (feuille unique « Avocats », 658 lignes) = ligne de mention « Barreau de Pointe-Noire — Document interne confidentiel… », en-tête de 11 colonnes (N°, N° inscription, Nom, Qualité, Statut, Cabinet, Téléphone, Email, Date d'inscription, Date de radiation, Date de décès) puis 656 lignes ; PDF serveur « 656 lignes », en-tête institutionnel, « Liste des avocats — tous — arrêtée au 10/10/2026 — Document interne ». Le motif de radiation n'apparaît dans aucun fichier. (La mission écrivait « 10 en-têtes » : le décompte exact est 11, le motif étant seul exclu.)
+Capture : `p3-menu-exporter`. Console : 0 erreur.
 
-Périmètre : la liste COMPLÈTE (612 avocats, 651 membres en base dont 39 stagiaires non touchés).
-1. Instantané « avant » (script Prisma : id, num, nom, qualite, statut, cabinet, tel, email, dateInscription au milliseconde, dateRadiation, dateDeces, motifRadiation, 651 membres, JSON).
-2. `/avocats`, « Exporter » : Excel, CSV, Texte, PDF (liste complète, aucun filtre).
-3. Pour chacun des trois fichiers CSV, XLSX, TXT : « Importer », choisir le fichier, lire l'aperçu, « Importer 612 lignes », lire le rapport.
-4. Instantané « après », comparaison.
-Attendu : aperçu « 612 ligne(s) retenue(s), 0 ligne(s) ignorée(s) » ; rapport 0 créé / 612 mis à jour / aucune erreur ; instantanés identiques.
-Obtenu :
+## P4 — Aller-retour export → import (SG) — CA-10 démontré
 
-- Aperçu 612 / 0 ignorée pour CSV, XLSX et TXT ; rapport « 0 avocat(s) créé(s), 612 avocat(s) mis à jour » ; journal d'audit « Import du tableau — Avocat (612 ligne(s), 0 créé(s), 612 mis à jour, 0 erreur(s)) » ×3.
-- Instantané avant/après : fichiers JSON strictement identiques (`cmp` sans différence, SHA-256 identique), y compris l'horodatage de `dateInscription`.
-- Défauts trouvés lors des essais précédents et corrigés : (a) mention de confidentialité prise pour l'en-tête (`cc9dbbe`) ; (b) l'import ramenait `dateInscription` à 00:00 (l'export n'écrit que le jour) : le serveur conserve désormais l'horodatage quand le jour est inchangé (test « aller-retour » dans `api.test.ts`) ; (c) la liste ne portait que 200 lignes : pages enchaînées côté client.
-Captures : `p4-complet-{csv,xlsx,txt}-{apercu,rapport}-{1280,360}`.
+1. Instantané « avant » (script de la précondition 5) : 697 membres, SHA-256 `6d4f72f7f179472e3744979ab6027ca3c8402950d141e49de6c5b28875b2ad14`.
+2. Pour chacun des trois fichiers CSV, XLSX, TXT du P3 : `/avocats`, « Importer », choisir le fichier, lire l'aperçu, « Importer 656 lignes », lire le rapport.
+3. Instantané « après » : comparaison.
+Obtenu : aperçu « 656 ligne(s) retenue(s), 0 ligne(s) ignorée(s) » ×3 ; rapport « 0 avocat(s) créé(s), 656 avocat(s) mis à jour » ×3 (aucune ligne d'erreur) ; journal d'audit « Import du tableau — Avocat (656 ligne(s), 0 créé(s), 656 mis à jour, 0 erreur(s)) » ×3 ; instantané après = instantané avant (`cmp` sans différence, même SHA-256), y compris l'horodatage de `dateInscription`, les statuts RADIE/DECEDE et leurs dates. Le périmètre est la liste complète (656 avocats).
+Captures : `p4-complet-{csv,xlsx,txt}-{apercu,rapport}`. Console : 0 erreur, 0 réponse ≥ 400.
 
-## P5 — Import d'un TXT à tabulations avec une ligne sans numéro (SG)
+## P5 — Import d'un TXT à tabulations avec une ligne sans numéro (SG) — réussi, import exécuté
 
-Fichier `num<TAB>nom<TAB>statut<TAB>date décès` : ligne 9101 « E2E TXT Delta » décédé 2026-09-15, une ligne sans numéro, ligne 9102 « E2E TXT Epsilon » inscrit. Ouvrir « Importer », choisir le fichier.
-Attendu : aperçu « 2 ligne(s) retenue(s), 1 ligne(s) ignorée(s) ». Obtenu : conforme (statut « décédé » reconnu dans l'aperçu). Import volontairement non lancé pour ne pas créer de données ; le chemin d'import « décédé » est couvert par les tests serveur.
-Captures : `p5-apercu-ignorees`.
+Fichier `p5.txt` (précondition 6). `/avocats`, « Importer », choisir le fichier.
+Attendu/obtenu : aperçu « 2 ligne(s) retenue(s), 1 ligne(s) ignorée(s) (sans numéro ou sans nom) » ; « Importer 2 lignes » : « 2 avocat(s) créé(s), 0 mis à jour ». Base : Delta (n° 9101) DECEDE, dateDeces 2026-09-15 ; Epsilon (n° 9102) INSCRIT ; aucune fiche « Sans numéro ».
+Captures : `p5-apercu-ignorees`, `p5-rapport`. Console : 0 erreur.
 
-## P6 — Suppression définitive (ADMIN)
+## P6 — Suppression définitive (ADMIN) — réussi
 
-1. Fiche d'un membre ayant des reçus (n° 21, issu des tests serveur) : « Supprimer », boîte « irréversible », confirmer.
-   Attendu : refus, message « Suppression impossible : pièces comptables à conserver 10 ans (OHADA) ; utilisez radiation ou décès », fiche conservée. Obtenu : conforme (HTTP 409 consigné en console).
-2. Fiche de `E2E DOUBLON Gamma` (sans pièce) : « Supprimer », boîte « irréversible », confirmer.
-   Attendu : suppression, fiche introuvable (404), absent de la liste. Obtenu : conforme ; base : id 1237 absent.
+1. `admin@barreau-pn.cg`, fiche `E2E R3 Recu` (membre avec reçu, précondition 4) : « Supprimer », boîte « … Cette action est irréversible. », confirmer.
+   Attendu/obtenu : refus, message « Suppression impossible : pièces comptables à conserver 10 ans (OHADA) ; utilisez radiation ou décès », fiche conservée.
+2. Fiche `E2E R3 Gamma doublon` (sans pièce) : « Supprimer », boîte « irréversible », confirmer. Obtenu : retour à `/avocats` ; rechargement de la fiche : « Avocat introuvable ».
    Captures : `p6-confirmation-recu`, `p6-refus-409`, `p6-confirmation-doublon`, `p6-doublon-disparu`.
 
-## P7 — Bâtonnier : lecture seule
+## P7 — Bâtonnier : lecture seule — réussi
 
-Connecté `batonnier@barreau-pn.cg`, fiche d'un inscrit (n° 1) puis liste avec une ligne cochée.
-Attendu : aucun bouton Radier, Déclarer le décès, Supprimer (ni Modifier). Obtenu : seuls les onglets Identité, Cotisations, Documents, Discipline ; la liste n'offre que « Fiche ».
-Correctif (révision 2) : la page Avocats n'appelle plus `/api/cotisations` sans la permission « finances » ; console et réseau du Bâtonnier sur `/avocats` et `/avocats/1` (360 et 1280 px) : 0 erreur, 0 réponse ≥ 400.
+`batonnier@barreau-pn.cg`, fiche `/avocats/1497` puis liste avec une ligne cochée. Obtenu : fiche = onglets Identité, Cotisations, Documents, Discipline, aucun bouton Radier / Déclarer le décès / Supprimer / Modifier ; liste = Exporter, Exporter la sélection, Fiche seulement. Console et réseau : 0 erreur, 0 réponse ≥ 400.
 Captures : `p7-batonnier-fiche`, `p7-batonnier-liste`.
 
-## Console
+## Console : exception documentée au critère « aucune erreur console »
 
-Aucune erreur applicative. Seules réponses ≥ 400 : 409 (P6.1) et 404 (P6.2), attendues et provoquées par le scénario. P1 (inscription, 360 px ajouté), P3, P4 et P7 : 0 erreur console, 0 réponse ≥ 400.
+Sur l'ensemble des parcours, seules deux entrées apparaissent, toutes deux provoquées volontairement par P6 et non évitables côté client : `409 DELETE /api/membres/1499` (refus OHADA attendu ; le navigateur journalise toute réponse ≥ 400 en « Failed to load resource ») et `404 GET /api/membres/1498` (rechargement de la fiche supprimée pour prouver sa disparition). Aucune erreur applicative, aucune autre réponse ≥ 400. Cette exception est une dérogation à valider par Fabrice.
 
 ## Données laissées en base barreau_pn_test
 
-Les suites vitest du serveur laissent des membres (préfixes TEST, OVERPAY, ESPACE, DISC, STAGE, AVOC, DROIT, DEMANDE, DOUBLEPAY, TIMBRE, SUPPR-RECU, COT-SUPPR, QUI-SUPPR, « E2E scrutin-cloison », « E2E vote », « E2E reset », « E2E statut », « E2E conso », « E2E msgA/msgB », ≈ 21 membres par exécution) : le préfixe « E2E » n'identifie donc pas les seuls parcours. Membres des parcours T14 : ids 1236 (`E2E RADIE Alpha`, radié) et 1238 (`E2E DECEDE Beta`, décédé). Nettoyage non exécuté (à valider par Fabrice).
+- Parcours T14 (préfixe `E2E R3`) : ids 1496, 1497, 1499, 1500, 1501. S'y ajoutent ceux du rejeu précédent (préfixe `E2E`, ids 1236 Alpha, 1238 Beta, et les membres d'essai créés ensuite) : purge à valider par Fabrice.
+- Les suites vitest du serveur (hors périmètre du test de bout en bout) ajoutent ≈ 21 membres par exécution (préfixes TEST, OVERPAY, ESPACE, DISC, STAGE, AVOC, DROIT, DEMANDE, DOUBLEPAY, TIMBRE, SUPPR-RECU, COT-SUPPR, QUI-SUPPR, « E2E scrutin-cloison », « E2E vote », « E2E reset », « E2E statut », « E2E conso », « E2E msgA/msgB »). Au 2026-10-10 : 719 membres dont 586 d'id ≤ 1235 (jeu de départ) ; id maximal 1531. Le préfixe `E2E` seul n'identifie donc pas les membres des parcours : utiliser `E2E R3` ou les ids ci-dessus. Aucun nettoyage n'a été exécuté (suppression en base à valider) ; recommandation : suites vitest autonettoyantes (`afterAll`).
