@@ -332,6 +332,13 @@ membresRouter.post(
           motifRadiation: r.motifRadiation?.trim().slice(0, 300) || undefined,
         };
         const existant = await prisma.membre.findUnique({ where: { num: r.num } });
+        // RADIE/DECEDE ne s'obtiennent (ni ne se quittent) par import : seuls /radier, /deces et PATCH
+        // valident la date d'acte et laissent une trace d'audit individuelle. Même statut = aller-retour autorisé.
+        const horsTableau = (s: StatutMembre) => (STATUTS_HORS_TABLEAU as readonly string[]).includes(s);
+        if (r.statut?.trim() && (existant ? existant.statut !== statut : true) && (horsTableau(statut) || (existant && horsTableau(existant.statut)))) {
+          erreurs.push({ ligne: i + 1, message: "Changement de statut vers ou depuis radié/décédé interdit à l'import : utilisez la fiche de l'avocat (Radier / Déclarer le décès / Modifier)." });
+          continue;
+        }
         if (existant) {
           // Colonne statut absente du fichier : le statut existant n'est pas écrasé.
           // Aller-retour export → import : l'export écrit le seul jour (AAAA-MM-JJ) ; si le jour est

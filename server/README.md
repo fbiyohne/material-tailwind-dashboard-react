@@ -92,6 +92,8 @@ Journalise un export produit dans le navigateur (CSV, XLSX, TXT, ou PDF de repli
 Admin seul. **409** « Suppression impossible : pièces comptables à conserver 10 ans (OHADA) ; utilisez radiation ou décès » dès que le membre a au moins un reçu, un paiement ou un quitus. Sans pièce (erreur de saisie, doublon), la suppression est définitive.
 
 ### POST /api/membres/import
+
+**Statuts RADIE / DECEDE (R1-9)** : l'import refuse tout changement de statut vers ou depuis radié/décédé (erreur de ligne, aucune écriture). Ces transitions passent par `/radier`, `/deces` ou la fiche (PATCH), qui valident la date et journalisent chaque acte. Un fichier ré-importé avec le statut déjà en base reste accepté (aller-retour).
 Upsert par `num`, aucune suppression, champs absents du fichier non écrasés, 2 000 lignes maximum. Chaque ligne est validée à part : une ligne invalide (ex. `num` non numérique) est rapportée sans bloquer les autres.
 Réponse : `{ "total": 3, "crees": 1, "maj": 1, "erreurs": [{ "ligne": 3, "message": "num : …" }] }`.
 - Colonnes étendues : `dateRadiation`, `motifRadiation` (tronqué à 300), `dateDeces`. Une date invalide est ignorée sans faire échouer la ligne.
