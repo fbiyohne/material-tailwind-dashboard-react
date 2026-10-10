@@ -1257,6 +1257,28 @@ describe("Cycle de vie — statut DECEDE (migration T3)", () => {
   });
 });
 
+describe("R2-2 — import : formats de date imposés", () => {
+  it("JJ/MM/AAAA lu dans l'ordre français, ISO conservé, date impossible ou hors format ignorée", async () => {
+    const nums = [990101, 990102, 990103, 990104];
+    const r = await request(app).post("/api/membres/import").set(...bearer(sg)).send({
+      membres: [
+        { num: 990101, nom: "R22 fr", dateServment: "09/10/2026" },
+        { num: 990102, nom: "R22 iso", dateServment: "2026-10-09" },
+        { num: 990103, nom: "R22 mois13", dateServment: "2026-13-01" },
+        { num: 990104, nom: "R22 inexistant", dateServment: "31/02/2026" },
+      ],
+    });
+    expect(r.status).toBe(200);
+    expect(r.body).toMatchObject({ crees: 4 });
+    const m = await prisma.membre.findMany({ where: { num: { in: nums } }, orderBy: { num: "asc" } });
+    expect(m[0].dateServment?.toISOString().slice(0, 10)).toBe("2026-10-09");
+    expect(m[1].dateServment?.toISOString().slice(0, 10)).toBe("2026-10-09");
+    expect(m[2].dateServment).toBeNull();
+    expect(m[3].dateServment).toBeNull();
+    await prisma.membre.deleteMany({ where: { num: { in: nums } } });
+  });
+});
+
 describe("Cycle de vie — radiation motivée, décès, garde-fou DELETE, RBAC (T4)", () => {
   const aujourdhui = new Date().toISOString().slice(0, 10);
   const creer = async (nom: string) =>

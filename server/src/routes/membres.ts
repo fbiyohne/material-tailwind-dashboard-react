@@ -295,7 +295,17 @@ const STATUTS: Record<string, StatutMembre> = {
 const SEXES: Record<string, "H" | "F"> = { h: "H", homme: "H", m: "H", masculin: "H", f: "F", femme: "F", feminin: "F", "féminin": "F" };
 const normSexe = (v?: string): "H" | "F" | undefined => SEXES[(v ?? "").toString().trim().toLowerCase()];
 const norm = <T,>(v: string | undefined, map: Record<string, T>, def: T): T => map[(v ?? "").toString().trim().toLowerCase()] ?? def;
-const toDate = (v?: string) => { if (!v) return undefined; const d = new Date(v); return Number.isNaN(d.getTime()) ? undefined : d; };
+// Formats acceptés : AAAA-MM-JJ (suivi éventuel d'une heure ISO) ou JJ/MM/AAAA (Excel FR). Tout autre → ignoré.
+// Jamais new Date(chaîne) brut : « 09/10/2026 » serait lu MM/JJ par V8 (inversion silencieuse).
+const toDate = (v?: string) => {
+  const s = (v ?? "").toString().trim();
+  const fr = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(s);
+  const iso = fr ? `${fr[3]}-${fr[2]}-${fr[1]}` : s;
+  if (!/^\d{4}-\d{2}-\d{2}/.test(iso)) return undefined;
+  const d = new Date(iso);
+  // Jour inexistant (31/02) : Date déborde sur le mois suivant, on refuse.
+  return Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== iso.slice(0, 10) ? undefined : d;
+};
 
 membresRouter.post(
   "/import",
