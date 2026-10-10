@@ -247,6 +247,12 @@ Seule source des valeurs juridiques : `REGLES_DEFAUT`, reprise de
 
 Identité (`lib/identiteDocuments.ts`) : `identite().ville` (défaut « Pointe-Noire »)
 et `identite().modeDemonstration` (mention C-13, `MENTION_DEMONSTRATION`).
+Coordonnées des reçus et quitus : `courriel`, `site`, `telephones` (séparés par « / »),
+paramétrables en Paramètres › Identité ; un bloc vide n'est pas affiché. Adresse et
+coordonnées par défaut ne valent que pour la ville par défaut : un barreau d'une autre
+ville qui ne les saisit pas n'hérite d'aucune coordonnée du barreau de base (adresse
+remplacée par sa ville). Test : `test/identite-documents.test.ts` (texte extrait du PDF
+rendu par `envoyerDocumentPdf`, via `pdftotext` ; sauté si Chromium ou pdftotext absent).
 `POST /api/parametres/reinitialiser-donnees` conserve désormais `JournalAudit`.
 
 Tests : `test/regles.test.ts`.

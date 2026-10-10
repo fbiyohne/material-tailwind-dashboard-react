@@ -41,7 +41,7 @@ const DEFAUT = {
   tarifs: { avocat: 150000, stagiaire: 75000, droitsPlaidoirie: 60000 },
   exerciceCourant: 2026,
   premierExercice: 2020,
-  identite: { denomination: "", ordre: "", batonnier: "", tresoriere: "", secretaireGeneral: "", adresse: "", logo: "", ville: "", modeDemonstration: false },
+  identite: { denomination: "", ordre: "", batonnier: "", tresoriere: "", secretaireGeneral: "", adresse: "", logo: "", ville: "", courriel: "", site: "", telephones: "", modeDemonstration: false },
   categoriesArchives: [],
   typesPublication: [],
   canauxActifs: ["MTN", "AIRTEL", "CARTE", "VIREMENT"],
@@ -321,6 +321,9 @@ export function Parametres() {
         {champMembre("secretaireGeneral", "Secrétaire Général")}
         <FormField label="Adresse"><input value={identite.adresse} onChange={setI("adresse")} className="bpn-input" /></FormField>
         <FormField label="Ville" hint="figure sur les reçus, quitus et en-têtes"><input value={identite.ville ?? ""} onChange={setI("ville")} className="bpn-input" /></FormField>
+        <FormField label="Courriel" hint="bandeau des reçus et quitus"><input value={identite.courriel ?? ""} onChange={setI("courriel")} className="bpn-input" /></FormField>
+        <FormField label="Site web"><input value={identite.site ?? ""} onChange={setI("site")} className="bpn-input" /></FormField>
+        <FormField label="Téléphones" hint="séparés par « / »"><input value={identite.telephones ?? ""} onChange={setI("telephones")} className="bpn-input" /></FormField>
       </div>
       <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-lg border border-grisM bg-grisL/40 p-3 text-sm">
         <input type="checkbox" className="mt-0.5 h-4 w-4 accent-navy" checked={!!identite.modeDemonstration} onChange={(e) => setIdentite({ ...identite, modeDemonstration: e.target.checked })} />

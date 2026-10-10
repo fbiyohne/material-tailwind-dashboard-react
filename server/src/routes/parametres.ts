@@ -23,6 +23,9 @@ const DEFAUT = {
     secretaireGeneral: "Me KALINA-MENGA Lionel",
     adresse: "Maison de l'Avocat — Pointe-Noire, République du Congo",
     ville: "Pointe-Noire",
+    courriel: "contact@barreau-pointe-noire.cg",
+    site: "www.barreau-pointe-noire.cg",
+    telephones: "+242 05 000 00 00 / +242 06 000 00 00",
     logo: "",
     // Mention C-13 (données fictives) sur les documents et l'accueil de l'instance de démonstration.
     modeDemonstration: false,
@@ -65,6 +68,7 @@ const identiteSchema = z.object({
   denomination: z.string(), ordre: z.string(), batonnier: z.string(),
   tresoriere: z.string(), secretaireGeneral: z.string(), adresse: z.string(),
   ville: z.string().max(80), modeDemonstration: z.boolean(),
+  courriel: z.string().max(120), site: z.string().max(120), telephones: z.string().max(120),
   // Logo institutionnel en data URI image (≈2 Mo max) ; chaîne vide = sceau dessiné.
   logo: z.string().max(3_000_000).refine(
     (v) => v === "" || v.startsWith("data:image/"),

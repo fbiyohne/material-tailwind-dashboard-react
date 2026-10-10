@@ -47,18 +47,16 @@ const calendrier = `
   <path d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/>
 </svg>`;
 
-/**
- * Coordonnées : adresse paramétrée. Courriel, site et téléphones sont des valeurs d'exemple
- * propres au Barreau de Pointe-Noire (identité de base) : ils ne sont affichés que pour elle.
- */
+/** Coordonnées paramétrées (Paramètres › Identité) ; un bloc vide n'est pas affiché. */
 const bandeauContact = () => {
   const id = identite();
-  const base = id.ville === "Pointe-Noire"; // ponytail: coordonnées paramétrables si un autre barreau les fournit
+  const enLigne = [id.courriel, id.site].filter(Boolean).map(esc).join("<br/>");
+  const tel = id.telephones.split("/").map((t) => esc(t.trim())).filter(Boolean).join("<br/>");
   return `
 <div class="band">
   <div><span class="band-l">Adresse</span><br/>${esc(id.adresse)}</div>
-  ${base ? `<div style="text-align:center"><span class="band-l">En ligne</span><br/>contact@barreau-pointe-noire.cg<br/>www.barreau-pointe-noire.cg</div>
-  <div style="text-align:right"><span class="band-l">Téléphone</span><br/>+242 05 000 00 00<br/>+242 06 000 00 00</div>` : ""}
+  ${enLigne ? `<div style="text-align:center"><span class="band-l">En ligne</span><br/>${enLigne}</div>` : ""}
+  ${tel ? `<div style="text-align:right"><span class="band-l">Téléphone</span><br/>${tel}</div>` : ""}
 </div>`;
 };
 

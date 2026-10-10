@@ -19,6 +19,11 @@ export interface IdentiteDocuments {
   adresse: string;
   /** Ville du barreau (reçus, quitus, en-têtes) : remplace toute ville écrite en dur. */
   ville: string;
+  /** Coordonnées du bandeau des reçus et quitus ; vides → bloc non affiché. */
+  courriel: string;
+  site: string;
+  /** Téléphones séparés par « / » (un par ligne sur le document). */
+  telephones: string;
   /** Logo téléversé (data URI image) ; vide → sceau dessiné par défaut. */
   logo: string;
   /** Instance de démonstration : les documents portent la mention C-13. */
@@ -37,6 +42,9 @@ const DEFAUT: IdentiteDocuments = {
   secretaireGeneral: "Me KALINA-MENGA Lionel",
   adresse: "Maison de l'Avocat — Pointe-Noire, République du Congo",
   ville: "Pointe-Noire",
+  courriel: "contact@barreau-pointe-noire.cg",
+  site: "www.barreau-pointe-noire.cg",
+  telephones: "+242 05 000 00 00 / +242 06 000 00 00",
   logo: "",
   modeDemonstration: false,
 };
@@ -52,14 +60,22 @@ export async function rafraichirIdentite(): Promise<void> {
     const row = await prisma.parametres.findUnique({ where: { id: 1 } });
     const id = ((row?.data as { identite?: Partial<IdentiteDocuments> } | null)?.identite) ?? {};
     // Repli champ par champ : une valeur vide en base ne doit pas effacer le défaut.
+    const ville = id.ville?.trim() || DEFAUT.ville;
+    // Adresse et coordonnées par défaut appartiennent au barreau de base : un barreau
+    // d'une autre ville qui ne les a pas saisies n'hérite pas de celles du barreau de base.
+    const base = ville === DEFAUT.ville;
+    const local = (v: string | undefined, d: string, autre = "") => v?.trim() || (base ? d : autre);
     courante = {
       denomination: id.denomination?.trim() || DEFAUT.denomination,
       ordre: id.ordre?.trim() || DEFAUT.ordre,
       batonnier: id.batonnier?.trim() || DEFAUT.batonnier,
       tresoriere: id.tresoriere?.trim() || DEFAUT.tresoriere,
       secretaireGeneral: id.secretaireGeneral?.trim() || DEFAUT.secretaireGeneral,
-      adresse: id.adresse?.trim() || DEFAUT.adresse,
-      ville: id.ville?.trim() || DEFAUT.ville,
+      adresse: local(id.adresse, DEFAUT.adresse, ville),
+      ville,
+      courriel: local(id.courriel, DEFAUT.courriel),
+      site: local(id.site, DEFAUT.site),
+      telephones: local(id.telephones, DEFAUT.telephones),
       logo: typeof id.logo === "string" ? id.logo : "",
       modeDemonstration: id.modeDemonstration === true,
     };
