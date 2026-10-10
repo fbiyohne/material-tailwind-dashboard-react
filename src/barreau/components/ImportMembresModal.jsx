@@ -26,7 +26,15 @@ const COLONNES = {
   dateNaissance: ["datenaissance", "naissance", "datedenaissance"],
   dateInscription: ["dateinscription", "inscription", "datedinscription"],
   dateServment: ["dateserment", "serment", "prestationdeserment", "datedeserment"],
+  dateRadiation: ["dateradiation", "datederadiation", "radiation"],
+  dateDeces: ["datedeces", "datededeces", "deces"],
+  motifRadiation: ["motifradiation", "motifderadiation", "motif"],
 };
+// « N° inscription » (colonne des exports) se normalise en « ninscription » : volontairement non mappé, jamais pris pour num.
+
+const CHAMPS_DATE = new Set(["dateNaissance", "dateInscription", "dateServment", "dateRadiation", "dateDeces"]);
+// Date Excel (numéro de série) → « AAAA-MM-JJ ».
+const serieVersIso = (n) => new Date(Math.round((n - 25569) * 86400000)).toISOString().slice(0, 10);
 
 const LOOKUP = Object.entries(COLONNES).reduce((acc, [champ, syns]) => {
   syns.forEach((s) => { acc[s] = champ; });
@@ -37,13 +45,16 @@ function mapperLigne(obj) {
   const out = {};
   for (const [k, v] of Object.entries(obj)) {
     const champ = LOOKUP[cle(k)];
-    if (champ && v !== "" && v != null) out[champ] = typeof v === "string" ? v.trim() : v;
+    if (!champ || v === "" || v == null) continue;
+    // Le serveur attend des chaînes : nombres Excel (téléphone, série de date) convertis ici.
+    if (typeof v === "number") out[champ] = CHAMPS_DATE.has(champ) ? serieVersIso(v) : champ === "num" ? v : String(v);
+    else out[champ] = typeof v === "string" ? v.trim() : v;
   }
   return out;
 }
 
 /**
- * Import du tableau du Barreau depuis un fichier .xlsx ou .csv (NFR-10).
+ * Import du tableau du Barreau depuis un fichier .xlsx, .xls, .csv ou .txt (NFR-10).
  * Le fichier est analysé côté client puis transmis au serveur qui upsert par
  * numéro d'inscription. Colonnes reconnues : num, nom, qualité, statut, cabinet,
  * téléphone, email, rccm, cnss, adresse, observations, maître de stage, dates.
@@ -52,17 +63,20 @@ export function ImportMembresModal({ open, onClose, onDone, qualiteDefaut, title
   const toast = useToast();
   const [rows, setRows] = useState([]);
   const [nomFichier, setNomFichier] = useState("");
+  const [ignorees, setIgnorees] = useState(0);
   const [resume, setResume] = useState(null);
   const [enCours, setEnCours] = useState(false);
 
-  const reset = () => { setRows([]); setNomFichier(""); setResume(null); };
+  const reset = () => { setRows([]); setNomFichier(""); setResume(null); setIgnorees(0); };
 
   const lireFichier = async (file) => {
     if (!file) return;
     try {
       const XLSX = await import("xlsx");
-      const buf = await file.arrayBuffer();
-      const wb = XLSX.read(buf, { type: "array" });
+      // Texte délimité (.csv/.txt) : lu en UTF-8, séparateur (; , tabulation) auto-détecté ;
+      // raw:true conserve les valeurs telles quelles (zéro initial des téléphones, dates AAAA-MM-JJ).
+      const texte = /.(csv|txt)$/i.test(file.name);
+      const wb = texte ? XLSX.read(await file.text(), { type: "string", raw: true }) : XLSX.read(await file.arrayBuffer(), { type: "array" });
       const ws = wb.Sheets[wb.SheetNames[0]];
       const json = XLSX.utils.sheet_to_json(ws, { defval: "" });
       const mappees = json.map(mapperLigne).filter((r) => r.num && r.nom);
@@ -71,6 +85,7 @@ export function ImportMembresModal({ open, onClose, onDone, qualiteDefaut, title
         return;
       }
       setRows(mappees);
+      setIgnorees(json.length - mappees.length);
       setNomFichier(file.name);
       setResume(null);
     } catch (e) {
@@ -86,7 +101,8 @@ export function ImportMembresModal({ open, onClose, onDone, qualiteDefaut, title
       toast.success(`Import terminé : ${r.crees} créé(s), ${r.maj} mis à jour.`);
       onDone?.();
     } catch (e) {
-      toast.error(e.message);
+      // L'import étant un upsert par numéro, relancer après une coupure ne crée aucun doublon.
+      toast.error(`Import interrompu (${e.message}). Vérifiez la connexion puis relancez : les lignes déjà importées seront simplement mises à jour.`);
     } finally {
       setEnCours(false);
     }
@@ -110,23 +126,25 @@ export function ImportMembresModal({ open, onClose, onDone, qualiteDefaut, title
         <p className="text-sm leading-6 text-gris">
           {description || (
             <>
-              Sélectionnez un fichier <strong>.xlsx</strong> ou <strong>.csv</strong>. Les avocats sont mis à jour
-              par numéro d'inscription (les nouveaux sont créés). Colonnes reconnues : num, nom, qualité, statut,
-              cabinet, téléphone, email, rccm, cnss, adresse, observations, maître de stage, dates.
+              Sélectionnez un fichier <strong>.xlsx</strong>, <strong>.xls</strong>, <strong>.csv</strong> ou <strong>.txt</strong>
+              (séparateur « ; », « , » ou tabulation). Les avocats sont mis à jour par numéro (les nouveaux sont créés,
+              rien n'est supprimé). Colonnes reconnues : num, nom, qualité, statut (dont « décédé »), cabinet, téléphone,
+              email, rccm, cnss, adresse, observations, maître de stage, dates (AAAA-MM-JJ) d'inscription, de naissance,
+              de serment, de radiation et de décès, motif de radiation.
             </>
           )}
         </p>
 
         <label className="flex cursor-pointer items-center justify-center gap-2 rounded border-2 border-dashed border-grisM bg-grisL/40 px-4 py-6 text-sm text-gris transition hover:border-or hover:text-encre">
           <ArrowUpTrayIcon className="h-5 w-5" />
-          {nomFichier || "Choisir un fichier .xlsx / .csv"}
-          <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(e) => lireFichier(e.target.files?.[0])} />
+          {nomFichier || "Choisir un fichier .xlsx / .csv / .txt"}
+          <input type="file" accept=".xlsx,.xls,.csv,.txt" className="hidden" onChange={(e) => lireFichier(e.target.files?.[0])} />
         </label>
 
         {rows.length > 0 && !resume && (
           <div className="rounded border border-grisL">
             <div className="border-b border-grisL bg-grisL/50 px-3 py-2 text-xs font-medium text-encre">
-              Aperçu — {rows.length} ligne(s) détectée(s)
+              Aperçu — {rows.length} ligne(s) retenue(s), {ignorees} ligne(s) ignorée(s) (sans numéro ou sans nom)
             </div>
             <div className="max-h-44 overflow-auto">
               <table className="w-full text-xs">

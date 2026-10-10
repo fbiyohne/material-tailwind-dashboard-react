@@ -50,7 +50,9 @@ export function audit(req: AuthRequest, res: Response, next: NextFunction) {
   const ip = (req.ip ?? "").replace(/^::ffff:/, "") || null;
   res.on("finish", () => {
     if (res.statusCode >= 400) return;
-    const { action, cible } = libelle(req.method, req.originalUrl.split("?")[0]);
+    const { action: base, cible } = libelle(req.method, req.originalUrl.split("?")[0]);
+    const detail = res.locals.auditDetail;
+    const action = detail ? `${base} (${detail})` : base;
     prisma.journalAudit
       .create({
         data: {

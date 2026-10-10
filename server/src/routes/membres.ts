@@ -255,6 +255,9 @@ const importRowSchema = z.object({
   dateNaissance: z.string().optional(),
   dateInscription: z.string().optional(),
   dateServment: z.string().optional(),
+  dateRadiation: z.string().optional(),
+  motifRadiation: z.string().optional(),
+  dateDeces: z.string().optional(),
 });
 
 const QUALITES: Record<string, "AVOCAT" | "STAGIAIRE" | "HONORAIRE"> = { avocat: "AVOCAT", stagiaire: "STAGIAIRE", honoraire: "HONORAIRE" };
@@ -273,7 +276,8 @@ membresRouter.post(
   "/import",
   requireRole("SECRETAIRE_GENERAL"),
   asyncH(async (req, res) => {
-    const rows = z.array(importRowSchema).max(2000).parse(req.body?.membres ?? []);
+    // Plafond sur le lot ; chaque ligne est validée à part : une ligne invalide (ex. num non numérique) est rapportée dans erreurs[] sans bloquer les autres.
+    const rows = z.array(z.unknown()).max(2000).parse(req.body?.membres ?? []);
     // Qualité par défaut des lignes sans colonne « qualité » explicite. Permet à la
     // page « Avocats stagiaires » d'importer directement des stagiaires ; défaut
     // « AVOCAT » (rétro-compatible avec la page « Avocats inscrits »).
@@ -282,7 +286,12 @@ membresRouter.post(
     let maj = 0;
     const erreurs: { ligne: number; message: string }[] = [];
     for (let i = 0; i < rows.length; i++) {
-      const r = rows[i];
+      const valide = importRowSchema.safeParse(rows[i]);
+      if (!valide.success) {
+        erreurs.push({ ligne: i + 1, message: valide.error.issues.map((x) => `${x.path.join(".")} : ${x.message}`).join(" ; ") });
+        continue;
+      }
+      const r = valide.data;
       try {
         const qualite = norm(r.qualite, QUALITES, qualiteDefaut);
         const statut = norm(r.statut, STATUTS, qualite === "STAGIAIRE" ? "STAGIAIRE" : qualite === "HONORAIRE" ? "HONORAIRE" : "INSCRIT");
@@ -291,10 +300,17 @@ membresRouter.post(
           cabinet: r.cabinet, tel: r.tel, email: r.email, rccm: r.rccm, cnss: r.cnss,
           adresse: r.adresse, observations: r.observations, maitreStage: r.maitreStage,
           dateNaissance: toDate(r.dateNaissance), dateServment: toDate(r.dateServment),
+          // Date invalide → ignorée (undefined = champ non touché) sans faire échouer la ligne.
+          dateRadiation: toDate(r.dateRadiation), dateDeces: toDate(r.dateDeces),
+          motifRadiation: r.motifRadiation?.trim().slice(0, 300) || undefined,
         };
         const existant = await prisma.membre.findUnique({ where: { num: r.num } });
         if (existant) {
-          await prisma.membre.update({ where: { num: r.num }, data: { ...base, dateInscription: toDate(r.dateInscription) } });
+          // Colonne statut absente du fichier : le statut existant n'est pas écrasé.
+          const data = { ...base, statut: r.statut?.trim() ? statut : undefined, dateInscription: toDate(r.dateInscription) };
+          const m = await prisma.membre.update({ where: { num: r.num }, data });
+          // Cohérence de l'espace avocat (décédé/radié → compte coupé ; rétabli sinon).
+          if (m.statut !== existant.statut) await synchroniserAccesAuStatut(m.id, m.statut);
           maj += 1;
         } else {
           await prisma.membre.create({
@@ -306,6 +322,8 @@ membresRouter.post(
         erreurs.push({ ligne: i + 1, message: e instanceof Error ? e.message : "Erreur" });
       }
     }
+    // Détail ajouté à la ligne JournalAudit « Import du tableau » (middleware audit, C-05).
+    res.locals.auditDetail = `${rows.length} ligne(s), ${crees} créé(s), ${maj} mis à jour, ${erreurs.length} erreur(s)`;
     res.json({ total: rows.length, crees, maj, erreurs });
   })
 );

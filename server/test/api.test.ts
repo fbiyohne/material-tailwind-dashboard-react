@@ -1353,3 +1353,66 @@ describe("Export PDF de la liste des avocats (T5, CA-08)", () => {
     expect(e[0].cible).toContain("lignes=2");
   }, 60000);
 });
+
+describe("Import du tableau — décès, dates, accès espace, audit (T6)", () => {
+  const num = 930000 + (Date.now() % 10000);
+  const importer = (membres: object[]) => request(app).post("/api/membres/import").set(...bearer(sg)).send({ membres });
+  afterAll(async () => {
+    const ms = await prisma.membre.findMany({ where: { nom: { startsWith: "T6 " } }, select: { id: true } });
+    await prisma.user.deleteMany({ where: { membreId: { in: ms.map((m) => m.id) } } });
+    await prisma.membre.deleteMany({ where: { nom: { startsWith: "T6 " } } });
+  });
+
+  it("CA-09 : statut décédé + date de décès → DECEDE, puis date invalide ignorée, puis num non numérique en erreur", async () => {
+    const r = await importer([{ num, nom: "T6 Décès", statut: "décédé", dateDeces: "2026-09-15" }]);
+    expect(r.status).toBe(200);
+    expect(r.body).toMatchObject({ total: 1, crees: 1, maj: 0, erreurs: [] });
+    const m = await prisma.membre.findUnique({ where: { num } });
+    const fiche = await request(app).get(`/api/membres/${m!.id}`).set(...bearer(sg));
+    expect(fiche.body.statut).toBe("DECEDE");
+    expect(String(fiche.body.dateDeces).slice(0, 10)).toBe("2026-09-15");
+
+    // Date invalide : ligne acceptée, date non modifiée (nouveau membre → null).
+    const r2 = await importer([{ num: num + 1, nom: "T6 Date invalide", statut: "decede", dateDeces: "n/a" }]);
+    expect(r2.body).toMatchObject({ crees: 1, erreurs: [] });
+    expect((await prisma.membre.findUnique({ where: { num: num + 1 } }))?.dateDeces).toBeNull();
+
+    // num non numérique : ligne en erreur (numéro de ligne), les autres lignes passent.
+    const r3 = await importer([{ num: num + 4, nom: "T6 Bon" }, { num: "abc", nom: "T6 Mauvais num" }]);
+    expect(r3.status).toBe(200);
+    expect(r3.body.crees).toBe(1);
+    expect(r3.body.erreurs).toHaveLength(1);
+    expect(r3.body.erreurs[0].ligne).toBe(2);
+  });
+
+  it("statut absent du fichier : le statut existant n'est pas écrasé ; radiation importée", async () => {
+    await importer([{ num: num + 2, nom: "T6 Radié", statut: "radié", dateRadiation: "2026-03-01", motifRadiation: "Décision n° 4" }]);
+    const r = await importer([{ num: num + 2, nom: "T6 Radié", cabinet: "Cabinet X" }]);
+    expect(r.body).toMatchObject({ crees: 0, maj: 1 });
+    const m = await prisma.membre.findUnique({ where: { num: num + 2 } });
+    expect(m?.statut).toBe("RADIE");
+    expect(m?.cabinet).toBe("Cabinet X");
+    expect(m?.dateRadiation?.toISOString().slice(0, 10)).toBe("2026-03-01");
+    expect(m?.motifRadiation).toBe("Décision n° 4");
+  });
+
+  it("membre existant importé « décédé » : compte espace actif désactivé", async () => {
+    const c = await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: `T6 Espace ${Date.now()}`, qualite: "AVOCAT", email: `t6-${Date.now()}@test.cg` });
+    const id = c.body.id as number;
+    await request(app).post(`/api/membres/${id}/acces`).set(...bearer(sg));
+    await prisma.user.update({ where: { membreId: id }, data: { actif: true, activationToken: null } });
+    const r = await importer([{ num: c.body.num, nom: c.body.nom, statut: "décédé" }]);
+    expect(r.body).toMatchObject({ maj: 1, erreurs: [] });
+    expect((await prisma.user.findUnique({ where: { membreId: id } }))?.actif).toBe(false);
+  });
+
+  it("C-05 : une ligne JournalAudit « Import du tableau » avec les totaux", async () => {
+    await importer([{ num: num + 3, nom: "T6 Audit" }]);
+    let e = null;
+    for (let i = 0; i < 30 && !e; i++) {
+      e = await prisma.journalAudit.findFirst({ where: { action: { startsWith: "Import du tableau — Avocat (1 ligne(s), 1 créé(s)" } } });
+      if (!e) await new Promise((r) => setTimeout(r, 100));
+    }
+    expect(e).not.toBeNull();
+  });
+});
