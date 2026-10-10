@@ -1133,11 +1133,11 @@ describe("Cycle de vie — statut DECEDE (migration T3)", () => {
   });
 
   it("reconnaît le filtre statut=DECEDE, l'accepte à l'inscription et l'exclut du corps électoral", async () => {
-    // Le filtre est reconnu (liste vide), pas ignoré (liste complète).
+    // Le filtre est reconnu, pas ignoré (liste complète) : seuls des décédés reviennent, même si la
+    // base de test en contient déjà (parcours de bout en bout).
     const vide = await request(app).get("/api/membres?statut=DECEDE").set(...bearer(sg));
     expect(vide.status).toBe(200);
-    expect(vide.body.total).toBe(0);
-    expect(vide.body.items).toEqual([]);
+    expect(vide.body.items.every((i: { statut: string }) => i.statut === "DECEDE")).toBe(true);
 
     const m = await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: `DECEDE Test ${Date.now()}`, qualite: "AVOCAT", statut: "DECEDE" });
     expect(m.status).toBe(201);
