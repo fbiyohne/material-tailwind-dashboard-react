@@ -8,7 +8,7 @@ import { requireAuth, requireRole, requirePermission, type AuthRequest } from ".
 import { prochainNumInscription, prochainNumeroAttestation, archiver, avecRejeuUnicite, STATUTS_HORS_TABLEAU } from "../lib/business.js";
 import { enregistrerFichier } from "../lib/storage.js";
 import { envoyerPdf, htmlVersPdf } from "../lib/pdf.js";
-import { attestationHtml, listeAvocatsHtml } from "../lib/templates.js";
+import { attestationHtml, listeAvocatsHtml, STATUT_FR, QUALITE_FR } from "../lib/templates.js";
 import { provisionnerAccesEspace, synchroniserAccesAuStatut } from "../lib/acces.js";
 
 export const membresRouter = Router();
@@ -94,8 +94,8 @@ membresRouter.get(
     });
     const filtre = [
       ids ? `sélection de ${ids.length}` : "",
-      p.data.statut ? `statut ${p.data.statut}` : "",
-      p.data.qualite ? `qualité ${p.data.qualite}` : "",
+      p.data.statut ? `statut ${STATUT_FR[p.data.statut] ?? p.data.statut}` : "",
+      p.data.qualite ? `qualité ${QUALITE_FR[p.data.qualite] ?? p.data.qualite}` : "",
       p.data.q ? `recherche « ${p.data.q} »` : "",
     ].filter(Boolean).join(", ") || "tous";
     // Rendu puis audit AVANT l'envoi : si l'audit échoue, aucune donnée nominative

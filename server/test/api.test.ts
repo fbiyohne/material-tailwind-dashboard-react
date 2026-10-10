@@ -1573,6 +1573,16 @@ describe("Revue sécurité T10 — données disciplinaires, extraction en masse,
     expect(html).not.toContain("MOTIF-SECRET-T10");
   });
 
+  it("R1-11 : le titre du PDF porte le libellé français du statut, pas la valeur brute de l'enum", async () => {
+    vi.mocked(htmlVersPdf).mockResolvedValueOnce(Buffer.from("%PDF-test"));
+    const r = await request(app).get("/api/membres/export/pdf?statut=DECEDE").set(...bearer(sg));
+    expect(r.status).toBe(200);
+    const html = vi.mocked(htmlVersPdf).mock.calls.at(-1)![0];
+    expect(html).toContain("statut Décédé");
+    expect(html).not.toContain("statut DECEDE");
+    expect(html).toContain("white-space:nowrap");
+  });
+
   it("ids : 201 valeurs → 400, « 1;DROP » → 400, sans appel au rendu", async () => {
     const appels = vi.mocked(htmlVersPdf).mock.calls.length;
     const ids201 = Array.from({ length: 201 }, (_, i) => i + 1).join(",");

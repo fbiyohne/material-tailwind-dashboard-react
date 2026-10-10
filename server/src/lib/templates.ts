@@ -445,11 +445,11 @@ export function decisionDisciplineHtml(d: any): string {
   });
 }
 
-const STATUT_FR: Record<string, string> = {
+export const STATUT_FR: Record<string, string> = {
   INSCRIT: "Inscrit", SUSPENDU: "Suspendu", RADIE: "Radié", OMIS: "Omis",
   HONORAIRE: "Honoraire", STAGIAIRE: "Stagiaire", DECEDE: "Décédé",
 };
-const QUALITE_FR: Record<string, string> = { AVOCAT: "Avocat", STAGIAIRE: "Stagiaire", HONORAIRE: "Honoraire" };
+export const QUALITE_FR: Record<string, string> = { AVOCAT: "Avocat", STAGIAIRE: "Stagiaire", HONORAIRE: "Honoraire" };
 const jour = (d?: Date | string | null) => (d ? new Date(d).toISOString().slice(0, 10) : "");
 
 /**
@@ -460,15 +460,15 @@ const jour = (d?: Date | string | null) => (d ? new Date(d).toISOString().slice(
 export function listeAvocatsHtml(membres: any[], libelleFiltre: string, date: Date | string): string {
   const d = new Date(date).toLocaleDateString("fr-FR");
   const th = ["N°", "N° inscription", "Nom", "Qualité", "Statut", "Cabinet", "Téléphone", "Email", "Date d'inscription", "Date de radiation", "Date de décès"]
-    .map((c) => `<th style="padding:4px 3px">${c}</th>`).join("");
-  const td = (v: unknown) => `<td style="padding:4px 3px;border-bottom:1px solid #E0DBD0">${escapeHtml(String(v ?? ""))}</td>`;
+    .map((c, i) => `<th style="padding:4px 3px${i >= 8 ? ";white-space:nowrap" : ""}">${c}</th>`).join("");
+  const td = (v: unknown, i: number) => `<td style="padding:4px 3px;border-bottom:1px solid #E0DBD0${i >= 8 ? ";white-space:nowrap" : ""}">${escapeHtml(String(v ?? ""))}</td>`;
   const lignes = membres
     .map((m) => `<tr>${[m.num, m.numInscription, m.nom, QUALITE_FR[m.qualite] ?? m.qualite, STATUT_FR[m.statut] ?? m.statut, m.cabinet, m.tel, m.email, jour(m.dateInscription), jour(m.dateRadiation), jour(m.dateDeces)].map(td).join("")}</tr>`)
     .join("");
   const titre = `Liste des avocats — ${escapeHtml(libelleFiltre)} — arrêtée au ${d} — Document interne`;
   return documentHtml({
     org: "Le Secrétaire Général",
-    title: `<span style="font-size:17px">${titre}</span>`,
+    title: `<span style="font-size:13px">${titre}</span>`,
     reference: `${membres.length} ligne${membres.length > 1 ? "s" : ""}`,
     bodyHtml: `<table style="width:100%;border-collapse:collapse;font-size:8px;line-height:1.3"><thead><tr style="border-bottom:1.5px solid #1A3A6B;color:#7A756A;text-align:left">${th}</tr></thead><tbody>${lignes}</tbody></table>
       <p style="margin-top:14px;font-size:9px;color:#7A756A;text-align:center">Barreau de Pointe-Noire — Document interne confidentiel — Diffusion interdite hors des organes de l'Ordre.</p>`,
