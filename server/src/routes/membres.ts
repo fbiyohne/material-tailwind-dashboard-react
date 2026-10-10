@@ -223,6 +223,9 @@ membresRouter.post(
   requireRole("SECRETAIRE_GENERAL"),
   asyncH(async (req, res) => {
     const data = inscriptionSchema.parse(req.body);
+    // Radiation et décès exigent une date d'acte validée : routes /radier et /deces.
+    if (data.statut === "RADIE" || data.statut === "DECEDE")
+      throw new HttpError(400, "Création impossible en statut radié ou décédé : utilisez la radiation ou la déclaration de décès.");
     // Rejeu sur collision : deux inscriptions concurrentes calculeraient le même
     // `num` (max+1) ; la contrainte @unique(num) rejette, on recalcule et réessaie.
     const membre = await avecRejeuUnicite(async () => {
@@ -366,8 +369,11 @@ membresRouter.post(
   })
 );
 
-/** Date « AAAA-MM-JJ » optionnelle et effaçable (null) : correction d'une saisie par le SG. */
-const dateNullable = z.string().date().nullable().optional();
+/** Date « AAAA-MM-JJ » qui ne peut pas être postérieure à aujourd'hui (décision notifiée, acte de décès). */
+const datePassee = z.string().date().refine((d) => new Date(d) <= new Date(), "La date ne peut pas être postérieure à aujourd'hui");
+
+/** Date d'acte « AAAA-MM-JJ » passée, optionnelle et effaçable (null) : correction d'une saisie par le SG. */
+const dateNullable = datePassee.nullable().optional();
 // Référence/objet de la décision du Conseil (loi 026-92, art. 36-39), pas un récit des faits.
 const motifRadiation = z.string().trim().max(300);
 const editSchema = inscriptionSchema.partial().extend({
@@ -384,6 +390,13 @@ membresRouter.patch(
   requireRole("SECRETAIRE_GENERAL"),
   asyncH(async (req, res) => {
     const data = editSchema.parse(req.body);
+    // Invariant « DECEDE ⇒ dateDeces » (avis juridique C-02) : la date effective
+    // est celle du corps, à défaut celle déjà en base.
+    const actuel = await prisma.membre.findUnique({ where: { id: Number(req.params.id) }, select: { statut: true, dateDeces: true } });
+    if (!actuel) throw new HttpError(404, "Avocat introuvable");
+    const dateDecesFinale = data.dateDeces === undefined ? actuel.dateDeces : data.dateDeces;
+    if ((data.statut ?? actuel.statut) === "DECEDE" && !dateDecesFinale)
+      throw new HttpError(400, "La date du décès est obligatoire pour un avocat décédé.");
     const membre = await prisma.membre.update({
       where: { id: Number(req.params.id) },
       data: {
@@ -403,9 +416,6 @@ membresRouter.patch(
     res.json(membre);
   })
 );
-
-/** Date « AAAA-MM-JJ » qui ne peut pas être postérieure à aujourd'hui (décision notifiée, acte de décès). */
-const datePassee = z.string().date().refine((d) => new Date(d) <= new Date(), "La date ne peut pas être postérieure à aujourd'hui");
 
 const radiationSchema = z.object({
   dateRadiation: datePassee.optional(),

@@ -1200,9 +1200,12 @@ describe("Cycle de vie — statut DECEDE (migration T3)", () => {
     expect(vide.status).toBe(200);
     expect(vide.body.items.every((i: { statut: string }) => i.statut === "DECEDE")).toBe(true);
 
-    const m = await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: `DECEDE Test ${Date.now()}`, qualite: "AVOCAT", statut: "DECEDE" });
+    const m = await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: `DECEDE Test ${Date.now()}`, qualite: "AVOCAT" });
     expect(m.status).toBe(201);
-    expect(m.body.statut).toBe("DECEDE");
+    expect((await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: "Direct décédé", statut: "DECEDE" })).status).toBe(400);
+    expect((await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: "Direct radié", statut: "RADIE" })).status).toBe(400);
+    const d = await request(app).post(`/api/membres/${m.body.id}/deces`).set(...bearer(sg)).send({ dateDeces: "2026-09-15" });
+    expect(d.body.statut).toBe("DECEDE");
     const liste = await request(app).get("/api/membres?statut=DECEDE").set(...bearer(sg));
     expect(liste.body.total).toBeGreaterThanOrEqual(1);
     expect(liste.body.items.every((x: any) => x.statut === "DECEDE")).toBe(true);
@@ -1220,8 +1223,11 @@ describe("Cycle de vie — statut DECEDE (migration T3)", () => {
 
   it("R1-7 : un décédé/radié sans ligne réelle n'a aucun dû calculé (cotisations, dashboard)", async () => {
     const annee = 2031;
-    const cree = async (statut: string) =>
-      (await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: `DECEDE Test r17 ${statut} ${Date.now()}`, qualite: "AVOCAT", statut })).body.id as number;
+    const cree = async (statut: string) => {
+      const id = (await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: `DECEDE Test r17 ${statut} ${Date.now()}`, qualite: "AVOCAT" })).body.id as number;
+      await prisma.membre.update({ where: { id }, data: { statut: statut as any } });
+      return id;
+    };
     const [idDeces, idRadie, idOk] = [await cree("DECEDE"), await cree("RADIE"), await cree("INSCRIT")];
     const avant = (await request(app).get(`/api/dashboard?annee=${annee}`).set(...bearer(sg))).body;
     const cot = await request(app).get(`/api/cotisations?annee=${annee}`).set(...bearer(sg));
@@ -1357,6 +1363,18 @@ describe("Cycle de vie — radiation motivée, décès, garde-fou DELETE, RBAC (
     expect(r2.status).toBe(200);
     expect(r2.body.dateRadiation).toMatch(/^2026-10-03/);
     expect(r2.body.motifRadiation).toBe("Décision n° 8");
+  });
+
+  it("R2-1 : PATCH DECEDE sans date → 400 ; date future → 400 ; avec date → 200 ; déjà décédé daté → 200", async () => {
+    const id = await creer("r2-1");
+    const patch = (b: object) => request(app).patch(`/api/membres/${id}`).set(...bearer(sg)).send(b);
+    expect((await patch({ statut: "DECEDE" })).status).toBe(400);
+    expect((await patch({ statut: "DECEDE", dateDeces: null })).status).toBe(400);
+    expect((await patch({ dateDeces: "2099-01-01" })).status).toBe(400);
+    expect((await patch({ statut: "RADIE", dateRadiation: "2099-01-01" })).status).toBe(400);
+    expect((await patch({ statut: "DECEDE", dateDeces: "2026-09-15" })).status).toBe(200);
+    expect((await patch({ cabinet: "Cab" })).status).toBe(200);
+    expect((await patch({ statut: "DECEDE", dateDeces: null })).status).toBe(400);
   });
 
   it("O3 : aucun rôle non autorisé ne mute un membre (403 sur POST, PATCH, radier, deces, DELETE)", async () => {

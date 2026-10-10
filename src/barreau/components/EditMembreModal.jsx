@@ -59,6 +59,7 @@ export function EditMembreModal({ membre, open, onClose, onSaved }) {
     const e = {};
     if (!form.nom?.trim()) e.nom = "Le nom est requis.";
     if (form.email?.trim() && !EMAIL_RE.test(form.email.trim())) e.email = "Adresse email invalide.";
+    if (form.statut === "decede" && !form.dateDeces) e.dateDeces = "La date du décès est requise.";
     setErreurs(e);
     if (Object.keys(e).length) return;
     setLoading(true);
@@ -144,8 +145,8 @@ export function EditMembreModal({ membre, open, onClose, onSaved }) {
             </>
           )}
           {form.statut === "decede" && (
-            <FormField label="Date du décès" hint="date portée sur l'acte de décès">
-              <input type="date" max={dateLocaleISO()} value={form.dateDeces ?? ""} onChange={set("dateDeces")} className="bpn-input" />
+            <FormField label="Date du décès" required hint="date portée sur l'acte de décès" error={erreurs.dateDeces}>
+              <input type="date" max={dateLocaleISO()} value={form.dateDeces ?? ""} onChange={set("dateDeces")} className={champ(erreurs.dateDeces)} />
             </FormField>
           )}
         </FormSection>
