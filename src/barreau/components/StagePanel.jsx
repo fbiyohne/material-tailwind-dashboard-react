@@ -57,7 +57,7 @@ export function StagePanel({ membre, onChange }) {
     if (busy) return;
     const ok = await confirm({
       title: "Valider la fin de stage ?",
-      message: `Me ${membre.nom} passera du statut d'avocat stagiaire à celui d'avocat inscrit au tableau. Action réservée au Bâtonnier.`,
+      message: `Me ${membre.nom} passera du statut d'avocat stagiaire à celui d'avocat inscrit au tableau, à la date d'aujourd'hui. Le certificat de fin de stage est délivré par le Bâtonnier national (loi n° 026-92, art. 29) : le logiciel enregistre la décision.`,
       confirmLabel: "Valider la fin de stage",
     });
     if (!ok) return;

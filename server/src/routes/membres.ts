@@ -9,13 +9,18 @@ import { prochainNumInscription, prochainNumeroAttestation, archiver, avecRejeuU
 import { enregistrerFichier } from "../lib/storage.js";
 import { envoyerPdf, htmlVersPdf } from "../lib/pdf.js";
 import { attestationHtml, listeAvocatsHtml, STATUT_FR, QUALITE_FR } from "../lib/templates.js";
-import { appliquerCycleVie } from "../lib/cycleVie.js";
+import { appliquerCycleVie, changerSituation } from "../lib/cycleVie.js";
+import { reglesActuelles } from "../lib/regles.js";
+import { realtimeTous } from "../lib/realtime.js";
 import { provisionnerAccesEspace, synchroniserAccesAuStatut } from "../lib/acces.js";
 
 export const membresRouter = Router();
 membresRouter.use(requireAuth);
 
-const TRI_AUTORISE = new Set(["num", "nom", "cabinet", "statut"]);
+const TRI_AUTORISE = new Set(["num", "nom", "cabinet", "statut", "dateInscription"]);
+
+/** Auteur d'un changement de situation (dénormalisé dans EvenementSituation). */
+const acteurDe = (req: AuthRequest) => ({ id: req.user?.id ?? null, nom: req.user?.nom ?? null });
 
 /** Filtres communs à la liste et à l'export PDF. Une valeur hors énum est ignorée
  *  (→ undefined) plutôt que transmise à Prisma, qui lèverait une 500. */
@@ -410,28 +415,31 @@ const versDate = (v: string | null | undefined) => (v == null ? v : new Date(v))
 membresRouter.patch(
   "/:id",
   requireRole("SECRETAIRE_GENERAL"),
-  asyncH(async (req, res) => {
-    const data = editSchema.parse(req.body);
+  asyncH(async (req: AuthRequest, res) => {
+    const { statut, dateRadiation, motifRadiation, dateDeces, ...fiche } = editSchema.parse(req.body);
     const id = Number(req.params.id);
     const actuel = await prisma.membre.findUnique({ where: { id }, select: { statut: true, dateRadiation: true, motifRadiation: true, dateDeces: true } });
     if (!actuel) throw new HttpError(404, "Avocat introuvable");
+    const donnees = {
+      ...fiche,
+      dateNaissance: fiche.dateNaissance ? new Date(fiche.dateNaissance) : undefined,
+      dateInscription: fiche.dateInscription ? new Date(fiche.dateInscription) : undefined,
+      // La date de prestation de serment est reçue en chaîne : convertir en Date
+      // (sinon Prisma rejette). Permet de renseigner/corriger le serment d'un
+      // stagiaire depuis sa fiche, sans passer par un ré-import.
+      dateServment: fiche.dateServment ? new Date(fiche.dateServment) : undefined,
+    };
     // Statut et données d'acte passent par la machine à états (cohérence, dates requises).
-    const cycle = appliquerCycleVie(actuel, {
-      statut: data.statut, dateRadiation: versDate(data.dateRadiation), motifRadiation: data.motifRadiation, dateDeces: versDate(data.dateDeces),
-    });
-    const membre = await prisma.membre.update({
-      where: { id },
-      data: {
-        ...data,
-        dateNaissance: data.dateNaissance ? new Date(data.dateNaissance) : undefined,
-        dateInscription: data.dateInscription ? new Date(data.dateInscription) : undefined,
-        // La date de prestation de serment est reçue en chaîne : convertir en Date
-        // (sinon Prisma rejette). Permet de renseigner/corriger le serment d'un
-        // stagiaire depuis sa fiche, sans passer par un ré-import.
-        dateServment: data.dateServment ? new Date(data.dateServment) : undefined,
-        ...cycle,
-      },
-    });
+    const demande = { statut, dateRadiation: versDate(dateRadiation), motifRadiation, dateDeces: versDate(dateDeces) };
+    if (statut && statut !== actuel.statut) {
+      // Changement de statut : écriture tracée par un EvenementSituation (D5). PATCH ne suit
+      // aucun circuit (omission, discipline) : type générique, sauf actes datés.
+      const type = statut === "RADIE" ? "RADIATION" : statut === "DECEDE" ? "DECES" : "CHANGEMENT_STATUT";
+      const dateEffet = (statut === "RADIE" ? demande.dateRadiation : statut === "DECEDE" ? demande.dateDeces : null) ?? undefined;
+      const { membre } = await changerSituation({ membreId: id, type, demande, donnees, dateEffet, reference: statut === "RADIE" ? motifRadiation : null, acteur: acteurDe(req) });
+      return res.json(membre);
+    }
+    const membre = await prisma.membre.update({ where: { id }, data: { ...donnees, ...appliquerCycleVie(actuel, demande) } });
     // L'accès espace suit le statut (suspendu/radié/omis/décédé → coupé ; régulier → rétabli).
     await synchroniserAccesAuStatut(membre.id, membre.statut);
     res.json(membre);
@@ -451,17 +459,17 @@ const radiationSchema = z.object({
 membresRouter.post(
   "/:id/radier",
   requireRole("SECRETAIRE_GENERAL"),
-  asyncH(async (req, res) => {
+  asyncH(async (req: AuthRequest, res) => {
     const data = radiationSchema.parse(req.body ?? {});
     const id = Number(req.params.id);
     const actuel = await prisma.membre.findUnique({ where: { id }, select: { statut: true, dateRadiation: true, motifRadiation: true, dateDeces: true } });
     if (!actuel) throw new HttpError(404, "Avocat introuvable");
     if (actuel.statut === "RADIE") throw new HttpError(409, "Cet avocat est déjà radié : corrigez la date ou la référence par « Modifier ».");
-    const cycle = appliquerCycleVie(actuel, {
-      statut: "RADIE", dateRadiation: data.dateRadiation ? new Date(data.dateRadiation) : new Date(), motifRadiation: data.motifRadiation ?? null,
+    const dateRadiation = data.dateRadiation ? new Date(data.dateRadiation) : new Date();
+    const { membre } = await changerSituation({
+      membreId: id, type: "RADIATION", demande: { statut: "RADIE", dateRadiation, motifRadiation: data.motifRadiation ?? null },
+      dateEffet: dateRadiation, reference: data.motifRadiation ?? null, acteur: acteurDe(req),
     });
-    const membre = await prisma.membre.update({ where: { id }, data: cycle });
-    await synchroniserAccesAuStatut(membre.id, membre.statut);
     res.json(membre);
   })
 );
@@ -474,15 +482,63 @@ membresRouter.post(
 membresRouter.post(
   "/:id/deces",
   requireRole("SECRETAIRE_GENERAL"),
-  asyncH(async (req, res) => {
+  asyncH(async (req: AuthRequest, res) => {
     const { dateDeces } = z.object({ dateDeces: datePassee }).parse(req.body ?? {});
     const id = Number(req.params.id);
     const actuel = await prisma.membre.findUnique({ where: { id }, select: { statut: true, dateRadiation: true, motifRadiation: true, dateDeces: true } });
     if (!actuel) throw new HttpError(404, "Avocat introuvable");
     if (actuel.statut === "DECEDE") throw new HttpError(409, "Le décès de cet avocat est déjà enregistré : corrigez la date par « Modifier ».");
-    const membre = await prisma.membre.update({ where: { id }, data: appliquerCycleVie(actuel, { statut: "DECEDE", dateDeces: new Date(dateDeces) }) });
-    await synchroniserAccesAuStatut(membre.id, membre.statut);
+    // Aucun motif ni détail : donnée de santé (loi n° 29-2019, art. 17).
+    const date = new Date(dateDeces);
+    const { membre } = await changerSituation({ membreId: id, type: "DECES", demande: { statut: "DECEDE", dateDeces: date }, dateEffet: date, acteur: acteurDe(req) });
     res.json(membre);
+  })
+);
+
+const admissionSchema = inscriptionSchema
+  .pick({ nom: true, sexe: true, cabinet: true, tel: true, email: true, rccm: true, cnss: true, adresse: true, observations: true, dateNaissance: true })
+  .extend({
+    cas: z.string().trim().min(1).max(40),
+    ancienneteAns: z.coerce.number().int().min(0).max(60),
+    reference: z.string().trim().min(1).max(120),
+    dateDecision: datePassee.optional(),
+  });
+
+/**
+ * POST /membres/admission-directe — inscription directe au tableau sans stage (F-03,
+ * loi n° 026-92, art. 32 ; permission admission_directe, SG et bâtonnier par défaut).
+ * Le cas doit figurer dans Paramètres → règles → admission directe et l'ancienneté
+ * atteindre son minimum (400 sinon). Le membre et son événement ADMISSION_DIRECTE
+ * sont créés ensemble (écriture imbriquée, tout ou rien).
+ */
+membresRouter.post(
+  "/admission-directe",
+  requirePermission("admission_directe"),
+  asyncH(async (req: AuthRequest, res) => {
+    const { cas, ancienneteAns, reference, dateDecision, dateNaissance, ...identite } = admissionSchema.parse(req.body);
+    const regle = (await reglesActuelles()).admissionDirecte.cas.find((c) => c.code === cas);
+    if (!regle) throw new HttpError(400, `Cas d'admission directe inconnu : ${cas}`);
+    if (ancienneteAns < regle.ancienneteMinAns)
+      throw new HttpError(400, `Ancienneté insuffisante : ${regle.ancienneteMinAns} ans au moins pour le cas « ${regle.libelle} » (${regle.article}).`);
+    const date = dateDecision ? new Date(dateDecision) : new Date();
+    const membre = await avecRejeuUnicite(async () => {
+      const { num, numInscription } = await prochainNumInscription();
+      return prisma.membre.create({
+        data: {
+          ...identite, num, numInscription, qualite: "AVOCAT", statut: "INSCRIT", sexe: identite.sexe ?? null,
+          dateNaissance: dateNaissance ? new Date(dateNaissance) : null, dateInscription: date,
+          evenements: {
+            create: {
+              type: "ADMISSION_DIRECTE", statutApres: "INSCRIT", dateEffet: date, reference,
+              details: { cas, libelle: regle.libelle, article: regle.article, ancienneteAns },
+              acteurId: req.user?.id ?? null, acteurNom: req.user?.nom ?? null,
+            },
+          },
+        },
+      });
+    });
+    realtimeTous({ type: "tableau" });
+    res.status(201).json(membre);
   })
 );
 
@@ -534,28 +590,54 @@ membresRouter.delete(
   })
 );
 
+const finStageSchema = z.object({
+  dateDecision: datePassee.optional(),
+  dateDemande: z.string().date().optional(),
+  dateCertificat: datePassee.optional(),
+  refCertificat: z.string().trim().min(1).max(120).optional(),
+});
+
+/** Organe qui délivre le certificat de fin de stage (loi n° 026-92, art. 29). */
+const ORGANE_CERTIFICAT = "Bâtonnier national (loi n° 026-92, art. 29)";
+
 /**
- * POST /membres/:id/valider-stage — validation de fin de stage (Bâtonnier) :
- * l'avocat stagiaire passe au tableau des avocats (qualité AVOCAT, statut INSCRIT).
+ * POST /membres/:id/valider-stage — enregistrement de la fin de stage (permission
+ * stage_valider, bâtonnier par défaut) : l'avocat stagiaire passe au tableau
+ * (qualité AVOCAT, statut INSCRIT) à la date de la décision (X-04). Corps facultatif :
+ * dateDecision (défaut : aujourd'hui), dateDemande, dateCertificat, refCertificat.
+ * Règles lues en Paramètres à chaque appel (CA8) : durée du stage depuis le serment
+ * (409 si non accomplie) et certificat exigé si certificatObligatoire (400).
  */
 membresRouter.post(
   "/:id/valider-stage",
-  requireRole("BATONNIER"),
+  requirePermission("stage_valider"),
   asyncH(async (req: AuthRequest, res) => {
     const membreId = Number(req.params.id);
     if (!Number.isInteger(membreId)) throw new HttpError(400, "Identifiant invalide");
+    const corps = finStageSchema.parse(req.body ?? {});
     const membre = await prisma.membre.findUnique({ where: { id: membreId } });
     if (!membre) throw new HttpError(404, "Avocat introuvable");
     if (membre.qualite !== "STAGIAIRE") throw new HttpError(409, "Ce membre n'est pas un avocat stagiaire.");
     // Un stagiaire sorti (radié, décédé, démissionnaire, retraité, cessation) ne revient pas au tableau par une validation de stage.
     if ((STATUTS_SORTIS as readonly string[]).includes(membre.statut))
       throw new HttpError(409, "Validation impossible : le stagiaire est sorti du barreau (radié, décédé ou sortie volontaire). Rétablissez d'abord son statut par la fiche.");
+    const { stage } = await reglesActuelles();
+    if (stage.certificatObligatoire && !(corps.dateCertificat && corps.refCertificat))
+      throw new HttpError(400, `Le certificat de fin de stage (date et référence), délivré par le ${ORGANE_CERTIFICAT}, est obligatoire.`);
+    const dateDecision = corps.dateDecision ? new Date(corps.dateDecision) : new Date();
+    if (membre.dateServment) {
+      const fin = new Date(membre.dateServment);
+      fin.setUTCMonth(fin.getUTCMonth() + stage.dureeMois);
+      if (fin > dateDecision)
+        throw new HttpError(409, `Stage non accompli : ${stage.dureeMois} mois requis depuis la prestation de serment (fin au ${fin.toISOString().slice(0, 10)}).`);
+    }
     const acteur = await nomActeur(req.user!.id);
-    const maj = await prisma.membre.update({
-      where: { id: membreId },
-      data: { qualite: "AVOCAT", ...appliquerCycleVie(membre, { statut: "INSCRIT" }), stageValideAt: new Date(), stageValidePar: acteur ?? undefined },
+    const { membre: maj } = await changerSituation({
+      membreId, type: "PASSAGE_TABLEAU", demande: { statut: "INSCRIT" },
+      donnees: { qualite: "AVOCAT", dateInscription: dateDecision, stageValideAt: new Date(), stageValidePar: acteur ?? undefined },
+      dateEffet: dateDecision, reference: corps.refCertificat ?? null, acteur: { id: req.user!.id, nom: acteur },
+      details: { organe: ORGANE_CERTIFICAT, dureeMoisRequise: stage.dureeMois, ...(corps.dateDemande ? { dateDemande: corps.dateDemande } : {}), ...(corps.dateCertificat ? { dateCertificat: corps.dateCertificat } : {}) },
     });
-    await synchroniserAccesAuStatut(maj.id, maj.statut);
     await archiver({ categorie: "Fin de stage", titre: `Fin de stage validée — Me ${membre.nom}`, reference: `STAGE-${membre.num}`, date: new Date(), membreNom: membre.nom });
     res.json(maj);
   })
