@@ -49,7 +49,7 @@ export function audit(req: AuthRequest, res: Response, next: NextFunction) {
   // préfixe IPv4-mapped (::ffff:) pour un affichage lisible.
   const ip = (req.ip ?? "").replace(/^::ffff:/, "") || null;
   res.on("finish", () => {
-    if (res.statusCode >= 400) return;
+    if (res.statusCode >= 400 || res.locals.auditFait) return;
     const { action: base, cible } = libelle(req.method, req.originalUrl.split("?")[0]);
     const detail = res.locals.auditDetail;
     const action = detail ? `${base} (${detail})` : base;

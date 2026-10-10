@@ -76,6 +76,20 @@ const exportPdfQuery = z.object({
 });
 
 /**
+ * Écrit (et attend) la ligne d'audit d'un export : pas de trace, pas d'export (C-04).
+ * Pose auditFait pour que le middleware générique n'écrive pas de doublon.
+ */
+async function tracerExport(req: AuthRequest, methode: string, chemin: string, detail: string) {
+  (req.res as { locals: Record<string, unknown> }).locals.auditFait = true;
+  await prisma.journalAudit.create({
+    data: {
+      action: "Export de la liste des avocats", cible: detail.slice(0, 250), methode, chemin, statut: methode === "GET" ? 200 : 204,
+      ip: (req.ip ?? "").replace(/^::ffff:/, "") || null, userId: req.user?.id ?? null, userNom: req.user?.nom ?? null,
+    },
+  });
+}
+
+/**
  * GET /membres/export/pdf — liste (filtrée ou sélection par ids) en PDF.
  * Extraction en masse : permission « membres » (l'AVOCAT est déjà bloqué par
  * confinementAvocat) ; projection annuaire sans motifRadiation ; journalisée (C-04).
@@ -101,13 +115,7 @@ membresRouter.get(
     // Rendu puis audit AVANT l'envoi : si l'audit échoue, aucune donnée nominative
     // n'est livrée (traçabilité C-04) et le gestionnaire d'erreur répond en 500.
     const pdf = await htmlVersPdf(listeAvocatsHtml(membres, filtre, new Date()));
-    await prisma.journalAudit.create({
-      data: {
-        action: "Export de la liste des avocats", cible: `format=pdf; filtre=${filtre}; lignes=${membres.length}`.slice(0, 250),
-        methode: "GET", chemin: "/api/membres/export/pdf", statut: 200,
-        ip: (req.ip ?? "").replace(/^::ffff:/, "") || null, userId: req.user?.id ?? null, userNom: req.user?.nom ?? null,
-      },
-    });
+    await tracerExport(req, "GET", "/api/membres/export/pdf", `format=pdf; filtre=${filtre}; lignes=${membres.length}`);
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="Avocats-${new Date().toISOString().slice(0, 10)}.pdf"`);
     res.end(pdf);
@@ -117,8 +125,8 @@ membresRouter.get(
 /**
  * POST /membres/export — trace un export généré côté client (CSV/XLSX/TXT, ou PDF
  * de repli) : le fichier est produit dans le navigateur, seule la journalisation
- * passe par le serveur (loi 29-2019 art. 63-64, avis C-04). Le middleware d'audit
- * écrit la ligne « Export de la liste des avocats » avec le détail ci-dessous.
+ * passe par le serveur (loi 29-2019 art. 63-64, avis C-04). La ligne d'audit est écrite
+ * (et attendue) avant la réponse 204 : si elle échoue, 500 et aucun fichier côté client.
  */
 const exportJournalSchema = z.object({
   format: z.enum(["csv", "xlsx", "txt", "pdf-local"]),
@@ -128,9 +136,9 @@ const exportJournalSchema = z.object({
 membresRouter.post(
   "/export",
   requirePermission("membres"),
-  asyncH(async (req, res) => {
+  asyncH(async (req: AuthRequest, res) => {
     const { format, filtre, lignes } = exportJournalSchema.parse(req.body);
-    res.locals.auditDetail = `format=${format}; filtre=${filtre || "tous"}; lignes=${lignes}`;
+    await tracerExport(req, "POST", "/api/membres/export", `format=${format}; filtre=${filtre || "tous"}; lignes=${lignes}`);
     res.status(204).end();
   })
 );

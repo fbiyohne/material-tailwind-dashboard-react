@@ -1679,9 +1679,19 @@ describe("Revue sécurité T10 — données disciplinaires, extraction en masse,
       if (!e) await new Promise((res) => setTimeout(res, 100));
     }
     expect(e).not.toBeNull();
-    expect(e!.action).toBe("Export de la liste des avocats — Avocat (format=xlsx; filtre=statut RADIE; lignes=3)");
+    expect(e!.action).toBe("Export de la liste des avocats");
+    expect(e!.cible).toBe("format=xlsx; filtre=statut RADIE; lignes=3");
+    // Une seule ligne (pas de doublon du middleware générique).
+    expect(await prisma.journalAudit.count({ where: { id: { gt: avant }, userId: user!.id, chemin: "/api/membres/export" } })).toBe(1);
     expect(e!.userNom).toBe("T10 Consultation");
     expect(e!.quand).toBeInstanceOf(Date);
+  });
+
+  it("export client : si l'écriture du journal échoue → 500 (pas de trace, pas d'export)", async () => {
+    const spy = vi.spyOn(prisma.journalAudit, "create").mockRejectedValueOnce(new Error("panne"));
+    const r = await request(app).post("/api/membres/export").set(...bearer(consultJwt)).send({ format: "csv", filtre: "tous", lignes: 1 });
+    spy.mockRestore();
+    expect(r.status).toBe(500);
   });
 });
 
