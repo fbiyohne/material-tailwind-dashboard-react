@@ -5,7 +5,7 @@ import type { Prisma, StatutMembre } from "@prisma/client";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole, requirePermission, type AuthRequest } from "../middleware/auth.js";
-import { prochainNumInscription, prochainNumeroAttestation, archiver, avecRejeuUnicite, STATUTS_HORS_TABLEAU } from "../lib/business.js";
+import { prochainNumInscription, prochainNumeroAttestation, archiver, avecRejeuUnicite, STATUTS_HORS_TABLEAU, STATUTS_SORTIS } from "../lib/business.js";
 import { enregistrerFichier } from "../lib/storage.js";
 import { envoyerPdf, htmlVersPdf } from "../lib/pdf.js";
 import { attestationHtml, listeAvocatsHtml, STATUT_FR, QUALITE_FR } from "../lib/templates.js";
@@ -609,7 +609,7 @@ membresRouter.post(
   asyncH(async (req, res) => {
     const membre = await prisma.membre.findUnique({ where: { id: Number(req.params.id) } });
     if (!membre) throw new HttpError(404, "Avocat introuvable");
-    if ((STATUTS_HORS_TABLEAU as readonly string[]).includes(membre.statut)) throw new HttpError(409, "Attestation impossible : membre radié ou décédé");
+    if ((STATUTS_SORTIS as readonly string[]).includes(membre.statut)) throw new HttpError(409, "Attestation impossible : membre radié, décédé ou sorti du tableau");
     const numero = await prochainNumeroAttestation();
     const date = new Date();
     await archiver({
@@ -630,7 +630,7 @@ membresRouter.get(
   asyncH(async (req, res) => {
     const membre = await prisma.membre.findUnique({ where: { id: Number(req.params.id) } });
     if (!membre) throw new HttpError(404, "Avocat introuvable");
-    if ((STATUTS_HORS_TABLEAU as readonly string[]).includes(membre.statut)) throw new HttpError(409, "Attestation impossible : membre radié ou décédé");
+    if ((STATUTS_SORTIS as readonly string[]).includes(membre.statut)) throw new HttpError(409, "Attestation impossible : membre radié, décédé ou sorti du tableau");
     const numero = await prochainNumeroAttestation();
     const date = new Date();
     await archiver({ categorie: "Attestation d'inscription", titre: `Attestation ${numero} — Me ${membre.nom}`, reference: numero, date, membreNom: membre.nom });

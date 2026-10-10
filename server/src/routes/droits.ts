@@ -5,7 +5,7 @@ import { prisma } from "../prisma.js";
 import { anneeDeRequete } from "../lib/requete.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole, requirePermission } from "../middleware/auth.js";
-import { droitDue, statutCotisation, tarifsActuels, STATUTS_HORS_TABLEAU } from "../lib/business.js";
+import { droitDue, statutCotisation, tarifsActuels, STATUTS_SORTIS } from "../lib/business.js";
 import { encaisser, gardeVersement } from "../lib/encaissement.js";
 import { envoyerEmail, envoyerSms, emailEnSimulation } from "../lib/notifications.js";
 
@@ -21,7 +21,7 @@ droitsRouter.post(
     const annee = anneeDeRequete(req);
     const [tarifs, membres] = await Promise.all([
       tarifsActuels(),
-      prisma.membre.findMany({ where: { qualite: "AVOCAT", statut: { notIn: [...STATUTS_HORS_TABLEAU] } }, include: { droitsPlaidoirie: { where: { annee } } } }),
+      prisma.membre.findMany({ where: { qualite: "AVOCAT", statut: { notIn: [...STATUTS_SORTIS] } }, include: { droitsPlaidoirie: { where: { annee } } } }),
     ]);
     const cibles = membres.filter((m) => {
       const d = m.droitsPlaidoirie[0];
@@ -62,7 +62,7 @@ droitsRouter.get(
     const [tarifs, membres] = await Promise.all([
       tarifsActuels(),
       prisma.membre.findMany({
-        where: { qualite: "AVOCAT", statut: { notIn: [...STATUTS_HORS_TABLEAU] } },
+        where: { qualite: "AVOCAT", statut: { notIn: [...STATUTS_SORTIS] } },
         orderBy: { num: "asc" },
         include: { droitsPlaidoirie: { where: { annee } } },
       }),

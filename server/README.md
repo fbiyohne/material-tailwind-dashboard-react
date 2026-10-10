@@ -102,8 +102,15 @@ Réponse : `{ "total": 3, "crees": 1, "maj": 1, "erreurs": [{ "ligne": 3, "messa
 - Statut `décédé` (aussi `decede`, `décédée`, `decedee`) → `DECEDE`. Si le statut change sur un membre existant, l'accès espace est resynchronisé.
 - Journal d'audit : « Import du tableau — Avocat (N ligne(s), X créé(s), Y mis à jour, Z erreur(s)) ».
 
+### Changement de situation et situation à une date (T5, `src/lib/cycleVie.ts`)
+- `changerSituation({ membreId, type, demande, donnees, dateEffet, annee, motif, reference, pieceId, dossierId, details, acteur })` : point d'écriture unique d'un changement de situation. Dans **une** transaction : `appliquerCycleVie`, mise à jour de la fiche, création d'un `EvenementSituation` (statut avant/après, acteur, motif, référence, pièce). Tout est annulé si une écriture échoue. Ensuite : `synchroniserAccesAuStatut` si le statut change, puis signal temps réel `{ type: "tableau" }` à tous les clients (`realtimeTous`, `src/lib/realtime.ts`).
+- `situationADate(membre, evenements, dossiers, recus, D)` : fonction pure (D10). Statut du dernier événement daté au plus tard de D, à défaut statut d'avant le premier événement postérieur, à défaut statut courant (limite PO-20) ; `null` si inscrit après D ; un inscrit sous interdiction ferme couvrant D compte `SUSPENDU` (avec sursis : reste inscrit, `sursis: true`) ; peine accessoire en cours → `ineligible: true` ; cotisation payée à D = reçus de cotisation de l'exercice de D datés au plus tard de D (sans reçu : la ligne si `datePaiement ≤ D`). D est inclusive : passer la fin de journée.
+- Tests : `test/cycleVie-situation.test.ts`.
+
 ### Constante et libellés d'audit
-- `STATUTS_HORS_TABLEAU = ["RADIE", "DECEDE"]` (`src/lib/business.ts`) : exclus du tableau de l'Ordre, des convocations, de la génération de cotisations **et des relances**, et inéligibles au corps électoral (raison `statut`).
+- `STATUTS_SORTIS = ["RADIE", "DECEDE", "DEMISSIONNAIRE", "RETRAITE", "CESSATION"]` (`src/lib/business.ts`) : exclus du tableau de l'Ordre, des convocations, de la génération de cotisations **et des relances**, inéligibles au corps électoral (raison `statut`), sans attestation ni accès à l'espace avocat. `STATUTS_HORS_TABLEAU = ["RADIE", "DECEDE"]` ne désigne plus que les actes datés (radiation, décès) contrôlés à l'import.
+- `STATUTS_ANNUAIRE = ["INSCRIT", "STAGIAIRE", "HONORAIRE"]` : statuts visibles dans l'annuaire de l'espace avocat (X-01).
+- `estRecuDroit(objet)` : règle unique « l'objet du reçu contient *droit* → droit de plaidoirie, sinon cotisation » (annulation de reçu, corps électoral à une date).
 - Libellés ajoutés dans `src/middleware/audit.ts` : « Radiation d'un avocat », « Déclaration de décès », « Import du tableau », « Export de la liste des avocats ».
 
 ### Chromium pour le PDF

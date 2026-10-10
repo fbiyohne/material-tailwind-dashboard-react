@@ -4,7 +4,7 @@ import { asyncH } from "../middleware/error.js";
 import { requireAuth, requireRole, requirePermission } from "../middleware/auth.js";
 import { envoyerPdf } from "../lib/pdf.js";
 import { tableauOrdreHtml, type ConseilPdf, type CabinetPdf } from "../lib/templates.js";
-import { archiver, STATUTS_HORS_TABLEAU } from "../lib/business.js";
+import { archiver, STATUTS_SORTIS } from "../lib/business.js";
 
 /**
  * Tableau de l'Ordre (RG-04..06) — registre officiel des membres, dressé par
@@ -16,10 +16,10 @@ tableauRouter.use(requireAuth, requirePermission("membres"));
 
 const ORDRE_QUALITES = ["AVOCAT", "STAGIAIRE", "HONORAIRE"] as const;
 
-/** Compose le tableau : membres ni radiés ni décédés, triés par ancienneté, en sections. */
+/** Compose le tableau : membres non sortis (radiés, décédés, sorties volontaires), triés par ancienneté, en sections. */
 async function composer() {
   const membres = await prisma.membre.findMany({
-    where: { statut: { notIn: [...STATUTS_HORS_TABLEAU] } },
+    where: { statut: { notIn: [...STATUTS_SORTIS] } },
     orderBy: [{ dateInscription: "asc" }, { num: "asc" }],
     select: { id: true, num: true, numInscription: true, nom: true, qualite: true, statut: true, cabinet: true, dateInscription: true },
   });

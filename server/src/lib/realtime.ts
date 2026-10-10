@@ -27,7 +27,8 @@ const parMembre = new Map<number, Set<SocketClient>>();
 const administration = new Set<SocketClient>();
 
 export interface EvenementRealtime {
-  type: "messagerie" | "notification";
+  /** « tableau » : une situation a changé, les écrans du tableau rechargent (H8, D16). */
+  type: "messagerie" | "notification" | "tableau";
   conversationId?: number;
 }
 
@@ -51,6 +52,12 @@ export function realtimeMembres(membreIds: number[], evt: EvenementRealtime) {
 /** Notifie en temps réel les officiers connectés (boîte administration). */
 export function realtimeAdministration(evt: EvenementRealtime) {
   diffuser(administration, evt);
+}
+
+/** Notifie en temps réel tous les clients connectés (officiers et avocats). */
+export function realtimeTous(evt: EvenementRealtime) {
+  diffuser(administration, evt);
+  for (const set of parMembre.values()) diffuser(set, evt);
 }
 
 function retirer(ws: SocketClient) {

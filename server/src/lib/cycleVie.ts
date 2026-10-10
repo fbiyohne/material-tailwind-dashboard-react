@@ -1,5 +1,9 @@
-import type { StatutMembre } from "@prisma/client";
+import type { Prisma, StatutMembre } from "@prisma/client";
 import { HttpError } from "../middleware/error.js";
+import { prisma } from "../prisma.js";
+import { synchroniserAccesAuStatut } from "./acces.js";
+import { realtimeTous } from "./realtime.js";
+import { estRecuDroit } from "./business.js";
 
 /** Partie « cycle de vie » d'une fiche membre. */
 export interface EtatCycleVie {
@@ -41,4 +45,137 @@ export function appliquerCycleVie(actuel: EtatCycleVie, demande: DemandeCycleVie
   if (radie && !etat.dateRadiation) throw new HttpError(400, "La date de la décision de radiation est obligatoire pour un avocat radié.");
   if (decede && !etat.dateDeces) throw new HttpError(400, "La date du décès est obligatoire pour un avocat décédé.");
   return etat;
+}
+
+// ─── Changement de situation tracé (D5) ──────────────────────────────────────
+
+export interface ChangementSituation {
+  membreId: number;
+  /** Type d'événement (INSCRIPTION, PASSAGE_TABLEAU, OMISSION, RADIATION, DECES…). */
+  type: string;
+  /** Statut et actes demandés, contrôlés par appliquerCycleVie ; absent = statut inchangé. */
+  demande?: DemandeCycleVie;
+  /** Autres champs de la fiche écrits dans la même transaction (qualité, date d'inscription…). */
+  donnees?: Prisma.MembreUpdateInput;
+  dateEffet?: Date;
+  annee?: number | null;
+  motif?: string | null;
+  reference?: string | null;
+  pieceId?: number | null;
+  dossierId?: number | null;
+  details?: Prisma.InputJsonValue;
+  acteur?: { id: number | null; nom: string | null } | null;
+}
+
+/**
+ * Point d'écriture unique d'un changement de situation : machine à états, mise à
+ * jour de la fiche et EvenementSituation (statut avant/après, acteur, pièce) dans
+ * une seule transaction — tout ou rien. Ensuite seulement : cohérence de l'accès à
+ * l'espace avocat et signal temps réel « tableau ».
+ */
+export async function changerSituation(c: ChangementSituation) {
+  const { membre, evenement, avant } = await prisma.$transaction(async (tx) => {
+    const actuel = await tx.membre.findUnique({ where: { id: c.membreId } });
+    if (!actuel) throw new HttpError(404, "Avocat introuvable");
+    const etat = appliquerCycleVie(actuel, c.demande ?? {});
+    const membre = await tx.membre.update({ where: { id: actuel.id }, data: { ...c.donnees, ...etat } });
+    const evenement = await tx.evenementSituation.create({
+      data: {
+        membreId: actuel.id,
+        type: c.type,
+        statutAvant: actuel.statut,
+        statutApres: membre.statut,
+        dateEffet: c.dateEffet ?? new Date(),
+        annee: c.annee ?? null,
+        motif: c.motif ?? null,
+        reference: c.reference ?? null,
+        pieceId: c.pieceId ?? null,
+        dossierId: c.dossierId ?? null,
+        details: c.details,
+        acteurId: c.acteur?.id ?? null,
+        acteurNom: c.acteur?.nom ?? null,
+      },
+    });
+    return { membre, evenement, avant: actuel.statut };
+  });
+  if (membre.statut !== avant) await synchroniserAccesAuStatut(membre.id, membre.statut);
+  realtimeTous({ type: "tableau" });
+  return { membre, evenement };
+}
+
+// ─── Situation à une date (D10) ──────────────────────────────────────────────
+
+export interface EvenementDate { dateEffet: Date; statutAvant: StatutMembre | null; statutApres: StatutMembre | null }
+export interface SanctionDate {
+  sursis: boolean;
+  sanctionDebut: Date | null;
+  sanctionFin: Date | null;
+  peineAccessoireMois: number | null;
+  dateDecision: Date | null;
+}
+export interface RecuDate { annee: number; montant: number; date: Date; objet: string | null }
+export interface MembreDate {
+  statut: StatutMembre;
+  dateInscription: Date | null;
+  cotisations?: { annee: number; montantDu: number; montantPaye: number; datePaiement: Date | null }[];
+}
+export interface SituationADate {
+  /** Statut à la date ; null si le membre n'était pas encore inscrit. */
+  statut: StatutMembre | null;
+  /** Interdiction temporaire avec sursis couvrant la date (mention, sans effet sur le statut). */
+  sursis: boolean;
+  /** Peine accessoire d'inéligibilité en cours à la date. */
+  ineligible: boolean;
+  /** Exercice (civil) de la date. */
+  annee: number;
+  /** Cotisation de l'exercice payée à la date ; null sans ligne (le dû se calcule alors sur le barème). */
+  cotisation: { montantDu: number; montantPaye: number } | null;
+}
+
+const ajouterMois = (d: Date, mois: number) => { const r = new Date(d); r.setUTCMonth(r.getUTCMonth() + mois); return r; };
+
+/**
+ * Situation d'un membre à la date D (incluse), fonction pure. Règles (D10) :
+ *  - statut du dernier événement daté au plus tard de D ; à défaut, statut d'avant le
+ *    premier événement postérieur ; à défaut, statut courant (limite PO-20 : fiable
+ *    seulement depuis le début de la journalisation) ;
+ *  - inscription postérieure à D : statut null ;
+ *  - interdiction ferme couvrant D (sanctionDebut ≤ D ≤ sanctionFin) : un inscrit compte SUSPENDU ;
+ *    avec sursis, il reste inscrit et `sursis` est vrai ;
+ *  - peine accessoire : inéligible de dateDecision (à défaut sanctionDebut) à + peineAccessoireMois ;
+ *  - cotisation payée à D : somme des reçus de cotisation (estRecuDroit) de l'exercice datés
+ *    au plus tard de D ; sans aucun reçu de cotisation pour l'exercice, la ligne Cotisation
+ *    compte si datePaiement ≤ D.
+ * L'appelant passe D en fin de journée s'il veut inclure les paiements du jour.
+ */
+export function situationADate(
+  membre: MembreDate,
+  evenements: EvenementDate[],
+  dossiers: SanctionDate[],
+  recus: RecuDate[],
+  D: Date
+): SituationADate {
+  const t = D.getTime();
+  const annee = D.getUTCFullYear();
+  const tries = [...evenements].sort((a, b) => a.dateEffet.getTime() - b.dateEffet.getTime());
+  const dernier = tries.filter((e) => e.dateEffet.getTime() <= t && e.statutApres).pop();
+  const suivant = tries.find((e) => e.dateEffet.getTime() > t && e.statutAvant);
+  let statut: StatutMembre | null = dernier?.statutApres ?? suivant?.statutAvant ?? membre.statut;
+  if (membre.dateInscription && membre.dateInscription.getTime() > t) statut = null;
+
+  const couvre = (s: SanctionDate) => !!s.sanctionDebut && s.sanctionDebut.getTime() <= t && (!s.sanctionFin || t <= s.sanctionFin.getTime());
+  const interdictions = dossiers.filter(couvre);
+  if (statut === "INSCRIT" && interdictions.some((s) => !s.sursis)) statut = "SUSPENDU";
+  const sursis = interdictions.some((s) => s.sursis);
+  const ineligible = dossiers.some((s) => {
+    const debut = s.dateDecision ?? s.sanctionDebut;
+    return !!s.peineAccessoireMois && !!debut && debut.getTime() <= t && t < ajouterMois(debut, s.peineAccessoireMois).getTime();
+  });
+
+  const recusCot = recus.filter((r) => r.annee === annee && !estRecuDroit(r.objet));
+  const ligne = membre.cotisations?.find((c) => c.annee === annee);
+  const paye = recusCot.length
+    ? recusCot.filter((r) => r.date.getTime() <= t).reduce((s, r) => s + r.montant, 0)
+    : ligne?.datePaiement && ligne.datePaiement.getTime() <= t ? ligne.montantPaye : 0;
+  return { statut, sursis, ineligible, annee, cotisation: ligne ? { montantDu: ligne.montantDu, montantPaye: paye } : null };
 }

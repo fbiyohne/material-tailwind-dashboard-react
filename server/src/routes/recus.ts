@@ -5,6 +5,7 @@ import { requireAuth, requireRole, requirePermission } from "../middleware/auth.
 import QRCode from "qrcode";
 import { envoyerDocumentPdf } from "../lib/pdf.js";
 import { recuRicheHtml } from "../lib/documentsRiches.js";
+import { estRecuDroit } from "../lib/business.js";
 
 export const recusRouter = Router();
 // Données financières restreintes (RG-15) : SG, Trésorière, Admin.
@@ -48,7 +49,7 @@ recusRouter.delete(
   asyncH(async (req, res) => {
     const recu = await prisma.recu.findUnique({ where: { id: Number(req.params.id) } });
     if (!recu) throw new HttpError(404, "Reçu introuvable");
-    const estDroit = (recu.objet ?? "").toLowerCase().includes("droit");
+    const estDroit = estRecuDroit(recu.objet);
     const where = { membreId_annee: { membreId: recu.membreId, annee: recu.annee } };
     await prisma.$transaction(async (tx) => {
       if (estDroit) {

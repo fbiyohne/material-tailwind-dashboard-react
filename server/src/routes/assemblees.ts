@@ -5,7 +5,7 @@ import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole, requirePermission } from "../middleware/auth.js";
 import { envoyerPdf } from "../lib/pdf.js";
-import { archiver, STATUTS_HORS_TABLEAU } from "../lib/business.js";
+import { archiver, STATUTS_SORTIS } from "../lib/business.js";
 import { convocationAgHtml, pvAssembleeHtml } from "../lib/templates.js";
 import { envoyerEmail } from "../lib/notifications.js";
 import { emailEnSimulation } from "../lib/mail.js";
@@ -33,7 +33,7 @@ assembleesRouter.post("/:id/convoquer", requireRole("SECRETAIRE_GENERAL"), async
   const libelle = TYPE_AG[a.type] ?? "Assemblée Générale";
   const odj = (a.ordreDuJour ?? []).map((p, i) => `${i + 1}. ${p}`).join("\n");
   // Convocation adressée à tous les membres ni radiés ni décédés disposant d'un email.
-  const membres = await prisma.membre.findMany({ where: { statut: { notIn: [...STATUTS_HORS_TABLEAU] }, email: { not: null } }, select: { nom: true, email: true } });
+  const membres = await prisma.membre.findMany({ where: { statut: { notIn: [...STATUTS_SORTIS] }, email: { not: null } }, select: { nom: true, email: true } });
   let envoyes = 0;
   for (const m of membres) {
     await envoyerEmail({

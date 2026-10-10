@@ -63,7 +63,7 @@ export function cotisationDue(ligne: { montantDu: number } | null | undefined, t
 
 /** Cotisation due pour le suivi : un radié/décédé n'a aucun dû calculé à la volée, seulement sa ligne réelle éventuelle. */
 export function cotisationDueSuivi(m: { statut: string; qualite: Qualite }, ligne: { montantDu: number } | null | undefined, tarifs: Tarifs): number {
-  if (!ligne && (STATUTS_HORS_TABLEAU as readonly string[]).includes(m.statut)) return 0;
+  if (!ligne && (STATUTS_SORTIS as readonly string[]).includes(m.statut)) return 0;
   return cotisationDue(ligne, tarifs, m.qualite);
 }
 
@@ -168,8 +168,23 @@ export async function prochainNumeroTimbre(): Promise<number> {
   return compteur.valeur;
 }
 
-/** Statuts définitivement hors du tableau de l'Ordre : exclus du tableau, des cotisations, des relances et des convocations. */
+/**
+ * Actes de sortie datés (radiation, décès). Valeur historique figée par le test R1
+ * de api.test.ts (CA2 : aucun test existant modifié) : pour exclure du tableau, utiliser STATUTS_SORTIS.
+ */
 export const STATUTS_HORS_TABLEAU = ["RADIE", "DECEDE"] as const;
+
+/**
+ * Tous les statuts hors du tableau de l'Ordre (actes datés + sorties volontaires, D8) :
+ * exclus du tableau, des cotisations, des relances, des convocations et du corps électoral.
+ */
+export const STATUTS_SORTIS = [...STATUTS_HORS_TABLEAU, "DEMISSIONNAIRE", "RETRAITE", "CESSATION"] as const;
+
+/** Statuts visibles dans l'annuaire de l'espace avocat et joignables par la messagerie (X-01, D11). */
+export const STATUTS_ANNUAIRE = ["INSCRIT", "STAGIAIRE", "HONORAIRE"] as const;
+
+/** Règle unique : un reçu dont l'objet mentionne « droit » est un droit de plaidoirie, sinon une cotisation. */
+export const estRecuDroit = (objet: string | null | undefined): boolean => (objet ?? "").toLowerCase().includes("droit");
 
 // ─── Corps électoral (RG-04, RG-05) ──────────────────────────────────────────
 export function eligibiliteElectorale(
@@ -179,7 +194,7 @@ export function eligibiliteElectorale(
 ): { eligible: boolean; raison: string | null } {
   if (membre.qualite === "HONORAIRE") return { eligible: false, raison: "honoraire" };
   if (membre.qualite === "STAGIAIRE") return { eligible: false, raison: "stagiaire" };
-  if (["SUSPENDU", "OMIS", ...STATUTS_HORS_TABLEAU].includes(membre.statut)) return { eligible: false, raison: "statut" };
+  if (["SUSPENDU", "OMIS", ...STATUTS_SORTIS].includes(membre.statut)) return { eligible: false, raison: "statut" };
   // Avec les tarifs courants (Paramètres), le dû d'un membre sans ligne persistée est
   // calculé sur le barème réel via cotisationDue (une exonération à 0 est ainsi respectée) ;
   // à défaut, on retombe sur le barème statique (rétrocompatibilité).

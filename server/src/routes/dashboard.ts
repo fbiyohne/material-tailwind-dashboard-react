@@ -3,7 +3,7 @@ import { prisma } from "../prisma.js";
 import { anneeDeRequete } from "../lib/requete.js";
 import { asyncH } from "../middleware/error.js";
 import { requireAuth, type AuthRequest } from "../middleware/auth.js";
-import { cotisationDueSuivi, statutCotisation, tarifsActuels, STATUTS_HORS_TABLEAU } from "../lib/business.js";
+import { cotisationDueSuivi, statutCotisation, tarifsActuels, STATUTS_SORTIS } from "../lib/business.js";
 
 export const dashboardRouter = Router();
 dashboardRouter.use(requireAuth);
@@ -40,7 +40,7 @@ dashboardRouter.get(
     const parite = { H: 0, F: 0, nr: 0 };
 
     for (const m of membres) {
-      const actif = !(STATUTS_HORS_TABLEAU as readonly string[]).includes(m.statut);
+      const actif = !(STATUTS_SORTIS as readonly string[]).includes(m.statut);
       if (m.qualite === "AVOCAT" && actif) inscrits += 1;
       if (m.qualite === "STAGIAIRE" && actif) stagiaires += 1;
       parQualite[m.qualite] = (parQualite[m.qualite] ?? 0) + 1;
