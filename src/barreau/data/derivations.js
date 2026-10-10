@@ -18,10 +18,16 @@ const STATUT_MEMBRE_META_DEFAUT = {
   inscrit: { label: "Inscrit", ton: "vert" },
   suspendu: { label: "Suspendu", ton: "rouge" },
   radie: { label: "Radié", ton: "rouge" },
-  omis: { label: "Omis", ton: "gris" },
+  // Omission : mesure temporaire et réversible (réinscription) — ton or, nettement
+  // distinct de la radiation (pastille rouge pleine), voir STATUT_AIDE.
+  omis: { label: "Omis", ton: "or" },
   honoraire: { label: "Honoraire", ton: "or" },
   stagiaire: { label: "Stagiaire", ton: "bleu" },
   decede: { label: "Décédé", ton: "gris" },
+  // Sorties volontaires définitives, hors tableau (mission audit-conformité, D2).
+  demissionnaire: { label: "Démissionnaire", ton: "gris" },
+  retraite: { label: "Retraité", ton: "gris" },
+  cessation: { label: "Cessation d'activité", ton: "gris" },
 };
 
 /** Libellé + ton de badge par statut de cotisation (jamais la couleur seule). */

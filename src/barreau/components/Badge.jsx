@@ -13,10 +13,10 @@ const TONS = {
  * Conforme à l'accessibilité de la maquette : l'information n'est jamais portée
  * par la seule couleur — une pastille (dot) accompagne toujours le libellé.
  */
-export function Badge({ ton = "gris", dot = true, children, className = "" }) {
+export function Badge({ ton = "gris", dot = true, children, className = "", ...rest }) {
   return (
-    <span className={`bpn-badge ${TONS[ton]} ${className}`}>
-      {dot && <span className="bpn-badge-dot" />}
+    <span className={`bpn-badge ${TONS[ton]} ${className}`} {...rest}>
+      {dot && <span className="bpn-badge-dot" aria-hidden="true" />}
       {children}
     </span>
   );

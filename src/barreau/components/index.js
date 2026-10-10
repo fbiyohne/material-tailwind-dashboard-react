@@ -42,3 +42,7 @@ export { ClocheNotifications } from "./ClocheNotifications";
 export { EditeurDocument } from "./EditeurDocument";
 export { VignetteTimbre } from "./VignetteTimbre";
 export { MatriceAcces } from "./MatriceAcces";
+export { BandeauExperimental } from "./BandeauExperimental";
+export { MentionJuridique } from "./MentionJuridique";
+export { Frise } from "./Frise";
+export { StatutMessage } from "./StatutMessage";

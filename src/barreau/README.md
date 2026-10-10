@@ -81,5 +81,37 @@ Dates au format `AAAA-MM-JJ`. Jamais exportés : motif de radiation, adresse, da
 ### Aller-retour
 Un fichier exporté en CSV, TXT ou XLSX se ré-importe tel quel : 0 créé, N mis à jour, 0 erreur, sans modification des valeurs.
 
+## Composants partagés de la mission audit-conformité (T3, 2026-10-10)
+
+Tous exportés par `components/index.js`. Icônes : Heroicons 24/outline (bibliothèque unique du projet). Jetons : `tailwind.config.cjs` uniquement. Non interactifs : aucun arrêt de tabulation ajouté.
+
+| Composant | Usage | Props |
+|---|---|---|
+| `BandeauExperimental` | En tête de **chaque** écran du vote électronique et du timbre autonome (CA13). Texte exact de l'avis, exporté en `TEXTE_EXPERIMENTAL`. `role="note"`, sans bouton de fermeture. | aucune |
+| `MentionJuridique` | Bandeau « Loi » / « Provisoire » avec source. Préréglages (texte de l'avis juridique, une seule source) : `regles`, `sursis`, `sanction`, `radiation`, `omission`, `passageTableau` → `<MentionJuridique type="omission" />`. Mention libre : `<MentionJuridique nature="provisoire" article="Règlement intérieur — à confirmer">…</MentionJuridique>`. | `type`, `nature` (`loi`\|`provisoire`), `article`, `children` |
+| `StatutBadge` | 10 statuts (`inscrit`, `suspendu`, `radie`, `omis`, `honoraire`, `stagiaire`, `decede`, `demissionnaire`, `retraite`, `cessation`). Infobulle `title` = `STATUT_AIDE[statut]`. Radié : pastille rouge pleine ; omis : or à contour pointillé (temporaire) ; sorties définitives : gris. `decrire` lit l'explication aux lecteurs d'écran (fiche membre ; pas dans les tableaux). | `statut`, `decrire` |
+| `Frise` | Frise chronologique verticale (historique de situation, circuit des impayés, circuit disciplinaire). État de l'étape en texte masqué + forme du repère (coche pleine / anneau or / cercle pointillé). `<time dateTime>` ; « Non daté » si pas de date ; message `vide` si aucune étape. | `titre` (nom de la liste), `etapes` [{`id`, `libelle`, `date`, `detail`, `etat`: `fait`\|`courant`\|`a_venir`}], `avecHeure`, `vide` |
+| `StatutMessage` | Envoyé / Reçu / Lu d'un message : libellé écrit + coches (1, 2, 2 marine). Détail horodaté en infobulle et pour lecteur d'écran. `inverse` sur bulle marine. `statutMessage({recuLe, luLe})` exporté. Aucune portée de preuve affichée. | `envoyeLe`, `recuLe`, `luLe`, `inverse` |
+
+Libellés et tons des statuts : `data/derivations.js` (`STATUT_MEMBRE_META`, surchargeables en Paramètres) ; l'omission passe du gris à l'or pour se distinguer de la radiation et du décès.
+
+### Audit impeccable (T3)
+
+Détecteur `impeccable detect` sur les 5 fichiers : 0 constat. Score technique 18/20 :
+accessibilité 3/4, performance 4/4, thème 3/4, responsive 4/4, intégrité 4/4.
+Contrastes mesurés (WCAG) : or foncé/or pâle 4,56 ; blanc/or foncé 4,92 ; encre/bleu pâle 14,5 ; encre 70 %/crème ≈ 6 ; blanc/rouge 9,3 ; repère « à venir » gris/blanc 4,59 (≥ 3:1 non-texte).
+Capture 360 px : `docs/captures/t3-composants-360.png` (largeur de document 352 px, aucun défilement horizontal).
+
+Corrections appliquées pendant l'audit :
+- `.bpn-badge-or` passait en texte or #C4990A sur or pâle (≈ 2,5:1, échec AA) → `text-or-fonce` (4,56:1). Touche aussi les badges « Honoraire » existants (contraste seulement).
+- Textes secondaires `text-gris` (3,99 à 4,32:1 sur gris clair et crème) → `text-encre/70`.
+- Repères de frise « en cours » et « à venir » relevés à ≥ 3:1 (or foncé, gris pointillé).
+- `StatutMessage` : variante `inverse` pour la bulle marine (texte gris illisible sur marine).
+- Omis et Honoraire partageaient le même badge or → contour pointillé sur l'omission.
+- « n° 026-92 » insécable dans les mentions (coupure observée à 360 px).
+- Pastille décorative du `Badge` en `aria-hidden`.
+
+Écarts connus : pas de mode sombre (absent du projet entier, hors périmètre « pas de refonte globale ») ; l'infobulle `title` n'apparaît qu'au survol (l'information reste écrite dans le libellé et lue par les lecteurs d'écran via `decrire` / le texte masqué) ; police DM Sans reprise du projet sans nouvel embarquement.
+
 ## Tests
 `npm test` à la racine (vitest) : sérialisation CSV/TXT (`utils/__tests__/exportCsv.test.js`), `normaliserMembre` et `StatutBadge` (`api/__tests__/resources.test.jsx`), modales et fiche avocat (`components/__tests__`, `pages/__tests__`).

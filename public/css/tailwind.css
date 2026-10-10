@@ -117,8 +117,9 @@
   .bpn-badge-rouge {
     @apply bg-rouge text-white;
   }
+  /* Texte or foncé : l'or principal sur or pâle ne tient pas l'AA (≈ 2,6:1). */
   .bpn-badge-or {
-    @apply bg-or-L text-or;
+    @apply bg-or-L text-or-fonce;
   }
   .bpn-badge-gris {
     @apply bg-grisL text-encre;
