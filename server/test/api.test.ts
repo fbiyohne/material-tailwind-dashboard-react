@@ -1320,24 +1320,36 @@ describe("Export PDF de la liste des avocats (T5, CA-08)", () => {
     expect(html.match(/<tbody>.*<\/tbody>/s)![0].match(/<tr>/g)).toHaveLength(1);
   });
 
-  it("le nombre de lignes du gabarit égale celui de GET /api/membres (mêmes filtres)", async () => {
-    const liste = await request(app).get("/api/membres?statut=INSCRIT&pageSize=200").set(...bearer(sg));
-    const html = listeAvocatsHtml(liste.body.items, "statut INSCRIT", new Date());
-    expect(html.match(/<tbody>.*<\/tbody>/s)![0].match(/<tr>/g)).toHaveLength(liste.body.items.length);
+  it("le nombre de lignes du gabarit égale celui de GET /api/membres (mêmes filtres, toutes les pages)", async () => {
+    const items: any[] = [];
+    for (let page = 1; ; page++) {
+      const r = await request(app).get(`/api/membres?statut=INSCRIT&pageSize=200&page=${page}`).set(...bearer(sg));
+      items.push(...r.body.items);
+      if (page >= r.body.totalPages) break;
+    }
+    const html = listeAvocatsHtml(items, "statut INSCRIT", new Date());
+    expect(html.match(/<tbody>.*<\/tbody>/s)![0].match(/<tr>/g)).toHaveLength(items.length);
   });
 
-  it.skipIf(!trouverChromium())("SG : 200, application/pdf, %PDF, sélection ids, journal d'audit", async () => {
-    const liste = await request(app).get("/api/membres?pageSize=3").set(...bearer(sg));
-    const ids = liste.body.items.map((m: any) => m.id).join(",");
-    const avant = await prisma.journalAudit.count({ where: { action: "Export de la liste des avocats" } });
+  it.skipIf(!trouverChromium())("SG : 200, application/pdf, %PDF, sélection ids (2 sur N), audit horodaté avant la réponse", async () => {
+    const liste = await request(app).get("/api/membres?pageSize=200").set(...bearer(sg));
+    expect(liste.body.items.length).toBeGreaterThan(2);
+    // deux derniers membres : prouve que le filtre ids est appliqué (et non les premiers / tous)
+    const ids = liste.body.items.slice(-2).map((m: any) => m.id).join(",");
+    const user = await prisma.user.findUnique({ where: { email: "sg@barreau-pn.cg" } });
+    const maxAvant = (await prisma.journalAudit.aggregate({ _max: { id: true } }))._max.id ?? 0;
     const r = await pdf(`?ids=${ids}`, sg);
     expect(r.status).toBe(200);
     expect(r.headers["content-type"]).toContain("application/pdf");
     expect(r.headers["content-disposition"]).toMatch(/Avocats-\d{4}-\d{2}-\d{2}\.pdf/);
     expect((r.body as Buffer).subarray(0, 4).toString()).toBe("%PDF");
-    const e = await prisma.journalAudit.findFirst({ where: { action: "Export de la liste des avocats" }, orderBy: { id: "desc" } });
-    expect(await prisma.journalAudit.count({ where: { action: "Export de la liste des avocats" } })).toBe(avant + 1);
-    expect(e!.cible).toContain("format=pdf");
-    expect(e!.cible).toContain("lignes=3");
+    // L'audit est écrit avant l'envoi : aucune attente nécessaire, lecture ciblée (id > avant, même utilisateur).
+    const e = await prisma.journalAudit.findMany({
+      where: { id: { gt: maxAvant }, action: "Export de la liste des avocats", userId: user!.id },
+    });
+    expect(e).toHaveLength(1);
+    expect(e[0].cible).toContain("format=pdf");
+    expect(e[0].cible).toContain("sélection de 2");
+    expect(e[0].cible).toContain("lignes=2");
   }, 60000);
 });

@@ -7,7 +7,7 @@ import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole, requirePermission, type AuthRequest } from "../middleware/auth.js";
 import { prochainNumInscription, prochainNumeroAttestation, archiver, avecRejeuUnicite } from "../lib/business.js";
 import { enregistrerFichier } from "../lib/storage.js";
-import { envoyerPdf } from "../lib/pdf.js";
+import { envoyerPdf, htmlVersPdf } from "../lib/pdf.js";
 import { attestationHtml, listeAvocatsHtml } from "../lib/templates.js";
 import { provisionnerAccesEspace, synchroniserAccesAuStatut } from "../lib/acces.js";
 
@@ -98,7 +98,9 @@ membresRouter.get(
       p.data.qualite ? `qualité ${p.data.qualite}` : "",
       p.data.q ? `recherche « ${p.data.q} »` : "",
     ].filter(Boolean).join(", ") || "tous";
-    await envoyerPdf(res, listeAvocatsHtml(membres, filtre, new Date()), `Avocats-${new Date().toISOString().slice(0, 10)}.pdf`);
+    // Rendu puis audit AVANT l'envoi : si l'audit échoue, aucune donnée nominative
+    // n'est livrée (traçabilité C-04) et le gestionnaire d'erreur répond en 500.
+    const pdf = await htmlVersPdf(listeAvocatsHtml(membres, filtre, new Date()));
     await prisma.journalAudit.create({
       data: {
         action: "Export de la liste des avocats", cible: `format=pdf; filtre=${filtre}; lignes=${membres.length}`.slice(0, 250),
@@ -106,6 +108,9 @@ membresRouter.get(
         ip: (req.ip ?? "").replace(/^::ffff:/, "") || null, userId: req.user?.id ?? null, userNom: req.user?.nom ?? null,
       },
     });
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="Avocats-${new Date().toISOString().slice(0, 10)}.pdf"`);
+    res.end(pdf);
   })
 );
 
