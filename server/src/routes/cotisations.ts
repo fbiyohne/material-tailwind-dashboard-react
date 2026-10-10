@@ -1,3 +1,4 @@
+import { identite } from "../lib/identiteDocuments.js";
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
@@ -36,15 +37,15 @@ cotisationsRouter.post(
       const solde = du - (c?.montantPaye ?? 0);
       await envoyerEmail({
         to: m.email!,
-        subject: `Relance — cotisation ordinale ${annee} · Barreau de Pointe-Noire`,
-        text: `Maître ${m.nom},\n\nVotre cotisation ordinale au titre de l'exercice ${annee} présente un solde restant dû de ${solde.toLocaleString("fr-FR")} FCFA.\nNous vous invitons à régulariser votre situation auprès de la Trésorerie.\n\nLe Secrétariat Général du Barreau de Pointe-Noire.`,
+        subject: `Relance — cotisation ordinale ${annee} · ${identite().denomination}`,
+        text: `Maître ${m.nom},\n\nVotre cotisation ordinale au titre de l'exercice ${annee} présente un solde restant dû de ${solde.toLocaleString("fr-FR")} FCFA.\nNous vous invitons à régulariser votre situation auprès de la Trésorerie.\n\nLe Secrétariat Général du ${identite().denomination}.`,
         evenement: "RELANCE",
       });
       // SMS complémentaire si un numéro est renseigné.
       if (m.tel) {
         await envoyerSms({
           to: m.tel,
-          message: `Barreau de Pointe-Noire : votre cotisation ${annee} présente un solde de ${solde.toLocaleString("fr-FR")} FCFA. Merci de régulariser auprès de la Trésorerie.`,
+          message: `${identite().denomination} : votre cotisation ${annee} présente un solde de ${solde.toLocaleString("fr-FR")} FCFA. Merci de régulariser auprès de la Trésorerie.`,
           evenement: "RELANCE",
         });
       }

@@ -1,7 +1,7 @@
 /** Gabarits HTML des documents officiels (rendus en PDF par Puppeteer). */
 
 import { esc as escapeHtml, fmtDateFr as fmtDate } from "./documentsCommun.js";
-import { identite } from "./identiteDocuments.js";
+import { identite, MENTION_DEMONSTRATION } from "./identiteDocuments.js";
 import { cachetPourRole } from "./cachets.js";
 
 /**
@@ -83,11 +83,11 @@ export function documentHtml({ org, title, reference, bodyHtml, signataire, date
       ${reference ? `<div class="ref">${reference}</div>` : '<div style="margin-bottom:18px"></div>'}
       <div class="content">${bodyHtml}</div>
       <div class="foot">
-        <div style="display:flex;align-items:flex-end;gap:12px">${sceau()}<div class="date">Fait à Pointe-Noire,<br>le ${fmtDate(date)}</div></div>
+        <div style="display:flex;align-items:flex-end;gap:12px">${sceau()}<div class="date">Fait à ${escapeHtml(identite().ville)},<br>le ${fmtDate(date)}</div></div>
         <div class="sign"><div class="role">${signataire.role}</div>${(() => { const c = cachet ? cachetPourRole(signataire.role) : null; return c ? `<img src="${c}" alt="Cachet officiel" style="display:block;margin:2px 0 -18px auto;width:92px;height:92px;object-fit:contain" />` : ""; })()}<div class="nom">${signataire.nom}</div></div>
       </div>
     </div>
-    <div class="mention">Document officiel · ${escapeHtml(identite().ordre)} · ${escapeHtml(identite().denomination)}</div>
+    <div class="mention">Document officiel · ${escapeHtml(identite().ordre)} · ${escapeHtml(identite().denomination)}${identite().modeDemonstration ? `<br>${escapeHtml(MENTION_DEMONSTRATION)}` : ""}</div>
   </div>
 </body></html>`;
 }
@@ -179,7 +179,7 @@ export function tableauOrdreHtml(
     org: "Le Bâtonnier",
     title: "Tableau de l'Ordre",
     reference: `Arrêté au ${fmtDate(date)}`,
-    bodyHtml: `${contexte}${conseilBloc(extras?.conseil)}<p style="margin-bottom:4px">Tableau de l'Ordre des Avocats du Barreau de Pointe-Noire, dressé par ordre d'ancienneté.</p>${sections.map(section).join("")}${cabinetsSection}`,
+    bodyHtml: `${contexte}${conseilBloc(extras?.conseil)}<p style="margin-bottom:4px">Tableau de l'Ordre des Avocats du ${escapeHtml(identite().denomination)}, dressé par ordre d'ancienneté.</p>${sections.map(section).join("")}${cabinetsSection}`,
     signataire: { role: "Le Bâtonnier", nom: signataire },
     date,
   });
@@ -192,7 +192,7 @@ export function attestationHtml(membre: { nom: string; num: number; dateInscript
     title: "Attestation d'inscription",
     reference: `N° ${numero}`,
     bodyHtml: `
-      <p>Le Bâtonnier de l'Ordre des Avocats du Barreau de Pointe-Noire atteste que <b>Me ${escapeHtml(membre.nom)}</b> est inscrit(e) au Tableau de l'Ordre des Avocats du Barreau de Pointe-Noire sous le numéro <b>${membre.num}</b>${depuis}.</p>
+      <p>Le Bâtonnier de l'Ordre des Avocats du ${escapeHtml(identite().denomination)} atteste que <b>Me ${escapeHtml(membre.nom)}</b> est inscrit(e) au Tableau de l'Ordre des Avocats du ${escapeHtml(identite().denomination)} sous le numéro <b>${membre.num}</b>${depuis}.</p>
       <p style="margin-top:12px">La présente attestation est délivrée à l'intéressé(e) pour servir et valoir ce que de droit.</p>`,
     signataire: { role: "Le Bâtonnier", nom: identite().batonnier },
     date,
@@ -211,7 +211,7 @@ export function attestationNonRedevanceHtml(
     title: "Attestation de non-redevance",
     reference: `N° ${numero}`,
     bodyHtml: `
-      <p>Le Bâtonnier de l'Ordre des Avocats du Barreau de Pointe-Noire atteste que <b>Me ${escapeHtml(membre.nom)}</b>, inscrit(e) au Tableau de l'Ordre sous le numéro <b>${membre.num}</b>, est à jour de sa cotisation ordinale au titre de l'exercice <b>${annee}</b>.</p>
+      <p>Le Bâtonnier de l'Ordre des Avocats du ${escapeHtml(identite().denomination)} atteste que <b>Me ${escapeHtml(membre.nom)}</b>, inscrit(e) au Tableau de l'Ordre sous le numéro <b>${membre.num}</b>, est à jour de sa cotisation ordinale au titre de l'exercice <b>${annee}</b>.</p>
       <p style="margin-top:12px">L'intéressé(e) ne demeure redevable d'aucune somme envers l'Ordre au titre de cet exercice. La présente attestation est délivrée pour servir et valoir ce que de droit.</p>`,
     signataire: { role: "Le Bâtonnier", nom: identite().batonnier },
     date,
@@ -274,7 +274,7 @@ export function convocationDisciplineHtml(d: any): string {
     title: "Convocation disciplinaire",
     reference: `Dossier N° ${d.reference}`,
     bodyHtml: `
-      <p>Dans le cadre du dossier disciplinaire <b>N° ${d.reference}</b>, <b>${qui}</b> est invité(e) à comparaître devant le Conseil de discipline de l'Ordre des Avocats du Barreau de Pointe-Noire${quand}.</p>
+      <p>Dans le cadre du dossier disciplinaire <b>N° ${d.reference}</b>, <b>${qui}</b> est invité(e) à comparaître devant le Conseil de discipline de l'Ordre des Avocats du ${escapeHtml(identite().denomination)}${quand}.</p>
       <p style="margin-top:10px">Objet : ${escapeHtml(d.objet ?? "—")}.</p>
       <p style="margin-top:10px;font-size:12px;color:#7A756A">L'intéressé(e) pourra se faire assister du conseil de son choix et consulter le dossier au Secrétariat de l'Ordre.</p>`,
     signataire: { role: "Le Bâtonnier, Président du Conseil de discipline", nom: identite().batonnier },
@@ -344,7 +344,7 @@ export function pvReunionHtml(reunion: any): string {
     reference: `Réunion du ${fmtDate(reunion.date)}`,
     bodyHtml: `
       ${sectionPv("I", "Convocation et ouverture de la séance")}
-      <p>L'an ${new Date(reunion.date).getFullYear()}, le <b>${fmtDate(reunion.date)}</b>${reunion.heure ? ` à <b>${escapeHtml(reunion.heure)}</b>` : ""}, le Conseil de l'Ordre des Avocats du Barreau de Pointe-Noire, régulièrement convoqué par le Bâtonnier, s'est réuni${reunion.lieu ? ` au <b>${escapeHtml(reunion.lieu)}</b>` : ""}. La séance est présidée par le Bâtonnier.</p>
+      <p>L'an ${new Date(reunion.date).getFullYear()}, le <b>${fmtDate(reunion.date)}</b>${reunion.heure ? ` à <b>${escapeHtml(reunion.heure)}</b>` : ""}, le Conseil de l'Ordre des Avocats du ${escapeHtml(identite().denomination)}, régulièrement convoqué par le Bâtonnier, s'est réuni${reunion.lieu ? ` au <b>${escapeHtml(reunion.lieu)}</b>` : ""}. La séance est présidée par le Bâtonnier.</p>
       ${sectionPv("II", "Présences et vérification du quorum")}
       ${presenceEtQuorum(reunion.presences)}
       ${sectionPv("III", "Ordre du jour")}
@@ -371,7 +371,7 @@ export function pvAssembleeHtml(a: any): string {
     reference: `${a.type} du ${fmtDate(a.date)}`,
     bodyHtml: `
       ${sectionPv("I", "Ouverture de la séance")}
-      <p>L'an ${new Date(a.date).getFullYear()}, le <b>${fmtDate(a.date)}</b>, les membres du Barreau de Pointe-Noire se sont réunis en <b>${type}</b>${a.lieu ? ` au <b>${escapeHtml(a.lieu)}</b>` : ""}, sous la présidence du Bâtonnier.</p>
+      <p>L'an ${new Date(a.date).getFullYear()}, le <b>${fmtDate(a.date)}</b>, les membres du ${escapeHtml(identite().denomination)} se sont réunis en <b>${type}</b>${a.lieu ? ` au <b>${escapeHtml(a.lieu)}</b>` : ""}, sous la présidence du Bâtonnier.</p>
       ${sectionPv("II", "Quorum")}
       <p>Nombre de membres présents : <b>${a.quorumPresent ?? 0}</b>.</p>
       ${sectionPv("III", "Ordre du jour")}
@@ -435,7 +435,7 @@ export function decisionDisciplineHtml(d: any): string {
     title: "Décision disciplinaire",
     reference: `Dossier N° ${d.reference}`,
     bodyHtml: `
-      <p>Le Conseil de discipline de l'Ordre des Avocats du Barreau de Pointe-Noire, statuant sur le dossier <b>N° ${d.reference}</b> concernant <b>${qui}</b>${d.dateAudience ? `, à la suite de l'audience du <b>${fmtDate(d.dateAudience)}</b>` : ""},</p>
+      <p>Le Conseil de discipline de l'Ordre des Avocats du ${escapeHtml(identite().denomination)}, statuant sur le dossier <b>N° ${d.reference}</b> concernant <b>${qui}</b>${d.dateAudience ? `, à la suite de l'audience du <b>${fmtDate(d.dateAudience)}</b>` : ""},</p>
       <p style="margin:10px 0 4px"><b>Objet :</b> ${escapeHtml(d.objet ?? "—")}.</p>
       <p style="margin:14px 0 4px"><b>Décision :</b></p>
       ${corpsPv(d.decision)}
@@ -471,7 +471,7 @@ export function listeAvocatsHtml(membres: any[], libelleFiltre: string, date: Da
     title: `<span style="font-size:13px">${titre}</span>`,
     reference: `${membres.length} ligne${membres.length > 1 ? "s" : ""}`,
     bodyHtml: `<table style="width:100%;border-collapse:collapse;font-size:8px;line-height:1.3"><thead><tr style="border-bottom:1.5px solid #1A3A6B;color:#7A756A;text-align:left">${th}</tr></thead><tbody>${lignes}</tbody></table>
-      <p style="margin-top:14px;font-size:9px;color:#7A756A;text-align:center">Barreau de Pointe-Noire — Document interne confidentiel — Diffusion interdite hors des organes de l'Ordre.</p>`,
+      <p style="margin-top:14px;font-size:9px;color:#7A756A;text-align:center">${escapeHtml(identite().denomination)} — Document interne confidentiel — Diffusion interdite hors des organes de l'Ordre.</p>`,
     signataire: { role: "Le Secrétaire Général", nom: escapeHtml(identite().secretaireGeneral) },
     date,
     cachet: false,

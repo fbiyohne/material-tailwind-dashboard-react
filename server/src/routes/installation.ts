@@ -1,3 +1,4 @@
+import { identite } from "../lib/identiteDocuments.js";
 import { Router } from "express";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
@@ -76,6 +77,6 @@ installationRouter.post("/", asyncH(async (req, res) => {
 installationRouter.post("/test-email", asyncH(async (req, res) => {
   if (!(await wizardActif())) throw new HttpError(409, "Application déjà installée.");
   const s = smtpSchema.extend({ to: z.string().email() }).parse(req.body);
-  await creerTransport(s).sendMail({ from: s.from, to: s.to, subject: "Test — Barreau de Pointe-Noire", text: "Votre configuration SMTP fonctionne." });
+  await creerTransport(s).sendMail({ from: s.from, to: s.to, subject: `Test — ${identite().denomination}`, text: "Votre configuration SMTP fonctionne." });
   res.json({ ok: true });
 }));

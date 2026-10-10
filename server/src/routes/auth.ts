@@ -1,3 +1,4 @@
+import { identite } from "../lib/identiteDocuments.js";
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import rateLimit from "express-rate-limit";
@@ -71,8 +72,8 @@ authRouter.post(
     // Accusé de réception (n'échoue jamais la demande si l'envoi échoue).
     void envoyerEmail({
       to: email,
-      subject: "Demande d'accès reçue · Barreau de Pointe-Noire",
-      text: `Bonjour ${data.nom.trim()},\n\nNous accusons réception de votre demande d'accès à l'application du Secrétariat Général du Barreau de Pointe-Noire.\nElle sera examinée par le Secrétariat Général ; vous serez recontacté(e) à cette adresse.\n\nLe Secrétariat Général du Barreau de Pointe-Noire.`,
+      subject: `Demande d'accès reçue · ${identite().denomination}`,
+      text: `Bonjour ${data.nom.trim()},\n\nNous accusons réception de votre demande d'accès à l'application du Secrétariat Général du ${identite().denomination}.\nElle sera examinée par le Secrétariat Général ; vous serez recontacté(e) à cette adresse.\n\nLe Secrétariat Général du ${identite().denomination}.`,
       evenement: "DEMANDE_ACCUSE",
     });
     res.status(201).json({ ok: true });
@@ -143,8 +144,8 @@ authRouter.post(
       const lien = `${env.clientOrigin}/reinitialiser/${token}`;
       void envoyerEmail({
         to: user.email,
-        subject: "Réinitialisation de votre mot de passe · Barreau de Pointe-Noire",
-        text: `Bonjour ${user.nom},\n\nVous avez demandé à réinitialiser votre mot de passe. Ouvrez le lien suivant (valable 1 heure) pour en définir un nouveau :\n${lien}\n\nSi vous n'êtes pas à l'origine de cette demande, ignorez ce message.\n\nLe Secrétariat Général du Barreau de Pointe-Noire.`,
+        subject: `Réinitialisation de votre mot de passe · ${identite().denomination}`,
+        text: `Bonjour ${user.nom},\n\nVous avez demandé à réinitialiser votre mot de passe. Ouvrez le lien suivant (valable 1 heure) pour en définir un nouveau :\n${lien}\n\nSi vous n'êtes pas à l'origine de cette demande, ignorez ce message.\n\nLe Secrétariat Général du ${identite().denomination}.`,
         evenement: "RESET_MDP",
       });
     }

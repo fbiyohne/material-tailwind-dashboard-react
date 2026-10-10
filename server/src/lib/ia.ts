@@ -1,3 +1,4 @@
+import { identite } from "./identiteDocuments.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { logger } from "./logger.js";
 
@@ -19,14 +20,14 @@ function brouillonLocal(mois: string, theme: string): string {
     `Thème : ${theme}.\n\n` +
     `Chères Consœurs, chers Confrères,\n\n` +
     `Le thème de ce mois, « ${theme} », nous invite à une réflexion collective sur ` +
-    `notre responsabilité au sein du Barreau de Pointe-Noire. En tant qu'auxiliaires de ` +
+    `notre responsabilité au sein du ${identite().denomination}. En tant qu'auxiliaires de ` +
     `justice, nous portons une exigence particulière d'exemplarité et d'engagement.\n\n` +
     `[Développement à compléter par le Bâtonnier.]\n\n` +
     `Confraternellement,\nLe Bâtonnier`
   );
 }
 
-const SYSTEM = `Tu rédiges l'éditorial mensuel « La Lettre du Bâtonnier » du Barreau de Pointe-Noire (Ordre National des Avocats du Congo).
+const SYSTEM = `Tu rédiges l'éditorial mensuel « La Lettre du Bâtonnier » du ${identite().denomination} (Ordre National des Avocats du Congo).
 Registre : institutionnel, confraternel, sobre et digne — pas de superlatifs creux ni de langue de bois.
 Structure : un titre, une adresse « Chères Consœurs, chers Confrères, », trois à quatre paragraphes développant le thème en lien avec la déontologie et la vie de l'Ordre, puis la formule « Confraternellement, Le Bâtonnier ».
 Longueur : 350 à 500 mots. Réponds uniquement avec le texte de l'article, sans commentaire.`;

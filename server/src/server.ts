@@ -15,7 +15,7 @@ void rafraichirIdentite();
 void amorcerMatriceSiVide().then(() => rafraichirMatrice());
 
 const server = creerApp().listen(env.port, () => {
-  logger.info({ port: env.port, env: env.nodeEnv }, `API Barreau de Pointe-Noire — http://localhost:${env.port}/api`);
+  logger.info({ port: env.port, env: env.nodeEnv }, `API Barreau — http://localhost:${env.port}/api`);
 });
 
 // Messagerie temps réel (WebSocket /ws) attachée au même serveur HTTP.

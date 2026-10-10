@@ -1,3 +1,4 @@
+import { identite } from "../lib/identiteDocuments.js";
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
@@ -37,8 +38,8 @@ assembleesRouter.post("/:id/convoquer", requireRole("SECRETAIRE_GENERAL"), async
   for (const m of membres) {
     await envoyerEmail({
       to: m.email!,
-      subject: `Convocation — ${libelle} du ${jour} · Barreau de Pointe-Noire`,
-      text: `Maître ${m.nom},\n\nLe Bâtonnier a l'honneur de vous convier à l'${libelle} du Barreau de Pointe-Noire, le ${jour}${a.lieu ? `, au ${a.lieu}` : ""}.\n\nOrdre du jour :\n${odj || "—"}\n\nLe Secrétariat Général du Barreau de Pointe-Noire.`,
+      subject: `Convocation — ${libelle} du ${jour} · ${identite().denomination}`,
+      text: `Maître ${m.nom},\n\nLe Bâtonnier a l'honneur de vous convier à l'${libelle} du ${identite().denomination}, le ${jour}${a.lieu ? `, au ${a.lieu}` : ""}.\n\nOrdre du jour :\n${odj || "—"}\n\nLe Secrétariat Général du ${identite().denomination}.`,
       evenement: "CONVOCATION",
     });
     envoyes += 1;

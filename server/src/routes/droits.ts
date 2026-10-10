@@ -1,3 +1,4 @@
+import { identite } from "../lib/identiteDocuments.js";
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
@@ -36,14 +37,14 @@ droitsRouter.post(
       const solde = du - (d?.montantPaye ?? 0);
       await envoyerEmail({
         to: m.email!,
-        subject: `Relance — droit de plaidoirie ${annee} · Barreau de Pointe-Noire`,
-        text: `Maître ${m.nom},\n\nVotre droit de plaidoirie au titre de l'exercice ${annee} présente un solde restant dû de ${solde.toLocaleString("fr-FR")} FCFA.\nNous vous invitons à régulariser votre situation auprès de la Trésorerie.\n\nLe Secrétariat Général du Barreau de Pointe-Noire.`,
+        subject: `Relance — droit de plaidoirie ${annee} · ${identite().denomination}`,
+        text: `Maître ${m.nom},\n\nVotre droit de plaidoirie au titre de l'exercice ${annee} présente un solde restant dû de ${solde.toLocaleString("fr-FR")} FCFA.\nNous vous invitons à régulariser votre situation auprès de la Trésorerie.\n\nLe Secrétariat Général du ${identite().denomination}.`,
         evenement: "RELANCE",
       });
       if (m.tel) {
         await envoyerSms({
           to: m.tel,
-          message: `Barreau de Pointe-Noire : votre droit de plaidoirie ${annee} présente un solde de ${solde.toLocaleString("fr-FR")} FCFA. Merci de régulariser auprès de la Trésorerie.`,
+          message: `${identite().denomination} : votre droit de plaidoirie ${annee} présente un solde de ${solde.toLocaleString("fr-FR")} FCFA. Merci de régulariser auprès de la Trésorerie.`,
           evenement: "RELANCE",
         });
       }

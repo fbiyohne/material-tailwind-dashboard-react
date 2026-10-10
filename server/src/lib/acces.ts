@@ -1,3 +1,4 @@
+import { identite } from "./identiteDocuments.js";
 import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "../prisma.js";
@@ -78,8 +79,8 @@ export async function provisionnerAccesEspace(membreId: number): Promise<AccesPr
   const lien = `${env.clientOrigin}/activer/${token}`;
   void envoyerEmail({
     to: membre.email,
-    subject: "Activez votre espace avocat · Barreau de Pointe-Noire",
-    text: `Maître ${membre.nom},\n\nLe Secrétariat Général vous ouvre l'accès à votre espace personnel.\nPour définir votre mot de passe et activer votre compte, ouvrez le lien suivant (valable 7 jours) :\n${lien}\n\nLe Secrétariat Général du Barreau de Pointe-Noire.`,
+    subject: `Activez votre espace avocat · ${identite().denomination}`,
+    text: `Maître ${membre.nom},\n\nLe Secrétariat Général vous ouvre l'accès à votre espace personnel.\nPour définir votre mot de passe et activer votre compte, ouvrez le lien suivant (valable 7 jours) :\n${lien}\n\nLe Secrétariat Général du ${identite().denomination}.`,
     evenement: "ACCES_AVOCAT",
   });
   return { email: membre.email, lien, renvoi: !!existant };

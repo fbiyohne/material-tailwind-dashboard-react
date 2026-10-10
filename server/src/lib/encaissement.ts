@@ -1,3 +1,4 @@
+import { identite } from "./identiteDocuments.js";
 import { Prisma, type Membre } from "@prisma/client";
 import { prisma } from "../prisma.js";
 import { HttpError } from "../middleware/error.js";
@@ -124,8 +125,8 @@ export async function encaisser(opts: {
   if (membre.email) {
     void envoyerEmail({
       to: membre.email,
-      subject: `Reçu N° ${numero} — ${estDroit ? "droit de plaidoirie" : "cotisation"} ${annee} · Barreau de Pointe-Noire`,
-      text: `Maître ${membre.nom},\n\nNous accusons réception de votre versement de ${montant.toLocaleString("fr-FR")} FCFA au titre ${estDroit ? "du droit de plaidoirie" : "de la cotisation ordinale"} ${annee}.\nVotre reçu officiel N° ${numero} a été établi.\n\nLe Secrétariat Général du Barreau de Pointe-Noire.`,
+      subject: `Reçu N° ${numero} — ${estDroit ? "droit de plaidoirie" : "cotisation"} ${annee} · ${identite().denomination}`,
+      text: `Maître ${membre.nom},\n\nNous accusons réception de votre versement de ${montant.toLocaleString("fr-FR")} FCFA au titre ${estDroit ? "du droit de plaidoirie" : "de la cotisation ordinale"} ${annee}.\nVotre reçu officiel N° ${numero} a été établi.\n\nLe Secrétariat Général du ${identite().denomination}.`,
       evenement: "RECU",
     });
   }

@@ -8,7 +8,7 @@
  */
 import { montantEnLettresFCFA } from "./montantEnLettres.js";
 import { esc, fmtFCFA, fmtDateFr } from "./documentsCommun.js";
-import { identite } from "./identiteDocuments.js";
+import { identite, MENTION_DEMONSTRATION } from "./identiteDocuments.js";
 import { cachetBatonnier, cachetTresoriere } from "./cachets.js";
 
 /** Cachet officiel (image) ou rien si l'asset est absent. */
@@ -47,12 +47,20 @@ const calendrier = `
   <path d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/>
 </svg>`;
 
-const bandeauContact = () => `
+/**
+ * Coordonnées : adresse paramétrée. Courriel, site et téléphones sont des valeurs d'exemple
+ * propres au Barreau de Pointe-Noire (identité de base) : ils ne sont affichés que pour elle.
+ */
+const bandeauContact = () => {
+  const id = identite();
+  const base = id.ville === "Pointe-Noire"; // ponytail: coordonnées paramétrables si un autre barreau les fournit
+  return `
 <div class="band">
-  <div><span class="band-l">Adresse</span><br/>${esc(identite().adresse)}</div>
-  <div style="text-align:center"><span class="band-l">En ligne</span><br/>contact@barreau-pointe-noire.cg<br/>www.barreau-pointe-noire.cg</div>
-  <div style="text-align:right"><span class="band-l">Téléphone</span><br/>+242 05 000 00 00<br/>+242 06 000 00 00</div>
+  <div><span class="band-l">Adresse</span><br/>${esc(id.adresse)}</div>
+  ${base ? `<div style="text-align:center"><span class="band-l">En ligne</span><br/>contact@barreau-pointe-noire.cg<br/>www.barreau-pointe-noire.cg</div>
+  <div style="text-align:right"><span class="band-l">Téléphone</span><br/>+242 05 000 00 00<br/>+242 06 000 00 00</div>` : ""}
 </div>`;
+};
 
 /** Feuille de style partagée des deux documents (reproduit les classes Tailwind). */
 const styles = `
@@ -115,12 +123,17 @@ const verif = (qr: string, host: string, chemin: string) => `
     </div>
   </div>`;
 
+/** Clause C-13 : seulement sur une instance de démonstration. */
+const mentionDemo = () =>
+  identite().modeDemonstration ? `<div class="gris" style="position:relative;z-index:10;padding:6px 48px;text-align:center;font-size:10px;font-style:italic">${esc(MENTION_DEMONSTRATION)}</div>` : "";
+
 const page = (corps: string) =>
   `<!doctype html><html lang="fr"><head><meta charset="utf-8">${fonts}${styles}</head><body><div class="doc-root">
     <div class="inner-border"></div>
     <div class="corner"><div></div></div>
     <div class="watermark" aria-hidden="true">${sceau(360)}</div>
     ${corps}
+    ${mentionDemo()}
     ${bandeauContact()}
   </div></body></html>`;
 
@@ -139,10 +152,10 @@ export function recuRicheHtml(recu: RecuLike, membre: MembreLike, qr: string, ho
         <div class="or" style="font-size:20px; font-weight:500; text-transform:uppercase; letter-spacing:.12em;">Reçu de paiement</div>
       </div>
       <div class="row-nd mono navy" style="margin-top:32px; font-size:14px;">
-        <span>N° ${esc(recu.numero)}</span><span>Pointe-Noire, le ${fmtDateFr(recu.date)}</span>
+        <span>N° ${esc(recu.numero)}</span><span>${esc(identite().ville)}, le ${fmtDateFr(recu.date)}</span>
       </div>
       <div style="margin-top:36px;">
-        <div style="text-align:center; font-size:16px; font-weight:700; text-transform:uppercase; line-height:1.375;">La Trésorière de l'Ordre des Avocats<br/>au Barreau de Pointe-Noire</div>
+        <div style="text-align:center; font-size:16px; font-weight:700; text-transform:uppercase; line-height:1.375;">La Trésorière de l'Ordre des Avocats<br/>au ${esc(identite().denomination)}</div>
         <div style="margin-top:16px; text-align:center; font-size:15px; font-style:italic;">Reconnaît avoir reçu de Maître :</div>
         <div style="margin-top:24px; display:flex; flex-direction:column; gap:16px;">
           <div class="champ"><b>Nom et Prénom(s) :</b><span>Me ${esc(membre.nom)}</span></div>
@@ -176,17 +189,17 @@ export function quitusRicheHtml(quitus: { numero: string; annee: number; dateEmi
   const inscr = membre.numInscription ?? (membre.num != null ? `${membre.num}/BPN` : "");
   const corps = `
     <div class="main">
-      ${enTete("Ordre des Avocats au Barreau de Pointe-Noire")}
+      ${enTete(`Ordre des Avocats au ${identite().denomination}`)}
       <div style="margin-top:14px; text-align:center;">
         <div class="disp navy" style="font-size:56px; font-weight:700; line-height:1.08;">QUITUS</div>
         ${filet(176)}
         <div class="or" style="font-size:20px; font-weight:500; text-transform:uppercase; letter-spacing:.12em;">Certificat de non-redevance</div>
       </div>
       <div class="row-nd mono navy" style="margin-top:16px; font-size:14px;">
-        <span>N° ${esc(quitus.numero)}</span><span>Pointe-Noire, le ${fmtDateFr(quitus.dateEmission)}</span>
+        <span>N° ${esc(quitus.numero)}</span><span>${esc(identite().ville)}, le ${fmtDateFr(quitus.dateEmission)}</span>
       </div>
       <div style="margin-top:16px;">
-        <div style="text-align:center; font-size:16px; font-weight:700; text-transform:uppercase; line-height:1.375;">Le Bâtonnier de l'Ordre des Avocats<br/>au Barreau de Pointe-Noire</div>
+        <div style="text-align:center; font-size:16px; font-weight:700; text-transform:uppercase; line-height:1.375;">Le Bâtonnier de l'Ordre des Avocats<br/>au ${esc(identite().denomination)}</div>
         <div style="margin-top:14px; text-align:center; font-size:15px; font-style:italic;">Atteste qu'après vérification des écritures de l'Ordre, Maître :</div>
         <div style="margin-top:16px; display:flex; flex-direction:column; gap:13px;">
           <div class="champ"><b>Nom et Prénom(s) :</b><span>Me ${esc(membre.nom)}</span></div>
@@ -196,7 +209,7 @@ export function quitusRicheHtml(quitus: { numero: string; annee: number; dateEmi
         </div>
         <div style="margin-top:14px; text-align:center; line-height:1.6;">
           <div style="font-size:17px; font-weight:700;">est à jour de toutes ses cotisations, contributions et redevances</div>
-          <div style="font-size:15px;">envers l'Ordre des Avocats au Barreau de Pointe-Noire, au titre de l'exercice ${esc(quitus.annee)}.</div>
+          <div style="font-size:15px;">envers l'Ordre des Avocats au ${esc(identite().denomination)}, au titre de l'exercice ${esc(quitus.annee)}.</div>
         </div>
         <div style="margin-top:12px; text-align:center; font-size:15px;">En foi de quoi, le présent quitus lui est délivré pour servir et valoir ce que de droit.</div>
       </div>
