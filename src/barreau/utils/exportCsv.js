@@ -11,7 +11,7 @@ function echapper(v, sep) {
   // Injection de formule (CSV/TXT ouverts dans Excel/LibreOffice) : une valeur
   // commençant par = @ tabulation ou CR, ou par + / - non suivi d'un simple
   // nombre/téléphone (« +242 06… », « -5000 »), est préfixée d'une apostrophe.
-  if (/^[=@\t\r]/.test(s) || (/^[+-]/.test(s) && !/^[+-][\d\s().]*$/.test(s))) s = `'${s}`;
+  if (/^[=@\t\r]/.test(s) || (/^[+-]/.test(s) && !/^[+-][\d\s().\/-]*$/.test(s))) s = `'${s}`;
   if (s.includes(sep) || /["\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
   return s;
 }

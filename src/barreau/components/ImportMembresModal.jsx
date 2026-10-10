@@ -41,14 +41,14 @@ const LOOKUP = Object.entries(COLONNES).reduce((acc, [champ, syns]) => {
   return acc;
 }, {});
 
-function mapperLigne(obj) {
+export function mapperLigne(obj) {
   const out = {};
   for (const [k, v] of Object.entries(obj)) {
     const champ = LOOKUP[cle(k)];
     if (!champ || v === "" || v == null) continue;
     // Le serveur attend des chaînes : nombres Excel (téléphone, série de date) convertis ici.
     if (typeof v === "number") out[champ] = CHAMPS_DATE.has(champ) ? serieVersIso(v) : champ === "num" ? v : String(v);
-    else out[champ] = typeof v === "string" ? v.trim() : v;
+    else out[champ] = typeof v === "string" ? v.trim().replace(/^'(?=[=+\-@])/, "") : v; // retire l'apostrophe anti-formule posée à l'export
   }
   return out;
 }

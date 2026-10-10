@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import * as XLSX from "xlsx";
-import { tableauDepuisFeuille, decoderTexte } from "../ImportMembresModal";
+import { versDelimite } from "../../utils/exportCsv";
+import { tableauDepuisFeuille, decoderTexte, mapperLigne } from "../ImportMembresModal";
 
 const MENTION = "Barreau de Pointe-Noire — Document interne confidentiel — Liste arrêtée au 10/10/2026 — Diffusion interdite.";
 const ENTETE = ["N°", "N° inscription", "Nom", "Qualité", "Statut"];
@@ -38,5 +39,19 @@ describe("decoderTexte — encodage des CSV", () => {
   it("repli Windows-1252 (Excel FR) sans U+FFFD", () => {
     const cp1252 = new Uint8Array([0x4d, 0xe9]).buffer; // « Mé »
     expect(decoderTexte(cp1252)).toBe("Mé");
+  });
+});
+
+describe("mapperLigne — apostrophe anti-formule (CA-10)", () => {
+  it("retire l'apostrophe posée à l'export devant = + - @ et garde les autres", () => {
+    expect(mapperLigne({ tel: "'+242-06-123" }).tel).toBe("+242-06-123");
+    expect(mapperLigne({ nom: "'=cmd" }).nom).toBe("=cmd");
+    expect(mapperLigne({ nom: "O'Neil" }).nom).toBe("O'Neil");
+  });
+  it("aller-retour : téléphone à tirets exporté puis ré-importé inchangé", () => {
+    const tel = "+242-06-123-45-67";
+    const csv = versDelimite([{ label: "num", valeur: (r) => r.n }, { label: "nom", valeur: (r) => r.nom }, { label: "tel", valeur: (r) => r.tel }], [{ n: 1, nom: "A", tel }], ";");
+    const [ligne] = tableauDepuisFeuille(XLSX, XLSX.read(csv.replace(/;/g, "	"), { type: "string", raw: true }).Sheets.Sheet1);
+    expect(mapperLigne(ligne).tel).toBe(tel);
   });
 });

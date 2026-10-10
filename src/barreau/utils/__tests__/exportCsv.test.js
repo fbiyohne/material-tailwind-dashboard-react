@@ -63,6 +63,8 @@ describe("versDelimite (TXT à tabulations)", () => {
     expect(sortie("+cmd|' /C calc'!A0")).toBe("'+cmd|' /C calc'!A0");
     expect(sortie("-1+HYPERLINK(1)")).toBe("'-1+HYPERLINK(1)");
     expect(sortie("+242 06 123 45 67")).toBe("+242 06 123 45 67");
+    expect(sortie("+242-06-123-45-67")).toBe("+242-06-123-45-67");
+    expect(sortie("+242/06/123")).toBe("+242/06/123");
     expect(sortie(-5000)).toBe("-5000");
     expect(sortie("2026-09-15")).toBe("2026-09-15");
   });
