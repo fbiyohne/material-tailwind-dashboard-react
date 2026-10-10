@@ -141,6 +141,9 @@ describe("GET /corps-electoral?date= — situation à la date (X-03, CA9)", () =
   it("refuse une date invalide (400)", async () => {
     expect((await corps("date=hier")).status).toBe(400);
     expect((await corps("date=2026-13-45")).status).toBe(400);
+    // scrutinId mal formé : 400 (jamais 500), scrutin inexistant : 404.
+    expect((await corps("scrutinId=abc")).status).toBe(400);
+    expect((await corps("scrutinId=999999999")).status).toBe(404);
   });
 });
 

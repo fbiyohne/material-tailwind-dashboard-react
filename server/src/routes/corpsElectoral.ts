@@ -20,8 +20,10 @@ corpsElectoralRouter.get(
   "/",
   asyncH(async (req, res) => {
     let date = dateDeRequete(req);
-    if (!date && req.query.scrutinId) {
-      const s = await prisma.scrutin.findUnique({ where: { id: Number(req.query.scrutinId) }, select: { dateScrutin: true, ouvertLe: true } });
+    if (!date && req.query.scrutinId !== undefined) {
+      const sid = Number(req.query.scrutinId);
+      if (!Number.isInteger(sid) || sid <= 0) throw new HttpError(400, "Paramètre « scrutinId » invalide.");
+      const s = await prisma.scrutin.findUnique({ where: { id: sid }, select: { dateScrutin: true, ouvertLe: true } });
       if (!s) throw new HttpError(404, "Scrutin introuvable");
       date = dateReferenceScrutin(s);
     }
