@@ -223,7 +223,12 @@ export function AvocatDetail() {
                     </div>
                   </Carte>
 
-                  {peutVoirFinances && droit && (
+                  {peutVoirFinances && !auTableau && (
+                    <Carte titre={`Droits de plaidoirie ${EXERCICE_COURANT}`}>
+                      <p className="text-sm text-gris">Sans objet — avocat {decede ? "décédé" : "radié"}.</p>
+                    </Carte>
+                  )}
+                  {peutVoirFinances && auTableau && droit && (
                     <Carte titre={`Droits de plaidoirie ${EXERCICE_COURANT}`}>
                       <div className="grid grid-cols-3 gap-3 text-center">
                         <div><div className="text-xs uppercase tracking-wide text-gris">Dû</div><div className="mt-1 font-medium">{formatFCFA(droit.du)}</div></div>

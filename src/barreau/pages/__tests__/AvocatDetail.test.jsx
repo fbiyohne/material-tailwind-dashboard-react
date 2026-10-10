@@ -5,7 +5,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { ToastProvider } from "../../components/Toast";
 import { ConfirmProvider } from "../../components/ConfirmDialog";
 import { AvocatDetail } from "../AvocatDetail";
-import { getMembre, supprimerMembre } from "../../api/resources";
+import { getMembre, getDroits, supprimerMembre } from "../../api/resources";
 import { useAuth } from "../../auth/AuthContext";
 
 vi.mock("../../api/resources", () => ({
@@ -60,6 +60,15 @@ describe("AvocatDetail — actions selon rôle et statut", () => {
       expect(screen.queryByRole("button", { name: nom })).not.toBeInTheDocument();
     }
     expect(screen.getByRole("button", { name: /Modifier/ })).toBeInTheDocument();
+  });
+
+  it("décédé : aucune créance de plaidoirie affichée, même si le serveur renvoie une ligne", async () => {
+    useAuth.mockReturnValue({ user: { role: "SECRETAIRE_GENERAL" } });
+    getDroits.mockResolvedValue({ lignes: [{ membre: { id: 7 }, du: 60000, paye: 0, solde: 60000 }] });
+    getMembre.mockResolvedValue({ ...base, statut: "decede", dateDeces: "2026-09-15" });
+    rendre();
+    expect(await screen.findByText(/Sans objet — avocat décédé/)).toBeInTheDocument();
+    expect(screen.queryByText(/60\s?000/)).not.toBeInTheDocument();
   });
 
   it("SG, membre radié : ligne « Radié le — motif », Accès espace et Attestation masqués, décès possible", async () => {
