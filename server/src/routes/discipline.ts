@@ -26,6 +26,8 @@ disciplineRouter.get(
     const membreId = req.query.membreId ? Number(req.query.membreId) : undefined;
     if (membreId) {
       await journaliser(`Consultation du casier disciplinaire (membre #${membreId})`, req.user!.id);
+      // Trace aussi dans JournalAudit (CA10) : identifiant seul, jamais le contenu.
+      res.locals.auditDetail = `casier membre #${membreId}`;
       res.json(await prisma.dossierDisciplinaire.findMany({ where: { membreId }, orderBy: { id: "desc" } }));
       return;
     }

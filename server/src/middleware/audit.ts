@@ -22,10 +22,12 @@ const RESSOURCES: Record<string, string> = {
 
 /**
  * Lectures sensibles journalisées malgré la méthode GET (R-62 / CA10) :
- * la consultation d'un dossier disciplinaire. Le chemin seul est retenu,
- * jamais le contenu de la réponse.
+ * la consultation d'un dossier disciplinaire et ses PDF (convocation, décision).
+ * Le chemin seul est retenu, jamais le contenu de la réponse. Une route peut
+ * aussi rendre un GET journalisable en posant `res.locals.auditDetail`
+ * (ex. casier d'un membre, dont l'identifiant est en query string).
  */
-const LECTURES_SENSIBLES = [/^\/api\/discipline\/\d+$/];
+const LECTURES_SENSIBLES = [/^\/api\/discipline\/\d+(\/(convocation|decision)\/pdf)?$/];
 
 const VERBES: Record<string, string> = { GET: "Consultation", POST: "Création", PATCH: "Mise à jour", PUT: "Mise à jour", DELETE: "Suppression" };
 
@@ -59,12 +61,13 @@ function libelle(methode: string, chemin: string): { action: string; cible: stri
 export function audit(req: AuthRequest, res: Response, next: NextFunction) {
   const chemin = req.originalUrl.split("?")[0];
   if (req.method === "OPTIONS" || req.method === "HEAD") return next();
-  if (req.method === "GET" && !LECTURES_SENSIBLES.some((re) => re.test(chemin))) return next();
+  const lectureSensible = req.method !== "GET" || LECTURES_SENSIBLES.some((re) => re.test(chemin));
   // IP capturée à la réception (req.ip fiable via « trust proxy ») ; on retire le
   // préfixe IPv4-mapped (::ffff:) pour un affichage lisible.
   const ip = (req.ip ?? "").replace(/^::ffff:/, "") || null;
   res.on("finish", () => {
     if (res.statusCode >= 400 || res.locals.auditFait) return;
+    if (!lectureSensible && !res.locals.auditDetail) return;
     const { action: base, cible } = libelle(req.method, chemin);
     // auditDetail ne porte jamais de contenu utilisateur (corps de message, pièce) :
     // seulement un identifiant ou un comptage.

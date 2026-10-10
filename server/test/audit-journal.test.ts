@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import request from "supertest";
 import { creerApp } from "../src/app.js";
 import { prisma } from "../src/prisma.js";
+import { trouverChromium } from "../src/lib/pdf.js";
 
 // T18 (CA10) — journal d'audit : envoi de message tracé sans son contenu,
 // lecture d'un dossier disciplinaire tracée, filtres userId / action / dates,
@@ -48,6 +49,8 @@ beforeAll(async () => {
 
 afterAll(async () => {
   // JournalAudit est immuable (trigger) : on n'y touche pas.
+  const d = await prisma.dossierDisciplinaire.findUnique({ where: { id: dossierId } });
+  if (d) await prisma.archive.deleteMany({ where: { reference: d.reference } });
   await prisma.dossierDisciplinaire.deleteMany({ where: { id: dossierId } });
   if (convId) await prisma.conversation.deleteMany({ where: { id: convId } });
   await prisma.user.deleteMany({ where: { id: av.userId } });
@@ -88,6 +91,21 @@ describe("Journal d'audit — messagerie sans contenu (CA10)", () => {
     const e = await attendreLigne({ userId: sgId, chemin: `/api/discipline/${dossierId}`, methode: "GET" });
     expect(e).not.toBeNull();
     expect(e!.action).toBe("Consultation — Dossier disciplinaire");
+    expect(e!.cible).toBe(`#${dossierId}`);
+  });
+
+  it("la consultation du casier d'un membre (GET /discipline?membreId=) est tracée avec le membre, sans contenu", async () => {
+    expect((await request(app).get(`/api/discipline?membreId=${av.membreId}`).set(...bearer(sg))).status).toBe(200);
+    const e = await attendreLigne({ userId: sgId, chemin: "/api/discipline", methode: "GET" });
+    expect(e).not.toBeNull();
+    expect(e!.action).toBe(`Consultation — Dossier disciplinaire (casier membre #${av.membreId})`);
+  });
+
+  it.skipIf(!trouverChromium())("la décision PDF d'un dossier est tracée dans JournalAudit", async () => {
+    expect((await request(app).get(`/api/discipline/${dossierId}/decision/pdf`).set(...bearer(sg))).status).toBe(200);
+    const e = await attendreLigne({ userId: sgId, chemin: `/api/discipline/${dossierId}/decision/pdf`, methode: "GET" });
+    expect(e).not.toBeNull();
+    expect(e!.action).toBe("Génération de décision — Dossier disciplinaire");
     expect(e!.cible).toBe(`#${dossierId}`);
   });
 });

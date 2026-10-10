@@ -144,9 +144,24 @@ Routeur `src/routes/audit.ts`, middleware `src/middleware/audit.ts`, écran
   `POST /espace/messagerie`, `POST /espace/messagerie/:id` et `POST /messagerie/:id`.
 - Lecture sensible journalisée malgré la méthode GET : `GET /discipline/:id` →
   « Consultation — Dossier disciplinaire » (cible `#id`), en plus du journal métier
-  `JournalDiscipline` (R-62).
+  `JournalDiscipline` (R-62). Même traitement pour `GET /discipline/:id/convocation/pdf`,
+  `GET /discipline/:id/decision/pdf` et le casier d'un membre
+  (`GET /discipline?membreId=` → « … (casier membre #id) »).
 - Désactivation du trigger par un DBA (purge de conservation, jamais depuis l'API) :
   `ALTER TABLE "JournalAudit" DISABLE TRIGGER journal_audit_immuable;` … `ENABLE TRIGGER`.
+- **Limites, à ne pas présenter autrement** : (1) `TRUNCATE` n'est pas couvert par le
+  trigger. (2) Le rôle de connexion de l'application est aussi celui qui applique les
+  migrations Prisma, donc **propriétaire** de la table : une exécution SQL arbitraire
+  obtenue via l'application (injection, serveur compromis) pourrait désactiver le
+  trigger. L'immuabilité vaut donc contre l'API, l'ORM et l'erreur humaine, pas contre
+  un accès SQL au nom du propriétaire. En production, utiliser un rôle d'exécution
+  distinct, sans `ALTER` ni droit de propriétaire, limité à `SELECT`/`INSERT` sur
+  `JournalAudit` (migrations lancées par le rôle propriétaire) : à valider par Fabrice.
+  (3) L'adresse IP journalisée est `req.ip`, soit `X-Forwarded-For` avec `TRUST_PROXY`
+  (défaut 1, un mandataire). En exposition directe, mettre `TRUST_PROXY=0`, sinon un
+  client forge l'IP inscrite au journal. (4) L'écriture asynchrone du journal est en
+  « fail-open » (avertissement dans les logs, réponse déjà envoyée) sauf pour les exports,
+  qui attendent la ligne avant de livrer (C-04).
 
 Test : `test/audit-journal.test.ts` (envoi d'un message au texte unique : une ligne
 par envoi, texte absent de toutes les colonnes ; lecture disciplinaire tracée ;
