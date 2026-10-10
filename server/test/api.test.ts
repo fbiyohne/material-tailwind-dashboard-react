@@ -1384,7 +1384,9 @@ describe("Cycle de vie — radiation motivée, décès, garde-fou DELETE, RBAC (
   it("C-03 : la liste n'expose jamais motifRadiation ; la fiche le renvoie avec les dates", async () => {
     const id = await creer("motif");
     await request(app).post(`/api/membres/${id}/radier`).set(...bearer(sg)).send({ dateRadiation: "2026-10-02", motifRadiation: "Décision n° 7" });
-    const liste = await request(app).get("/api/membres?statut=RADIE&pageSize=200").set(...bearer(sg));
+    // Liste filtrée sur le nom créé : indépendante du nombre de RADIE présents en base (pageSize=200 ne suffisait plus).
+    const nom = (await request(app).get(`/api/membres/${id}`).set(...bearer(sg))).body.nom as string;
+    const liste = await request(app).get(`/api/membres?statut=RADIE&q=${encodeURIComponent(nom)}`).set(...bearer(sg));
     expect(liste.status).toBe(200);
     const ligne = liste.body.items.find((m: any) => m.id === id);
     expect(ligne).toBeTruthy();
