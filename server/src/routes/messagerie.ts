@@ -108,6 +108,8 @@ messagerieRouter.post(
     const message = await prisma.message.create({
       data: { conversationId: id, corps, auteurMembreId: null, auteurNom, estAdministration: true },
     });
+    // Journal d'audit : identifiant seulement, jamais le corps (CA10, R-58).
+    res.locals.auditDetail = `message #${message.id}`;
     await prisma.conversation.update({ where: { id }, data: { updatedAt: new Date(), adminLastReadAt: new Date() } });
     // Symétrie des notifications : on prévient l'avocat de la réponse (non bloquant).
     const membreIds = conv.participants.map((p) => p.membreId);

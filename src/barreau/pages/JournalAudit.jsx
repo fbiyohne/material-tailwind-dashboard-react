@@ -12,12 +12,16 @@ const estSysteme = (a) => !a || /^syst/i.test(a);
 
 /**
  * Journal d'audit (RG-16) — consultation des actions sensibles, filtrable par
- * mot-clé (action / chemin / cible / acteur) et plage de dates, paginée côté
- * serveur. Réservé au SG / Bâtonnier / Admin.
+ * mot-clé (action / chemin / cible / acteur), utilisateur, action et plage de
+ * dates, paginée côté serveur. Lecture seule : le journal n'est ni modifiable
+ * ni supprimable (trigger en base, aucune route d'écriture). Réservé au SG /
+ * Bâtonnier / Admin.
  */
 export function JournalAudit() {
   const toast = useToast();
   const [q, setQ] = useState("");
+  const [userId, setUserId] = useState("");
+  const [action, setAction] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [page, setPage] = useState(1);
@@ -30,20 +34,23 @@ export function JournalAudit() {
     const t = setTimeout(() => {
       setChargement(true);
       setErreur(false);
-      listerAudit({ q, from, to, page, pageSize: PAGE_SIZE })
+      listerAudit({ q, userId, action, from, to, page, pageSize: PAGE_SIZE })
         .then(setData)
         .catch((e) => { setErreur(true); toast.error(e.message); })
         .finally(() => setChargement(false));
     }, 250);
     return () => clearTimeout(t);
-  }, [q, from, to, page, nonce]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [q, userId, action, from, to, page, nonce]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const resetPage = (setter) => (e) => { setter(e.target.value); setPage(1); };
-  const reinitialiser = () => { setQ(""); setFrom(""); setTo(""); setPage(1); };
+  const reinitialiser = () => { setQ(""); setUserId(""); setAction(""); setFrom(""); setTo(""); setPage(1); };
 
   const totalPages = useMemo(() => (data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1), [data]);
   const items = data?.items ?? [];
-  const filtreActif = !!(q || from || to);
+  const filtreActif = !!(q || userId || action || from || to);
+  // Liste des acteurs connus du journal (renvoyée par l'API), conservée entre
+  // deux chargements pour que le sélecteur ne se vide pas pendant un filtre.
+  const acteurs = data?.acteurs ?? [];
 
   return (
     <div className="space-y-5">
@@ -63,6 +70,11 @@ export function JournalAudit() {
             <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gris" />
             <input type="text" value={q} onChange={resetPage(setQ)} placeholder="Rechercher une action, un acteur, une cible, une IP…" className="bpn-input pl-9" />
           </div>
+          <select aria-label="Utilisateur" value={userId} onChange={resetPage(setUserId)} className="bpn-input !w-auto !py-1.5">
+            <option value="">Tous les utilisateurs</option>
+            {acteurs.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
+          </select>
+          <input type="text" aria-label="Action" value={action} onChange={resetPage(setAction)} placeholder="Action (ex. Envoi d'un message)" className="bpn-input !py-1.5 sm:!w-56" />
           <label className="flex items-center gap-2 text-xs text-gris">Du <input type="date" lang="fr-FR" value={from} onChange={resetPage(setFrom)} className="bpn-input !w-auto !py-1.5" /></label>
           <label className="flex items-center gap-2 text-xs text-gris">Au <input type="date" lang="fr-FR" value={to} onChange={resetPage(setTo)} className="bpn-input !w-auto !py-1.5" /></label>
           {filtreActif && (

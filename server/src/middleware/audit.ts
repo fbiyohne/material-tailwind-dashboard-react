@@ -16,23 +16,36 @@ const RESSOURCES: Record<string, string> = {
   archives: "Archive",
   parametres: "Paramètres",
   auth: "Session",
+  espace: "Espace avocat",
+  messagerie: "Messagerie",
 };
 
-const VERBES: Record<string, string> = { POST: "Création", PATCH: "Mise à jour", PUT: "Mise à jour", DELETE: "Suppression" };
+/**
+ * Lectures sensibles journalisées malgré la méthode GET (R-62 / CA10) :
+ * la consultation d'un dossier disciplinaire. Le chemin seul est retenu,
+ * jamais le contenu de la réponse.
+ */
+const LECTURES_SENSIBLES = [/^\/api\/discipline\/\d+$/];
+
+const VERBES: Record<string, string> = { GET: "Consultation", POST: "Création", PATCH: "Mise à jour", PUT: "Mise à jour", DELETE: "Suppression" };
 
 /** Construit un libellé d'action lisible à partir de la méthode et du chemin. */
 function libelle(methode: string, chemin: string): { action: string; cible: string | null } {
   const segments = chemin.replace(/^\/api\//, "").split("/").filter(Boolean);
-  const ressource = RESSOURCES[segments[0]] ?? segments[0] ?? "Ressource";
-  const sousAction = segments.find((s) => ["paiement", "valider", "radier", "deces", "import", "export", "relances", "statut", "attestation", "convocation", "pv", "decision", "login", "logout"].includes(s));
-  const cibleId = segments[1] && /^\d+$/.test(segments[1]) ? `#${segments[1]}` : null;
+  // La messagerie est une ressource à part entière, qu'elle soit atteinte par
+  // /messagerie (administration) ou /espace/messagerie (avocat).
+  const ressource = segments.includes("messagerie") ? RESSOURCES.messagerie : RESSOURCES[segments[0]] ?? segments[0] ?? "Ressource";
+  const sousAction = segments.find((s) => ["paiement", "valider", "radier", "deces", "import", "export", "relances", "statut", "attestation", "convocation", "pv", "decision", "login", "logout", "messagerie"].includes(s));
+  // Cible : le premier segment numérique (id du membre, du fil, du dossier…).
+  const id = segments.find((s) => /^\d+$/.test(s));
+  const cibleId = id ? `#${id}` : null;
   if (sousAction) {
     const map: Record<string, string> = {
       paiement: "Enregistrement d'un paiement", valider: "Validation Trésorière", radier: "Radiation d'un avocat",
       deces: "Déclaration de décès", import: "Import du tableau", export: "Export de la liste des avocats",
       relances: "Lancement des relances", statut: "Changement de statut", attestation: "Génération d'attestation",
       convocation: "Génération de convocation", pv: "Génération de procès-verbal", decision: "Génération de décision",
-      login: "Connexion", logout: "Déconnexion",
+      login: "Connexion", logout: "Déconnexion", messagerie: "Envoi d'un message",
     };
     return { action: `${map[sousAction]} — ${ressource}`, cible: cibleId };
   }
@@ -44,19 +57,23 @@ function libelle(methode: string, chemin: string): { action: string; cible: stri
  * Écriture asynchrone après envoi de la réponse : n'impacte jamais la latence client.
  */
 export function audit(req: AuthRequest, res: Response, next: NextFunction) {
-  if (req.method === "GET" || req.method === "OPTIONS" || req.method === "HEAD") return next();
+  const chemin = req.originalUrl.split("?")[0];
+  if (req.method === "OPTIONS" || req.method === "HEAD") return next();
+  if (req.method === "GET" && !LECTURES_SENSIBLES.some((re) => re.test(chemin))) return next();
   // IP capturée à la réception (req.ip fiable via « trust proxy ») ; on retire le
   // préfixe IPv4-mapped (::ffff:) pour un affichage lisible.
   const ip = (req.ip ?? "").replace(/^::ffff:/, "") || null;
   res.on("finish", () => {
     if (res.statusCode >= 400 || res.locals.auditFait) return;
-    const { action: base, cible } = libelle(req.method, req.originalUrl.split("?")[0]);
+    const { action: base, cible } = libelle(req.method, chemin);
+    // auditDetail ne porte jamais de contenu utilisateur (corps de message, pièce) :
+    // seulement un identifiant ou un comptage.
     const detail = res.locals.auditDetail;
     const action = detail ? `${base} (${detail})` : base;
     prisma.journalAudit
       .create({
         data: {
-          action, cible, methode: req.method, chemin: req.originalUrl.split("?")[0], ip,
+          action, cible, methode: req.method, chemin, ip,
           // userNom dénormalisé : l'entrée reste attribuable même après suppression
           // du compte, et la recherche par acteur (filtre) devient effective.
           statut: res.statusCode, userId: req.user?.id ?? null, userNom: req.user?.nom ?? null,

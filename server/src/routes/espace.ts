@@ -694,7 +694,10 @@ espaceRouter.post(
         participants: { create: participantsData },
         messages: { create: { corps, auteurMembreId: moi, auteurNom, estAdministration: false } },
       },
+      include: { messages: { select: { id: true } } },
     });
+    // Journal d'audit : identifiant seulement, jamais le corps (CA10, R-58).
+    res.locals.auditDetail = `message #${conv.messages[0]?.id}`;
     if (avecAdministration) {
       notifierAdministration(sujet, auteurNom, corps);
       realtimeAdministration({ type: "messagerie", conversationId: conv.id });
@@ -724,6 +727,7 @@ espaceRouter.post(
     const message = await prisma.message.create({
       data: { conversationId: id, corps, auteurMembreId: moi, auteurNom, estAdministration: false },
     });
+    res.locals.auditDetail = `message #${message.id}`;
     await prisma.conversation.update({ where: { id }, data: { updatedAt: new Date() } });
     if (conv.avecAdministration) {
       notifierAdministration(conv.sujet, auteurNom, corps);

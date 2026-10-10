@@ -109,6 +109,36 @@ Réponse : `{ "total": 3, "crees": 1, "maj": 1, "erreurs": [{ "ligne": 3, "messa
 ### Chromium pour le PDF
 `trouverChromium` (`src/lib/pdf.ts`) cherche dans l'ordre : `PUPPETEER_EXECUTABLE_PATH`, le cache Puppeteer, Playwright, les binaires Linux (`/usr/bin/chromium`, `google-chrome`…), puis sous Windows `C:/Program Files/Google/Chrome/Application/chrome.exe` et `C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe`. Sans binaire, les routes PDF répondent en erreur et les tests PDF s'ignorent.
 
+## Journal d'audit (T18, CA10)
+
+Routeur `src/routes/audit.ts`, middleware `src/middleware/audit.ts`, écran
+`src/barreau/pages/JournalAudit.jsx`.
+
+- `GET /api/audit` (permission `audit`) : `q` (action, chemin, cible, acteur, IP),
+  `userId` (entier, sinon 400), `action` (libellé partiel, insensible à la casse),
+  `from` / `to` (jour inclusif), `page` / `pageSize` (≤ 100). La réponse porte aussi
+  `acteurs` (utilisateurs connus du journal, pour le sélecteur de l'écran).
+- **Lecture seule** : aucune route POST, PUT, PATCH ni DELETE sur `/api/audit`
+  (404). En base, le trigger `journal_audit_immuable` refuse UPDATE et DELETE
+  (voir « Journal d'audit non modifiable » plus bas). `TRUNCATE` n'est pas couvert
+  et n'est pas annoncé comme garanti.
+- **Jamais de contenu** : le middleware n'enregistre que méthode, chemin, libellé,
+  cible (`#id`), statut HTTP, IP et acteur. `res.locals.auditDetail` ne porte qu'un
+  identifiant ou un comptage, jamais un corps de message ni une pièce (secret
+  professionnel, art. 52 loi 026-92, R-58).
+- Libellés messagerie : « Envoi d'un message — Messagerie (message #id) » pour
+  `POST /espace/messagerie`, `POST /espace/messagerie/:id` et `POST /messagerie/:id`.
+- Lecture sensible journalisée malgré la méthode GET : `GET /discipline/:id` →
+  « Consultation — Dossier disciplinaire » (cible `#id`), en plus du journal métier
+  `JournalDiscipline` (R-62).
+- Désactivation du trigger par un DBA (purge de conservation, jamais depuis l'API) :
+  `ALTER TABLE "JournalAudit" DISABLE TRIGGER journal_audit_immuable;` … `ENABLE TRIGGER`.
+
+Test : `test/audit-journal.test.ts` (envoi d'un message au texte unique : une ligne
+par envoi, texte absent de toutes les colonnes ; lecture disciplinaire tracée ;
+filtres ; 404 sur toute écriture ; 403 pour un avocat). Front :
+`src/barreau/pages/__tests__/JournalAudit.test.jsx`.
+
 ## Permissions d'action (RBAC, R-42 provisoire)
 
 En plus des modules (`membres`, `finances`…), la matrice `RolePermission` porte
