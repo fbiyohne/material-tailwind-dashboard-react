@@ -174,6 +174,44 @@ il ne les prononce pas.
 
 Tests : `test/rbac-actions.test.ts`.
 
+## Discipline : décision enregistrée (T11, X-02, art. 36 loi n° 026-92)
+
+Le logiciel **enregistre** la décision du conseil de discipline, il ne la prononce
+pas. Routes de `routes/discipline.ts` :
+
+- `POST /api/discipline` — saisine : action `discipline_saisir` (SG et bâtonnier par défaut).
+- `PATCH /api/discipline/:id` — instruction (rapporteur, convocation, audience, recours,
+  champs de procédure `origine`, `dateDesignationRapporteur`, `dateRapport`,
+  `conclusionRapport`, `orientation` CLASSEMENT|POURSUITE, `juridiction`,
+  `dateNotification`). Modifier `decision`, `sanction` ou passer `statut` à `DECISION`
+  exige `discipline_decider` (403 sinon) ; renvoyer ces champs à l'identique reste permis
+  (le formulaire les renvoie toujours).
+- `POST /api/discipline/:id/decision` — action `discipline_decider` (bâtonnier par défaut).
+  Corps : `sanctionCode` (catalogue `regles.sanctions`), `dureeMois` (obligatoire pour une
+  interdiction, ≤ `dureeMaxMois`), `sursis` (seulement si `regles.sursisAutorise` et
+  `sursisPossible`), `peineAccessoireMois` (≤ `peineAccessoireMaxMois`), `motivation`
+  (obligatoire, 10 caractères au moins), `decision` (texte), `reference`, `decidePar`
+  (défaut : « Conseil de discipline (art. 36, loi n° 026-92) »), `dateDecision`,
+  `dateNotification`. Une seule décision par dossier (409), `membreId` exigé (400).
+  Le champ texte `sanction` reçoit le libellé (« Interdiction temporaire (6 mois, avec sursis) »).
+
+Effets, tous écrits par `changerSituation` (événement d'historique avec `dossierId`) :
+
+| Sanction | Effet |
+|---|---|
+| effet `AUCUN` (avertissement, réprimande) | événement `SANCTION`, statut inchangé |
+| interdiction temporaire ferme | `SUSPENDU`, `sanctionDebut`/`sanctionFin` posés, événement `SUSPENSION` |
+| interdiction avec sursis | reste `INSCRIT` (au tableau), événement `SANCTION` portant la mention |
+| radiation, `regles.effetRadiation = ENREGISTREMENT` | `RADIE` (date = `dateDecision`, motif = libellé + référence), retiré du tableau et de l'annuaire, événement `RADIATION` |
+| radiation, `EXPIRATION_RECOURS` | événement `SANCTION` seul, statut inchangé (point ouvert) |
+
+La fin d'une interdiction ferme ne rétablit pas le statut : un événement `REPRISE` manuel
+est nécessaire. Le PDF de décision affiche « Sanction enregistrée — organe, décision du … ».
+La lecture d'un dossier (`GET /discipline/:id`) est tracée dans `JournalAudit` par le
+middleware d'audit (R-62, CA10).
+
+Tests : `test/discipline-decision.test.ts`.
+
 ## Règles juridiques paramétrables (`lib/regles.ts`)
 
 Seule source des valeurs juridiques : `REGLES_DEFAUT`, reprise de

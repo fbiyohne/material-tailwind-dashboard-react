@@ -428,7 +428,7 @@ export function pvScrutinHtml(s: any): string {
 export function decisionDisciplineHtml(d: any): string {
   const qui = d.avocatNom === "Confidentiel" ? "l'avocat concerné" : `Me ${escapeHtml(d.avocatNom)}`;
   const sanction = d.sanction
-    ? `<div class="montant"><b>${escapeHtml(d.sanction)}</b><i>Sanction prononcée</i></div>`
+    ? `<div class="montant"><b>${escapeHtml(d.sanction)}</b><i>Sanction enregistrée${d.decidePar ? ` — ${escapeHtml(d.decidePar)}` : ""}${d.dateDecision ? `, décision du ${fmtDate(d.dateDecision)}` : ""}</i></div>`
     : "";
   return documentHtml({
     org: "Conseil de discipline",
