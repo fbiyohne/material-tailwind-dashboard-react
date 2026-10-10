@@ -14,8 +14,10 @@ import {
   XMarkIcon,
   ExclamationTriangleIcon,
   TrashIcon,
+  ScaleIcon,
 } from "@heroicons/react/24/outline";
 import { Badge, Notice, useToast, PageHeader, FormField, Tabs, DataTable, Modal, Sceau, MatriceAcces } from "../components";
+import ReglesJuridiques from "../components/ReglesJuridiques";
 import { useAuth } from "../auth/AuthContext";
 import { formatFCFA, formatDateTime } from "../utils/format";
 import { appliquerConfig } from "../data/config";
@@ -39,11 +41,10 @@ const DEFAUT = {
   tarifs: { avocat: 150000, stagiaire: 75000, droitsPlaidoirie: 60000 },
   exerciceCourant: 2026,
   premierExercice: 2020,
-  identite: { denomination: "", ordre: "", batonnier: "", tresoriere: "", secretaireGeneral: "", adresse: "", logo: "" },
+  identite: { denomination: "", ordre: "", batonnier: "", tresoriere: "", secretaireGeneral: "", adresse: "", logo: "", ville: "", modeDemonstration: false },
   categoriesArchives: [],
   typesPublication: [],
   canauxActifs: ["MTN", "AIRTEL", "CARTE", "VIREMENT"],
-  dureeStage: 24,
   fonctionsConseil: ["Bâtonnier", "Vice-Bâtonnier", "Secrétaire Général", "Trésorière", "Membre du Conseil"],
   libelles: { membre: {}, cotisation: {}, dossier: {}, publication: {} },
 };
@@ -140,7 +141,7 @@ export function Parametres() {
   const [categories, setCategories] = useState(DEFAUT.categoriesArchives);
   const [typesPub, setTypesPub] = useState(DEFAUT.typesPublication);
   const [canaux, setCanaux] = useState(DEFAUT.canauxActifs);
-  const [dureeStage, setDureeStage] = useState(DEFAUT.dureeStage);
+  const [regles, setRegles] = useState(null); // { stage, ...regles } : objet complet exigé par le serveur
   const [fonctions, setFonctions] = useState(DEFAUT.fonctionsConseil);
   const [libelles, setLibelles] = useState(DEFAUT.libelles);
   const [notif, setNotif] = useState(null);
@@ -159,7 +160,7 @@ export function Parametres() {
       setCategories(p.documents?.categoriesArchives ?? []);
       setTypesPub(p.documents?.typesPublication ?? []);
       setCanaux(p.paiement?.canauxActifs ?? DEFAUT.canauxActifs);
-      setDureeStage(p.stage?.dureeMois ?? DEFAUT.dureeStage);
+      setRegles(p.regles ? { ...p.regles, stage: p.stage } : null);
       setFonctions(p.conseil?.fonctions ?? DEFAUT.fonctionsConseil);
       setLibelles({ membre: {}, cotisation: {}, dossier: {}, publication: {}, ...p.libellesStatuts });
     }).catch((e) => toast.error(e.message));
@@ -213,12 +214,16 @@ export function Parametres() {
       {
         documents: { categoriesArchives: categories, typesPublication: typesPub },
         paiement: { canauxActifs: canaux },
-        stage: { dureeMois: Number(dureeStage) },
         conseil: { fonctions },
         libellesStatuts: libelles,
       },
       "Données de référence enregistrées."
     );
+
+  const sauverRegles = () => {
+    const { stage, ...autres } = regles;
+    return enregistrer({ regles: autres, stage }, "Règles juridiques enregistrées.");
+  };
 
   // Réinitialisation totale (ADMIN) — confirmée par saisie du mot « SUPPRIMER ».
   const lancerReset = async () => {
@@ -315,7 +320,15 @@ export function Parametres() {
         {champMembre("tresoriere", "Trésorière")}
         {champMembre("secretaireGeneral", "Secrétaire Général")}
         <FormField label="Adresse"><input value={identite.adresse} onChange={setI("adresse")} className="bpn-input" /></FormField>
+        <FormField label="Ville" hint="figure sur les reçus, quitus et en-têtes"><input value={identite.ville ?? ""} onChange={setI("ville")} className="bpn-input" /></FormField>
       </div>
+      <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-lg border border-grisM bg-grisL/40 p-3 text-sm">
+        <input type="checkbox" className="mt-0.5 h-4 w-4 accent-navy" checked={!!identite.modeDemonstration} onChange={(e) => setIdentite({ ...identite, modeDemonstration: e.target.checked })} />
+        <span>
+          <span className="font-medium text-encre">Mode démonstration</span>
+          <span className="block text-xs text-gris">Affiche la mention « données fictives » dans l'en-tête et sur les documents. À n'activer que sur une instance de démonstration.</span>
+        </span>
+      </label>
       <div className="mt-4 flex justify-end">
         <button className="bpn-btn bpn-btn-primary" onClick={sauverIdentite}><CheckIcon className="h-4 w-4" /> Enregistrer</button>
       </div>
@@ -347,7 +360,7 @@ export function Parametres() {
       </Section>
           ) },
           { id: "paiement", label: "Paiement & stage", content: (
-      <Section titre="Canaux de paiement & stage" description="Moyens de paiement proposés en ligne et durée de stage par défaut.">
+      <Section titre="Canaux de paiement & stage" description="Moyens de paiement proposés en ligne.">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div>
             <div className={SOUS_TITRE}>Canaux de paiement actifs</div>
@@ -364,12 +377,8 @@ export function Parametres() {
             </div>
           </div>
           <div>
-            <div className={SOUS_TITRE}>Durée du stage par défaut</div>
-            <div className="flex items-center gap-2">
-              <input type="number" min={1} max={120} value={dureeStage} onChange={(e) => setDureeStage(Number(e.target.value))} className="bpn-input w-28 text-sm" />
-              <span className="text-sm text-gris">mois</span>
-            </div>
-            <p className="mt-2 text-xs text-gris">Appliquée automatiquement aux avocats stagiaires lors de leur inscription.</p>
+            <div className={SOUS_TITRE}>Durée du stage</div>
+            <p className="text-xs text-gris">Réglée dans l'onglet « Règles juridiques ».</p>
           </div>
         </div>
       </Section>
@@ -405,6 +414,12 @@ export function Parametres() {
         <button className="bpn-btn bpn-btn-primary" onClick={sauverReference}><CheckIcon className="h-4 w-4" /> Enregistrer les données de référence</button>
       </div>
     </div>
+  );
+
+  const panneauRegles = regles ? (
+    <ReglesJuridiques valeur={regles} onChange={setRegles} onSave={sauverRegles} />
+  ) : (
+    <Section titre="Règles juridiques (provisoires)" description="Chargement des règles…" />
   );
 
   const panneauRoles = (
@@ -478,6 +493,7 @@ export function Parametres() {
           { id: "tarifs", label: "Tarifs & exercices", icon: BanknotesIcon, content: panneauTarifs },
           { id: "identite", label: "Institution", icon: BuildingLibraryIcon, content: panneauIdentite },
           { id: "reference", label: "Données de référence", icon: AdjustmentsHorizontalIcon, content: panneauReference },
+          { id: "regles", label: "Règles juridiques (provisoires)", icon: ScaleIcon, content: panneauRegles },
           { id: "roles", label: "Rôles & sécurité", icon: ShieldCheckIcon, content: panneauRoles },
           { id: "notifications", label: "Notifications", icon: BellIcon, badge: notif?.journal?.length || null, content: panneauNotifications },
         ]}

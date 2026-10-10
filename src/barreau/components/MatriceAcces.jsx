@@ -27,6 +27,8 @@ export function MatriceAcces() {
   };
   useEffect(() => { charger(); /* eslint-disable-line */ }, []);
 
+  // Colonnes : modules puis actions d'enregistrement (R-42). Le PUT renvoie les deux familles de clés.
+  const colonnes = useMemo(() => (data ? [...data.permissions, ...(data.actions ?? [])] : []), [data]);
   const initiale = useMemo(
     () => (data ? Object.fromEntries(data.rolesEditables.map((r) => [r.cle, new Set(data.matrice[r.cle] ?? [])])) : {}),
     [data]
@@ -64,7 +66,7 @@ export function MatriceAcces() {
       <p className="text-sm text-gris">
         Cochez les modules accessibles à chaque profil. Le <strong className="text-encre">Secrétaire Général</strong> et
         l'<strong className="text-encre">Administrateur</strong> disposent d'un accès complet, non modifiable.
-        Les actions sensibles (émissions, validations, suppressions) restent réservées aux profils habilités.
+        Les colonnes « actions » (décision disciplinaire, validation du stage, omission…) sont attribuées séparément des modules ; le Secrétaire Général garde ses actions par défaut, non modifiables.
       </p>
 
       <div className="overflow-x-auto rounded-lg border border-grisM">
@@ -72,7 +74,7 @@ export function MatriceAcces() {
           <thead>
             <tr className="bg-navy text-left text-2xs uppercase tracking-wide text-white/90">
               <th className="sticky left-0 z-10 bg-navy px-3 py-2.5 font-medium">Profil</th>
-              {data.permissions.map((p) => (
+              {colonnes.map((p) => (
                 <th key={p.cle} className="px-2 py-2.5 text-center font-medium" title={p.description}>{p.libelle}</th>
               ))}
               <th className="px-3 py-2.5" />
@@ -83,7 +85,7 @@ export function MatriceAcces() {
             {data.rolesComplet.map((r) => (
               <tr key={r.cle} className="border-b border-grisL bg-vertL/30">
                 <td className="sticky left-0 z-10 bg-vertL/60 px-3 py-2.5 font-medium text-encre">{r.libelle}</td>
-                <td colSpan={data.permissions.length} className="px-3 py-2.5 text-xs text-vert">
+                <td colSpan={colonnes.length} className="px-3 py-2.5 text-xs text-vert">
                   <span className="inline-flex items-center gap-1.5"><ShieldCheckIcon className="h-4 w-4" /> Accès complet (non modifiable)</span>
                 </td>
                 <td />
@@ -93,7 +95,7 @@ export function MatriceAcces() {
             {data.rolesEditables.map((r) => (
               <tr key={r.cle} className="border-b border-grisL hover:bg-grisL/40">
                 <td className="sticky left-0 z-10 bg-white px-3 py-2.5 font-medium text-encre">{r.libelle}</td>
-                {data.permissions.map((p) => (
+                {colonnes.map((p) => (
                   <td key={p.cle} className="px-2 py-2.5 text-center">
                     <input
                       type="checkbox"

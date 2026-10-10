@@ -25,6 +25,8 @@ export const PARAMETRES_DEFAUT = {
     secretaireGeneral: "Me KALINA-MENGA Lionel",
     adresse: "Maison de l'Avocat — Pointe-Noire, République du Congo",
     logo: "", // logo téléversé (data URI image) ; vide = sceau dessiné
+    ville: "Pointe-Noire",
+    modeDemonstration: false, // affiche la mention C-13 (données fictives)
   },
   documents: {
     categoriesArchives: [
@@ -100,6 +102,9 @@ export function exercices() {
 }
 /** Identité institutionnelle configurée (dénomination, ordre, signataires, adresse, logo). */
 export const identite = () => config.identite ?? PARAMETRES_DEFAUT.identite;
+/** Clause C-13 (docs/juridique/clauses-congres.md), mot pour mot. */
+export const MENTION_DEMONSTRATION =
+  "Données entièrement fictives — toute ressemblance avec une personne réelle serait fortuite. Barreau de démonstration.";
 /** Logo institutionnel téléversé (data URI) ou chaîne vide (→ sceau dessiné). */
 export const logoInstitution = () => config.identite?.logo || "";
 export const categoriesArchives = () => config.documents?.categoriesArchives ?? [];
