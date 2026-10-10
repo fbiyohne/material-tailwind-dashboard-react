@@ -9,6 +9,7 @@ import { prochainNumInscription, prochainNumeroAttestation, archiver, avecRejeuU
 import { enregistrerFichier } from "../lib/storage.js";
 import { envoyerPdf, htmlVersPdf } from "../lib/pdf.js";
 import { attestationHtml, listeAvocatsHtml, STATUT_FR, QUALITE_FR } from "../lib/templates.js";
+import { appliquerCycleVie } from "../lib/cycleVie.js";
 import { provisionnerAccesEspace, synchroniserAccesAuStatut } from "../lib/acces.js";
 
 export const membresRouter = Router();
@@ -348,9 +349,8 @@ membresRouter.post(
           cabinet: r.cabinet, tel: r.tel, email: r.email, rccm: r.rccm, cnss: r.cnss,
           adresse: r.adresse, observations: r.observations, maitreStage: r.maitreStage,
           dateNaissance: toDate(r.dateNaissance), dateServment: toDate(r.dateServment),
-          // Date invalide → ignorée (undefined = champ non touché) sans faire échouer la ligne.
-          dateRadiation: toDate(r.dateRadiation), dateDeces: toDate(r.dateDeces),
-          motifRadiation: r.motifRadiation?.trim().slice(0, 300) || undefined,
+          // dateRadiation / motifRadiation / dateDeces ne sont jamais écrits par import (colonnes lues
+          // et ignorées) : les actes passent par /radier, /deces ou PATCH (machine à états cycleVie).
         };
         const existant = await prisma.membre.findUnique({ where: { num: r.num } });
         // RADIE/DECEDE ne s'obtiennent (ni ne se quittent) par import : seuls /radier, /deces et PATCH
@@ -408,15 +408,15 @@ membresRouter.patch(
   requireRole("SECRETAIRE_GENERAL"),
   asyncH(async (req, res) => {
     const data = editSchema.parse(req.body);
-    // Invariant « DECEDE ⇒ dateDeces » (avis juridique C-02) : la date effective
-    // est celle du corps, à défaut celle déjà en base.
-    const actuel = await prisma.membre.findUnique({ where: { id: Number(req.params.id) }, select: { statut: true, dateDeces: true } });
+    const id = Number(req.params.id);
+    const actuel = await prisma.membre.findUnique({ where: { id }, select: { statut: true, dateRadiation: true, motifRadiation: true, dateDeces: true } });
     if (!actuel) throw new HttpError(404, "Avocat introuvable");
-    const dateDecesFinale = data.dateDeces === undefined ? actuel.dateDeces : data.dateDeces;
-    if ((data.statut ?? actuel.statut) === "DECEDE" && !dateDecesFinale)
-      throw new HttpError(400, "La date du décès est obligatoire pour un avocat décédé.");
+    // Statut et données d'acte passent par la machine à états (cohérence, dates requises).
+    const cycle = appliquerCycleVie(actuel, {
+      statut: data.statut, dateRadiation: versDate(data.dateRadiation), motifRadiation: data.motifRadiation, dateDeces: versDate(data.dateDeces),
+    });
     const membre = await prisma.membre.update({
-      where: { id: Number(req.params.id) },
+      where: { id },
       data: {
         ...data,
         dateNaissance: data.dateNaissance ? new Date(data.dateNaissance) : undefined,
@@ -425,8 +425,7 @@ membresRouter.patch(
         // (sinon Prisma rejette). Permet de renseigner/corriger le serment d'un
         // stagiaire depuis sa fiche, sans passer par un ré-import.
         dateServment: data.dateServment ? new Date(data.dateServment) : undefined,
-        dateRadiation: versDate(data.dateRadiation),
-        dateDeces: versDate(data.dateDeces),
+        ...cycle,
       },
     });
     // L'accès espace suit le statut (suspendu/radié/omis/décédé → coupé ; régulier → rétabli).
@@ -450,10 +449,14 @@ membresRouter.post(
   requireRole("SECRETAIRE_GENERAL"),
   asyncH(async (req, res) => {
     const data = radiationSchema.parse(req.body ?? {});
-    const membre = await prisma.membre.update({
-      where: { id: Number(req.params.id) },
-      data: { statut: "RADIE", dateRadiation: data.dateRadiation ? new Date(data.dateRadiation) : new Date(), motifRadiation: data.motifRadiation ?? null },
+    const id = Number(req.params.id);
+    const actuel = await prisma.membre.findUnique({ where: { id }, select: { statut: true, dateRadiation: true, motifRadiation: true, dateDeces: true } });
+    if (!actuel) throw new HttpError(404, "Avocat introuvable");
+    if (actuel.statut === "RADIE") throw new HttpError(409, "Cet avocat est déjà radié : corrigez la date ou la référence par « Modifier ».");
+    const cycle = appliquerCycleVie(actuel, {
+      statut: "RADIE", dateRadiation: data.dateRadiation ? new Date(data.dateRadiation) : new Date(), motifRadiation: data.motifRadiation ?? null,
     });
+    const membre = await prisma.membre.update({ where: { id }, data: cycle });
     await synchroniserAccesAuStatut(membre.id, membre.statut);
     res.json(membre);
   })
@@ -470,8 +473,10 @@ membresRouter.post(
   asyncH(async (req, res) => {
     const { dateDeces } = z.object({ dateDeces: datePassee }).parse(req.body ?? {});
     const id = Number(req.params.id);
-    if (!(await prisma.membre.findUnique({ where: { id }, select: { id: true } }))) throw new HttpError(404, "Avocat introuvable");
-    const membre = await prisma.membre.update({ where: { id }, data: { statut: "DECEDE", dateDeces: new Date(dateDeces) } });
+    const actuel = await prisma.membre.findUnique({ where: { id }, select: { statut: true, dateRadiation: true, motifRadiation: true, dateDeces: true } });
+    if (!actuel) throw new HttpError(404, "Avocat introuvable");
+    if (actuel.statut === "DECEDE") throw new HttpError(409, "Le décès de cet avocat est déjà enregistré : corrigez la date par « Modifier ».");
+    const membre = await prisma.membre.update({ where: { id }, data: appliquerCycleVie(actuel, { statut: "DECEDE", dateDeces: new Date(dateDeces) }) });
     await synchroniserAccesAuStatut(membre.id, membre.statut);
     res.json(membre);
   })

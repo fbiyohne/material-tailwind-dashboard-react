@@ -1399,6 +1399,42 @@ describe("Cycle de vie — radiation motivée, décès, garde-fou DELETE, RBAC (
     expect((await patch({ statut: "DECEDE", dateDeces: null })).status).toBe(400);
   });
 
+  it("R2-4 : machine à états — invariants d'acte, transitions refusées, effacement à la sortie", async () => {
+    const id = await creer("r2-4");
+    const patch = (b: object) => request(app).patch(`/api/membres/${id}`).set(...bearer(sg)).send(b);
+    const radier = (b: object = {}) => request(app).post(`/api/membres/${id}/radier`).set(...bearer(sg)).send(b);
+    const deces = (d = "2026-09-15") => request(app).post(`/api/membres/${id}/deces`).set(...bearer(sg)).send({ dateDeces: d });
+    const lire = () => prisma.membre.findUniqueOrThrow({ where: { id } });
+    // PATCH RADIE sans date → 400 ; avec date → 200.
+    expect((await patch({ statut: "RADIE" })).status).toBe(400);
+    expect((await patch({ statut: "RADIE", dateRadiation: "2026-10-01", motifRadiation: "Déc. 1", dateDeces: "2026-09-01" })).status).toBe(200);
+    let m = await lire();
+    expect(m.dateDeces).toBeNull(); // date de décès parasite écartée
+    expect(m.motifRadiation).toBe("Déc. 1");
+    // Déjà radié : /radier → 409, motif/date inchangés ; PATCH motif seul conserve la date.
+    expect((await radier()).status).toBe(409);
+    expect((await patch({ motifRadiation: "Déc. 2" })).status).toBe(200);
+    m = await lire();
+    expect(m.dateRadiation?.toISOString().slice(0, 10)).toBe("2026-10-01");
+    // Radié → décédé : les données de radiation sont effacées.
+    expect((await deces()).status).toBe(200);
+    m = await lire();
+    expect(m).toMatchObject({ statut: "DECEDE", dateRadiation: null, motifRadiation: null });
+    expect(m.dateDeces?.toISOString().slice(0, 10)).toBe("2026-09-15");
+    // Décédé : ni /radier, ni PATCH RADIE, ni second /deces (409) ; rien ne change.
+    expect((await radier()).status).toBe(409);
+    expect((await patch({ statut: "RADIE", dateRadiation: "2026-10-01" })).status).toBe(409);
+    expect((await deces()).status).toBe(409);
+    expect((await lire()).statut).toBe("DECEDE");
+    // Rétablissement : toutes les données d'acte sont effacées.
+    expect((await patch({ statut: "INSCRIT" })).status).toBe(200);
+    m = await lire();
+    expect(m).toMatchObject({ statut: "INSCRIT", dateRadiation: null, motifRadiation: null, dateDeces: null });
+    // Date d'acte fournie sur un statut régulier : ignorée.
+    expect((await patch({ dateDeces: "2026-09-15", dateRadiation: "2026-10-01" })).status).toBe(200);
+    expect(await lire()).toMatchObject({ dateRadiation: null, dateDeces: null });
+  });
+
   it("O3 : aucun rôle non autorisé ne mute un membre (403 sur POST, PATCH, radier, deces, DELETE)", async () => {
     const id = await creer("rbac");
     const compte = async (role: string) => {
@@ -1536,9 +1572,9 @@ describe("Import du tableau — décès, dates, accès espace, audit (T6)", () =
     expect((await prisma.membre.findUnique({ where: { num: n } }))?.dateInscription.toISOString().slice(0, 10)).toBe("2025-03-05");
   });
 
-  it("statut absent du fichier : le statut existant n'est pas écrasé ; radiation importée", async () => {
-    await prisma.membre.create({ data: { num: num + 2, numInscription: `T${num + 2}`, nom: "T6 Radié", qualite: "AVOCAT", statut: "RADIE" } });
-    await importer([{ num: num + 2, nom: "T6 Radié", dateRadiation: "2026-03-01", motifRadiation: "Décision n° 4" }]);
+  it("statut absent du fichier : le statut existant n'est pas écrasé ; données d'acte jamais altérées par import (R2-4)", async () => {
+    await prisma.membre.create({ data: { num: num + 2, numInscription: `T${num + 2}`, nom: "T6 Radié", qualite: "AVOCAT", statut: "RADIE", dateRadiation: new Date("2026-03-01"), motifRadiation: "Décision n° 4" } });
+    await importer([{ num: num + 2, nom: "T6 Radié", dateRadiation: "2020-01-01", motifRadiation: "Altéré", dateDeces: "2020-01-01" }]);
     const r = await importer([{ num: num + 2, nom: "T6 Radié", cabinet: "Cabinet X" }]);
     expect(r.body).toMatchObject({ crees: 0, maj: 1 });
     const m = await prisma.membre.findUnique({ where: { num: num + 2 } });
@@ -1546,6 +1582,7 @@ describe("Import du tableau — décès, dates, accès espace, audit (T6)", () =
     expect(m?.cabinet).toBe("Cabinet X");
     expect(m?.dateRadiation?.toISOString().slice(0, 10)).toBe("2026-03-01");
     expect(m?.motifRadiation).toBe("Décision n° 4");
+    expect(m?.dateDeces).toBeNull();
   });
 
   it("R1-2 : « Radiée » → RADIE ; statut inconnu → erreur de ligne, membre inchangé", async () => {

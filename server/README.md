@@ -94,6 +94,8 @@ Admin seul. **409** « Suppression impossible : pièces comptables à conserver 
 ### POST /api/membres/import
 
 **Statuts RADIE / DECEDE (R1-9)** : l'import refuse tout changement de statut vers ou depuis radié/décédé (erreur de ligne, aucune écriture). Ces transitions passent par `/radier`, `/deces` ou la fiche (PATCH), qui valident la date et journalisent chaque acte. Un fichier ré-importé avec le statut déjà en base reste accepté (aller-retour).
+
+**Machine à états du cycle de vie (R2-4, `server/src/lib/cycleVie.ts`)** : PATCH, `/radier` et `/deces` passent par `appliquerCycleVie`. Invariant : `dateRadiation`/`motifRadiation` n'existent que pour RADIE, `dateDeces` que pour DECEDE ; toute donnée d'acte d'un autre statut est effacée (rétablissement, ou décès après radiation). RADIE et DECEDE exigent leur date (400). Un décédé ne peut pas être radié (409) ; `/radier` sur un radié et `/deces` sur un décédé renvoient 409 (correction par PATCH). L'import n'écrit plus `dateRadiation`, `motifRadiation`, `dateDeces`.
 Upsert par `num`, aucune suppression, champs absents du fichier non écrasés, 2 000 lignes maximum. Chaque ligne est validée à part : une ligne invalide (ex. `num` non numérique) est rapportée sans bloquer les autres.
 Réponse : `{ "total": 3, "crees": 1, "maj": 1, "erreurs": [{ "ligne": 3, "message": "num : …" }] }`.
 - Colonnes étendues : `dateRadiation`, `motifRadiation` (tronqué à 300), `dateDeces`. Une date invalide est ignorée sans faire échouer la ligne.
