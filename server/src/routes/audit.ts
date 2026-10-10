@@ -23,7 +23,8 @@ auditRouter.get(
     const q = String(req.query.q ?? "").trim().slice(0, 200);
     const action = String(req.query.action ?? "").trim().slice(0, 200);
     const userId = req.query.userId == null || req.query.userId === "" ? undefined : Number(req.query.userId);
-    if (userId !== undefined && !Number.isInteger(userId)) throw new HttpError(400, "userId invalide");
+    // Borné à INT4 (clé Prisma/PostgreSQL) : hors plage = 400, jamais une erreur Prisma non maîtrisée.
+    if (userId !== undefined && (!Number.isInteger(userId) || userId < 1 || userId > 2_147_483_647)) throw new HttpError(400, "userId invalide");
     const page = Math.max(1, Math.trunc(Number(req.query.page) || 1));
     const pageSize = Math.min(100, Math.max(1, Math.trunc(Number(req.query.pageSize) || 25)));
     const from = req.query.from ? new Date(String(req.query.from)) : undefined;

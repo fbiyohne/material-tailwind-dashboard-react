@@ -101,6 +101,9 @@ describe("Journal d'audit — filtres et absence d'écriture", () => {
     expect(r.body.total).toBeGreaterThanOrEqual(2);
     expect(r.body.items.every((i: { userId: number }) => i.userId === av.userId)).toBe(true);
     expect((await lister({ userId: "abc" })).status).toBe(400);
+    // Borne INT4 : hors plage = 400 maîtrisé, jamais 500 remonté par Prisma.
+    expect((await lister({ userId: "99999999999" })).status).toBe(400);
+    expect((await lister({ userId: "0" })).status).toBe(400);
   });
 
   it("filtre action : libellé partiel, insensible à la casse", async () => {
