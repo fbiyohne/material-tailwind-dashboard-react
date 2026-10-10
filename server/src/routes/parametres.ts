@@ -4,6 +4,7 @@ import { prisma } from "../prisma.js";
 import { asyncH } from "../middleware/error.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { rafraichirIdentite } from "../lib/identiteDocuments.js";
+import { fusionnerRegles, reglesSchema, stageSchema, REGLES_DEFAUT, REGLES_SECTION_DEFAUT } from "../lib/regles.js";
 
 export const parametresRouter = Router();
 // Lecture ouverte à tout profil authentifié (données de référence d'affichage) ;
@@ -21,7 +22,10 @@ const DEFAUT = {
     tresoriere: "Me ONDZE BOYA Armelle Laure Carine",
     secretaireGeneral: "Me KALINA-MENGA Lionel",
     adresse: "Maison de l'Avocat — Pointe-Noire, République du Congo",
+    ville: "Pointe-Noire",
     logo: "",
+    // Mention C-13 (données fictives) sur les documents et l'accueil de l'instance de démonstration.
+    modeDemonstration: false,
   },
   documents: {
     categoriesArchives: [
@@ -32,7 +36,9 @@ const DEFAUT = {
     typesPublication: ["Avis", "Communiqué"],
   },
   paiement: { canauxActifs: ["MTN", "AIRTEL", "CARTE", "VIREMENT"] },
-  stage: { dureeMois: 24 },
+  // Valeurs juridiques : source unique lib/regles.ts (REGLES_DEFAUT).
+  stage: REGLES_DEFAUT.stage,
+  regles: REGLES_SECTION_DEFAUT,
   conseil: {
     fonctions: ["Bâtonnier", "Vice-Bâtonnier", "Secrétaire Général", "Trésorière", "Membre du Conseil"],
   },
@@ -45,7 +51,8 @@ parametresRouter.get(
     const row = await prisma.parametres.findUnique({ where: { id: 1 } });
     // Fusion avec les valeurs par défaut : garantit la présence des nouvelles
     // sections même pour un enregistrement créé avant leur introduction.
-    res.json({ ...DEFAUT, ...((row?.data as object) ?? {}) });
+    const { stage, ...regles } = fusionnerRegles(row?.data);
+    res.json({ ...DEFAUT, ...((row?.data as object) ?? {}), stage, regles });
   })
 );
 
@@ -57,6 +64,7 @@ const tarifsSchema = z.object({
 const identiteSchema = z.object({
   denomination: z.string(), ordre: z.string(), batonnier: z.string(),
   tresoriere: z.string(), secretaireGeneral: z.string(), adresse: z.string(),
+  ville: z.string().max(80), modeDemonstration: z.boolean(),
   // Logo institutionnel en data URI image (≈2 Mo max) ; chaîne vide = sceau dessiné.
   logo: z.string().max(3_000_000).refine(
     (v) => v === "" || v.startsWith("data:image/"),
@@ -76,7 +84,8 @@ const majSchema = z.object({
   paiement: z.object({
     canauxActifs: z.array(z.enum(["MTN", "AIRTEL", "CARTE", "VIREMENT"])),
   }).partial().optional(),
-  stage: z.object({ dureeMois: z.number().int().positive().max(120) }).partial().optional(),
+  stage: stageSchema.partial().optional(),
+  regles: reglesSchema.optional(),
   conseil: z.object({
     fonctions: z.array(z.string().trim().min(1)).max(40),
   }).partial().optional(),
@@ -96,11 +105,13 @@ parametresRouter.put(
     const patch = majSchema.parse(req.body);
     const row = await prisma.parametres.findUnique({ where: { id: 1 } });
     const base = (row?.data as object) ?? DEFAUT;
-    const data = { ...base, ...patch };
+    const data: Record<string, unknown> = { ...base, ...patch };
+    // Le stage porte deux règles indépendantes : une mise à jour partielle ne doit pas effacer l'autre.
+    if (patch.stage) data.stage = { ...((base as { stage?: object }).stage ?? {}), ...patch.stage };
     const saved = await prisma.parametres.upsert({
       where: { id: 1 },
-      create: { id: 1, data },
-      update: { data },
+      create: { id: 1, data: data as object },
+      update: { data: data as object },
     });
     // Rafraîchit la source unique d'identité des documents (si l'identité a changé).
     if (patch.identite) await rafraichirIdentite();
@@ -111,8 +122,9 @@ parametresRouter.put(
 /**
  * POST /parametres/reinitialiser-donnees — RÉINITIALISATION TOTALE (ADMIN).
  * Supprime toutes les données métier (membres, finances, institutionnel,
- * documents, messagerie, journaux, comptes non-admin) en CONSERVANT uniquement
- * le(s) compte(s) ADMIN et la configuration (table Parametres). Atomique : en
+ * documents, messagerie, journaux métier, comptes non-admin) en CONSERVANT le(s)
+ * compte(s) ADMIN, la configuration (table Parametres) et le journal d'audit
+ * (JournalAudit, non modifiable : traçabilité de la réinitialisation elle-même). Atomique : en
  * cas d'échec d'une contrainte, rien n'est supprimé. Outil de remise à zéro.
  */
 parametresRouter.post(
@@ -146,7 +158,6 @@ parametresRouter.post(
       prisma.calendrierEditorial.deleteMany({}),
       prisma.journalNotification.deleteMany({}),
       prisma.demandeAcces.deleteMany({}),
-      prisma.journalAudit.deleteMany({}),
       // Comptes non-admin (les jetons de rafraîchissement liés sont supprimés en cascade).
       prisma.user.deleteMany({ where: { role: { not: "ADMIN" } } }),
       prisma.membre.deleteMany({}),

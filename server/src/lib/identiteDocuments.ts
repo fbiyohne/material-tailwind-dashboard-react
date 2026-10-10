@@ -17,9 +17,17 @@ export interface IdentiteDocuments {
   tresoriere: string;
   secretaireGeneral: string;
   adresse: string;
+  /** Ville du barreau (reçus, quitus, en-têtes) : remplace toute ville écrite en dur. */
+  ville: string;
   /** Logo téléversé (data URI image) ; vide → sceau dessiné par défaut. */
   logo: string;
+  /** Instance de démonstration : les documents portent la mention C-13. */
+  modeDemonstration: boolean;
 }
+
+/** Clause C-13 (docs/juridique/clauses-congres.md), reproduite mot pour mot. */
+export const MENTION_DEMONSTRATION =
+  "Données entièrement fictives — toute ressemblance avec une personne réelle serait fortuite. Barreau de démonstration.";
 
 const DEFAUT: IdentiteDocuments = {
   denomination: "Barreau de Pointe-Noire",
@@ -28,7 +36,9 @@ const DEFAUT: IdentiteDocuments = {
   tresoriere: "Me ONDZE BOYA Armelle Laure Carine",
   secretaireGeneral: "Me KALINA-MENGA Lionel",
   adresse: "Maison de l'Avocat — Pointe-Noire, République du Congo",
+  ville: "Pointe-Noire",
   logo: "",
+  modeDemonstration: false,
 };
 
 let courante: IdentiteDocuments = { ...DEFAUT };
@@ -49,7 +59,9 @@ export async function rafraichirIdentite(): Promise<void> {
       tresoriere: id.tresoriere?.trim() || DEFAUT.tresoriere,
       secretaireGeneral: id.secretaireGeneral?.trim() || DEFAUT.secretaireGeneral,
       adresse: id.adresse?.trim() || DEFAUT.adresse,
+      ville: id.ville?.trim() || DEFAUT.ville,
       logo: typeof id.logo === "string" ? id.logo : "",
+      modeDemonstration: id.modeDemonstration === true,
     };
   } catch {
     // Base indisponible : on conserve la dernière identité connue (ou le défaut).
