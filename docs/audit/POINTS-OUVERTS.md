@@ -177,3 +177,11 @@ Toutes les entrées ont pour interlocutrice Me Kalina MENGA, qui valide ou trans
 - **Question** : cotisations ordinales et timbre de plaidoirie hors champ de la TVA ?
 - **Valeur provisoire retenue** : hors TVA, aucune mention fiscale sur les reçus (hypothèse HJ-8).
 - **Interlocutrice** : Me Kalina MENGA, avec l'expert conformité-finance.
+
+### PO-25 — Notification par e-mail d'un confrère sorti du tableau dans un fil déjà ouvert
+
+- **Texte** : art. 52 (secret professionnel) ; loi n° 29-2019, art. 65 (minimisation). La loi 026-92 ne dit pas si un avocat radié, omis, décédé ou sorti conserve un lien avec ses correspondances ordinales en cours.
+- **Constat** (revue sécurité T7) : le correctif X-01 (`2cd740d`) interdit d'ouvrir un nouveau fil vers un membre hors annuaire. En revanche, une réponse dans un fil déjà ouvert (`server/src/routes/espace.ts:743` côté avocat, `server/src/routes/messagerie.ts:116` côté administration) notifie tous les participants par e-mail via `emailsMembres()` (`server/src/lib/messagerieNotif.ts:19`), sans filtre sur le statut, et cet e-mail reproduit le corps du message (réserve F-30, `messagerieNotif.ts:51`). Un confrère devenu radié, omis ou sorti après l'ouverture du fil reçoit donc encore, sur son adresse personnelle, le texte des réponses. Son accès à l'espace est, lui, coupé par `synchroniserAccesAuStatut` (`server/src/lib/acces.ts:19`).
+- **Question** : un confrère sorti du tableau doit-il encore être informé des réponses dans ses fils ouverts, et par quel canal ? Faut-il clore d'office ces fils à la sortie, ou seulement cesser les notifications ?
+- **Valeur provisoire retenue** : comportement inchangé (F-30 ✅, « conforme = on ne touche pas »). Correctif minimal prêt si l'Ordre le demande : filtrer `emailsMembres()` sur `STATUTS_ANNUAIRE`, ou retirer le corps du message de l'e-mail de notification (ne garder que l'objet).
+- **Interlocutrice** : Me Kalina MENGA.
