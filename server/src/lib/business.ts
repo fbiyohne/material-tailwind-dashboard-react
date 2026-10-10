@@ -1,4 +1,5 @@
-import type { Qualite } from "@prisma/client";
+import type { Qualite, TypeScrutin } from "@prisma/client";
+import type { Regles } from "./regles.js";
 import { prisma } from "../prisma.js";
 
 /**
@@ -186,15 +187,30 @@ export const STATUTS_ANNUAIRE = ["INSCRIT", "STAGIAIRE", "HONORAIRE"] as const;
 /** Règle unique : un reçu dont l'objet mentionne « droit » est un droit de plaidoirie, sinon une cotisation. */
 export const estRecuDroit = (objet: string | null | undefined): boolean => (objet ?? "").toLowerCase().includes("droit");
 
-// ─── Corps électoral (RG-04, RG-05) ──────────────────────────────────────────
+// ─── Corps électoral (RG-04, RG-05 ; règles paramétrables R-48 à R-54) ──────
+/**
+ * Qualité d'électeur. Sans `regles` (appel historique), règle figée de 76958a4 ;
+ * avec `regles` (Paramètres), qualités admises, statuts exclus et exigence de
+ * cotisation viennent de regles.electoral. `cot` est la ligne de l'exercice, ou la
+ * situation à une date (situationADate) pour un corps électoral daté (X-03).
+ */
 export function eligibiliteElectorale(
   membre: { qualite: Qualite; statut: string },
   cot: { montantDu: number; montantPaye: number } | null,
-  tarifs?: Tarifs
+  tarifs?: Tarifs,
+  regles?: Regles
 ): { eligible: boolean; raison: string | null } {
-  if (membre.qualite === "HONORAIRE") return { eligible: false, raison: "honoraire" };
-  if (membre.qualite === "STAGIAIRE") return { eligible: false, raison: "stagiaire" };
-  if (["SUSPENDU", "OMIS", ...STATUTS_SORTIS].includes(membre.statut)) return { eligible: false, raison: "statut" };
+  const e = regles?.electoral;
+  if (e) {
+    const admis = e.qualites.includes(membre.qualite) || (membre.qualite === "HONORAIRE" && e.honorairesElecteurs);
+    if (!admis) return { eligible: false, raison: membre.qualite.toLowerCase() };
+    if ((e.statutsExclus as readonly string[]).includes(membre.statut)) return { eligible: false, raison: "statut" };
+    if (!e.exigerCotisationAJour) return { eligible: true, raison: null };
+  } else {
+    if (membre.qualite === "HONORAIRE") return { eligible: false, raison: "honoraire" };
+    if (membre.qualite === "STAGIAIRE") return { eligible: false, raison: "stagiaire" };
+    if (["SUSPENDU", "OMIS", ...STATUTS_SORTIS].includes(membre.statut)) return { eligible: false, raison: "statut" };
+  }
   // Avec les tarifs courants (Paramètres), le dû d'un membre sans ligne persistée est
   // calculé sur le barème réel via cotisationDue (une exonération à 0 est ainsi respectée) ;
   // à défaut, on retombe sur le barème statique (rétrocompatibilité).
@@ -202,6 +218,30 @@ export function eligibiliteElectorale(
   const paye = cot?.montantPaye ?? 0;
   if (statutCotisation(du, paye) !== "ajour") return { eligible: false, raison: "cotisation" };
   return { eligible: true, raison: null };
+}
+
+const jourUTC = (d: Date) => Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+
+/**
+ * Motif d'inéligibilité d'un candidat à la date D du scrutin (R-44, R-53, R-54), ou null.
+ * L'ancienneté se compte en jours civils : « plus de 8 ans » (stricte) refuse le jour
+ * anniversaire exact, « au moins » l'accepte.
+ */
+export function motifIneligibilite(
+  membre: { dateInscription: Date | null },
+  type: TypeScrutin,
+  regles: Regles,
+  D: Date,
+  peineAccessoireEnCours: boolean
+): string | null {
+  if (regles.exclurePeineAccessoire && peineAccessoireEnCours) return "peine accessoire d'inéligibilité en cours à la date du scrutin";
+  const cond = regles.eligibilite[type];
+  if (cond.ancienneteMinAns <= 0) return null;
+  if (!membre.dateInscription) return "date d'inscription inconnue : ancienneté non vérifiable";
+  const seuil = new Date(membre.dateInscription);
+  seuil.setUTCFullYear(seuil.getUTCFullYear() + cond.ancienneteMinAns);
+  const ok = cond.stricte ? jourUTC(D) > jourUTC(seuil) : jourUTC(D) >= jourUTC(seuil);
+  return ok ? null : `ancienneté insuffisante : ${cond.stricte ? "plus de" : "au moins"} ${cond.ancienneteMinAns} ans d'inscription au tableau requis à la date du scrutin`;
 }
 
 /** Archive automatiquement un document (BR-05 / RG-14). */

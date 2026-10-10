@@ -5,7 +5,9 @@ import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole, requirePermission } from "../middleware/auth.js";
 import { envoyerPdf } from "../lib/pdf.js";
 import { pvScrutinHtml } from "../lib/templates.js";
-import { archiver } from "../lib/business.js";
+import { archiver, motifIneligibilite } from "../lib/business.js";
+import { dateReferenceScrutin, electeursADate } from "../lib/cycleVie.js";
+import { reglesActuelles } from "../lib/regles.js";
 
 /**
  * Élections (Conseil de l'Ordre / Bâtonnier) — gestion du scrutin par le
@@ -46,11 +48,15 @@ scrutinsRouter.get("/:id", asyncH(async (req, res) => {
   res.json(await detail(Number(req.params.id)));
 }));
 
+// Date de référence du corps électoral (X-03) : jour civil, stocké à minuit UTC.
+const dateCivile = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).transform((v) => new Date(v)).refine((d) => !Number.isNaN(d.getTime()), "Date invalide");
+
 const creerSchema = z.object({
   titre: z.string().trim().min(1).max(160),
-  type: z.enum(["CONSEIL", "BATONNIER", "AUTRE"]),
+  type: z.enum(["CONSEIL", "BATONNIER", "CONSEIL_BARREAU", "AUTRE"]),
   modalite: z.enum(["PRESENTIEL", "EN_LIGNE"]),
   nbSieges: z.number().int().positive().max(50).default(1),
+  dateScrutin: dateCivile.optional(),
 });
 
 /** POST /scrutins — crée un scrutin (SG). */
@@ -61,6 +67,7 @@ scrutinsRouter.post("/", requireRole("SECRETAIRE_GENERAL"), asyncH(async (req, r
 const majSchema = z.object({
   titre: z.string().trim().min(1).max(160).optional(),
   nbSieges: z.number().int().positive().max(50).optional(),
+  dateScrutin: dateCivile.nullable().optional(),
 });
 
 /** PATCH /scrutins/:id — modifie l'intitulé / le nombre de sièges (SG, en préparation). */
@@ -104,13 +111,31 @@ scrutinsRouter.get("/:id/pv/pdf", asyncH(async (req, res) => {
 
 const candidatSchema = z.object({ nom: z.string().trim().min(1).max(160), membreId: z.number().int().positive().optional() });
 
-/** POST /scrutins/:id/candidats — ajoute un candidat (SG, en préparation). */
+/**
+ * POST /scrutins/:id/candidats — ajoute un candidat (SG, en préparation). Un candidat
+ * rattaché à une fiche est contrôlé à la date du scrutin (R-44, R-53 ; règles
+ * paramétrées) : inscrit au tableau, ancienneté requise pour le type de scrutin,
+ * aucune peine accessoire en cours → sinon 409 motivé. Un candidat libre (sans
+ * fiche) n'est pas contrôlé : comportement historique.
+ */
 scrutinsRouter.post("/:id/candidats", requireRole("SECRETAIRE_GENERAL"), asyncH(async (req, res) => {
   const id = Number(req.params.id);
-  const s = await prisma.scrutin.findUnique({ where: { id }, select: { statut: true } });
+  const s = await prisma.scrutin.findUnique({ where: { id }, select: { statut: true, type: true, dateScrutin: true, ouvertLe: true } });
   if (!s) throw new HttpError(404, "Scrutin introuvable");
   if (s.statut !== "PREPARATION") throw new HttpError(409, "Les candidatures sont closes (scrutin ouvert).");
-  res.status(201).json(await prisma.candidat.create({ data: { scrutinId: id, ...candidatSchema.parse(req.body) } }));
+  const data = candidatSchema.parse(req.body);
+  if (data.membreId) {
+    const regles = await reglesActuelles();
+    const D = dateReferenceScrutin(s);
+    const [e] = await electeursADate({ id: data.membreId }, D, regles);
+    if (!e) throw new HttpError(404, "Avocat introuvable");
+    if (!e.situation.statut || (regles.electoral.statutsExclus as readonly string[]).includes(e.situation.statut)) {
+      throw new HttpError(409, "Candidature refusée : l'avocat n'est pas inscrit au tableau à la date du scrutin.");
+    }
+    const motif = motifIneligibilite(e.membre, s.type, regles, D, e.situation.ineligible);
+    if (motif) throw new HttpError(409, `Candidature refusée : ${motif}.`);
+  }
+  res.status(201).json(await prisma.candidat.create({ data: { scrutinId: id, ...data } }));
 }));
 
 /** DELETE /scrutins/:id/candidats/:cid — retire un candidat (SG, en préparation). */

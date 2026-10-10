@@ -6,7 +6,7 @@ import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireAvocat, type AuthRequest } from "../middleware/auth.js";
 import { enregistrerFichier, lireFichier, supprimerFichier } from "../lib/storage.js";
-import { cotisationDue, droitDue, statutCotisation, tarifsActuels, eligibiliteElectorale, prochainNumeroAttestation, archiver, STATUTS_SORTIS, STATUTS_ANNUAIRE } from "../lib/business.js";
+import { cotisationDue, droitDue, statutCotisation, tarifsActuels, prochainNumeroAttestation, archiver, STATUTS_SORTIS, STATUTS_ANNUAIRE } from "../lib/business.js";
 import { finaliserPaiement } from "../lib/encaissement.js";
 import { CANAUX, modeSandbox, nouvelleReference, initierPaiement } from "../lib/paiement.js";
 import QRCode from "qrcode";
@@ -16,6 +16,7 @@ import { recuRicheHtml, quitusRicheHtml } from "../lib/documentsRiches.js";
 import { notifierNouveauMessage, emailsAdministration, emailsMembres } from "../lib/messagerieNotif.js";
 import { messageNonDeMoi, compterNonLusParFil, totalNonLus, jamaisLu } from "../lib/messagerie.js";
 import { realtimeMembres, realtimeAdministration } from "../lib/realtime.js";
+import { dateReferenceScrutin, electeursADate } from "../lib/cycleVie.js";
 import { notifier, usersSecretariat, listerNotifications, compterNonLus, marquerLu, marquerToutLu } from "../lib/centreNotifications.js";
 import { emettreTimbre, MONTANT_TIMBRE } from "../lib/timbres.js";
 
@@ -760,14 +761,14 @@ espaceRouter.get(
     });
     const emarges = await prisma.emargement.findMany({ where: { membreId: moi, scrutinId: { in: scrutins.map((s) => s.id) } }, select: { scrutinId: true } });
     const aVote = new Set(emarges.map((e) => e.scrutinId));
-    // Éligibilité électorale de l'avocat (même règle que le POST /voter) : exposée
-    // pour que l'espace affiche l'état plutôt que de laisser buter sur un 403.
-    const annee = new Date().getFullYear();
-    const [membre, tarifs] = await Promise.all([
-      prisma.membre.findUnique({ where: { id: moi }, include: { cotisations: { where: { annee } } } }),
-      tarifsActuels(),
-    ]);
-    const eligible = membre ? eligibiliteElectorale(membre, membre.cotisations[0] ?? null, tarifs).eligible : false;
+    // Éligibilité électorale de l'avocat (même règle que le POST /voter), appréciée à
+    // la date de référence de chaque scrutin (X-03) : exposée pour que l'espace affiche
+    // l'état plutôt que de laisser buter sur un 403.
+    const eligibleA = new Map<number, boolean>();
+    for (const s of scrutins) {
+      const D = dateReferenceScrutin(s);
+      if (!eligibleA.has(D.getTime())) eligibleA.set(D.getTime(), (await electeursADate({ id: moi }, D))[0]?.eligible ?? false);
+    }
     res.json(
       scrutins.map((s) => ({
         id: s.id,
@@ -775,8 +776,9 @@ espaceRouter.get(
         type: s.type,
         statut: s.statut,
         nbSieges: s.nbSieges,
+        dateScrutin: s.dateScrutin,
         aDejaVote: aVote.has(s.id),
-        eligible,
+        eligible: eligibleA.get(dateReferenceScrutin(s).getTime()) ?? false,
         // Les voix ne sont révélées qu'une fois le scrutin publié.
         candidats: s.candidats.map((c) => ({ id: c.id, nom: c.nom, ...(s.statut === "PUBLIE" ? { voix: c.voix } : {}) })),
       }))
@@ -800,14 +802,11 @@ espaceRouter.post(
     if (!scrutin) throw new HttpError(404, "Scrutin introuvable");
     if (scrutin.modalite !== "EN_LIGNE" || scrutin.statut !== "OUVERT") throw new HttpError(409, "Ce scrutin n'est pas ouvert au vote en ligne.");
 
-    // Éligibilité de l'électeur (corps électoral : statut + cotisation à jour).
-    const annee = new Date().getFullYear();
-    const [membre, tarifs] = await Promise.all([
-      prisma.membre.findUnique({ where: { id: moi }, include: { cotisations: { where: { annee } } } }),
-      tarifsActuels(),
-    ]);
-    if (!membre) throw new HttpError(404, "Fiche introuvable");
-    if (!eligibiliteElectorale(membre, membre.cotisations[0] ?? null, tarifs).eligible) {
+    // Éligibilité de l'électeur (corps électoral : statut + cotisation à jour) à la
+    // date de référence du scrutin : dateScrutin, sinon ouverture, sinon aujourd'hui (X-03).
+    const [electeur] = await electeursADate({ id: moi }, dateReferenceScrutin(scrutin));
+    if (!electeur) throw new HttpError(404, "Fiche introuvable");
+    if (!electeur.eligible) {
       throw new HttpError(403, "Vous ne figurez pas dans le corps électoral pour ce scrutin.");
     }
 

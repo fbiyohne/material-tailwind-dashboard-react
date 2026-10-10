@@ -273,6 +273,43 @@ rendu par `envoyerDocumentPdf`, via `pdftotext` ; sauté si Chromium ou pdftotex
 
 Tests : `test/regles.test.ts`.
 
+## Corps électoral à la date du scrutin et éligibilité des candidats (T12, X-03)
+
+Le corps électoral n'est plus figé sur l'exercice courant : il est **calculé à une
+date** (`situationADate`, `lib/cycleVie.ts`) selon les règles de `Parametres.data.regles`.
+
+- `GET /api/corps-electoral?date=AAAA-MM-JJ` : statut (événements d'historique,
+  interdiction temporaire ferme couvrant la date), peine accessoire et cotisation
+  (reçus de cotisation de l'exercice datés au plus tard de la date) appréciés à
+  cette date, fin de journée UTC. `?scrutinId=` prend la `dateScrutin` du scrutin
+  (sinon son ouverture, sinon aujourd'hui). `?annee=` est conservé : date au 31/12
+  de l'exercice, même liste que la règle historique. Date mal formée → 400.
+  Réponse : `date` ajoutée, `statutADate` et `sursis` sur chaque ligne ; les
+  stagiaires n'apparaissent que si `regles.electoral.qualites` les admet.
+- `electeursADate(where, D, regles?)` (`lib/cycleVie.ts`) : point unique partagé par
+  le corps électoral, la candidature et le vote de l'espace. Quatre requêtes, calcul
+  en mémoire ; sans journalisation antérieure, le statut courant fait foi (PO-20).
+- `eligibiliteElectorale(membre, cot, tarifs?, regles?)` : avec `regles`, qualités
+  admises, statuts exclus, cotisation exigée et honoraires viennent des Paramètres ;
+  sans `regles`, règle historique inchangée (appels existants et tests de 76958a4).
+- Scrutins : type `CONSEIL_BARREAU` ; `dateScrutin` (jour civil) à la création et
+  en préparation. `POST /api/scrutins/:id/candidats` avec `membreId` répond **409
+  motivé** si l'avocat n'est pas inscrit au tableau à la date, si une peine accessoire
+  d'inéligibilité est en cours (`exclurePeineAccessoire`) ou si l'ancienneté
+  `regles.eligibilite[type]` n'est pas atteinte (`stricte` : « plus de 8 ans » refuse
+  le jour anniversaire exact ; comptée en jours civils). Un candidat libre (sans
+  fiche) n'est pas contrôlé. Changer `ancienneteMinAns` en Paramètres change l'issue
+  sans redéploiement (CA8).
+- Espace avocat : `GET /espace/scrutins` expose `eligible` par scrutin (et
+  `dateScrutin`) ; `POST /espace/scrutins/:id/voter` apprécie l'électeur à la date
+  de référence du scrutin. Le mécanisme de vote (anonymat, unicité) est inchangé.
+
+Tests : `test/corps-electoral-date.test.ts` (CA9 : deux dates encadrant un paiement
+ou une sanction donnent deux listes différentes ; `?annee=` égal à la règle
+historique ; bâtonnat 8 ans exacts → 409, 8 ans et 1 jour → 201, seuil modifié en
+Paramètres → 409 ; peine accessoire → 409 ; vote à la `dateScrutin`). Sur 76958a4,
+`?date=` est ignoré et les deux listes sont identiques : le test y échoue.
+
 ## Schéma de l'audit de conformité (migrations T2)
 
 Deux migrations additives et idempotentes (`IF NOT EXISTS` ou contrôle du catalogue,

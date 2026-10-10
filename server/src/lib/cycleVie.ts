@@ -3,7 +3,8 @@ import { HttpError } from "../middleware/error.js";
 import { prisma } from "../prisma.js";
 import { synchroniserAccesAuStatut } from "./acces.js";
 import { realtimeTous } from "./realtime.js";
-import { estRecuDroit } from "./business.js";
+import { estRecuDroit, eligibiliteElectorale, tarifsActuels } from "./business.js";
+import { reglesActuelles, type Regles } from "./regles.js";
 
 /** Partie « cycle de vie » d'une fiche membre. */
 export interface EtatCycleVie {
@@ -178,4 +179,46 @@ export function situationADate(
     ? recusCot.filter((r) => r.date.getTime() <= t).reduce((s, r) => s + r.montant, 0)
     : ligne?.datePaiement && ligne.datePaiement.getTime() <= t ? ligne.montantPaye : 0;
   return { statut, sursis, ineligible, annee, cotisation: ligne ? { montantDu: ligne.montantDu, montantPaye: paye } : null };
+}
+
+// ─── Corps électoral à une date (X-03, D10) ──────────────────────────────────
+
+/** Fin de journée UTC : la date du scrutin inclut les paiements et actes du jour. */
+export const finDeJourUTC = (d: Date) => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 23, 59, 59, 999));
+
+/** Date de référence du corps électoral d'un scrutin : dateScrutin, sinon ouverture, sinon aujourd'hui. */
+export const dateReferenceScrutin = (s: { dateScrutin: Date | null; ouvertLe: Date | null }) =>
+  finDeJourUTC(s.dateScrutin ?? s.ouvertLe ?? new Date());
+
+/**
+ * Membres filtrés par `where`, avec leur situation à D (événements, sanctions, reçus de
+ * l'exercice chargés en quatre requêtes) et leur qualité d'électeur selon les règles
+ * en vigueur. Un membre inscrit après D (statut null) est exclu pour « statut ».
+ */
+export async function electeursADate(where: Prisma.MembreWhereInput, D: Date, regles?: Regles) {
+  const annee = D.getUTCFullYear();
+  const [membres, tarifs, r] = await Promise.all([
+    prisma.membre.findMany({
+      where,
+      orderBy: { num: "asc" },
+      include: {
+        cotisations: { where: { annee } },
+        recus: { where: { annee }, select: { annee: true, montant: true, date: true, objet: true } },
+        evenements: { select: { dateEffet: true, statutAvant: true, statutApres: true } },
+        dossiers: {
+          where: { sanctionCode: { not: null } },
+          select: { sursis: true, sanctionDebut: true, sanctionFin: true, peineAccessoireMois: true, dateDecision: true },
+        },
+      },
+    }),
+    tarifsActuels(),
+    regles ?? reglesActuelles(),
+  ]);
+  return membres.map((m) => {
+    const situation = situationADate(m, m.evenements, m.dossiers, m.recus, D);
+    const { eligible, raison } = situation.statut
+      ? eligibiliteElectorale({ qualite: m.qualite, statut: situation.statut }, situation.cotisation, tarifs, r)
+      : { eligible: false, raison: "statut" };
+    return { membre: m, situation, eligible, raison };
+  });
 }
