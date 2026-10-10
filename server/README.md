@@ -195,6 +195,13 @@ DATABASE_URL=postgresql://barreau:barreau_dev@localhost:5432/barreau_pn_test npm
 npm test          # vitest + supertest (auth, BR-01/03, RBAC, RG-13)
 ```
 
+Certains blocs de `api.test.ts` (RELDROIT, R25, VS) laissent des membres RADIE à
+chaque exécution ; passé 200 RADIE, le test C-03 (`pageSize=200`) échoue, et un reçu
+accroché à « T10 Hostile » bloque le `afterAll` du bloc T10. Purge de ces seules
+fixtures, garde-fou sur le nom de base `barreau_pn_test` :
+`npx tsx prisma/purger-restes-tests.ts` (simulation), puis `--executer` après
+validation (suppression de données). Ne pas la lancer pendant une exécution de la suite.
+
 ## Variables d'environnement complémentaires
 `ACCESS_TTL`, `REFRESH_TTL_DAYS`, `PUPPETEER_EXECUTABLE_PATH`, `SMTP_*`,
 `MAIL_FROM`, `SIGNATURE_SECRET` (voir `.env.example`).
