@@ -4,6 +4,7 @@ import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole, type AuthRequest } from "../middleware/auth.js";
 import { lireFichier, supprimerFichier } from "../lib/storage.js";
+import { notifier, userDeMembre } from "../lib/centreNotifications.js";
 
 /**
  * Pièces du dossier d'inscription — actions au niveau de la pièce.
@@ -68,7 +69,15 @@ piecesRouter.get(
   })
 );
 
-const noteSchema = z.object({ note: z.string().max(500).optional() });
+// Motif obligatoire : l'avocat doit savoir quoi corriger (parcours 9).
+const noteSchema = z.object({ note: z.string().trim().min(3).max(500) });
+
+/** Alerte in-app de l'avocat (best-effort : n'échoue jamais l'action). */
+function prevenir(membreId: number, type: string, titre: string, message: string) {
+  void userDeMembre(membreId)
+    .then((uid) => (uid ? notifier([uid], { type, titre, message, lien: "/documents" }) : 0))
+    .catch(() => {});
+}
 
 /** POST /pieces/:id/verifier — marque la pièce vérifiée (SG / Admin). */
 piecesRouter.post(
@@ -76,10 +85,12 @@ piecesRouter.post(
   requireRole("SECRETAIRE_GENERAL"),
   asyncH(async (req: AuthRequest, res) => {
     const piece = await trouver(Number(req.params.id));
-    res.json(await prisma.pieceDossier.update({
+    const maj = await prisma.pieceDossier.update({
       where: { id: piece.id },
       data: { statut: "VERIFIEE", verifieePar: await nomActeur(req.user!.id), verifieeAt: new Date(), note: null },
-    }));
+    });
+    prevenir(piece.membreId, "PIECE_VERIFIEE", "Pièce validée", `Votre pièce « ${piece.nomFichier} » a été validée.`);
+    res.json(maj);
   })
 );
 
@@ -90,10 +101,12 @@ piecesRouter.post(
   asyncH(async (req: AuthRequest, res) => {
     const { note } = noteSchema.parse(req.body ?? {});
     const piece = await trouver(Number(req.params.id));
-    res.json(await prisma.pieceDossier.update({
+    const maj = await prisma.pieceDossier.update({
       where: { id: piece.id },
-      data: { statut: "REJETEE", verifieePar: await nomActeur(req.user!.id), verifieeAt: new Date(), note: note ?? null },
-    }));
+      data: { statut: "REJETEE", verifieePar: await nomActeur(req.user!.id), verifieeAt: new Date(), note },
+    });
+    prevenir(piece.membreId, "PIECE_REJETEE", "Pièce rejetée", `Votre pièce « ${piece.nomFichier} » est rejetée. Correction demandée : ${note}`);
+    res.json(maj);
   })
 );
 

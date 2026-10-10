@@ -18,9 +18,14 @@ export function ConfirmProvider({ children }) {
     []
   );
 
+  const [motif, setMotif] = useState("");
+  const motifOk = !state?.motif || motif.trim().length >= (state.motif.min ?? 3);
+
+  // Avec l'option `motif`, la promesse résout le texte saisi (ou false si annulé).
   const close = (value) => {
-    state?.resolve(value);
+    state?.resolve(value && state?.motif ? motif.trim() : value);
     setState(null);
+    setMotif("");
   };
 
   return (
@@ -37,6 +42,7 @@ export function ConfirmProvider({ children }) {
             </button>
             <button
               className={`bpn-btn ${state?.danger ? "bpn-btn-danger" : "bpn-btn-primary"}`}
+              disabled={!motifOk}
               onClick={() => close(true)}
             >
               {state?.confirmLabel ?? "Confirmer"}
@@ -52,6 +58,12 @@ export function ConfirmProvider({ children }) {
           )}
           <p className="text-sm leading-6 text-encre">{state?.message}</p>
         </div>
+        {state?.motif && (
+          <label className="mt-4 block">
+            <span className="bpn-label">{state.motif.label ?? "Motif"} <span className="text-rouge">*</span></span>
+            <textarea className="bpn-input mt-1" rows={3} maxLength={state.motif.max ?? 500} value={motif} onChange={(e) => setMotif(e.target.value)} />
+          </label>
+        )}
       </Modal>
     </ConfirmContext.Provider>
   );

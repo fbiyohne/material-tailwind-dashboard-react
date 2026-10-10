@@ -66,9 +66,8 @@ export function PiecesDossier({ membreId, qualite, peutGerer }) {
     if (ok) action(() => supprimerPiece(p.id), "Pièce supprimée.");
   };
   const rejeter = async (p) => {
-    const note = window.prompt("Motif du rejet (optionnel) :", p.note ?? "");
-    if (note === null) return;
-    action(() => rejeterPiece(p.id, note || undefined), "Pièce rejetée.");
+    const note = await confirm({ title: "Rejeter la pièce ?", message: `« ${p.nomFichier} » sera rejetée ; l'avocat en sera notifié avec les corrections demandées.`, confirmLabel: "Rejeter la pièce", danger: true, motif: { label: "Motif du rejet et corrections demandées", min: 3 } });
+    if (note) action(() => rejeterPiece(p.id, note), "Pièce rejetée.");
   };
 
   const Ligne = ({ type, piece, requise }) => {

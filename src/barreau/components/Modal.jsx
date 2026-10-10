@@ -26,6 +26,12 @@ export function Modal({ open, onClose, onBeforeClose, title, children, footer })
     onClose?.();
   }, [onBeforeClose, onClose]);
 
+  // Dernière version de la fermeture, lue par l'écouteur clavier : sans cela l'effet
+  // (et son focus() sur la boîte) se rejouerait à chaque rendu parent et volerait le
+  // focus d'un champ en cours de saisie.
+  const fermer = useRef(demanderFermeture);
+  fermer.current = demanderFermeture;
+
   useEffect(() => {
     if (!open) return undefined;
     declencheur.current = document.activeElement;
@@ -36,7 +42,7 @@ export function Modal({ open, onClose, onBeforeClose, title, children, footer })
 
     const onKey = (e) => {
       if (e.key === "Escape") {
-        demanderFermeture();
+        fermer.current();
         return;
       }
       if (e.key === "Tab" && node) {
@@ -59,7 +65,7 @@ export function Modal({ open, onClose, onBeforeClose, title, children, footer })
       document.body.style.overflow = "";
       declencheur.current?.focus?.();
     };
-  }, [open, demanderFermeture]);
+  }, [open]);
 
   if (!open) return null;
 

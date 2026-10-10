@@ -130,6 +130,30 @@ il ne les prononce pas.
 
 Tests : `test/rbac-actions.test.ts`.
 
+## Règles juridiques paramétrables (`lib/regles.ts`)
+
+Seule source des valeurs juridiques : `REGLES_DEFAUT`, reprise de
+`docs/juridique/regles-reference.md` (loi n° 026-92). Aucune autre valeur ne doit
+être écrite en dur dans les routes.
+
+- Stockage : `Parametres.data.regles` (admission directe, délais des impayés,
+  catalogue des peines de l'art. 36 avec durée maximale et sursis, effet de la
+  radiation, peine accessoire, corps électoral, éligibilité par type de scrutin)
+  et la clé historique `Parametres.data.stage` (`dureeMois`, `certificatObligatoire`).
+- Lecture : `await reglesActuelles()` relit la base à chaque appel et complète
+  clé par clé avec les défauts ; un changement en Paramètres agit sans redémarrage.
+- Écriture : `PUT /api/parametres` (SG) ; `regles` exige l'objet **complet**
+  (schéma `reglesSchema`, sinon 400) ; `stage` accepte une mise à jour partielle
+  fusionnée avec la valeur enregistrée.
+- Valeurs « provisoires » (sursis, circuit d'omission, cotisation à jour pour
+  voter…) : à confirmer par les textes, voir `docs/audit/POINTS-OUVERTS.md`.
+
+Identité (`lib/identiteDocuments.ts`) : `identite().ville` (défaut « Pointe-Noire »)
+et `identite().modeDemonstration` (mention C-13, `MENTION_DEMONSTRATION`).
+`POST /api/parametres/reinitialiser-donnees` conserve désormais `JournalAudit`.
+
+Tests : `test/regles.test.ts`.
+
 ## Sécurité & production
 - **Auth** : access token (15 min) + refresh token (7 j, rotation), `/auth/refresh`, `/auth/logout`
 - **Rate-limit** sur `/auth/login` + limiteur global par IP (600 requêtes / 15 min sans jeton ou avec jeton invalide ; 3000 avec un JWT valide, vérifié par signature ; `/health`, `/notifications` et `/mes-notifications` exclus ; mesuré : environ 13 appels `/api` par page en rechargement complet, soit plus de 200 pages / 15 min) ; 429 = `{ erreur, retryAfter }` + en-tête `Retry-After`, le client ne déconnecte que sur 401 ; en-têtes **helmet**

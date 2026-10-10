@@ -48,10 +48,9 @@ export function Pieces() {
   const action = async (fn, msg) => {
     try { await fn(); toast.success(msg); charger(); } catch (e) { toast.error(e.message); }
   };
-  const rejeter = (p) => {
-    const note = window.prompt("Motif du rejet (optionnel) :", p.note ?? "");
-    if (note === null) return;
-    action(() => rejeterPiece(p.id, note || undefined), "Pièce rejetée.");
+  const rejeter = async (p) => {
+    const note = await confirm({ title: "Rejeter la pièce ?", message: `« ${p.nomFichier} » de Me ${p.membre?.nom} sera rejetée ; l'avocat en sera notifié avec les corrections demandées.`, confirmLabel: "Rejeter la pièce", danger: true, motif: { label: "Motif du rejet et corrections demandées", min: 3 } });
+    if (note) action(() => rejeterPiece(p.id, note), "Pièce rejetée.");
   };
   const supprimer = async (p) => {
     const ok = await confirm({ title: "Supprimer la pièce ?", message: `« ${p.nomFichier} » de Me ${p.membre?.nom} sera définitivement supprimée.`, confirmLabel: "Supprimer", danger: true });
