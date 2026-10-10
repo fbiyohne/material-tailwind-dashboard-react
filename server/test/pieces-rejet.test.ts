@@ -22,7 +22,9 @@ const notifs = () => prisma.notification.findMany({ where: { userId }, orderBy: 
 
 beforeAll(async () => {
   sg = (await request(app).post("/api/auth/login").send({ email: "sg@barreau-pn.cg", password: "barreau" })).body.token;
-  const num = 960000 + Math.floor(Math.random() * 30000);
+  // num = max(num) + 1 (comme POST /membres) : aucune collision avec un reste de test,
+  // la suite étant sérialisée par le verrou consultatif de globalSetup.
+  const num = ((await prisma.membre.aggregate({ _max: { num: true } }))._max.num ?? 0) + 1;
   const m = await prisma.membre.create({ data: { num, nom: `REJET PIECE ${num}`, qualite: "AVOCAT" } as never });
   membreId = m.id;
   const u = await prisma.user.create({
