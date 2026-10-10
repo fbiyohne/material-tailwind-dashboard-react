@@ -74,6 +74,8 @@ export const telechargerAvocatsPdf = (params = {}) => {
   const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v != null && v !== "")).toString();
   return telechargerPdf(`/membres/export/pdf${qs ? `?${qs}` : ""}`, `Avocats-${new Date().toISOString().slice(0, 10)}.pdf`);
 };
+/** Trace côté serveur un export généré dans le navigateur (CSV/XLSX/TXT, PDF de repli) : { format, filtre, lignes }. */
+export const journaliserExport = (body) => api("/membres/export", { method: "POST", body });
 export const supprimerMembre = (id) => api(`/membres/${id}`, { method: "DELETE" });
 /** Provisionne (ou renvoie) l'accès à l'espace avocat d'un membre. SG/Admin. */
 export const provisionnerAccesAvocat = (membreId) => api(`/membres/${membreId}/acces`, { method: "POST" });

@@ -5,7 +5,7 @@ import { MemoryRouter } from "react-router-dom";
 import { ToastProvider } from "../../components/Toast";
 import { ConfirmProvider } from "../../components/ConfirmDialog";
 import { Avocats } from "../Avocats";
-import { listerMembres, telechargerAvocatsPdf } from "../../api/resources";
+import { listerMembres, telechargerAvocatsPdf, journaliserExport } from "../../api/resources";
 import { telechargerTexte } from "../../utils/exportCsv";
 import { exporterExcel, exporterPdf } from "../../utils/exports";
 
@@ -14,6 +14,7 @@ vi.mock("../../api/resources", () => ({
   getCotisations: vi.fn().mockResolvedValue([]),
   supprimerMembre: vi.fn(),
   telechargerAvocatsPdf: vi.fn(),
+  journaliserExport: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("../../utils/exportCsv", async (orig) => ({ ...(await orig()), telechargerTexte: vi.fn() }));
 vi.mock("../../utils/exports", () => ({ exporterExcel: vi.fn(), exporterPdf: vi.fn() }));
@@ -86,6 +87,20 @@ describe("Avocats — exports", () => {
     await exportVers("Exporter", "PDF");
     await waitFor(() => expect(exporterPdf).toHaveBeenCalledWith(expect.stringMatching(/^Avocats-\d{4}-\d{2}-\d{2}$/), "#zone-impression-avocats"));
     expect(await screen.findByText(/PDF généré sur cet appareil/)).toBeInTheDocument();
+  });
+
+  it("chaque export client est journalisé avant le téléchargement ; échec du journal = pas de fichier", async () => {
+    await rendre();
+    await exportVers("Exporter", "CSV");
+    expect(journaliserExport).toHaveBeenCalledWith({ format: "csv", filtre: "tous", lignes: 2 });
+    await userEvent.click(screen.getAllByRole("checkbox")[2]);
+    await exportVers("Exporter la sélection", "Excel");
+    expect(journaliserExport).toHaveBeenLastCalledWith({ format: "xlsx", filtre: "sélection de 1", lignes: 1 });
+    journaliserExport.mockRejectedValueOnce(new Error("Accès refusé"));
+    telechargerTexte.mockClear();
+    await exportVers("Exporter", "Texte");
+    expect(await screen.findByText(/Export impossible/)).toBeInTheDocument();
+    expect(telechargerTexte).not.toHaveBeenCalled();
   });
 
   it("filtre Décédé proposé", async () => {

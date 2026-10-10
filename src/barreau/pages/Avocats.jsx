@@ -7,7 +7,7 @@ import { STATUT_META, STATUT_MEMBRE_META_CLES, QUALITE_LABEL } from "../data/der
 import { EXERCICE_COURANT } from "../data/dashboard-data";
 import { versDelimite, telechargerTexte } from "../utils/exportCsv";
 import { exporterExcel, exporterPdf } from "../utils/exports";
-import { listerMembres, getCotisations, supprimerMembre, telechargerAvocatsPdf } from "../api/resources";
+import { listerMembres, getCotisations, supprimerMembre, telechargerAvocatsPdf, journaliserExport } from "../api/resources";
 
 const FILTRES = [
   { value: "tous", label: "Tous les statuts" },
@@ -166,7 +166,13 @@ export function Avocats() {
   // Export de `lignes` (liste filtrée ou sélection) dans le format demandé.
   const exporter = async (format, lignes, { selection = false } = {}) => {
     const nom = selection ? "Avocats-selection" : "Avocats";
+    // Journal serveur (avis C-04) écrit AVANT de produire le fichier : pas de trace, pas d'export.
+    const libelleFiltre = selection
+      ? `sélection de ${lignes.length}`
+      : [filtre !== "tous" ? `statut ${filtre.toUpperCase()}` : "", recherche ? `recherche « ${recherche} »` : ""].filter(Boolean).join(", ") || "tous";
+    const tracer = (f) => journaliserExport({ format: f, filtre: libelleFiltre.slice(0, 200), lignes: lignes.length });
     try {
+      if (format !== "pdf") await tracer(format);
       if (format === "csv") {
         telechargerTexte(`${nom}.csv`, `﻿${mention()}\r\n${versDelimite(COLONNES_EXPORT, lignes, ";")}`, "text/csv;charset=utf-8;");
       } else if (format === "txt") {
@@ -187,6 +193,7 @@ export function Avocats() {
           });
         } catch {
           // Repli : PDF capturé sur l'appareil (qualité réduite) si le serveur échoue.
+          await tracer("pdf-local");
           setZonePdf(lignes);
           await new Promise((r) => setTimeout(r, 80));
           await exporterPdf(`${nom}-${aujourdhui()}`, "#zone-impression-avocats");

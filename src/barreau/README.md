@@ -28,6 +28,8 @@ Menu « Exporter » (liste filtrée) et « Exporter la sélection » : 4 formats
 
 Les fichiers CSV, TXT et XLSX commencent par une ligne de mention (« Barreau de Pointe-Noire — Document interne confidentiel… »), puis l'en-tête, puis les données. L'import saute cette ligne.
 
+Sécurité : chaque export est d'abord journalisé côté serveur (`journaliserExport` → `POST /api/membres/export`) ; si le journal échoue, aucun fichier n'est produit. En CSV et TXT, une valeur commençant par `=`, `@`, ou par `+`/`-` sans être un simple nombre ou téléphone, est préfixée d'une apostrophe (protection contre l'injection de formules dans Excel/LibreOffice).
+
 ### Colonnes (ordre de `COLONNES_EXPORT`, `pages/Avocats.jsx`)
 Le code compte **11 colonnes** (la consigne en annonçait 10) ; le motif de radiation n'en fait pas partie.
 1. N°

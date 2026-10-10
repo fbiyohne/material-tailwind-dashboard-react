@@ -82,6 +82,12 @@ GET /api/membres/export/pdf?statut=INSCRIT&qualiteNot=STAGIAIRE
 ```
 - Repli : si Chromium est absent, la route échoue et le client produit lui-même le PDF (`exporterPdf`, qualité réduite).
 
+### POST /api/membres/export
+Journalise un export produit dans le navigateur (CSV, XLSX, TXT, ou PDF de repli `pdf-local`) : le client l'appelle **avant** de générer le fichier et n'exporte rien si l'appel échoue.
+- Garde : permission « membres » (AVOCAT → 403).
+- Corps : `{ "format": "csv"|"xlsx"|"txt"|"pdf-local", "filtre": "≤ 200 caractères", "lignes": 0..100000 }` → **204**.
+- Journal d'audit : « Export de la liste des avocats — Avocat (format=…; filtre=…; lignes=…) », avec l'agent, l'IP et l'horodatage.
+
 ### DELETE /api/membres/:id
 Admin seul. **409** « Suppression impossible : pièces comptables à conserver 10 ans (OHADA) ; utilisez radiation ou décès » dès que le membre a au moins un reçu, un paiement ou un quitus. Sans pièce (erreur de saisie, doublon), la suppression est définitive.
 

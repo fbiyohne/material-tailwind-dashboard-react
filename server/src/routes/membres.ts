@@ -115,6 +115,27 @@ membresRouter.get(
 );
 
 /**
+ * POST /membres/export — trace un export généré côté client (CSV/XLSX/TXT, ou PDF
+ * de repli) : le fichier est produit dans le navigateur, seule la journalisation
+ * passe par le serveur (loi 29-2019 art. 63-64, avis C-04). Le middleware d'audit
+ * écrit la ligne « Export de la liste des avocats » avec le détail ci-dessous.
+ */
+const exportJournalSchema = z.object({
+  format: z.enum(["csv", "xlsx", "txt", "pdf-local"]),
+  filtre: z.string().trim().max(200),
+  lignes: z.number().int().min(0).max(100000),
+});
+membresRouter.post(
+  "/export",
+  requirePermission("membres"),
+  asyncH(async (req, res) => {
+    const { format, filtre, lignes } = exportJournalSchema.parse(req.body);
+    res.locals.auditDetail = `format=${format}; filtre=${filtre || "tous"}; lignes=${lignes}`;
+    res.status(204).end();
+  })
+);
+
+/**
  * GET /membres/:id — fiche complète (cotisations/reçus/quitus imbriqués).
  * Données nominatives + financières : réservé à l'institutionnel (SG/Bâtonnier),
  * contrairement à la liste `GET /` qui alimente l'annuaire ouvert. Cf. RG-15.

@@ -1,9 +1,16 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import request from "supertest";
 import { creerApp } from "../src/app.js";
 import { prisma } from "../src/prisma.js";
 import { tableauOrdreHtml, listeAvocatsHtml } from "../src/lib/templates.js";
-import { trouverChromium } from "../src/lib/pdf.js";
+import { trouverChromium, htmlVersPdf } from "../src/lib/pdf.js";
+
+// htmlVersPdf espionné (implémentation réelle conservée) : permet d'inspecter le HTML
+// rendu par l'export PDF et de s'affranchir de Chromium dans les tests de sécurité.
+vi.mock("../src/lib/pdf.js", async (importOriginal) => {
+  const orig = await importOriginal<typeof import("../src/lib/pdf.js")>();
+  return { ...orig, htmlVersPdf: vi.fn(orig.htmlVersPdf) };
+});
 import { eligibiliteElectorale, STATUTS_HORS_TABLEAU } from "../src/lib/business.js";
 
 const app = creerApp();
@@ -1414,5 +1421,93 @@ describe("Import du tableau — décès, dates, accès espace, audit (T6)", () =
       if (!e) await new Promise((r) => setTimeout(r, 100));
     }
     expect(e).not.toBeNull();
+  });
+});
+
+describe("Revue sécurité T10 — données disciplinaires, extraction en masse, rôles", () => {
+  const suffixe = Date.now();
+  let avocatJwt = "";
+  let consultJwt = "";
+  let radieId = 0;
+  const avocatEmail = `t10.avocat.${suffixe}@barreau-pn.cg`;
+  const consultEmail = `t10.consult.${suffixe}@barreau-pn.cg`;
+
+  beforeAll(async () => {
+    const m = await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: `T10 Avocat ${suffixe}`, qualite: "AVOCAT", email: avocatEmail });
+    const acces = await request(app).post(`/api/membres/${m.body.id}/acces`).set(...bearer(sg));
+    await request(app).post("/api/auth/activer").send({ token: acces.body.lien.split("/activer/")[1], password: "avocatpass8" });
+    avocatJwt = (await request(app).post("/api/auth/login").send({ email: avocatEmail, password: "avocatpass8" })).body.token;
+    await request(app).post("/api/users").set(...bearer(sg)).send({ nom: `T10 Consultation`, email: consultEmail, role: "CONSULTATION", password: "consultpass8" });
+    consultJwt = (await request(app).post("/api/auth/login").send({ email: consultEmail, password: "consultpass8" })).body.token;
+    const r = await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: `T10 Radie ${suffixe}`, qualite: "AVOCAT" });
+    radieId = r.body.id;
+    await request(app).post(`/api/membres/${radieId}/radier`).set(...bearer(sg)).send({ dateRadiation: "2026-10-01", motifRadiation: "MOTIF-SECRET-T10" });
+  });
+  afterAll(async () => {
+    await prisma.user.deleteMany({ where: { email: { in: [avocatEmail, consultEmail] } } });
+    await prisma.membre.deleteMany({ where: { nom: { startsWith: "T10 " } } });
+  });
+
+  it("AVOCAT → 403 sur export PDF, journal d'export, déclaration de décès et import", async () => {
+    expect(avocatJwt).toBeTruthy();
+    expect((await request(app).get("/api/membres/export/pdf").set(...bearer(avocatJwt))).status).toBe(403);
+    expect((await request(app).post("/api/membres/export").set(...bearer(avocatJwt)).send({ format: "csv", filtre: "tous", lignes: 1 })).status).toBe(403);
+    expect((await request(app).post(`/api/membres/${radieId}/deces`).set(...bearer(avocatJwt)).send({ dateDeces: "2026-09-15" })).status).toBe(403);
+    expect((await request(app).post("/api/membres/import").set(...bearer(avocatJwt)).send({ membres: [{ num: 999999, nom: "T10 Intrus" }] })).status).toBe(403);
+    expect(await prisma.membre.findUnique({ where: { num: 999999 } })).toBeNull();
+  });
+
+  it("CONSULTATION ne reçoit jamais motifRadiation : ni dans GET /membres, ni dans le HTML de l'export PDF", async () => {
+    const liste = await request(app).get(`/api/membres?q=${encodeURIComponent(`T10 Radie ${suffixe}`)}`).set(...bearer(consultJwt));
+    expect(liste.status).toBe(200);
+    expect(liste.body.items).toHaveLength(1);
+    expect(JSON.stringify(liste.body)).not.toContain("MOTIF-SECRET-T10");
+    expect("motifRadiation" in liste.body.items[0]).toBe(false);
+    vi.mocked(htmlVersPdf).mockResolvedValueOnce(Buffer.from("%PDF-test"));
+    const r = await request(app).get(`/api/membres/export/pdf?ids=${radieId}`).set(...bearer(consultJwt));
+    expect(r.status).toBe(200);
+    const html = vi.mocked(htmlVersPdf).mock.calls.at(-1)![0];
+    expect(html).toContain(`T10 Radie ${suffixe}`);
+    expect(html).not.toContain("MOTIF-SECRET-T10");
+  });
+
+  it("ids : 201 valeurs → 400, « 1;DROP » → 400, sans appel au rendu", async () => {
+    const appels = vi.mocked(htmlVersPdf).mock.calls.length;
+    const ids201 = Array.from({ length: 201 }, (_, i) => i + 1).join(",");
+    expect((await request(app).get(`/api/membres/export/pdf?ids=${ids201}`).set(...bearer(sg))).status).toBe(400);
+    expect((await request(app).get(`/api/membres/export/pdf?ids=${encodeURIComponent("1;DROP")}`).set(...bearer(sg))).status).toBe(400);
+    expect((await request(app).get(`/api/membres/export/pdf?ids=1&ids=2`).set(...bearer(sg))).status).toBe(400);
+    expect(vi.mocked(htmlVersPdf).mock.calls.length).toBe(appels);
+  });
+
+  it("import : plafond 2 000 lignes (2 001 → 400, rien d'écrit) ; clés d'en-tête hostiles ignorées", async () => {
+    const base = 970000 + (suffixe % 10000);
+    const trop = Array.from({ length: 2001 }, (_, i) => ({ num: base + i, nom: `T10 Lot ${i}` }));
+    expect((await request(app).post("/api/membres/import").set(...bearer(sg)).send({ membres: trop })).status).toBe(400);
+    expect(await prisma.membre.count({ where: { nom: { startsWith: "T10 Lot " } } })).toBe(0);
+    const hostile = JSON.parse(`[{"num": ${base}, "nom": "T10 Hostile", "__proto__": {"statut": "RADIE"}, "id": 1, "numInscription": "PN-X", "motifRadiation": "x"}]`);
+    const r = await request(app).post("/api/membres/import").set(...bearer(sg)).send({ membres: hostile });
+    expect(r.status).toBe(200);
+    const m = await prisma.membre.findUnique({ where: { num: base } });
+    expect(m?.statut).toBe("INSCRIT");
+    expect(m?.numInscription).toBe(`T${base}`);
+    expect(m?.id).not.toBe(1);
+  });
+
+  it("export client (CSV/XLSX/TXT) journalisé : format, filtre, lignes, identité et horodatage", async () => {
+    const user = await prisma.user.findUnique({ where: { email: consultEmail } });
+    const avant = (await prisma.journalAudit.aggregate({ _max: { id: true } }))._max.id ?? 0;
+    const r = await request(app).post("/api/membres/export").set(...bearer(consultJwt)).send({ format: "xlsx", filtre: "statut RADIE", lignes: 3 });
+    expect(r.status).toBe(204);
+    expect((await request(app).post("/api/membres/export").set(...bearer(consultJwt)).send({ format: "exe", filtre: "x", lignes: 1 })).status).toBe(400);
+    let e = null;
+    for (let i = 0; i < 20 && !e; i++) {
+      e = await prisma.journalAudit.findFirst({ where: { id: { gt: avant }, userId: user!.id, chemin: "/api/membres/export" } });
+      if (!e) await new Promise((res) => setTimeout(res, 100));
+    }
+    expect(e).not.toBeNull();
+    expect(e!.action).toBe("Export de la liste des avocats — Avocat (format=xlsx; filtre=statut RADIE; lignes=3)");
+    expect(e!.userNom).toBe("T10 Consultation");
+    expect(e!.quand).toBeInstanceOf(Date);
   });
 });
