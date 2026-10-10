@@ -136,6 +136,23 @@ describe("Super-administrateur — CRUD étendu (suppressions réservées à l'A
     expect((await request(app).get(`/api/membres/${id}`).set(...bearer(sg))).status).toBe(200);
   });
 
+  it("R1-8 : refuse l'attestation (409) pour un radié ou un décédé, sans numéroter ni archiver", async () => {
+    const avant = await prisma.archive.count({ where: { categorie: "Attestation d'inscription" } });
+    for (const statut of ["RADIE", "DECEDE"] as const) {
+      const id = await creerAvocat(`ATTEST-${statut}`);
+      await prisma.membre.update({ where: { id }, data: { statut } });
+      for (const r of [
+        await request(app).post(`/api/membres/${id}/attestation`).set(...bearer(sg)),
+        await request(app).get(`/api/membres/${id}/attestation/pdf`).set(...bearer(sg)),
+      ]) {
+        expect(r.status).toBe(409);
+        expect(r.body.erreur).toMatch(/Attestation impossible/);
+      }
+      await request(app).delete(`/api/membres/${id}`).set(...bearer(admin));
+    }
+    expect(await prisma.archive.count({ where: { categorie: "Attestation d'inscription" } })).toBe(avant);
+  });
+
   it("l'ADMIN supprime un avocat sans pièce comptable et son historique non comptable (cascade)", async () => {
     const id = await creerAvocat("SUPPR-CASCADE");
     // Ligne de cotisation et droit de plaidoirie sans reçu : cascade FK, aucune pièce comptable.
