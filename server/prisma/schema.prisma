@@ -46,6 +46,9 @@ enum StatutMembre {
   HONORAIRE
   STAGIAIRE
   DECEDE // décès constaté (acte de décès) : hors tableau, corps électoral, cotisations et espace avocat
+  DEMISSIONNAIRE // démission (sortie volontaire) : hors tableau
+  RETRAITE // retraite (sortie volontaire) : hors tableau
+  CESSATION // cessation d'activité : hors tableau
 }
 
 enum TypeAssemblee {
@@ -173,6 +176,8 @@ model Membre {
   cabinetLie      Cabinet?  @relation("CabinetMembres", fields: [cabinetId], references: [id])
   cabinetsDiriges Cabinet[] @relation("CabinetTitulaire")
   createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @default(now()) @updatedAt // « Mis à jour le » du tableau PDF
+  evenements  EvenementSituation[]   // historique des changements de situation
 }
 
 /// Personne morale (cabinet, société ou association d'avocats). Regroupe des
@@ -272,6 +277,7 @@ model PieceDossier {
   verifieePar String?
   verifieeAt  DateTime?
   createdAt   DateTime    @default(now())
+  evenements  EvenementSituation[]
 
   @@index([membreId])
 }
@@ -380,8 +386,26 @@ model DossierDisciplinaire {
   recours         String? // recours formé contre la décision
   dateRecours     DateTime?
   pieces          String[]      @default([])
+  // Procédure et sanction structurées (T2). Le texte `sanction` est conservé (libellé).
+  origine                   String? // saisine : plainte, procureur, bâtonnier…
+  dateDesignationRapporteur DateTime?
+  dateRapport               DateTime?
+  conclusionRapport         String?
+  orientation               String? // CLASSEMENT | POURSUITE
+  juridiction               String?
+  sanctionCode              String? // code du catalogue Parametres.data.regles.sanctions
+  sanctionDureeMois         Int?
+  sursis                    Boolean   @default(false)
+  sanctionDebut             DateTime?
+  sanctionFin               DateTime?
+  peineAccessoireMois       Int? // inéligibilité accessoire
+  motivation                String?
+  dateDecision              DateTime?
+  dateNotification          DateTime?
+  decidePar                 String? // organe décideur enregistré
   statut          StatutDossier @default(OUVERT)
   createdAt       DateTime      @default(now())
+  evenements      EvenementSituation[]
 }
 
 model Reunion {
@@ -447,6 +471,7 @@ model JournalAudit {
   quand   DateTime @default(now())
 
   @@index([quand])
+  @@index([userId, quand])
 }
 
 model Parametres {
@@ -480,6 +505,7 @@ enum TypeScrutin {
   CONSEIL
   BATONNIER
   AUTRE
+  CONSEIL_BARREAU
 }
 
 enum ModaliteScrutin {
@@ -504,6 +530,7 @@ model Scrutin {
   nbSieges  Int             @default(1)
   ouvertLe  DateTime?
   closLe    DateTime?
+  dateScrutin DateTime? // date de référence du corps électoral (X-03)
   createdAt DateTime        @default(now())
 
   candidats   Candidat[]
@@ -563,6 +590,9 @@ model Conversation {
   avecAdministration Boolean                   @default(false)
   /// Dernière lecture côté administration (boîte partagée du Secrétariat).
   adminLastReadAt    DateTime?
+  /// Demande d'attestation archivée dans ce fil (type demandé, numéro délivré).
+  attestationType    String?
+  attestationNumero  String?
   createdAt          DateTime                  @default(now())
   updatedAt          DateTime                  @updatedAt
   participants       ConversationParticipant[]
@@ -597,6 +627,16 @@ model Message {
   auteurNom         String
   corps             String
   createdAt         DateTime     @default(now())
+  /// Pièce jointe unique (stockage StorageProvider « messagerie »).
+  pieceNom          String?
+  pieceFichier      String?
+  pieceMime         String?
+  pieceTaille       Int?
+  /// Empreinte SHA-256 (corps + pièce) calculée à l'envoi.
+  empreinte         String?
+  /// Accusés posés une seule fois côté destinataire.
+  recuAt            DateTime?
+  luAt              DateTime?
 
   @@index([conversationId])
 }
@@ -620,4 +660,49 @@ model DemandeAcces {
   statut         StatutDemande @default(EN_ATTENTE)
   createdAt      DateTime      @default(now())
   traiteeAt      DateTime?
+}
+
+/// Journal métier des changements de situation d'un membre (T2) : qui, quand,
+/// pourquoi, avec quelle pièce. Distinct de JournalAudit (traçabilité technique).
+/// type : INSCRIPTION, PASSAGE_TABLEAU, ADMISSION_DIRECTE, RAPPEL, MISE_EN_DEMEURE,
+/// TRANSMISSION, OMISSION, REINSCRIPTION, SANCTION, SUSPENSION, REPRISE, RADIATION,
+/// DECES, DEMISSIONNAIRE, RETRAITE, CESSATION, CHANGEMENT_STATUT.
+model EvenementSituation {
+  id          Int                   @id @default(autoincrement())
+  membre      Membre                @relation(fields: [membreId], references: [id], onDelete: Cascade)
+  membreId    Int
+  type        String
+  statutAvant StatutMembre?
+  statutApres StatutMembre?
+  dateEffet   DateTime
+  annee       Int? // exercice concerné (circuit des impayés)
+  motif       String?
+  reference   String?
+  piece       PieceDossier?         @relation(fields: [pieceId], references: [id], onDelete: SetNull)
+  pieceId     Int?
+  dossier     DossierDisciplinaire? @relation(fields: [dossierId], references: [id], onDelete: SetNull)
+  dossierId   Int?
+  details     Json? // certificat, date de demande, cas d'admission, ancienneté…
+  acteurId    Int?
+  acteurNom   String?
+  createdAt   DateTime              @default(now())
+
+  @@index([membreId, dateEffet])
+  @@index([type, annee])
+}
+
+/// Timbre vendu hors application (dispositif MTN), importé par CSV/Excel mensuel.
+/// La référence unique rend l'import idempotent (createMany skipDuplicates).
+model TimbreExterne {
+  id         Int      @id @default(autoincrement())
+  reference  String   @unique
+  date       DateTime
+  montant    Int
+  canal      String
+  source     String   @default("MTN")
+  avocatNom  String?
+  importePar String?
+  importeLe  DateTime @default(now())
+
+  @@index([date])
 }

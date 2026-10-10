@@ -154,6 +154,30 @@ et `identite().modeDemonstration` (mention C-13, `MENTION_DEMONSTRATION`).
 
 Tests : `test/regles.test.ts`.
 
+## Schéma de l'audit de conformité (migrations T2)
+
+Deux migrations additives et idempotentes (`IF NOT EXISTS` ou contrôle du catalogue,
+aucune suppression ni renommage), rejouables :
+
+- `20261010090000_enums_audit_conformite` : statuts `DEMISSIONNAIRE`, `RETRAITE`,
+  `CESSATION` et scrutin `CONSEIL_BARREAU` (fichier séparé : une valeur d'enum ne
+  s'utilise pas dans la transaction qui la crée) ;
+- `20261010090100_audit_conformite` : tables `EvenementSituation` (historique des
+  situations) et `TimbreExterne` (référence unique, import idempotent),
+  `Membre.updatedAt`, procédure et sanction structurées de `DossierDisciplinaire`
+  (le texte `sanction` est conservé), `Scrutin.dateScrutin`, pièce jointe, empreinte
+  et accusés de `Message`, attestation de `Conversation`, index
+  `JournalAudit(userId, quand)`.
+
+**Journal d'audit non modifiable** : le trigger `journal_audit_immuable` refuse tout
+`UPDATE` ou `DELETE` sur `JournalAudit` (erreur 42501). `TRUNCATE` n'est pas couvert.
+Une purge de conservation légitime se fait par un DBA, explicitement :
+`ALTER TABLE "JournalAudit" DISABLE TRIGGER journal_audit_immuable;` puis
+`ENABLE TRIGGER` aussitôt après.
+
+Test : `test/migrations.test.ts` (rejeu double des deux SQL sur `barreau_pn_test`,
+absence de dérive schéma/base, immuabilité du journal).
+
 ## Sécurité & production
 - **Auth** : access token (15 min) + refresh token (7 j, rotation), `/auth/refresh`, `/auth/logout`
 - **Rate-limit** sur `/auth/login` + limiteur global par IP (600 requêtes / 15 min sans jeton ou avec jeton invalide ; 3000 avec un JWT valide, vérifié par signature ; `/health`, `/notifications` et `/mes-notifications` exclus ; mesuré : environ 13 appels `/api` par page en rechargement complet, soit plus de 200 pages / 15 min) ; 429 = `{ erreur, retryAfter }` + en-tête `Retry-After`, le client ne déconnecte que sur 401 ; en-têtes **helmet**
