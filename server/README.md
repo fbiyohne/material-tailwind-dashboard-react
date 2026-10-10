@@ -323,6 +323,29 @@ PURGER_RESTES_TESTS=1 npx vitest run               # purge automatique avant la 
 Sans `PURGER_RESTES_TESTS=1`, `globalSetup` se contente d'afficher les effectifs de
 restes. Ne pas lancer la purge manuelle pendant une exécution de la suite.
 
+### Suite de référence sur une base sans restes (`barreau_pn_test_ci`)
+
+La suite n'est verte de façon reproductible que sur une base **sans restes de fixtures** :
+sur `barreau_pn_test` polluée (plus de 400 RADIE), C-03 et R1-6 échouent sans aucune
+régression de code. Le socle attribue au projet une seconde base de test,
+`barreau_pn_test_ci` (même rôle `barreau`, inscrite au `registre.json` du socle), réservée
+à la recette : on la vise par `TEST_DATABASE_URL`. La garde des scripts (`estBaseDeTest`,
+`prisma/purger-restes-tests.ts`) accepte `barreau_pn_test` et ses variantes suffixées
+`barreau_pn_test_<suffixe>`, jamais `barreau_pn`.
+
+```bash
+# Mise en place (une fois) : migrations + seed sur la base vierge du socle
+DATABASE_URL="postgresql://barreau:barreau_dev@127.0.0.1:5432/barreau_pn_test_ci?schema=public" npx prisma migrate deploy
+DATABASE_URL="postgresql://barreau:barreau_dev@127.0.0.1:5432/barreau_pn_test_ci?schema=public" npm run seed
+# Recette (preuve « Test Files / Tests » à joindre au rapport)
+TEST_DATABASE_URL="postgresql://barreau:barreau_dev@127.0.0.1:5432/barreau_pn_test_ci?schema=public" npm test
+```
+
+Résultat de référence du 2026-10-10 sur `barreau_pn_test_ci` : 14 fichiers, 245 tests,
+tous verts (deux exécutions successives, la seconde sur la base déjà utilisée une fois).
+Si cette base accumule à son tour des restes, la remettre à zéro par
+`npm run seed` (après validation de Fabrice : le seed supprime les données de la base visée).
+
 ## Variables d'environnement complémentaires
 `ACCESS_TTL`, `REFRESH_TTL_DAYS`, `PUPPETEER_EXECUTABLE_PATH`, `SMTP_*`,
 `MAIL_FROM`, `SIGNATURE_SECRET` (voir `.env.example`).

@@ -15,13 +15,17 @@
  *   npx tsx prisma/purger-restes-tests.ts            # simulation : affiche les effectifs
  *   npx tsx prisma/purger-restes-tests.ts --executer # suppression effective
  *
- * Garde-fou : refuse toute base dont le nom n'est pas exactement barreau_pn_test.
+ * Garde-fou : refuse toute base dont le nom n'est pas barreau_pn_test ou une variante suffixée
+ * (barreau_pn_test_ci, base vierge de recette) — jamais barreau_pn.
  */
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { PrismaClient } from "@prisma/client";
 
 export const URL_TEST = process.env.TEST_DATABASE_URL || "postgresql://barreau:barreau_dev@127.0.0.1:5432/barreau_pn_test?schema=public";
+
+/** Vrai si l'URL vise une base de test (barreau_pn_test ou barreau_pn_test_<suffixe>). */
+export const estBaseDeTest = (url: string) => /^\/barreau_pn_test(_[a-z0-9]+)?$/.test(new URL(url).pathname);
 
 /** Préfixes de noms propres aux fixtures (api.test.ts, cycleVie-situation, migrations, pieces-rejet…). */
 export const PREFIXES_FIXTURES = [
@@ -32,7 +36,7 @@ export const PREFIXES_FIXTURES = [
 ];
 
 export async function purgerRestesTests(prisma: PrismaClient, executer: boolean) {
-  if (new URL(URL_TEST).pathname !== "/barreau_pn_test") throw new Error(`Refus : la base ciblée n'est pas barreau_pn_test (${new URL(URL_TEST).pathname}).`);
+  if (!estBaseDeTest(URL_TEST)) throw new Error(`Refus : la base ciblée n'est pas une base de test (${new URL(URL_TEST).pathname}).`);
   const cible = { OR: PREFIXES_FIXTURES.map((p) => ({ nom: { startsWith: p } })) };
   const membres = await prisma.membre.findMany({ where: cible, select: { id: true, statut: true } });
   const ids = membres.map((m) => m.id);

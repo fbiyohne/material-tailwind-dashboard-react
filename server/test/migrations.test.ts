@@ -3,6 +3,7 @@ import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { prisma } from "../src/prisma.js";
+import { estBaseDeTest } from "../prisma/purger-restes-tests.js";
 
 /**
  * T2 / CA14 — migrations de l'audit de conformité : additives, idempotentes,
@@ -19,8 +20,9 @@ const MIGRATIONS = [
 afterAll(() => prisma.$disconnect());
 
 describe("Migrations audit de conformité (CA14)", () => {
-  it("cible exclusivement barreau_pn_test", () => {
-    expect(new URL(url).pathname).toBe("/barreau_pn_test");
+  it("cible exclusivement une base de test (barreau_pn_test ou variante suffixée)", () => {
+    expect(estBaseDeTest(url)).toBe(true);
+    expect(estBaseDeTest("postgresql://x@h/barreau_pn")).toBe(false);
   });
 
   it("aucun DROP ni RENAME dans les nouveaux fichiers", () => {
