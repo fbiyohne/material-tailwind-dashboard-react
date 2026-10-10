@@ -539,14 +539,19 @@ membresRouter.post(
   requireRole("BATONNIER"),
   asyncH(async (req: AuthRequest, res) => {
     const membreId = Number(req.params.id);
+    if (!Number.isInteger(membreId)) throw new HttpError(400, "Identifiant invalide");
     const membre = await prisma.membre.findUnique({ where: { id: membreId } });
     if (!membre) throw new HttpError(404, "Avocat introuvable");
     if (membre.qualite !== "STAGIAIRE") throw new HttpError(409, "Ce membre n'est pas un avocat stagiaire.");
+    // Un radié ou un décédé ne revient pas au tableau par une validation de stage.
+    if (membre.statut === "RADIE" || membre.statut === "DECEDE")
+      throw new HttpError(409, "Validation impossible : le stagiaire est radié ou décédé. Rétablissez d'abord son statut par la fiche.");
     const acteur = await nomActeur(req.user!.id);
     const maj = await prisma.membre.update({
       where: { id: membreId },
-      data: { qualite: "AVOCAT", statut: "INSCRIT", stageValideAt: new Date(), stageValidePar: acteur ?? undefined },
+      data: { qualite: "AVOCAT", ...appliquerCycleVie(membre, { statut: "INSCRIT" }), stageValideAt: new Date(), stageValidePar: acteur ?? undefined },
     });
+    await synchroniserAccesAuStatut(maj.id, maj.statut);
     await archiver({ categorie: "Fin de stage", titre: `Fin de stage validée — Me ${membre.nom}`, reference: `STAGE-${membre.num}`, date: new Date(), membreNom: membre.nom });
     res.json(maj);
   })

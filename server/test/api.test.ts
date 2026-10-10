@@ -506,6 +506,27 @@ describe("Cycle du stage — rapports & validation (Bâtonnier)", () => {
     expect(v.body.qualite).toBe("AVOCAT");
     expect((await request(app).post(`/api/membres/${sid}/valider-stage`).set(...bearer(admin))).status).toBe(409);
   });
+
+  it("R2-4 : valider-stage refuse un RADIE/DECEDE (409, rien modifié) et ne laisse aucune donnée d'acte sur un SUSPENDU/OMIS", async () => {
+    const n = 950000 + (Date.now() % 10000);
+    const base = { qualite: "STAGIAIRE" as const };
+    const rad = await prisma.membre.create({ data: { ...base, num: n, numInscription: `V${n}`, nom: "VS Radié", statut: "RADIE", dateRadiation: new Date("2026-03-01"), motifRadiation: "Décision n° 4" } });
+    const dec = await prisma.membre.create({ data: { ...base, num: n + 1, numInscription: `V${n + 1}`, nom: "VS Décédé", statut: "DECEDE", dateDeces: new Date("2026-03-02") } });
+    for (const m of [rad, dec]) {
+      const r = await request(app).post(`/api/membres/${m.id}/valider-stage`).set(...bearer(admin));
+      expect(r.status).toBe(409);
+      const apres = await prisma.membre.findUnique({ where: { id: m.id } });
+      expect(apres).toMatchObject({ statut: m.statut, qualite: "STAGIAIRE", dateRadiation: m.dateRadiation, dateDeces: m.dateDeces, motifRadiation: m.motifRadiation });
+    }
+    for (const [i, statut] of (["SUSPENDU", "OMIS"] as const).entries()) {
+      const m = await prisma.membre.create({ data: { ...base, num: n + 2 + i, numInscription: `V${n + 2 + i}`, nom: `VS ${statut}`, statut } });
+      const r = await request(app).post(`/api/membres/${m.id}/valider-stage`).set(...bearer(admin));
+      expect(r.status).toBe(200);
+      const apres = await prisma.membre.findUnique({ where: { id: m.id } });
+      expect(apres).toMatchObject({ statut: "INSCRIT", qualite: "AVOCAT", dateRadiation: null, motifRadiation: null, dateDeces: null });
+    }
+    expect((await request(app).post("/api/membres/abc/valider-stage").set(...bearer(admin))).status).toBe(400);
+  });
 });
 
 describe("Import du tableau — qualité par défaut (qualiteDefaut)", () => {
