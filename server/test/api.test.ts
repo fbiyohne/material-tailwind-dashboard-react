@@ -1744,7 +1744,8 @@ describe("Revue sécurité T10 — données disciplinaires, extraction en masse,
   });
 
   it("CONSULTATION ne reçoit jamais motifRadiation : ni dans GET /membres, ni dans le HTML de l'export PDF", async () => {
-    const liste = await request(app).get(`/api/membres?q=${encodeURIComponent(`T10 Radie ${suffixe}`)}`).set(...bearer(consultJwt));
+    // O1 (M-20261011) : les radiés sont exclus de la liste par défaut ; on les interroge par statut explicite.
+    const liste = await request(app).get(`/api/membres?statut=RADIE&q=${encodeURIComponent(`T10 Radie ${suffixe}`)}`).set(...bearer(consultJwt));
     expect(liste.status).toBe(200);
     expect(liste.body.items).toHaveLength(1);
     expect(JSON.stringify(liste.body)).not.toContain("MOTIF-SECRET-T10");

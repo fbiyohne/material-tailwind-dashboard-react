@@ -30,7 +30,8 @@ npm run dev                   # API sur http://localhost:4000/api
 |--------|-------|-------------|
 | POST | `/api/auth/login` | — |
 | GET | `/api/auth/me` | authentifié |
-| GET | `/api/membres` (`?q=&statut=&qualite=&page=&pageSize=`) | authentifié |
+| GET | `/api/membres` (`?q=&statut=&qualite=&page=&pageSize=`) — sortis exclus par défaut | authentifié |
+| GET | `/api/membres?sortis=1` (`&motif=&du=&au=`) — registre des anciens membres | permission `membres` |
 | GET | `/api/membres/:id` | authentifié |
 | POST | `/api/membres` (inscription) | SG / Admin |
 | PATCH | `/api/membres/:id` | SG / Admin |
@@ -43,6 +44,13 @@ npm run dev                   # API sur http://localhost:4000/api
 | POST | `/api/quitus` (BR-01) | SG / Admin |
 
 ## Cycle de vie des avocats (radiation, décès, suppression, export, import)
+
+### Anciens membres : GET /api/membres?sortis=1 (T4, M-20261011, O1)
+- **Liste par défaut** : `GET /api/membres` et `GET /api/membres/export/pdf` excluent les statuts de sortie (`STATUTS_SORTIS` : `RADIE`, `DECEDE`, `DEMISSIONNAIRE`, `RETRAITE`, `CESSATION`). Un `statut` explicite s'applique tel quel (`?statut=RADIE` renvoie les radiés) ; une sélection `ids` de l'export reste servie telle quelle.
+- **Registre** (`sortis=1`, sans `statut`) : seuls les sortis, chacun avec `motifSortie` (Radiation, Décès, Démission, Retraite, Cessation d'activité) et `dateSortie` (date d'effet du dernier `EvenementSituation` de sortie, à défaut `dateRadiation` ou `dateDeces`). Filtres : `motif` (un statut de sortie), `du` et `au` (`AAAA-MM-JJ`, bornes incluses, sur cette même date).
+- **R-62** : sans permission `discipline`, un radié est renvoyé avec `motifSortie: "Sortie du tableau"`, `statut: null` et `dateRadiation: null` ; `motif=RADIE` répond 403. Un décès n'affiche jamais de cause.
+- **Traçabilité** : chaque consultation du registre écrit (et attend) une ligne JournalAudit « Consultation des anciens membres » (motif, période, nombre de lignes) ; l'export PDF du registre est tracé comme tout export (`filtre=anciens membres (…)`).
+- Garde : permission `membres` (403 sinon). Le tableau public (`/api/tableau`) exclut déjà ces statuts.
 
 ### POST /api/membres/:id/radier
 Corps **optionnel** (un corps vide reste valide) :
@@ -75,7 +83,7 @@ Effet : statut `DECEDE`, compte espace désactivé, jetons révoqués. Un membre
 ### GET /api/membres/export/pdf
 Liste des avocats en PDF A4 (Puppeteer, gabarit `listeAvocatsHtml`, en-tête institutionnel, sans cachet).
 - Garde : permission « membres » (l'espace AVOCAT est refusé en 403).
-- Paramètres : `q`, `statut` (ex. `INSCRIT`, `DECEDE`), `qualite`, `qualiteNot` — mêmes filtres que `GET /api/membres` ; `ids` = identifiants séparés par des virgules (200 maximum) pour exporter une sélection.
+- Paramètres : `q`, `statut` (ex. `INSCRIT`, `DECEDE`), `qualite`, `qualiteNot`, `sortis`, `motif`, `du`, `au` — mêmes filtres que `GET /api/membres` (colonne Statut = motif de sortie en mode registre) ; `ids` = identifiants séparés par des virgules (200 maximum) pour exporter une sélection.
 - Colonnes : projection annuaire uniquement (jamais le motif de radiation, l'adresse, la date de naissance, RCCM, CNSS, observations).
 - Chaque export est journalisé (« Export de la liste des avocats », format, filtre, nombre de lignes) **avant** l'envoi ; si l'audit échoue, aucun PDF n'est livré (500).
 ```http

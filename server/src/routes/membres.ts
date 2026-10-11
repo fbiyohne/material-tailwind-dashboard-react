@@ -33,19 +33,66 @@ function whereMembres(query: Record<string, unknown>): Prisma.MembreWhereInput {
   const qualite = dansEnum(query.qualite, QUALITES);
   const qualiteNot = dansEnum(query.qualiteNot, QUALITES);
   const statut = dansEnum(query.statut, STATUTS);
+  // O1 : un statut explicite s'applique tel quel ; sortis=1 = registre des anciens membres ;
+  // sinon les sortis sont exclus (une sélection explicite par ids de l'export reste servie).
+  const registre = estRegistre(query);
+  const motif = dansEnum(query.motif, SORTIS);
+  const plage = { ...(jourQuery(query.du) ? { gte: jourQuery(query.du) } : {}), ...(jourQuery(query.au, true) ? { lte: jourQuery(query.au, true) } : {}) };
+  const filtreStatut = statut ? { statut: statut as any } : registre ? { statut: (motif ?? { in: SORTIS }) as any } : query.ids ? {} : { statut: { notIn: SORTIS as any } };
+  // Période sur la date d'effet du (dernier) événement de sortie ; repli sur dateRadiation /
+  // dateDeces pour les fiches importées sans événement.
+  // ponytail: « some » teste toute sortie dans la plage, pas seulement la dernière (sorties multiples rares).
+  const periode = registre && Object.keys(plage).length
+    ? { AND: [{ OR: [
+      { evenements: { some: { statutApres: { in: SORTIS as any }, dateEffet: plage } } },
+      { evenements: { none: { statutApres: { in: SORTIS as any } } }, OR: [{ dateRadiation: plage }, { dateDeces: plage }] },
+    ] }] }
+    : {};
   return {
     ...(qualite ? { qualite: qualite as any } : {}),
     ...(qualiteNot ? { qualite: { not: qualiteNot as any } } : {}),
-    ...(statut ? { statut: statut as any } : {}),
+    ...filtreStatut,
+    ...periode,
     ...(q ? { OR: [{ nom: { contains: q, mode: "insensitive" } }, { cabinet: { contains: q, mode: "insensitive" } }] } : {}),
   };
 }
+
+// ── Anciens membres (O1) ──
+const SORTIS: string[] = [...STATUTS_SORTIS];
+/** Motif de sortie dérivé du statut ; « Sortie du tableau » remplace la radiation sans permission discipline (R-62). */
+const MOTIF_SORTIE: Record<string, string> = { RADIE: "Radiation", DECEDE: "Décès", DEMISSIONNAIRE: "Démission", RETRAITE: "Retraite", CESSATION: "Cessation d'activité" };
+const estRegistre = (query: Record<string, unknown>) => (query.sortis === "1" || query.sortis === "true") && !query.statut;
+/** Date AAAA-MM-JJ d'un filtre (fin de journée si `fin`) ; toute autre valeur est ignorée. */
+const jourQuery = (v: unknown, fin = false) =>
+  typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v)) ? new Date(`${v}T${fin ? "23:59:59.999" : "00:00:00.000"}Z`) : undefined;
+/** Dernier événement de sortie, joint à la projection du registre. */
+const derniereSortie = { evenements: { where: { statutApres: { in: SORTIS as any } }, orderBy: [{ dateEffet: "desc" }, { id: "desc" }], take: 1, select: { dateEffet: true } } } satisfies Prisma.MembreSelect;
+
+/** Registre : permission « membres » exigée ; filtre par motif disciplinaire refusé sans permission discipline (R-62). Renvoie ce dernier droit. */
+function droitDiscipline(req: AuthRequest, query: Record<string, unknown>): boolean {
+  if (!aLaPermission(req.user!.role, "membres")) throw new HttpError(403, "Accès refusé pour votre profil");
+  const voit = aLaPermission(req.user!.role, "discipline");
+  if (!voit && query.motif === "RADIE") throw new HttpError(403, "Le motif disciplinaire est réservé aux personnes habilitées");
+  return voit;
+}
+
+/** Ligne du registre : motif et date de sortie ; radiation masquée sans permission discipline. */
+function ligneSortie<T extends { statut: string; dateRadiation: Date | null; dateDeces: Date | null; evenements: { dateEffet: Date }[] }>(m: T, voitDiscipline: boolean) {
+  const { evenements, ...reste } = m;
+  const dateSortie = evenements[0]?.dateEffet ?? m.dateRadiation ?? m.dateDeces ?? null;
+  if (m.statut === "RADIE" && !voitDiscipline) return { ...reste, statut: null, dateRadiation: null, motifSortie: "Sortie du tableau", dateSortie };
+  return { ...reste, motifSortie: MOTIF_SORTIE[m.statut], dateSortie };
+}
+
+/** Description du filtre du registre pour le journal (jamais de valeur disciplinaire au-delà du code demandé). */
+const filtreRegistre = (query: Record<string, unknown>) =>
+  [`motif=${typeof query.motif === "string" && SORTIS.includes(query.motif) ? query.motif : "tous"}`, jourQuery(query.du) ? `du=${query.du}` : "", jourQuery(query.au) ? `au=${query.au}` : ""].filter(Boolean).join("; ");
 
 /** GET /membres — liste filtrée, triée et paginée côté serveur (FR-AV-02/03). */
 membresRouter.get(
   "/",
   asyncH(async (req, res) => {
-    const where = whereMembres(req.query);
+    const where = whereMembres({ ...req.query, ids: undefined }); // « ids » ne vaut que pour l'export
     const page = Math.max(1, Number(req.query.page ?? 1));
     const pageSize = Math.min(200, Math.max(1, Number(req.query.pageSize ?? 20)));
     const sort = String(req.query.sort ?? "num");
@@ -69,11 +116,22 @@ membresRouter.get(
       dateRadiation: true, dateDeces: true,
     } satisfies Prisma.MembreSelect;
 
+    const totalPages = (total: number) => Math.max(1, Math.ceil(total / pageSize));
+    if (estRegistre(req.query)) {
+      // Registre des anciens membres (O1) : motif et date de sortie, consultation tracée (avant envoi, C-04).
+      const voit = droitDiscipline(req as AuthRequest, req.query);
+      const [lignes, total] = await Promise.all([
+        prisma.membre.findMany({ where, orderBy, skip: (page - 1) * pageSize, take: pageSize, select: { ...selectAnnuaire, ...derniereSortie } }),
+        prisma.membre.count({ where }),
+      ]);
+      await tracerExport(req as AuthRequest, "GET", "/api/membres", `${filtreRegistre(req.query)}; lignes=${total}`, "Consultation des anciens membres");
+      return res.json({ items: lignes.map((m) => ligneSortie(m, voit)), total, page, pageSize, totalPages: totalPages(total) });
+    }
     const [items, total] = await Promise.all([
       prisma.membre.findMany({ where, orderBy, skip: (page - 1) * pageSize, take: pageSize, select: selectAnnuaire }),
       prisma.membre.count({ where }),
     ]);
-    res.json({ items, total, page, pageSize, totalPages: Math.max(1, Math.ceil(total / pageSize)) });
+    res.json({ items, total, page, pageSize, totalPages: totalPages(total) });
   })
 );
 
@@ -83,17 +141,21 @@ const exportPdfQuery = z.object({
   qualite: z.string().max(20).optional(),
   qualiteNot: z.string().max(20).optional(),
   ids: z.string().regex(/^\d{1,9}(,\d{1,9})*$/).refine((v) => v.split(",").length <= 200, "200 identifiants maximum").optional(),
+  sortis: z.enum(["1", "true"]).optional(),
+  motif: z.string().max(20).optional(),
+  du: z.string().max(10).optional(),
+  au: z.string().max(10).optional(),
 });
 
 /**
  * Écrit (et attend) la ligne d'audit d'un export : pas de trace, pas d'export (C-04).
  * Pose auditFait pour que le middleware générique n'écrive pas de doublon.
  */
-async function tracerExport(req: AuthRequest, methode: string, chemin: string, detail: string) {
+async function tracerExport(req: AuthRequest, methode: string, chemin: string, detail: string, action = "Export de la liste des avocats") {
   (req.res as { locals: Record<string, unknown> }).locals.auditFait = true;
   await prisma.journalAudit.create({
     data: {
-      action: "Export de la liste des avocats", cible: detail.slice(0, 250), methode, chemin, statut: methode === "GET" ? 200 : 204,
+      action, cible: detail.slice(0, 250), methode, chemin, statut: methode === "GET" ? 200 : 204,
       ip: (req.ip ?? "").replace(/^::ffff:/, "") || null, userId: req.user?.id ?? null, userNom: req.user?.nom ?? null,
     },
   });
@@ -112,11 +174,20 @@ membresRouter.get(
     if (!p.success) throw new HttpError(400, "Paramètres d'export invalides");
     const ids = p.data.ids?.split(",").map(Number);
     const where: Prisma.MembreWhereInput = { ...whereMembres(p.data), ...(ids ? { id: { in: ids } } : {}) };
-    const membres = await prisma.membre.findMany({
+    const registre = estRegistre(p.data);
+    const voit = registre && droitDiscipline(req, p.data);
+    const lignes = await prisma.membre.findMany({
       where, orderBy: { num: "asc" },
-      select: { num: true, numInscription: true, nom: true, qualite: true, statut: true, cabinet: true, tel: true, email: true, dateInscription: true, dateRadiation: true, dateDeces: true },
+      select: { num: true, numInscription: true, nom: true, qualite: true, statut: true, cabinet: true, tel: true, email: true, dateInscription: true, dateRadiation: true, dateDeces: true, ...derniereSortie },
+    });
+    // Registre : la colonne « statut » porte le motif de sortie (masqué selon R-62).
+    const membres = lignes.map(({ evenements, ...m }) => {
+      if (!registre) return m;
+      const l = ligneSortie({ ...m, evenements }, voit);
+      return { ...l, statut: l.motifSortie };
     });
     const filtre = [
+      registre ? `anciens membres (${filtreRegistre(p.data)})` : "",
       ids ? `sélection de ${ids.length}` : "",
       p.data.statut ? `statut ${STATUT_FR[p.data.statut] ?? p.data.statut}` : "",
       p.data.qualite ? `qualité ${QUALITE_FR[p.data.qualite] ?? p.data.qualite}` : "",
