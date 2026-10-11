@@ -10,10 +10,10 @@ import { aLaPermission } from "../lib/rbac.js";
 import { enregistrerFichier } from "../lib/storage.js";
 import { envoyerPdf, htmlVersPdf } from "../lib/pdf.js";
 import { attestationHtml, listeAvocatsHtml, STATUT_FR, QUALITE_FR } from "../lib/templates.js";
-import { appliquerCycleVie, changerSituation } from "../lib/cycleVie.js";
+import { appliquerCycleVie, changerSituation, ficheModifiee, reconcilierAcces } from "../lib/cycleVie.js";
 import { reglesActuelles } from "../lib/regles.js";
 import { realtimeTous } from "../lib/realtime.js";
-import { provisionnerAccesEspace, synchroniserAccesAuStatut } from "../lib/acces.js";
+import { provisionnerAccesEspace } from "../lib/acces.js";
 
 export const membresRouter = Router();
 membresRouter.use(requireAuth);
@@ -439,9 +439,15 @@ membresRouter.post(
           const memeJour = dIns && existant.dateInscription && dIns.toISOString().slice(0, 10) === existant.dateInscription.toISOString().slice(0, 10);
           // Colonne qualité absente : la qualité existante n'est pas écrasée par la qualité par défaut de la page (R1-5).
           const data = { ...base, qualite: r.qualite?.trim() ? qualite : undefined, statut: r.statut?.trim() ? statut : undefined, dateInscription: memeJour ? undefined : dIns };
-          const m = await prisma.membre.update({ where: { num: r.num }, data });
-          // Cohérence de l'espace avocat (décédé/radié → compte coupé ; rétabli sinon).
-          if (m.statut !== existant.statut) await synchroniserAccesAuStatut(m.id, m.statut);
+          // R1-11 : gardes ci-dessus réévaluées sous verrou (409 si la fiche a changé entre-temps) ;
+          // l'accès espace suit le statut dans la même transaction (coupé si bloquant, rétabli sinon).
+          await prisma.$transaction(async (tx) => {
+            await tx.$queryRaw`SELECT id FROM "Membre" WHERE id = ${existant.id} FOR UPDATE`;
+            const relu = await tx.membre.findUniqueOrThrow({ where: { id: existant.id }, select: { statut: true } });
+            if (relu.statut !== existant.statut) throw ficheModifiee();
+            const m = await tx.membre.update({ where: { id: existant.id }, data });
+            await reconcilierAcces(m.id, existant.statut, m.statut, tx);
+          });
           maj += 1;
         } else {
           await prisma.membre.create({
@@ -522,12 +528,20 @@ membresRouter.patch(
       // aucun circuit (omission, discipline) : type générique, sauf actes datés.
       const type = statut === "RADIE" ? "RADIATION" : statut === "DECEDE" ? "DECES" : "CHANGEMENT_STATUT";
       const dateEffet = (statut === "RADIE" ? demande.dateRadiation : statut === "DECEDE" ? demande.dateDeces : null) ?? undefined;
-      const { membre } = await changerSituation({ membreId: id, type, demande, donnees, dateEffet, reference: statut === "RADIE" ? motifRadiation : null, acteur: acteurDe(req) });
+      const { membre } = await changerSituation({ membreId: id, type, demande, donnees, dateEffet, reference: statut === "RADIE" ? motifRadiation : null, acteur: acteurDe(req), statutAttendu: actuel.statut });
       return res.json(membre);
     }
-    const membre = await prisma.membre.update({ where: { id }, data: { ...donnees, ...appliquerCycleVie(actuel, demande) } });
-    // L'accès espace suit le statut (suspendu/radié/omis/décédé → coupé ; régulier → rétabli).
-    await synchroniserAccesAuStatut(membre.id, membre.statut);
+    // Statut inchangé (R1-11) : fiche relue sous verrou ; si une transition concurrente a changé le
+    // statut depuis la lecture des gardes, 409 au lieu d'écraser (ex. radiation rétablie en INSCRIT).
+    // L'accès n'est pas réactivé : un statut bloquant le coupe, sinon le compte reste tel quel.
+    const membre = await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "Membre" WHERE id = ${id} FOR UPDATE`;
+      const relu = await tx.membre.findUniqueOrThrow({ where: { id }, select: { statut: true, dateRadiation: true, motifRadiation: true, dateDeces: true } });
+      if (relu.statut !== actuel.statut) throw ficheModifiee();
+      const m = await tx.membre.update({ where: { id }, data: { ...donnees, ...appliquerCycleVie(relu, demande) } });
+      await reconcilierAcces(m.id, relu.statut, m.statut, tx);
+      return m;
+    });
     res.json(membre);
   })
 );
@@ -556,7 +570,7 @@ membresRouter.post(
     const dateRadiation = data.dateRadiation ? new Date(data.dateRadiation) : new Date();
     const { membre } = await changerSituation({
       membreId: id, type: "RADIATION", demande: { statut: "RADIE", dateRadiation, motifRadiation: data.motifRadiation ?? null },
-      dateEffet: dateRadiation, reference: data.motifRadiation ?? null, acteur: acteurDe(req),
+      dateEffet: dateRadiation, reference: data.motifRadiation ?? null, acteur: acteurDe(req), statutAttendu: actuel.statut, // « déjà radié » revérifié sous verrou
     });
     res.json(membre);
   })
@@ -578,7 +592,7 @@ membresRouter.post(
     if (actuel.statut === "DECEDE") throw new HttpError(409, "Le décès de cet avocat est déjà enregistré : corrigez la date par « Modifier ».");
     // Aucun motif ni détail : donnée de santé (loi n° 29-2019, art. 17).
     const date = new Date(dateDeces);
-    const { membre } = await changerSituation({ membreId: id, type: "DECES", demande: { statut: "DECEDE", dateDeces: date }, dateEffet: date, acteur: acteurDe(req) });
+    const { membre } = await changerSituation({ membreId: id, type: "DECES", demande: { statut: "DECEDE", dateDeces: date }, dateEffet: date, acteur: acteurDe(req), statutAttendu: actuel.statut });
     res.json(membre);
   })
 );
@@ -698,6 +712,7 @@ membresRouter.post(
     const statut = (c.type === "OMISSION" ? "OMIS" : decision || c.type === "REPRISE" ? "INSCRIT" : c.type) as StatutMembre;
     const r = await changerSituation({
       membreId, type: c.type, demande: { statut }, dateEffet, reference: c.reference ?? null, pieceId: c.pieceId ?? null, acteur,
+      statutAttendu: membre.statut, // gardes (omis, sorti, suspendu) revérifiées sous verrou
       annee: c.type === "OMISSION" ? annee : null,
       motif: cause ? `Art. ${cause}° loi n° 026-92${c.motif ? ` — ${c.motif}` : ""}` : c.motif ?? null,
       details: decision ? { organe: ORGANE_OMISSION, ...(cause ? { cause } : {}) } : undefined,
@@ -847,7 +862,7 @@ membresRouter.post(
     }
     const acteur = await nomActeur(req.user!.id);
     const { membre: maj } = await changerSituation({
-      membreId, type: "PASSAGE_TABLEAU", demande: { statut: "INSCRIT" },
+      membreId, type: "PASSAGE_TABLEAU", demande: { statut: "INSCRIT" }, statutAttendu: membre.statut,
       donnees: { qualite: "AVOCAT", dateInscription: dateDecision, stageValideAt: new Date(), stageValidePar: acteur ?? undefined },
       dateEffet: dateDecision, reference: corps.refCertificat ?? null, acteur: { id: req.user!.id, nom: acteur },
       details: { organe: ORGANE_CERTIFICAT, dureeMoisRequise: stage.dureeMois, ...(corps.dateDemande ? { dateDemande: corps.dateDemande } : {}), ...(corps.dateCertificat ? { dateCertificat: corps.dateCertificat } : {}) },

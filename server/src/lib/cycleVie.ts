@@ -1,7 +1,7 @@
 import type { Prisma, StatutMembre } from "@prisma/client";
 import { HttpError } from "../middleware/error.js";
 import { prisma } from "../prisma.js";
-import { synchroniserAccesAuStatut } from "./acces.js";
+import { STATUTS_BLOQUANTS, synchroniserAccesAuStatut } from "./acces.js";
 import { realtimeTous } from "./realtime.js";
 import { estRecuDroit, eligibiliteElectorale, tarifsActuels } from "./business.js";
 import { reglesActuelles, type Regles } from "./regles.js";
@@ -66,6 +66,12 @@ export interface ChangementSituation {
   dossierId?: number | null;
   details?: Prisma.InputJsonValue;
   acteur?: { id: number | null; nom: string | null } | null;
+  /**
+   * Statut sur lequel l'appelant a évalué ses gardes (lecture hors verrou). S'il a changé
+   * entre-temps, 409 : une garde (déjà radié, omission, permission…) n'est jamais contournée
+   * par une transition concurrente (R1-11).
+   */
+  statutAttendu?: StatutMembre;
 }
 
 /**
@@ -75,18 +81,33 @@ export interface ChangementSituation {
  * Concurrence (R1-11) : la fiche est verrouillée (SELECT … FOR UPDATE) avant lecture ;
  * deux transitions d'un même membre s'exécutent donc l'une après l'autre et le
  * statutAvant de la seconde est le statutApres de la première. L'accès à l'espace
- * avocat est recalé dans la même transaction, d'après le statut final : il ne peut
- * pas contredire la fiche, et tout passage ici répare un écart antérieur
- * (réconciliation). Seul le signal temps réel « tableau » part après validation.
+ * avocat est recalé dans la même transaction (reconcilierAcces) : il ne peut pas
+ * contredire la fiche. Seul le signal temps réel « tableau » part après validation.
  * `avantEffet` (facultatif) s'exécute en tête de la même transaction : une écriture
  * liée (ex. réservation du dossier disciplinaire) réussit ou échoue avec l'effet.
  */
+/** 409 commun : la fiche a changé entre la lecture des gardes et l'écriture sous verrou. */
+export const ficheModifiee = () =>
+  new HttpError(409, "La situation de cet avocat vient d'être modifiée par ailleurs : rechargez la fiche et recommencez.");
+
+/**
+ * Accès à l'espace avocat après une écriture de fiche, dans la transaction de l'écriture.
+ * Statut changé : l'accès suit le nouveau statut (coupé ou rétabli). Statut inchangé :
+ * réconciliation restrictive seulement — un accès resté ouvert sur un statut bloquant est
+ * coupé, mais un compte n'est jamais réactivé (désactivation manuelle de l'administrateur
+ * respectée, retour QA R1-11).
+ */
+export async function reconcilierAcces(membreId: number, avant: StatutMembre, apres: StatutMembre, tx: Prisma.TransactionClient) {
+  if (avant !== apres || STATUTS_BLOQUANTS.includes(apres)) await synchroniserAccesAuStatut(membreId, apres, tx);
+}
+
 export async function changerSituation(c: ChangementSituation, avantEffet?: (tx: Prisma.TransactionClient) => Promise<unknown>) {
   const { membre, evenement } = await prisma.$transaction(async (tx) => {
     if (avantEffet) await avantEffet(tx);
     await tx.$queryRaw`SELECT id FROM "Membre" WHERE id = ${c.membreId} FOR UPDATE`;
     const actuel = await tx.membre.findUnique({ where: { id: c.membreId } });
     if (!actuel) throw new HttpError(404, "Avocat introuvable");
+    if (c.statutAttendu && actuel.statut !== c.statutAttendu) throw ficheModifiee();
     const etat = appliquerCycleVie(actuel, c.demande ?? {});
     const membre = await tx.membre.update({ where: { id: actuel.id }, data: { ...c.donnees, ...etat } });
     const evenement = await tx.evenementSituation.create({
@@ -106,7 +127,7 @@ export async function changerSituation(c: ChangementSituation, avantEffet?: (tx:
         acteurNom: c.acteur?.nom ?? null,
       },
     });
-    await synchroniserAccesAuStatut(membre.id, membre.statut, tx);
+    await reconcilierAcces(membre.id, actuel.statut, membre.statut, tx);
     return { membre, evenement };
   });
   realtimeTous({ type: "tableau" });
