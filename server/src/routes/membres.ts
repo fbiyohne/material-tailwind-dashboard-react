@@ -718,9 +718,11 @@ membresRouter.post(
       });
       return res.status(201).json({ evenement });
     }
-    const statut = (c.type === "OMISSION" ? "OMIS" : decision || c.type === "REPRISE" ? "INSCRIT" : c.type) as StatutMembre;
+    // REINSCRIPTION et REPRISE rétablissent la situation d'avant la mesure, calculée sous verrou (R2-2).
+    const retablir = c.type === "REINSCRIPTION" || c.type === "REPRISE";
+    const statut = (c.type === "OMISSION" ? "OMIS" : c.type) as StatutMembre;
     const r = await changerSituation({
-      membreId, type: c.type, demande: { statut }, dateEffet, reference: c.reference ?? null, pieceId: c.pieceId ?? null, acteur,
+      membreId, type: c.type, retablir, demande: retablir ? {} : { statut }, dateEffet, reference: c.reference ?? null, pieceId: c.pieceId ?? null, acteur,
       statutAttendu: membre.statut, // gardes (omis, sorti, suspendu) revérifiées sous verrou
       annee: c.type === "OMISSION" ? annee : null,
       motif: cause ? `Art. ${cause}° loi n° 026-92${c.motif ? ` — ${c.motif}` : ""}` : c.motif ?? null,

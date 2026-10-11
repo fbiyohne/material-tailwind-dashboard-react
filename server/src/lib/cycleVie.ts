@@ -72,6 +72,29 @@ export interface ChangementSituation {
    * par une transition concurrente (R1-11).
    */
   statutAttendu?: StatutMembre;
+  /**
+   * Fin de mesure (REINSCRIPTION, REPRISE, R2-2) : le statut écrit est calculé sous verrou par
+   * statutRetabli (situation d'avant l'omission ou la suspension), demande.statut est ignoré.
+   */
+  retablir?: boolean;
+}
+
+const STATUTS_RETABLISSABLES: StatutMembre[] = ["INSCRIT", "STAGIAIRE", "HONORAIRE"];
+
+/**
+ * Statut rétabli à la fin d'une omission ou d'une suspension (R2-2) : statutAvant de
+ * l'événement qui a fait entrer le membre dans son statut actuel ; à défaut (fiche sans
+ * historique), repli sur la qualité. Un stagiaire reste toujours STAGIAIRE : seule la
+ * validation du stage le porte au tableau (R1-5).
+ */
+async function statutRetabli(tx: Prisma.TransactionClient, membre: { id: number; statut: StatutMembre; qualite: string }): Promise<StatutMembre> {
+  if (membre.qualite === "STAGIAIRE") return "STAGIAIRE";
+  const entree = await tx.evenementSituation.findFirst({
+    where: { membreId: membre.id, statutApres: membre.statut, statutAvant: { in: STATUTS_RETABLISSABLES } },
+    orderBy: [{ dateEffet: "desc" }, { id: "desc" }],
+    select: { statutAvant: true },
+  });
+  return entree?.statutAvant ?? (membre.qualite === "HONORAIRE" ? "HONORAIRE" : "INSCRIT");
 }
 
 /**
@@ -108,7 +131,8 @@ export async function changerSituation(c: ChangementSituation, avantEffet?: (tx:
     const actuel = await tx.membre.findUnique({ where: { id: c.membreId } });
     if (!actuel) throw new HttpError(404, "Avocat introuvable");
     if (c.statutAttendu && actuel.statut !== c.statutAttendu) throw ficheModifiee();
-    const etat = appliquerCycleVie(actuel, c.demande ?? {});
+    const demande = c.retablir ? { ...c.demande, statut: await statutRetabli(tx, actuel) } : c.demande ?? {};
+    const etat = appliquerCycleVie(actuel, demande);
     const membre = await tx.membre.update({ where: { id: actuel.id }, data: { ...c.donnees, ...etat } });
     const evenement = await tx.evenementSituation.create({
       data: {
