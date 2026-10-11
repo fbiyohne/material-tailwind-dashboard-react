@@ -262,3 +262,18 @@ export async function archiver(entree: {
 }, client: Prisma.TransactionClient = prisma) {
   return client.archive.create({ data: entree });
 }
+
+/**
+ * Date de fin de validité d'un quitus : délivrance + `mois` mois civils (UTC).
+ * Si le jour n'existe pas dans le mois d'arrivée (31 janv. + 1 mois), on retient
+ * le dernier jour de ce mois (28 ou 29 févr.) au lieu de déborder sur le suivant.
+ */
+export function finValiditeQuitus(dateEmission: Date, mois: number): Date {
+  const d = new Date(dateEmission);
+  const jour = d.getUTCDate();
+  d.setUTCDate(1);
+  d.setUTCMonth(d.getUTCMonth() + mois);
+  const dernier = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+  d.setUTCDate(Math.min(jour, dernier));
+  return d;
+}

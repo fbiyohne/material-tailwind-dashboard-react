@@ -48,6 +48,7 @@ export const reglesSchema = z.object({
     CONSEIL_BARREAU: conditionEligibilite, AUTRE: conditionEligibilite,
   }).strict(),
   exclurePeineAccessoire: z.boolean(),
+  quitus: z.object({ validiteMois: z.number().int().min(1).max(24) }).strict(),
 }).strict();
 
 export type Regles = z.infer<typeof reglesSchema> & { stage: z.infer<typeof stageSchema> };
@@ -84,6 +85,7 @@ export const REGLES_DEFAUT: Regles = {
     AUTRE: { ancienneteMinAns: 0, stricte: false },
   },
   exclurePeineAccessoire: true, // R-53 (légal)
+  quitus: { validiteMois: 3 }, // aucun texte : pratique, provisoire (à confirmer par le Conseil de l'Ordre)
 };
 
 /** Défauts de la section `regles` seule (sans la clé `stage`, stockée à part). */
