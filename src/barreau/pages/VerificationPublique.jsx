@@ -65,7 +65,7 @@ export function VerificationPublique({ type, numero }) {
               {d.empreinteCle && <Ligne label="Empreinte du signataire" valeur={d.empreinteCle} mono />}
             </dl>
             <p className="border-t border-grisL px-6 py-3 text-center text-xs text-gris">
-              Signature électronique RSA-2048 / SHA-256 de l'Ordre des Avocats au Barreau de Pointe-Noire.
+              Signature électronique RSA-2048 / SHA-256 de l'Ordre des Avocats au {identite().denomination}.
             </p>
           </>
         )}

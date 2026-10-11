@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { identite } from "../data/config";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeftIcon, CalendarDaysIcon, MapPinIcon, CheckIcon, ArrowDownTrayIcon, TrashIcon, ListBulletIcon, UserGroupIcon, DocumentTextIcon, PaperAirplaneIcon, PencilSquareIcon } from "@heroicons/react/24/outline";
 import { Badge, DocumentModal, EditeurDocument, useToast, useConfirm, PageHeader, Tabs, ErrorState, TableSkeleton } from "../components";
@@ -274,7 +275,7 @@ export function ReunionDetail() {
         open={feuille} onClose={() => setFeuille(false)} title="Feuille de présence"
         reference={`Réunion du ${formatDate(reunion.date)}`} date={dateCourte}
         pdfPath={`/reunions/${reunion.id}/feuille-presence/pdf`} pdfFilename={`Feuille-presence-${dateCourte}.pdf`}
-        signataire={{ role: "Le Secrétaire Général", nom: "Me KALINA-MENGA Lionel" }}
+        signataire={{ role: "Le Secrétaire Général", nom: identite().secretaireGeneral }}
         onArchive={() => archiverDoc({ categorie: "Feuille de présence", titre: `Feuille de présence du ${dateCourte}`, reference: dateCourte, date: dateCourte })}
       >
         <table className="w-full text-xs">

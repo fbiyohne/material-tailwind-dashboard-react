@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { identite } from "../../data/config";
 import { MegaphoneIcon } from "@heroicons/react/24/outline";
 import { Badge, PageHeader, useToast, TableSkeleton, ErrorState, EmptyState } from "../../components";
 import { formatDate } from "../../utils/format";
@@ -21,7 +22,7 @@ export function EspacePublications() {
 
   return (
     <div className="space-y-5">
-      <PageHeader eyebrow="Mon espace" titre="Publications" sousTitre="Avis, communiqués et actualités officielles du Barreau de Pointe-Noire." />
+      <PageHeader eyebrow="Mon espace" titre="Publications" sousTitre={`Avis, communiqués et actualités officielles du ${identite().denomination}.`} />
 
       {items.length === 0 ? (
         <div className="bpn-card p-4"><EmptyState icon={MegaphoneIcon} title="Aucune publication" description="Les communications officielles du Barreau apparaîtront ici." /></div>

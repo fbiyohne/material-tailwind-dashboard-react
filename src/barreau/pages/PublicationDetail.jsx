@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { identite } from "../data/config";
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeftIcon, CheckIcon } from "@heroicons/react/24/outline";
 import { Badge, useToast, FormField, PageHeader, ErrorState, TableSkeleton } from "../components";
@@ -113,7 +114,7 @@ export function PublicationDetail() {
           <div className="p-6">
             <div className="overflow-hidden rounded border border-grisM">
               <div className="bg-navy px-5 py-3">
-                <div className="text-2xs font-semibold uppercase tracking-[0.15em] text-or">Barreau de Pointe-Noire</div>
+                <div className="text-2xs font-semibold uppercase tracking-[0.15em] text-or">{identite().denomination}</div>
                 <div className="text-2xs text-white/60">{form.type ?? publication.type} officiel</div>
               </div>
               <div className="h-[3px] bg-gradient-to-r from-or via-or-2 to-or" />

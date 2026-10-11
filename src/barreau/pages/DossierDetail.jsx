@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { identite } from "../data/config";
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeftIcon, ShieldExclamationIcon, CheckIcon, ArrowDownTrayIcon, PaperClipIcon, PlusIcon, XMarkIcon, DocumentTextIcon, ScaleIcon, PencilSquareIcon } from "@heroicons/react/24/outline";
 import { Badge, DocumentModal, EditeurDocument, Notice, MentionJuridique, useToast, useConfirm, FormField, PageHeader, Tabs, ErrorState, TableSkeleton } from "../components";
@@ -360,14 +361,14 @@ export function DossierDetail() {
         org="Conseil de discipline"
         reference={`Dossier N° ${dossier.reference}`}
         pdfPath={`/discipline/${dossier.id}/convocation/pdf`} pdfFilename={`Convocation-disciplinaire-${dossier.reference}.pdf`}
-        signataire={{ role: "Le Bâtonnier, Président du Conseil de discipline", nom: "Me BIKINDOU Audrey Séverin" }}
+        signataire={{ role: "Le Bâtonnier, Président du Conseil de discipline", nom: identite().batonnier }}
         onArchive={() => archiverDoc({ categorie: "Convocation disciplinaire", titre: `Convocation — dossier ${dossier.reference}`, reference: dossier.reference, date: new Date().toISOString().slice(0, 10) })}
       >
         <p>
           Dans le cadre du dossier disciplinaire <strong>N° {dossier.reference}</strong>,{" "}
           <strong>{dossier.avocatNom === "Confidentiel" ? "l'avocat concerné" : `Me ${dossier.avocatNom}`}</strong>{" "}
           est invité(e) à comparaître devant le Conseil de discipline de l'Ordre des Avocats du
-          Barreau de Pointe-Noire{form.dateAudience ? <>, le <strong>{formatDate(form.dateAudience)}</strong></> : null}.
+          {identite().denomination}{form.dateAudience ? <>, le <strong>{formatDate(form.dateAudience)}</strong></> : null}.
         </p>
         <p className="mt-3">Objet : {dossier.objet}.</p>
         <p className="mt-3 text-xs text-gris">L'intéressé(e) pourra se faire assister du conseil de son choix.</p>

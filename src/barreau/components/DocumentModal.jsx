@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { identite } from "../data/config";
 import PropTypes from "prop-types";
 import { PrinterIcon, CheckCircleIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
 import { Modal } from "./Modal";
@@ -19,7 +20,7 @@ export function DocumentModal({
   org = "Conseil de l'Ordre",
   reference,
   children,
-  signataire = { role: "Le Bâtonnier", nom: "Me BIKINDOU Audrey Séverin" },
+  signataire = { role: "Le Bâtonnier", nom: identite().batonnier },
   date = new Date().toISOString().slice(0, 10),
   onArchive,
   pdfPath,

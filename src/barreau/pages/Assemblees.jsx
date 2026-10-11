@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { identite } from "../data/config";
 import { useNavigate } from "react-router-dom";
 import { PlusIcon, ArrowRightIcon, BuildingLibraryIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { Badge, Modal, EmptyState, ErrorState, Skeleton, useToast, useConfirm, PageHeader, FormField } from "../components";
@@ -8,12 +9,12 @@ import { listerAssemblees, creerAssemblee as apiCreerAssemblee, supprimerAssembl
 
 const TYPE_LABEL = { AGO: "Assemblée Générale Ordinaire", AGE: "Assemblée Générale Extraordinaire" };
 
-const VIDE_ASSEMBLEE = { type: "AGO", date: "", lieu: "Palais de Justice — Pointe-Noire", odj: "" };
+const VIDE_ASSEMBLEE = () => ({ type: "AGO", date: "", lieu: `Palais de Justice — ${identite().ville}`, odj: "" });
 function NouvelleAssembleeModal({ open, onClose, onCreated }) {
   const toast = useToast();
   const [form, setForm] = useState(VIDE_ASSEMBLEE);
   const [busy, setBusy] = useState(false);
-  useEffect(() => { if (open) { setForm(VIDE_ASSEMBLEE); setBusy(false); } }, [open]);
+  useEffect(() => { if (open) { setForm(VIDE_ASSEMBLEE()); setBusy(false); } }, [open]);
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
   const valider = async () => {
     if (!form.date || busy) return;

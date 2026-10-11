@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { identite } from "../data/config";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { MagnifyingGlassIcon, ArrowUpTrayIcon, ArrowDownTrayIcon, ChevronDownIcon, DocumentIcon, DocumentTextIcon, TableCellsIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { Badge, StatutBadge, AttestationModal, useToast, useConfirm, ImportMembresModal, PageHeader, DataTable } from "../components";
@@ -51,7 +52,7 @@ const aujourdhui = () => new Date().toISOString().slice(0, 10);
 const jjmmaaaa = (iso) => iso.split("-").reverse().join("/");
 // Mention de confidentialité : première ligne de chaque export (spec § 4.2, texte mot pour mot).
 export const mention = () =>
-  `Barreau de Pointe-Noire — Document interne confidentiel — Liste arrêtée au ${jjmmaaaa(aujourdhui())} — Diffusion interdite hors des organes de l'Ordre.`;
+  `${identite().denomination} — Document interne confidentiel — Liste arrêtée au ${jjmmaaaa(aujourdhui())} — Diffusion interdite hors des organes de l'Ordre.`;
 
 /** Menu « Exporter » natif (<details>) : 4 formats, état d'attente par entrée. */
 function MenuExport({ libelle, petit = false, onExport }) {

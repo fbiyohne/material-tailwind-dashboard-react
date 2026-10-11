@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { identite } from "../data/config";
 import { useNavigate } from "react-router-dom";
 import { PlusIcon, CalendarDaysIcon, MapPinIcon, ArrowRightIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { Badge, Modal, EmptyState, ErrorState, Skeleton, useToast, useConfirm, PageHeader, FormField } from "../components";
@@ -6,13 +7,13 @@ import { formatDate } from "../utils/format";
 import { useAuth } from "../auth/AuthContext";
 import { listerReunions, creerReunion as apiCreerReunion, supprimerReunion } from "../api/resources";
 
-const VIDE_REUNION = { date: "", heure: "15:00", lieu: "Maison de l'Avocat — Pointe-Noire", odj: "" };
+const VIDE_REUNION = () => ({ date: "", heure: "15:00", lieu: `Maison de l'Avocat — ${identite().ville}`, odj: "" });
 function NouvelleReunionModal({ open, onClose, onCreated }) {
   const toast = useToast();
   const [form, setForm] = useState(VIDE_REUNION);
   const [busy, setBusy] = useState(false);
   // Réinitialise à l'ouverture pour ne pas réafficher une saisie abandonnée.
-  useEffect(() => { if (open) { setForm(VIDE_REUNION); setBusy(false); } }, [open]);
+  useEffect(() => { if (open) { setForm(VIDE_REUNION()); setBusy(false); } }, [open]);
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
   const valider = async () => {
     if (!form.date || busy) return;
