@@ -354,3 +354,9 @@ export const supprimerUser = (id) => api(`/users/${id}`, { method: "DELETE" });
 // Timbre autonome (prototype) — import des timbres vendus hors application et statistiques
 export const importerTimbresExternes = (lignes) => api("/timbres/externes", { method: "POST", body: { lignes } });
 export const statsTimbres = (annee) => api(`/timbres/stats?annee=${annee}`);
+
+// Historique des situations d'un membre (SG / Bâtonnier) et étapes du circuit d'omission, sorties, reprise.
+export const listerEvenements = (membreId) => api(`/membres/${membreId}/evenements`);
+export const enregistrerEvenement = (membreId, body) => api(`/membres/${membreId}/evenements`, { method: "POST", body });
+// « Contacter » : l'administration ouvre un fil de messagerie vers l'avocat.
+export const contacterMembre = (body) => api("/messagerie", { method: "POST", body });

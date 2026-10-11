@@ -46,3 +46,5 @@ export { BandeauExperimental } from "./BandeauExperimental";
 export { MentionJuridique } from "./MentionJuridique";
 export { Frise } from "./Frise";
 export { StatutMessage } from "./StatutMessage";
+export { SituationPanel } from "./SituationPanel";
+export { ContacterModal } from "./ContacterModal";

@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeftIcon, DocumentPlusIcon, PencilSquareIcon, NoSymbolIcon, HeartIcon, TrashIcon, IdentificationIcon, BanknotesIcon, FolderIcon, KeyIcon, AcademicCapIcon, ArrowDownTrayIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
+import { ArrowLeftIcon, DocumentPlusIcon, PencilSquareIcon, NoSymbolIcon, HeartIcon, TrashIcon, IdentificationIcon, BanknotesIcon, FolderIcon, KeyIcon, AcademicCapIcon, ArrowDownTrayIcon, ShieldCheckIcon, EnvelopeIcon, ClockIcon } from "@heroicons/react/24/outline";
 import { ScaleIcon } from "@heroicons/react/24/outline";
-import { Badge, StatutBadge, AttestationModal, EditMembreModal, ActeStatutModal, PiecesDossier, AccesActivationModal, StagePanel, CasierDiscipline, useConfirm, useToast, PageHeader, Tabs, TableSkeleton, ErrorState, DataTable } from "../components";
+import { Badge, StatutBadge, AttestationModal, EditMembreModal, ActeStatutModal, PiecesDossier, AccesActivationModal, StagePanel, CasierDiscipline, SituationPanel, ContacterModal, MentionJuridique, useConfirm, useToast, PageHeader, Tabs, TableSkeleton, ErrorState, DataTable } from "../components";
+import { sursisEnCours } from "../components/SituationPanel";
 import { QUALITE_LABEL, STATUT_META, infoStage } from "../data/derivations";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { formatFCFA, formatDate, formatDateCourte } from "../utils/format";
-import { getMembre, supprimerMembre, getDroits, provisionnerAccesAvocat, telechargerQuitusPdf, telechargerRecuPdf } from "../api/resources";
+import { getMembre, supprimerMembre, getDroits, provisionnerAccesAvocat, telechargerQuitusPdf, telechargerRecuPdf, listerEvenements } from "../api/resources";
 import { useAuth } from "../auth/AuthContext";
 
 const FINANCES = ["SECRETAIRE_GENERAL", "TRESORIERE", "ADMIN"];
@@ -47,12 +48,25 @@ export function AvocatDetail() {
   const [attestation, setAttestation] = useState(null);
   const [edition, setEdition] = useState(false);
   const [acces, setAcces] = useState(null); // { email, lien, renvoi } après provisionnement
+  const [contact, setContact] = useState(false);
+  const [evenements, setEvenements] = useState(null);
+  const [erreurEvenements, setErreurEvenements] = useState(null);
   const [acte, setActe] = useState(null); // "radiation" | "deces" : modale d'acte ouverte
 
   const charger = useCallback(() => {
     getMembre(Number(id)).then(setMembre).catch(() => setMembre(false));
   }, [id]);
   useEffect(() => { charger(); }, [charger]);
+
+  // Historique des situations : SG, Bâtonnier et Admin (même périmètre que GET /membres/:id/evenements).
+  const peutVoirHistorique = ["SECRETAIRE_GENERAL", "BATONNIER", "ADMIN"].includes(user?.role);
+  const chargerHistorique = useCallback(() => {
+    if (!peutVoirHistorique) return;
+    // La fiche ne dépend jamais de l'historique : son échec s'affiche dans l'onglet seulement.
+    Promise.resolve().then(() => listerEvenements(Number(id))).then((e) => { setEvenements(e); setErreurEvenements(null); }).catch((e) => setErreurEvenements(e?.message ?? "erreur"));
+  }, [id, peutVoirHistorique]);
+  useEffect(() => { chargerHistorique(); }, [chargerHistorique]);
+  const apresSituation = () => { charger(); chargerHistorique(); };
 
   // Droits de plaidoirie : source unique (API), réservée aux rôles financiers (RG-15).
   useEffect(() => {
@@ -116,6 +130,8 @@ export function AvocatDetail() {
   // possible ; un radié peut encore décéder (H-09, spec T2 § 3.1).
   const decede = membre.statut === "decede";
   const auTableau = !decede && membre.statut !== "radie";
+  // Le serveur refuse « Contacter » pour un sorti : pas d'accès à l'espace avocat.
+  const peutContacter = !["radie", "decede", "demissionnaire", "retraite", "cessation"].includes(membre.statut) && !!user?.permissions?.includes("messagerie");
   // Cibles tactiles ≥ 44 px sous `sm`, hauteur `bpn-btn` native sur bureau.
   const btn = "bpn-btn min-h-[44px] sm:min-h-0";
   const btnRouge = `${btn} bpn-btn-ghost text-rouge hover:!bg-rougeL hover:!text-rouge`;
@@ -133,6 +149,9 @@ export function AvocatDetail() {
           </span>
         }
       >
+        {peutContacter && (
+          <button className={`${btn} bpn-btn-ghost`} onClick={() => setContact(true)}><EnvelopeIcon className="h-4 w-4" /> Contacter</button>
+        )}
         {peutGererFiche && (
           <button className={`${btn} bpn-btn-ghost`} onClick={() => setEdition(true)}><PencilSquareIcon className="h-4 w-4" /> Modifier</button>
         )}
@@ -169,6 +188,12 @@ export function AvocatDetail() {
           </button>
         )}
       </PageHeader>
+
+      {sursisEnCours(evenements) && (
+        <MentionJuridique type="sursis">
+          Sanction avec sursis enregistrée : l'avocat reste inscrit au tableau. Le sursis n'est pas prévu par la loi n°{" "}026-92 ; ne l'appliquer que si le règlement intérieur le prévoit (voir l'onglet Situation).
+        </MentionJuridique>
+      )}
 
       <Tabs
         tabs={[
@@ -325,6 +350,10 @@ export function AvocatDetail() {
               </div>
             ),
           },
+          ...(peutVoirHistorique
+            ? [{ id: "situation", label: "Situation", icon: ClockIcon,
+                content: <SituationPanel membre={membre} evenements={evenements} erreur={erreurEvenements} user={user} onChange={apresSituation} /> }]
+            : []),
           {
             id: "discipline",
             label: "Discipline",
@@ -345,7 +374,8 @@ export function AvocatDetail() {
 
       <AttestationModal membre={attestation} onClose={() => setAttestation(null)} />
       <EditMembreModal membre={edition ? membre : null} open={edition} onClose={() => setEdition(false)} onSaved={charger} />
-      {acte && <ActeStatutModal mode={acte} membre={membre} open onClose={() => setActe(null)} onDone={charger} />}
+      {peutContacter && <ContacterModal membre={membre} open={contact} onClose={() => setContact(false)} />}
+      {acte && <ActeStatutModal mode={acte} membre={membre} open onClose={() => setActe(null)} onDone={apresSituation} />}
 
       {/* Lien d'activation de l'espace avocat (après provisionnement) */}
       <AccesActivationModal acces={acces} onClose={() => setAcces(null)} />
