@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import QRCode from "qrcode";
 import { logger } from "./logger.js";
 
 /**
@@ -74,3 +75,56 @@ export const recuPayload = (r: { numero: string; membreId: number; annee: number
 
 export const timbrePayload = (t: { numero: number; code: string; membreId: number; montant: number }) =>
   `TIMBRE|${t.numero}|${t.code}|${t.membreId}|${t.montant}`;
+
+/* ------------------------------------------------------------------------- *
+ * Code de vérification des QR (quitus, reçus, timbres).
+ * Le QR encode une URL courte {origine}/v/{q|r|t}/{ref}.{jeton}. Le jeton est
+ * une HMAC-SHA256 tronquée (10 caractères base32 Crockford, 50 bits) de
+ * « type|ref », sous la clé sha256("qr|" + DER de la clé privée des documents) : aucun
+ * nouveau secret, distinct de PARAMS_CLE, jamais dans Git. Il est déterministe
+ * (rien à stocker) et empêche d'énumérer les numéros séquentiels. Ce n'est
+ * qu'un code d'authenticité, pas une signature au sens légal.
+ * Rotation : l'ancienne clé privée (PEM) placée dans
+ * SIGNATURE_ANCIENNE_PRIVATE_KEY sert uniquement à vérifier les QR déjà émis.
+ * ------------------------------------------------------------------------- */
+export type TypeDocQr = "q" | "r" | "t";
+const CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+
+/** Jeton de 10 caractères pour (type, ref) sous la clé privée donnée (actuelle par défaut). */
+export function jetonQr(type: TypeDocQr, ref: string, clePrivee: string = privateKey): string {
+  // Dérivation sur la forme DER canonique : un PEM recollé (CRLF, espaces) garde le même jeton.
+  const der = crypto.createPrivateKey(clePrivee).export({ type: "pkcs8", format: "der" });
+  const cle = crypto.createHash("sha256").update("qr|").update(der).digest();
+  const h = crypto.createHmac("sha256", cle).update(`${type}|${ref}`).digest();
+  let bits = 0n;
+  for (const o of h.subarray(0, 7)) bits = (bits << 8n) | BigInt(o); // 56 bits, on garde les 50 de tête
+  let j = "";
+  for (let i = 0; i < 10; i++) j += CROCKFORD[Number((bits >> BigInt(51 - 5 * i)) & 31n)];
+  return j;
+}
+
+/** Chemin public court à encoder dans le QR : /v/{t}/{ref}.{jeton}. */
+export const cheminVerif = (type: TypeDocQr, ref: string) => `/v/${type}/${ref}.${jetonQr(type, ref)}`;
+
+/** Vrai si le jeton correspond à (type, ref) sous la clé actuelle ou l'ancienne clé configurée. */
+export function jetonValide(type: TypeDocQr, ref: string, jeton: string): boolean {
+  const recu = Buffer.from(String(jeton ?? ""));
+  const cles = [privateKey, process.env.SIGNATURE_ANCIENNE_PRIVATE_KEY].filter(Boolean) as string[];
+  let ok = false;
+  for (const c of cles) {
+    let attendu: Buffer;
+    try { attendu = Buffer.from(jetonQr(type, ref, c)); } catch { continue; } // ancienne clé illisible : ignorée
+    if (recu.length === attendu.length && crypto.timingSafeEqual(recu, attendu)) ok = true;
+  }
+  return ok;
+}
+
+/**
+ * QR (PNG data URL) du document : même rendu que les QR existants, correction M.
+ * Origine tirée de la requête (hôte servi) ; schéma limité à http/https.
+ */
+export function qrDocument(req: { protocol: string; get(nom: string): string | undefined }, type: TypeDocQr, ref: string): Promise<string> {
+  const proto = req.protocol === "https" || req.get("x-forwarded-proto") === "https" ? "https" : "http";
+  const url = `${proto}://${req.get("host") ?? ""}${cheminVerif(type, ref)}`;
+  return QRCode.toDataURL(url, { errorCorrectionLevel: "M", margin: 1, width: 234, color: { dark: "#1A3A6B", light: "#ffffff" } });
+}
