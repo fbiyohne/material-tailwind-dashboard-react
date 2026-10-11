@@ -85,4 +85,63 @@ describe("R2-2 — réinscription et reprise rétablissent la situation d'avant 
     expect(r.status).toBe(201);
     expect(await statut(id)).toBe("HONORAIRE");
   });
+  /** Interdiction temporaire ferme de 12 mois décidée le 2026-09-01 : elle court encore (fin 2027-09-01). */
+  async function interdire(id: number) {
+    const d = await request(app).post("/api/discipline").set(...bearer(sg)).send({ avocatNom: `Me ${MARQUE}`, objet: "Manquement", membreId: id });
+    expect(d.status).toBe(201);
+    dossiers.push(d.body.id);
+    const dec = await request(app).post(`/api/discipline/${d.body.id}/decision`).set(...bearer(bat)).send({
+      sanctionCode: "INTERDICTION_TEMPORAIRE", dureeMois: 12, dateDecision: "2026-09-01",
+      motivation: "Motivation suffisante de la décision du conseil de discipline.",
+    });
+    expect(dec.status, JSON.stringify(dec.body)).toBe(200);
+    expect(await statut(id)).toBe("SUSPENDU");
+  }
+  const omettre = (id: number) => evt(bat, id, { type: "OMISSION", cause: "35-2", reference: "CNO-R22-O" });
+  const reinscrire = (id: number) => evt(bat, id, { type: "REINSCRIPTION", reference: "CNO-R22-R" });
+
+  it("(a) avocat INSCRIT omis (35-2) puis réinscrit : redevient INSCRIT (non-régression)", async () => {
+    const id = await creer("avocat-omis", { qualite: "AVOCAT", statut: "INSCRIT" });
+    expect((await omettre(id)).status).toBe(201);
+    expect(await statut(id)).toBe("OMIS");
+    const r = await reinscrire(id);
+    expect(r.status, JSON.stringify(r.body)).toBe(201);
+    expect(r.body.evenement).toMatchObject({ statutAvant: "OMIS", statutApres: "INSCRIT" });
+    expect(await auTableau(id)).toBe("AVOCAT/INSCRIT");
+  });
+
+  it("(b) avocat sous interdiction ferme, omis puis réinscrit : redevient SUSPENDU, reprise refusée tant que l'interdiction court", async () => {
+    const id = await creer("avocat-interdit-omis", { qualite: "AVOCAT", statut: "INSCRIT" });
+    await interdire(id);
+    const o = await omettre(id);
+    expect(o.status, JSON.stringify(o.body)).toBe(201);
+    expect(o.body.evenement).toMatchObject({ statutAvant: "SUSPENDU", statutApres: "OMIS" });
+    const r = await reinscrire(id);
+    expect(r.status, JSON.stringify(r.body)).toBe(201);
+    expect(r.body.evenement).toMatchObject({ statutAvant: "OMIS", statutApres: "SUSPENDU" });
+    expect(await statut(id)).not.toBe("INSCRIT");
+    expect((await evt(sg, id, { type: "REPRISE", reference: "Fin" })).status).toBe(409);
+    expect(await statut(id)).toBe("SUSPENDU");
+  });
+
+  it("stagiaire sous interdiction ferme, omis puis réinscrit : SUSPENDU prime sur STAGIAIRE, jamais INSCRIT", async () => {
+    const id = await creer("stagiaire-interdit-omis", { qualite: "STAGIAIRE", statut: "STAGIAIRE" });
+    await interdire(id);
+    expect((await omettre(id)).status).toBe(201);
+    const r = await reinscrire(id);
+    expect(r.status, JSON.stringify(r.body)).toBe(201);
+    expect(r.body.evenement).toMatchObject({ statutAvant: "OMIS", statutApres: "SUSPENDU" });
+    expect((await evt(sg, id, { type: "REPRISE", reference: "Fin" })).status).toBe(409);
+    expect(await auTableau(id)).not.toBe("STAGIAIRE/INSCRIT");
+  });
+
+  it("(c) honoraire avec historique réel (omis depuis HONORAIRE) puis réinscrit : redevient HONORAIRE", async () => {
+    const id = await creer("honoraire-omis", { qualite: "HONORAIRE", statut: "HONORAIRE" });
+    const o = await omettre(id);
+    expect(o.status, JSON.stringify(o.body)).toBe(201);
+    expect(o.body.evenement).toMatchObject({ statutAvant: "HONORAIRE", statutApres: "OMIS" });
+    const r = await reinscrire(id);
+    expect(r.status, JSON.stringify(r.body)).toBe(201);
+    expect(r.body.evenement).toMatchObject({ statutAvant: "OMIS", statutApres: "HONORAIRE" });
+  });
 });

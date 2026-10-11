@@ -79,21 +79,24 @@ export interface ChangementSituation {
   retablir?: boolean;
 }
 
-const STATUTS_RETABLISSABLES: StatutMembre[] = ["INSCRIT", "STAGIAIRE", "HONORAIRE"];
+const STATUTS_RETABLISSABLES: StatutMembre[] = ["INSCRIT", "STAGIAIRE", "HONORAIRE", "SUSPENDU"];
 
 /**
  * Statut rétabli à la fin d'une omission ou d'une suspension (R2-2) : statutAvant de
- * l'événement qui a fait entrer le membre dans son statut actuel ; à défaut (fiche sans
- * historique), repli sur la qualité. Un stagiaire reste toujours STAGIAIRE : seule la
- * validation du stage le porte au tableau (R1-5).
+ * l'événement qui a fait entrer le membre dans son statut actuel (les événements sans
+ * changement de statut sont ignorés) ; à défaut (fiche sans historique), repli sur la qualité.
+ * Priorités : un membre omis alors qu'il était SUSPENDU redevient SUSPENDU (stagiaire compris),
+ * l'interdiction ne se lève que par une REPRISE, gardée tant qu'elle court ; sinon un stagiaire
+ * reste toujours STAGIAIRE : seule la validation du stage le porte au tableau (R1-5).
  */
 async function statutRetabli(tx: Prisma.TransactionClient, membre: { id: number; statut: StatutMembre; qualite: string }): Promise<StatutMembre> {
-  if (membre.qualite === "STAGIAIRE") return "STAGIAIRE";
   const entree = await tx.evenementSituation.findFirst({
-    where: { membreId: membre.id, statutApres: membre.statut, statutAvant: { in: STATUTS_RETABLISSABLES } },
+    where: { membreId: membre.id, statutApres: membre.statut, statutAvant: { in: STATUTS_RETABLISSABLES.filter((s) => s !== membre.statut) } },
     orderBy: [{ dateEffet: "desc" }, { id: "desc" }],
     select: { statutAvant: true },
   });
+  if (entree?.statutAvant === "SUSPENDU") return "SUSPENDU";
+  if (membre.qualite === "STAGIAIRE") return "STAGIAIRE";
   return entree?.statutAvant ?? (membre.qualite === "HONORAIRE" ? "HONORAIRE" : "INSCRIT");
 }
 
