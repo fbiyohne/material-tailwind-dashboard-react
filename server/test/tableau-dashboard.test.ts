@@ -27,7 +27,12 @@ describe("Tableau daté", () => {
     const apres = (await request(app).get("/api/tableau").set(...bearer(sg))).body;
     expect(new Date(apres.miseAJour).getTime()).toBeGreaterThan(new Date(avant.miseAJour).getTime());
     const max = await prisma.membre.aggregate({ _max: { updatedAt: true }, where: { statut: { notIn: ["RADIE", "DECEDE", "DEMISSIONNAIRE", "RETRAITE", "CESSATION"] } } });
-    expect(new Date(apres.miseAJour).getTime()).toBe(max._max.updatedAt!.getTime());
+    // Base partagée : d'autres écritures concurrentes peuvent survenir entre les deux lectures,
+    // d'où un encadrement (notre modification <= date servie <= maximum relu) plutôt qu'une égalité.
+    const nous = (await prisma.membre.findUniqueOrThrow({ where: { id: membreId }, select: { updatedAt: true } })).updatedAt;
+    const servi = new Date(apres.miseAJour).getTime();
+    expect(servi).toBeGreaterThanOrEqual(nous.getTime());
+    expect(servi).toBeLessThanOrEqual(max._max.updatedAt!.getTime());
   });
 
   // Le PDF rend TOUT le tableau : sa durée croît avec le volume de barreau_pn_test (4 600+ inscrits
