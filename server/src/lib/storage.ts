@@ -32,3 +32,23 @@ export function supprimerFichier(chemin: string): void {
     /* déjà absent : rien à faire */
   }
 }
+
+/** Types acceptés pour les pièces (messagerie, dossier) : PDF, DOCX, JPG, PNG. */
+export type TypePiece = "application/pdf" | "application/vnd.openxmlformats-officedocument.wordprocessingml.document" | "image/jpeg" | "image/png";
+
+/**
+ * Type RÉEL d'un fichier d'après ses octets de signature, sans faire confiance
+ * au nom ni au Content-Type déclarés par le client (un exécutable renommé en
+ * .pdf est refusé). Renvoie null pour tout format hors liste.
+ */
+export function typeReel(buffer: Buffer): TypePiece | null {
+  if (buffer.length < 4) return null;
+  if (buffer.subarray(0, 4).toString("latin1") === "%PDF") return "application/pdf";
+  if (buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return "image/png";
+  if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return "image/jpeg";
+  // DOCX = archive zip (PK\3\4) contenant une entrée word/… : un .xlsx ou un zip quelconque est refusé.
+  if (buffer.subarray(0, 4).toString("latin1") === "PK\x03\x04" && buffer.includes("word/", 0, "latin1")) {
+    return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  }
+  return null;
+}

@@ -5,7 +5,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireAvocat, type AuthRequest } from "../middleware/auth.js";
-import { enregistrerFichier, lireFichier, supprimerFichier } from "../lib/storage.js";
+import { enregistrerFichier, lireFichier, supprimerFichier, typeReel } from "../lib/storage.js";
 import { cotisationDue, droitDue, statutCotisation, tarifsActuels, prochainNumeroAttestation, archiver, STATUTS_SORTIS, STATUTS_ANNUAIRE } from "../lib/business.js";
 import { finaliserPaiement } from "../lib/encaissement.js";
 import { CANAUX, modeSandbox, nouvelleReference, initierPaiement } from "../lib/paiement.js";
@@ -14,7 +14,7 @@ import { envoyerPdf, envoyerDocumentPdf } from "../lib/pdf.js";
 import { convocationAgHtml, pvAssembleeHtml, decisionDisciplineHtml, attestationHtml, attestationNonRedevanceHtml } from "../lib/templates.js";
 import { recuRicheHtml, quitusRicheHtml } from "../lib/documentsRiches.js";
 import { notifierNouveauMessage, emailsAdministration, emailsMembres } from "../lib/messagerieNotif.js";
-import { messageNonDeMoi, compterNonLusParFil, totalNonLus, jamaisLu } from "../lib/messagerie.js";
+import { messageNonDeMoi, compterNonLusParFil, totalNonLus, jamaisLu, pieceSchema, envoyerMessage, accuser, messageAvecFil, pieceDto, envoyerPiece, htmlAccuse } from "../lib/messagerie.js";
 import { realtimeMembres, realtimeAdministration } from "../lib/realtime.js";
 import { dateReferenceScrutin, electeursADate } from "../lib/cycleVie.js";
 import { notifier, usersSecretariat, listerNotifications, compterNonLus, marquerLu, marquerToutLu } from "../lib/centreNotifications.js";
@@ -473,10 +473,13 @@ espaceRouter.post(
     const data = pieceEspaceSchema.parse(req.body);
     const tailleEstimee = Math.floor((data.donnees.length * 3) / 4);
     if (tailleEstimee > MAX_TAILLE_PIECE) throw new HttpError(413, "Fichier trop volumineux (max 5 Mo).");
+    // F-36 : le type retenu est celui des octets, jamais le mimeType déclaré (un exécutable renommé est refusé).
+    const mimeType = typeReel(Buffer.from(data.donnees, "base64"));
+    if (!mimeType) throw new HttpError(400, "Format de pièce refusé : PDF, DOCX, JPG ou PNG uniquement (contenu vérifié).");
     const ext = path.extname(data.nomFichier).slice(0, 12);
     const { chemin, taille } = enregistrerFichier(`pieces/${moi}`, data.donnees, ext);
     const piece = await prisma.pieceDossier.create({
-      data: { membreId: moi, type: data.type, nomFichier: data.nomFichier, fichier: chemin, mimeType: data.mimeType, taille },
+      data: { membreId: moi, type: data.type, nomFichier: data.nomFichier, fichier: chemin, mimeType, taille },
     });
     // Alerte le Secrétariat qu'une pièce attend vérification (best-effort).
     const fiche = await prisma.membre.findUnique({ where: { id: moi }, select: { nom: true } });
@@ -606,6 +609,8 @@ espaceRouter.get(
       },
     });
     const seuils = convs.map((c) => ({ conversationId: c.id, depuis: c.participants.find((p) => p.membreId === moi)?.lastReadAt ?? jamaisLu() }));
+    // Charger sa liste vaut réception des messages adressés à l'avocat (posé une seule fois).
+    await accuser("recuAt", { conversationId: { in: convs.map((c) => c.id) }, ...messageNonDeMoi(moi) });
     const nonLusParFil = await compterNonLusParFil(messageNonDeMoi(moi), seuils);
     const result = convs.map((c) => {
       const autre = c.avecAdministration ? null : c.participants.find((p) => p.membreId !== moi)?.membre ?? null;
@@ -641,6 +646,9 @@ espaceRouter.get(
   asyncH(async (req: AuthRequest, res) => {
     const moi = monMembreId(req);
     const id = Number(req.params.id);
+    // Ouvrir le fil vaut première lecture des messages reçus (posé une seule fois) ;
+    // la participation est contrôlée dans le where, avant le chargement des messages.
+    await accuser("luAt", { conversationId: id, conversation: { participants: { some: { membreId: moi } } }, ...messageNonDeMoi(moi) });
     const conv = await prisma.conversation.findUnique({
       where: { id },
       include: { participants: { include: { membre: { select: { id: true, nom: true } } } }, messages: { orderBy: { createdAt: "asc" } } },
@@ -663,8 +671,34 @@ espaceRouter.get(
         estMoi: m.auteurMembreId === moi,
         estAdministration: m.estAdministration,
         createdAt: m.createdAt,
+        empreinte: m.empreinte,
+        recuAt: m.recuAt,
+        luAt: m.luAt,
+        piece: pieceDto(m),
       })),
     });
+  })
+);
+
+/** Message dont l'avocat connecté est participant du fil, sinon 403 (anti-IDOR : un identifiant deviné ne donne rien). */
+async function monMessage(req: AuthRequest) {
+  const m = await messageAvecFil(Number(req.params.id));
+  if (!m.conversation.participants.some((p) => p.membreId === monMembreId(req))) throw new HttpError(403, "Vous n'êtes pas participant de ce fil.");
+  return m;
+}
+
+/** GET /espace/messagerie/messages/:id/piece — pièce jointe d'un message d'un fil où l'avocat est participant. */
+espaceRouter.get(
+  "/messagerie/messages/:id/piece",
+  asyncH(async (req: AuthRequest, res) => envoyerPiece(res, await monMessage(req)))
+);
+
+/** GET /espace/messagerie/messages/:id/accuse/pdf — accusé de lecture (métadonnées + empreinte, sans le corps), participants seulement. */
+espaceRouter.get(
+  "/messagerie/messages/:id/accuse/pdf",
+  asyncH(async (req: AuthRequest, res) => {
+    const m = await monMessage(req);
+    await envoyerPdf(res, htmlAccuse(m), `Accuse-lecture-${m.id}.pdf`);
   })
 );
 
@@ -673,6 +707,7 @@ const nouvelleConvSchema = z.object({
   corps: z.string().trim().min(1).max(5000),
   avecAdministration: z.boolean().default(false),
   destinataireMembreId: z.number().int().positive().optional(),
+  piece: pieceSchema,
 });
 
 /** POST /espace/messagerie — ouvre un fil (avec l'administration ou un confrère). */
@@ -680,7 +715,7 @@ espaceRouter.post(
   "/messagerie",
   asyncH(async (req: AuthRequest, res) => {
     const moi = monMembreId(req);
-    const { sujet, corps, avecAdministration, destinataireMembreId } = nouvelleConvSchema.parse(req.body);
+    const { sujet, corps, avecAdministration, destinataireMembreId, piece } = nouvelleConvSchema.parse(req.body);
     const auteurNom = await monNom(req);
 
     const participantsData: { membreId: number }[] = [{ membreId: moi }];
@@ -693,15 +728,17 @@ espaceRouter.post(
       participantsData.push({ membreId: destinataireMembreId });
     }
 
-    const conv = await prisma.conversation.create({
-      data: {
-        sujet,
-        avecAdministration,
-        participants: { create: participantsData },
-        messages: { create: { corps, auteurMembreId: moi, auteurNom, estAdministration: false } },
-      },
-      include: { messages: { select: { id: true } } },
-    });
+    const conv = await envoyerMessage(corps, piece, (data) =>
+      prisma.conversation.create({
+        data: {
+          sujet,
+          avecAdministration,
+          participants: { create: participantsData },
+          messages: { create: { ...data, auteurMembreId: moi, auteurNom, estAdministration: false } },
+        },
+        include: { messages: { select: { id: true } } },
+      })
+    );
     // Journal d'audit : identifiant seulement, jamais le corps (CA10, R-58).
     res.locals.auditDetail = `message #${conv.messages[0]?.id}`;
     if (avecAdministration) {
@@ -715,7 +752,7 @@ espaceRouter.post(
   })
 );
 
-const repondreSchema = z.object({ corps: z.string().trim().min(1).max(5000) });
+const repondreSchema = z.object({ corps: z.string().trim().min(1).max(5000), piece: pieceSchema });
 
 /** POST /espace/messagerie/:id — répond dans un fil dont l'avocat est participant. */
 espaceRouter.post(
@@ -723,16 +760,16 @@ espaceRouter.post(
   asyncH(async (req: AuthRequest, res) => {
     const moi = monMembreId(req);
     const id = Number(req.params.id);
-    const { corps } = repondreSchema.parse(req.body);
+    const { corps, piece } = repondreSchema.parse(req.body);
     const conv = await prisma.conversation.findUnique({
       where: { id },
       include: { participants: { select: { membreId: true } } },
     });
     if (!conv || !conv.participants.some((p) => p.membreId === moi)) throw new HttpError(404, "Conversation introuvable");
     const auteurNom = await monNom(req);
-    const message = await prisma.message.create({
-      data: { conversationId: id, corps, auteurMembreId: moi, auteurNom, estAdministration: false },
-    });
+    const message = await envoyerMessage(corps, piece, (data) =>
+      prisma.message.create({ data: { ...data, conversationId: id, auteurMembreId: moi, auteurNom, estAdministration: false } })
+    );
     res.locals.auditDetail = `message #${message.id}`;
     await prisma.conversation.update({ where: { id }, data: { updatedAt: new Date() } });
     if (conv.avecAdministration) {

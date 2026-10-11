@@ -243,6 +243,53 @@ middleware d'audit (R-62, CA10).
 
 Tests : `test/discipline-decision.test.ts`.
 
+## Messagerie : pièce jointe, empreinte, accusés, Contacter (T13, F-32 à F-34)
+
+Fichiers : `src/lib/messagerie.ts` (helpers partagés), `src/lib/storage.ts`
+(`typeReel`), `src/lib/templates.ts` (`accuseReceptionHtml`, `clauseAccuse`),
+`src/routes/espace.ts`, `src/routes/messagerie.ts`. Test : `test/messagerie-pj.test.ts`.
+
+**Pièce jointe** — une pièce par message, champ facultatif `piece: { nomFichier, donnees }`
+(base64 sans préfixe `data:`) sur `POST /espace/messagerie`, `POST /espace/messagerie/:id`,
+`POST /messagerie` et `POST /messagerie/:id`. Limite 5 Mo (413) ; la limite JSON globale
+de 8 Mo d'`app.ts` est inchangée (écart assumé face au R-60, PO-26). Le type n'est
+jamais déclaré par le client : `typeReel(buffer)` le lit dans les octets de signature
+(PDF `%PDF`, PNG, JPEG `FF D8 FF`, DOCX = zip contenant `word/`) et refuse tout le reste
+en 400 — un exécutable renommé en `.pdf` est rejeté. Même contrôle sur `POST /espace/pieces`
+(F-36) : le `mimeType` enregistré est le type réel. Stockage `enregistrerFichier("messagerie")`,
+fichier retiré si l'écriture en base échoue. Nom assaini (guillemets, retours à la ligne,
+séparateurs de chemin). Téléchargement : `GET /espace/messagerie/messages/:id/piece`
+(participant du fil, sinon 403) et `GET /messagerie/messages/:id/piece` (fil avec
+l'administration, sinon 404), `X-Content-Type-Options: nosniff`, `inline` pour PDF et
+images, `attachment` pour le DOCX.
+
+**Empreinte** — `Message.empreinte` = SHA-256 hexadécimal du corps (UTF-8) suivi des
+octets de la pièce, calculée à l'envoi, exposée dans les réponses de fil.
+
+**Statuts envoyé / reçu / lu** — `recuAt` est posé quand le destinataire charge sa liste
+(`GET /espace/messagerie`, `GET /messagerie`), `luAt` quand il ouvre le fil (`GET …/:id`,
+qui pose aussi `recuAt` s'il manquait). Les deux sont écrits par `updateMany … IS NULL` :
+jamais réécrits. Le destinataire est « quiconque n'est pas l'auteur » (`messageNonDeMoi`
+côté avocat, `MESSAGE_DE_AVOCAT` côté administration) : relire ses propres messages ne
+pose rien. Les fils sont 1-1 ou avec l'administration, donc une colonne par message suffit.
+
+**Accusé de lecture** — `GET /espace/messagerie/messages/:id/accuse/pdf` (participants) et
+`GET /messagerie/messages/:id/accuse/pdf` (administration, fils administration seulement).
+Titre « Accusé de lecture de la plateforme » ; contenu : expéditeur, destinataire, sujet,
+dates d'envoi, de réception et de première ouverture à l'heure de Brazzaville (UTC+1),
+pièce et empreinte ; **jamais le corps du message** ; pied = clause C-01 mot pour mot
+(`clauseAccuse()`), sans signature ni cachet. Il ne vaut ni lettre recommandée ni
+notification (art. 39 et 42, loi n° 026-92) : aucune valeur probatoire n'est revendiquée.
+
+**Contacter** — `POST /messagerie { membreId, sujet, corps, piece? }` (permission
+`messagerie`) ouvre un fil administration → membre, déjà lu côté administration ; 404 si
+le membre n'existe pas, 409 s'il est sorti (`STATUTS_SORTIS`, plus d'accès à l'espace).
+Le journal d'audit ne reçoit que `message #id`. Les réponses de liste et de fil portent
+désormais `membreId` (lien vers la fiche).
+
+**Cloisonnement (R-58)** — l'administration, ADMIN compris, ne voit jamais un fil entre
+confrères : liste filtrée, fil, pièce et accusé répondent 404.
+
 ## Règles juridiques paramétrables (`lib/regles.ts`)
 
 Seule source des valeurs juridiques : `REGLES_DEFAUT`, reprise de

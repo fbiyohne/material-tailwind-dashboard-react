@@ -185,3 +185,11 @@ Toutes les entrées ont pour interlocutrice Me Kalina MENGA, qui valide ou trans
 - **Question** : un confrère sorti du tableau doit-il encore être informé des réponses dans ses fils ouverts, et par quel canal ? Faut-il clore d'office ces fils à la sortie, ou seulement cesser les notifications ?
 - **Valeur provisoire retenue** : comportement inchangé (F-30 ✅, « conforme = on ne touche pas »). Correctif minimal prêt si l'Ordre le demande : filtrer `emailsMembres()` sur `STATUTS_ANNUAIRE`, ou retirer le corps du message de l'e-mail de notification (ne garder que l'objet).
 - **Interlocutrice** : Me Kalina MENGA.
+
+### PO-26 — Pièces jointes de la messagerie : nombre et taille
+
+- **Texte** : aucun texte ; R-60 du référentiel proposait 10 Mo et plusieurs fichiers par message.
+- **Constat** (T13) : une seule pièce par message, 5 Mo au plus, formats PDF, DOCX, JPG et PNG contrôlés par leurs octets (`typeReel`, `server/src/lib/storage.ts`). Relever ces limites demanderait d'augmenter la limite JSON globale de 8 Mo de toute l'API (surface de déni de service) ou d'ajouter un analyseur multipart (nouvelle dépendance).
+- **Question** : 5 Mo et une pièce par message suffisent-ils aux échanges ordinaux (conclusions, décisions scannées) ?
+- **Valeur provisoire retenue** : 1 pièce, 5 Mo. Un dossier plus lourd passe par plusieurs messages.
+- **Interlocutrice** : Me Kalina MENGA.

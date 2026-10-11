@@ -480,3 +480,45 @@ export function listeAvocatsHtml(membres: any[], libelleFiltre: string, date: Da
     cachet: false,
   });
 }
+
+/** Horodatage lisible à l'heure de Brazzaville (UTC+1), telle qu'enregistrée par le serveur. */
+const fmtBrazzaville = (d?: Date | string | null): string =>
+  d ? `${new Intl.DateTimeFormat("fr-FR", { timeZone: "Africa/Brazzaville", dateStyle: "long", timeStyle: "medium" }).format(new Date(d))} (heure de Brazzaville, UTC+1)` : "—";
+
+/** Pied de l'accusé de lecture : clause C-01 mot pour mot (docs/juridique/clauses-congres.md), « Barreau [nom] » = dénomination paramétrée (« Barreau de Pointe-Noire »). */
+export const clauseAccuse = (): string =>
+  `Accusé de lecture établi automatiquement par la plateforme du ${identite().denomination} à partir de ses journaux techniques. Il atteste les dates d'envoi, de réception et de première ouverture enregistrées par le système, et l'empreinte SHA-256 des pièces transmises. Il ne vaut ni lettre recommandée ni notification au sens des articles 39 et 42 de la loi n° 026-92 du 20 août 1992. Valeur probatoire à confirmer.`;
+
+/**
+ * Accusé de lecture de la plateforme (T13, F-34) : métadonnées d'un message
+ * (expéditeur, destinataire, sujet, dates d'envoi / réception / première ouverture,
+ * pièce et empreinte SHA-256). Le corps du message n'y figure JAMAIS (R-58).
+ * Aucune signature ni cachet : document technique, clause C-01 en pied.
+ */
+export function accuseReceptionHtml(a: {
+  messageId: number; sujet: string; auteurNom: string; destinataire: string;
+  envoyeLe: Date; recuLe?: Date | null; luLe?: Date | null; empreinte?: string | null;
+  pieceNom?: string | null; pieceTaille?: number | null;
+}): string {
+  const ligne = (l: string, v: string) => `<div class="row"><span class="l">${l}</span><span>${v}</span></div>`;
+  const piece = a.pieceNom ? `${escapeHtml(a.pieceNom)} (${Math.max(1, Math.round((a.pieceTaille ?? 0) / 1024))} Ko)` : "Aucune";
+  return documentHtml({
+    org: "Messagerie professionnelle",
+    title: "Accusé de lecture de la plateforme",
+    reference: `Message n° ${a.messageId}`,
+    bodyHtml: `
+      ${ligne("Expéditeur", escapeHtml(a.auteurNom))}
+      ${ligne("Destinataire", escapeHtml(a.destinataire))}
+      ${ligne("Sujet", escapeHtml(a.sujet))}
+      ${ligne("Envoi", fmtBrazzaville(a.envoyeLe))}
+      ${ligne("Réception", fmtBrazzaville(a.recuLe))}
+      ${ligne("Première ouverture", fmtBrazzaville(a.luLe))}
+      ${ligne("Pièce jointe", piece)}
+      <div class="row"><span class="l">Empreinte SHA-256</span></div>
+      <p style="font-family:'DM Mono',monospace;font-size:11px;word-break:break-all;margin:6px 0 14px">${escapeHtml(a.empreinte ?? "non calculée (message antérieur à la mise en place des empreintes)")}</p>
+      <p style="font-size:11px;color:#7A756A;line-height:1.6">${escapeHtml(clauseAccuse())}</p>`,
+    signataire: { role: "Édité automatiquement", nom: "Plateforme du Barreau" },
+    cachet: false,
+    date: new Date(),
+  });
+}

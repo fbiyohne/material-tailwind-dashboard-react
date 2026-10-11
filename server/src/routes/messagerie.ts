@@ -2,15 +2,18 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
-import { requireAuth, requireRole, type AuthRequest, requirePermission } from "../middleware/auth.js";
+import { requireAuth, type AuthRequest, requirePermission } from "../middleware/auth.js";
 import { notifierNouveauMessage, emailsMembres } from "../lib/messagerieNotif.js";
-import { MESSAGE_DE_AVOCAT, compterNonLusParFil, totalNonLus, jamaisLu } from "../lib/messagerie.js";
+import { MESSAGE_DE_AVOCAT, compterNonLusParFil, totalNonLus, jamaisLu, pieceSchema, envoyerMessage, accuser, messageAvecFil, pieceDto, envoyerPiece, htmlAccuse } from "../lib/messagerie.js";
 import { realtimeMembres } from "../lib/realtime.js";
+import { envoyerPdf } from "../lib/pdf.js";
+import { STATUTS_SORTIS } from "../lib/business.js";
 
 /**
  * Messagerie — côté administration (Secrétariat). Boîte partagée des officiers
  * de l'Ordre : seuls les fils adressés à l'administration (avecAdministration)
- * sont visibles ici. Les échanges entre confrères restent privés (jamais exposés).
+ * sont visibles ici. Les échanges entre confrères restent privés (jamais exposés,
+ * pas même à l'ADMIN : R-58), pièces jointes et accusés compris.
  */
 export const messagerieRouter = Router();
 messagerieRouter.use(requireAuth, requirePermission("messagerie"));
@@ -19,6 +22,17 @@ messagerieRouter.use(requireAuth, requirePermission("messagerie"));
 async function monNomAdmin(req: AuthRequest) {
   const u = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { nom: true } });
   return u?.nom ?? "Secrétariat";
+}
+
+/** Prévient l'avocat (e-mail best-effort + temps réel) d'un message de l'administration. */
+function notifierAvocat(membreIds: number[], conversationId: number, auteurNom: string, sujet: string, corps: string, titre: string, intro: string) {
+  notifierNouveauMessage(() => emailsMembres(membreIds), {
+    titre,
+    intro,
+    cta: "Connectez-vous à votre espace avocat (module « Messagerie ») pour le consulter.",
+    auteurNom, sujet, corps,
+  });
+  realtimeMembres(membreIds, { type: "messagerie", conversationId });
 }
 
 /** GET /messagerie/non-lus — total de messages avocats non lus côté administration. */
@@ -46,6 +60,8 @@ messagerieRouter.get(
         messages: { orderBy: { createdAt: "desc" }, take: 1 },
       },
     });
+    // Charger la boîte vaut réception des messages des avocats (posé une seule fois).
+    await accuser("recuAt", { conversationId: { in: convs.map((c) => c.id) }, ...MESSAGE_DE_AVOCAT });
     const seuils = convs.map((c) => ({ conversationId: c.id, depuis: c.adminLastReadAt ?? jamaisLu() }));
     const nonLusParFil = await compterNonLusParFil(MESSAGE_DE_AVOCAT, seuils);
     const result = convs.map((c) => {
@@ -55,6 +71,7 @@ messagerieRouter.get(
         id: c.id,
         sujet: c.sujet,
         expediteur: avocat ? `Me ${avocat.nom}` : "Avocat",
+        membreId: avocat?.id ?? null,
         updatedAt: c.updatedAt,
         apercu: dernier ? { corps: dernier.corps.slice(0, 140), auteurNom: dernier.auteurNom, estAdministration: dernier.estAdministration, createdAt: dernier.createdAt } : null,
         nonLus: nonLusParFil.get(c.id) ?? 0,
@@ -64,11 +81,35 @@ messagerieRouter.get(
   })
 );
 
+/** Message d'un fil adressé à l'administration ; un fil entre confrères répond 404, comme s'il n'existait pas (R-58). */
+async function messageAdministration(req: AuthRequest) {
+  const m = await messageAvecFil(Number(req.params.id));
+  if (!m.conversation.avecAdministration) throw new HttpError(404, "Message introuvable");
+  return m;
+}
+
+/** GET /messagerie/messages/:id/piece — pièce jointe d'un message d'un fil avec l'administration. */
+messagerieRouter.get(
+  "/messages/:id/piece",
+  asyncH(async (req: AuthRequest, res) => envoyerPiece(res, await messageAdministration(req)))
+);
+
+/** GET /messagerie/messages/:id/accuse/pdf — accusé de lecture (métadonnées + empreinte, sans le corps). */
+messagerieRouter.get(
+  "/messages/:id/accuse/pdf",
+  asyncH(async (req: AuthRequest, res) => {
+    const m = await messageAdministration(req);
+    await envoyerPdf(res, htmlAccuse(m), `Accuse-lecture-${m.id}.pdf`);
+  })
+);
+
 /** GET /messagerie/:id — fil détaillé ; marque comme lu côté administration. */
 messagerieRouter.get(
   "/:id",
   asyncH(async (req: AuthRequest, res) => {
     const id = Number(req.params.id);
+    // Ouvrir le fil vaut première lecture des messages de l'avocat (posé une seule fois) ; fil administration seulement.
+    await accuser("luAt", { conversationId: id, conversation: { avecAdministration: true }, ...MESSAGE_DE_AVOCAT });
     const conv = await prisma.conversation.findUnique({
       where: { id },
       include: { participants: { include: { membre: { select: { id: true, nom: true } } } }, messages: { orderBy: { createdAt: "asc" } } },
@@ -80,46 +121,80 @@ messagerieRouter.get(
       id: conv.id,
       sujet: conv.sujet,
       expediteur: avocat ? `Me ${avocat.nom}` : "Avocat",
+      membreId: avocat?.id ?? null,
       messages: conv.messages.map((m) => ({
         id: m.id,
         corps: m.corps,
         auteurNom: m.auteurNom,
         estAdministration: m.estAdministration,
         createdAt: m.createdAt,
+        empreinte: m.empreinte,
+        recuAt: m.recuAt,
+        luAt: m.luAt,
+        piece: pieceDto(m),
       })),
     });
   })
 );
 
-const repondreSchema = z.object({ corps: z.string().trim().min(1).max(5000) });
+const contacterSchema = z.object({
+  membreId: z.number().int().positive(),
+  sujet: z.string().trim().min(1).max(160),
+  corps: z.string().trim().min(1).max(5000),
+  piece: pieceSchema,
+});
+
+/** POST /messagerie — « Contacter » depuis la fiche d'un avocat : l'administration ouvre un fil vers ce membre. */
+messagerieRouter.post(
+  "/",
+  asyncH(async (req: AuthRequest, res) => {
+    const { membreId, sujet, corps, piece } = contacterSchema.parse(req.body);
+    const membre = await prisma.membre.findUnique({ where: { id: membreId }, select: { id: true, statut: true } });
+    if (!membre) throw new HttpError(404, "Membre introuvable");
+    // Un sorti (radié, décédé, démissionnaire…) n'a plus d'accès à l'espace : le fil ne lui parviendrait jamais.
+    if ((STATUTS_SORTIS as readonly string[]).includes(membre.statut)) throw new HttpError(409, "Ce membre n'a plus accès à l'espace avocat.");
+    const auteurNom = await monNomAdmin(req);
+    const conv = await envoyerMessage(corps, piece, (data) =>
+      prisma.conversation.create({
+        data: {
+          sujet,
+          avecAdministration: true,
+          adminLastReadAt: new Date(),
+          participants: { create: [{ membreId }] },
+          messages: { create: { ...data, auteurMembreId: null, auteurNom, estAdministration: true } },
+        },
+        include: { messages: { select: { id: true } } },
+      })
+    );
+    // Journal d'audit : identifiant seulement, jamais le corps (CA10, R-58).
+    res.locals.auditDetail = `message #${conv.messages[0]?.id}`;
+    notifierAvocat([membreId], conv.id, auteurNom, sujet, corps, "message de l'administration", `L'administration du Barreau (${auteurNom}) vous a adressé un message.`);
+    res.status(201).json({ id: conv.id });
+  })
+);
+
+const repondreSchema = z.object({ corps: z.string().trim().min(1).max(5000), piece: pieceSchema });
 
 /** POST /messagerie/:id — réponse de l'administration dans un fil. */
 messagerieRouter.post(
   "/:id",
   asyncH(async (req: AuthRequest, res) => {
     const id = Number(req.params.id);
-    const { corps } = repondreSchema.parse(req.body);
+    const { corps, piece } = repondreSchema.parse(req.body);
     const conv = await prisma.conversation.findUnique({
       where: { id },
       select: { id: true, sujet: true, avecAdministration: true, participants: { select: { membreId: true } } },
     });
     if (!conv || !conv.avecAdministration) throw new HttpError(404, "Conversation introuvable");
     const auteurNom = await monNomAdmin(req);
-    const message = await prisma.message.create({
-      data: { conversationId: id, corps, auteurMembreId: null, auteurNom, estAdministration: true },
-    });
+    const message = await envoyerMessage(corps, piece, (data) =>
+      prisma.message.create({ data: { ...data, conversationId: id, auteurMembreId: null, auteurNom, estAdministration: true } })
+    );
     // Journal d'audit : identifiant seulement, jamais le corps (CA10, R-58).
     res.locals.auditDetail = `message #${message.id}`;
     await prisma.conversation.update({ where: { id }, data: { updatedAt: new Date(), adminLastReadAt: new Date() } });
     // Symétrie des notifications : on prévient l'avocat de la réponse (non bloquant).
-    const membreIds = conv.participants.map((p) => p.membreId);
-    notifierNouveauMessage(() => emailsMembres(membreIds), {
-      titre: "réponse de l'administration",
-      intro: `L'administration du Barreau (${auteurNom}) a répondu à votre message.`,
-      cta: "Connectez-vous à votre espace avocat (module « Messagerie ») pour la consulter.",
-      auteurNom, sujet: conv.sujet, corps,
-    });
-    realtimeMembres(membreIds, { type: "messagerie", conversationId: id });
+    notifierAvocat(conv.participants.map((p) => p.membreId), id, auteurNom, conv.sujet, corps, "réponse de l'administration", `L'administration du Barreau (${auteurNom}) a répondu à votre message.`);
     res.status(201).json({ id: message.id });
   })
 );
