@@ -38,6 +38,10 @@ export function etapeDe(e) {
 /** Vrai si une sanction avec sursis figure à l'historique : mention à afficher sur la fiche (C-06). */
 export const sursisEnCours = (evenements) => (evenements ?? []).some((e) => e.details?.sursis && ["SANCTION", "SUSPENSION"].includes(e.type));
 
+/** Exercice du circuit en cours : celui de la dernière étape (rappel, mise en demeure, transmission) ; sinon le serveur retient l'année de la date d'effet. */
+export const exerciceDuCircuit = (evenements) =>
+  (evenements ?? []).find((e) => ["RAPPEL", "MISE_EN_DEMEURE", "TRANSMISSION"].includes(e.type) && e.annee)?.annee;
+
 const ACTIONS = {
   RAPPEL: { titre: "Enregistrer un rappel", icone: BellAlertIcon, permission: "finances", statuts: ["inscrit", "suspendu"] },
   MISE_EN_DEMEURE: { titre: "Enregistrer une mise en demeure", icone: ExclamationTriangleIcon, permission: "finances", statuts: ["inscrit", "suspendu"] },
@@ -86,6 +90,7 @@ export function SituationPanel({ membre, evenements, erreur, user, onChange }) {
         ...(form.motif?.trim() && { motif: form.motif.trim() }),
         ...(form.pieceId && { pieceId: Number(form.pieceId) }),
         ...(type === "OMISSION" && { cause: form.cause }),
+        ...(["MISE_EN_DEMEURE", "TRANSMISSION", "OMISSION"].includes(type) && exerciceDuCircuit(evenements) && { annee: exerciceDuCircuit(evenements) }),
       });
       toast.success(`${LIBELLES[type]} enregistré(e).`);
       setType(null);
