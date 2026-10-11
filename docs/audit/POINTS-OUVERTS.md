@@ -283,3 +283,8 @@ Toutes les entrées ont pour interlocutrice Me Kalina MENGA, qui valide ou trans
 - **Constat** (R1-9) : `GET /tableau` et son PDF ne filtraient que `STATUTS_SORTIS`, donc les OMIS figuraient avec la mention « (Omis) ».
 - **Décision** : corrigé. Les OMIS sont exclus (`routes/tableau.ts`, test `tableau-dashboard.test.ts`). Les SUSPENDU restent au tableau avec la mention « (Suspendu) » : valeur **provisoire**, car l'interdiction temporaire n'est pas un retrait du tableau en l'état des textes lus.
 - **Reste à confirmer** : si l'avocat suspendu doit être masqué du tableau public. À valider par Me Kalina MENGA.
+
+### PO-36 — Interdiction temporaire visant un avocat omis ou sorti
+- **Constat** (R2-3) : `POST /discipline/:id/decision` ne refusait l'interdiction ferme que pour RADIE et DECEDE. Un avocat OMIS, DEMISSIONNAIRE, RETRAITE ou CESSATION passait SUSPENDU, revenait au tableau public (où SUSPENDU figure, PO-35) et voyait son omission levée hors du circuit et de `omission_prononcer`.
+- **Décision** : corrigé. L'interdiction ferme est refusée (409, rien n'est écrit) pour OMIS et tout statut de `STATUTS_SORTIS`. Test `discipline-decision.test.ts` « R2-3 » (OMIS, DEMISSIONNAIRE). Les autres sanctions (avertissement, réprimande, interdiction avec sursis) restent enregistrables sans changement de statut.
+- **Reste à confirmer** : si une interdiction prononcée contre un avocat omis doit être enregistrée pour exécution à sa réinscription (au lieu d'un refus). À valider par Me Kalina MENGA.
