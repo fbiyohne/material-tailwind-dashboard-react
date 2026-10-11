@@ -7,8 +7,9 @@ import { prisma } from "../src/prisma.js";
 /**
  * Revue R1-4 : mots de passe des comptes de démonstration.
  * --mots-de-passe-aleatoires (ou --identite=demonstration seule) retire le mot de passe public
- * « barreau » des 5 comptes ; --mots-de-passe-defaut (ou --identite=pointe-noire seule) le rétablit,
- * ce qu'attend le reste de la suite. Ne tourne que sur barreau_pn_test (garde du script).
+ * « barreau » des 5 comptes du scénario et de tout autre compte actif qui l'acceptait ;
+ * --mots-de-passe-defaut (ou --identite=pointe-noire seule) le rétablit sur les 5 comptes et sur
+ * avocat@barreau-pn.cg (seed), ce qu'attend le reste de la suite. Ne tourne que sur barreau_pn_test (garde du script).
  */
 const url = process.env.DATABASE_URL!;
 const surBaseDemo = new URL(url).pathname === "/barreau_pn_test";
@@ -16,7 +17,7 @@ const tsx = path.resolve("node_modules/tsx/dist/cli.mjs");
 const COMPTES = ["batonnier@barreau-pn.cg", "sg@barreau-pn.cg", "tresoriere@barreau-pn.cg", "admin@barreau-pn.cg", "avocat.demo@demo.invalid"];
 
 function demo(...args: string[]) {
-  const r = spawnSync(process.execPath, [tsx, "prisma/demo.ts", ...args], { env: { ...process.env, DATABASE_URL: url }, encoding: "utf8", timeout: 120_000 });
+  const r = spawnSync(process.execPath, [tsx, "prisma/demo.ts", ...args], { env: { ...process.env, DATABASE_URL: url }, encoding: "utf8", timeout: 600_000 });
   expect(r.status, r.stderr).toBe(0);
   return r.stdout;
 }
@@ -28,6 +29,23 @@ async function accepte(mdp: (email: string) => string) {
   return Object.fromEntries(users.map((u) => [u.email, bcrypt.compareSync(mdp(u.email), u.passwordHash)]));
 }
 const tous = (v: boolean) => Object.fromEntries(COMPTES.map((e) => [e, v]));
+
+/**
+ * Comptes actifs de TOUTE la table User qui acceptent encore le mot de passe commun. Une comparaison
+ * bcrypt par empreinte distincte (≈ 0,16 s) : rapide une fois les comptes hors scénario verrouillés.
+ */
+async function actifsAcceptantCommun() {
+  const users = await prisma.user.findMany({ where: { actif: true }, select: { email: true, passwordHash: true } });
+  const parEmpreinte = new Map<string, string[]>();
+  for (const u of users) parEmpreinte.set(u.passwordHash, [...(parEmpreinte.get(u.passwordHash) ?? []), u.email]);
+  const ok: string[] = [];
+  for (const [h, emails] of parEmpreinte) if (await bcrypt.compare("barreau", h)) ok.push(...emails);
+  return ok;
+}
+const accepteCommun = async (email: string) => {
+  const u = await prisma.user.findUnique({ where: { email } });
+  return !!u && bcrypt.compareSync("barreau", u.passwordHash);
+};
 
 /** Mots de passe affichés par le script, une ligne « email  mot-de-passe » par compte. */
 const affiches = (sortie: string) => {
@@ -41,9 +59,9 @@ describe.skipIf(!surBaseDemo)("npm run demo : mots de passe des comptes de démo
   afterAll(async () => {
     // Toujours rendre la base à la suite : mot de passe par défaut et Paramètres d'origine.
     if (!surBaseDemo) return;
-    spawnSync(process.execPath, [tsx, "prisma/demo.ts", "--mots-de-passe-defaut"], { env: { ...process.env, DATABASE_URL: url }, timeout: 120_000 });
+    spawnSync(process.execPath, [tsx, "prisma/demo.ts", "--mots-de-passe-defaut"], { env: { ...process.env, DATABASE_URL: url }, timeout: 600_000 });
     if (parametresAvant !== undefined) await prisma.parametres.update({ where: { id: 1 }, data: { data: parametresAvant as object } });
-  }, 240_000);
+  }, 600_000);
 
   it("--mots-de-passe-aleatoires retire « barreau », --mots-de-passe-defaut le rétablit", async () => {
     const sortie = demo("--mots-de-passe-aleatoires");
@@ -57,15 +75,18 @@ describe.skipIf(!surBaseDemo)("npm run demo : mots de passe des comptes de démo
     const sortie2 = demo("--mots-de-passe-defaut");
     expect(Object.values(affiches(sortie2))).toEqual(COMPTES.map(() => "")); // aucun mot de passe affiché
     expect(await accepte(() => "barreau")).toEqual(tous(true));
-  }, 240_000);
+  }, 600_000);
 
   it("--identite=demonstration seule impose des mots de passe aléatoires ; --identite=pointe-noire rétablit le défaut", async () => {
     parametresAvant = (await prisma.parametres.findUnique({ where: { id: 1 } }))?.data;
     demo("--identite=demonstration");
     expect(await accepte(() => "barreau")).toEqual(tous(false));
+    // Aucun compte actif de la base, hors liste comprise (avocat@barreau-pn.cg du seed), ne s'ouvre plus avec « barreau ».
+    expect(await actifsAcceptantCommun()).toEqual([]);
     demo("--identite=pointe-noire");
     expect(await accepte(() => "barreau")).toEqual(tous(true));
-  }, 240_000);
+    expect(await accepteCommun("avocat@barreau-pn.cg")).toBe(true); // compte du seed attendu par npm test
+  }, 600_000);
 });
 
 describe("npm run demo : options de mot de passe incompatibles (R1-4)", () => {

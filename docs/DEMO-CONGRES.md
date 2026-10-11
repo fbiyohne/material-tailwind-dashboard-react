@@ -28,7 +28,7 @@ Contrôle d'ouverture (1 minute, avant le public) : `http://localhost:4100/api/h
 
 ## 2. Comptes
 
-Mots de passe : un mot de passe aléatoire par compte, affiché **une seule fois** en console par `npm run demo -- --identite=demonstration --mots-de-passe-aleatoires` (à noter hors du dépôt, à ne jamais écrire dans ce document). `--identite=demonstration` impose ces mots de passe aléatoires même si l'option est oubliée ; seul `--mots-de-passe-defaut`, à n'utiliser qu'en recette, rétablit le mot de passe commun de la base de test. Ne jamais présenter le scénario avec ce mot de passe commun. Vérification avant le public : la connexion du compte administrateur avec l'ancien mot de passe commun doit être refusée. L'instance écoute sur `127.0.0.1` seulement (`relancer-test.ps1` positionne `HOST`) ; ne pas l'ouvrir sur le Wi-Fi du lieu.
+Mots de passe : un mot de passe aléatoire par compte, affiché **une seule fois** en console par `npm run demo -- --identite=demonstration --mots-de-passe-aleatoires` (à noter hors du dépôt, à ne jamais écrire dans ce document). `--identite=demonstration` impose ces mots de passe aléatoires même si l'option est oubliée ; seul `--mots-de-passe-defaut`, à n'utiliser qu'en recette, rétablit le mot de passe commun de la base de test. Tous les autres comptes actifs de la base (dont le compte avocat `avocat@barreau-pn.cg` du jeu de test) reçoivent en même temps un mot de passe aléatoire **non affiché** et sont ainsi verrouillés ; le script indique leur nombre. Ne jamais présenter le scénario avec ce mot de passe commun. Vérification avant le public : la connexion avec l'ancien mot de passe commun doit être refusée pour le compte administrateur **et** pour `avocat@barreau-pn.cg`. L'instance écoute sur `127.0.0.1` seulement (`relancer-test.ps1` positionne `HOST`) ; ne pas l'ouvrir sur le Wi-Fi du lieu.
 
 | Rôle | Identifiant | Usage dans le scénario |
 |------|-------------|------------------------|
@@ -85,11 +85,11 @@ Le logiciel **enregistre** les décisions des organes de l'Ordre ; il ne les pro
 
 ```powershell
 npm run demo -- --identite=demonstration   # Barreau de démonstration, logo générique, mode démonstration actif, mots de passe aléatoires (affichés une fois)
-npm run demo -- --identite=pointe-noire    # retour à l'identité de base ET au mot de passe commun de la base de test (à faire avant npm test)
+npm run demo -- --identite=pointe-noire    # retour à l'identité de base ET au mot de passe commun sur les comptes attendus par npm test
 npm run demo -- --mots-de-passe-defaut     # retour au mot de passe commun seul, sans toucher l'identité
 ```
 
-Chaque exécution avec `--identite=demonstration` tire de nouveaux mots de passe : noter ceux de la dernière exécution. Les 5 comptes concernés sont ceux du § 2. Tant que les mots de passe aléatoires sont en place, la suite de tests serveur (`npm test`) ne peut pas se connecter : revenir d'abord à la base de test par `--identite=pointe-noire`.
+Chaque exécution avec `--identite=demonstration` tire de nouveaux mots de passe : noter ceux de la dernière exécution. Les mots de passe affichés sont ceux des 5 comptes du § 2. Le retour au mot de passe commun (`--identite=pointe-noire` ou `--mots-de-passe-defaut`) porte sur ces 5 comptes et sur `avocat@barreau-pn.cg`, les seuls comptes préexistants qu'utilisent la suite de tests et la recette ; les autres comptes verrouillés le restent (ce sont des reliquats de tests, que la suite recrée à chaque exécution). Tant que les mots de passe aléatoires sont en place, la suite de tests serveur (`npm test`) ne peut pas se connecter : revenir d'abord à la base de test par `--identite=pointe-noire`.
 
 Le serveur déjà lancé garde l'identité en cache : relancer `.\scripts\relancer-test.ps1` (ou enregistrer *Paramètres*) après chaque bascule. Le logo se remplace en écrasant `server\assets\demo\logo-demonstration.png`.
 
@@ -145,4 +145,4 @@ Ne jamais dire, écrire ni laisser afficher :
 - Relecture de ce scénario par la sécurité et par le juriste avant le congrès : à consigner dans le rapport de mission.
 - Points ouverts à valider avec Me Kalina MENGA : `docs/audit/POINTS-OUVERTS.md`.
 - Rejeu technique des 12 parcours : `cd server && npx vitest run test/parcours.test.ts` (API) et `npx tsx scripts/recette-ui.ts parcours` (interface, captures de repli dans `docs/captures`, remise en état automatique) ; procédure dans `docs/captures/README.md`.
-- Après la démonstration : `npm run demo -- --identite=pointe-noire` (identité de base et mot de passe commun de la base de test rétablis sur les 5 comptes), relancer `.\scripts\relancer-test.ps1`, puis `npm test` (les tests se connectent avec le mot de passe commun et certains tests de PDF attendent l'identité de base).
+- Après la démonstration : `npm run demo -- --identite=pointe-noire` (identité de base et mot de passe commun de la base de test rétablis sur les 5 comptes du § 2 et sur `avocat@barreau-pn.cg`), relancer `.\scripts\relancer-test.ps1`, puis `npm test` (les tests se connectent avec le mot de passe commun et certains tests de PDF attendent l'identité de base).

@@ -5,9 +5,12 @@
  *   npm run demo -- --identite=demonstration       # + identité « Barreau de démonstration »
  *   npm run demo -- --identite=pointe-noire        # retour à l'identité de base
  *
- * Mots de passe des 5 comptes de démonstration (bâtonnier, SG, trésorière, admin, avocat.demo) :
- *   --mots-de-passe-aleatoires : un mot de passe aléatoire par compte, affiché une seule fois ;
- *   --mots-de-passe-defaut     : retour au mot de passe de la base de test (« barreau »), attendu par npm test ;
+ * Mots de passe (comptes du scénario : bâtonnier, SG, trésorière, admin, avocat.demo) :
+ *   --mots-de-passe-aleatoires : un mot de passe aléatoire par compte du scénario, affiché une seule fois,
+ *                                et un mot de passe aléatoire non affiché pour tous les autres comptes
+ *                                actifs (verrouillés : plus aucun ne s'ouvre avec le mot de passe commun) ;
+ *   --mots-de-passe-defaut     : retour au mot de passe commun de la base de test sur les comptes du
+ *                                scénario et sur avocat@barreau-pn.cg (seed), attendus par npm test ;
  *   sans option : --identite=demonstration implique les aléatoires (le congrès n'expose jamais
  *   le mot de passe public), --identite=pointe-noire implique le défaut, sinon rien ne change.
  *
@@ -290,18 +293,43 @@ async function main() {
   await appliquerIdentite();
 }
 
-/** Comptes de démonstration : mots de passe aléatoires (affichés une seule fois, jamais écrits) ou défaut de la base de test. */
+/** Comptes du scénario : mots de passe aléatoires affichés une seule fois (jamais écrits ailleurs). */
 const COMPTES_DEMO = ["batonnier@barreau-pn.cg", "sg@barreau-pn.cg", "tresoriere@barreau-pn.cg", "admin@barreau-pn.cg", "avocat.demo@demo.invalid"];
+/** Comptes du seed attendus par npm test avec le mot de passe commun, hors scénario. */
+const COMPTES_SEED = ["avocat@barreau-pn.cg"];
+const MDP_COMMUN = "barreau";
+
+/**
+ * « aleatoires » : un mot de passe aléatoire affiché par compte du scénario, puis TOUS les autres
+ * comptes actifs reçoivent un mot de passe aléatoire non affiché (aucun compte de l'instance du
+ * congrès ne s'ouvre avec le mot de passe public, avocat@barreau-pn.cg du seed compris).
+ * « defaut » : mot de passe commun rétabli sur les comptes du scénario et du seed (attendus par npm test).
+ */
 async function changerMotsDePasse(mode: "aleatoires" | "defaut") {
   const { randomBytes } = await import("node:crypto");
-  console.log(mode === "aleatoires"
-    ? "MOTS DE PASSE (affichés une seule fois, à noter maintenant) :"
-    : "MOTS DE PASSE : mot de passe par défaut de la base de test rétabli pour :");
-  for (const email of COMPTES_DEMO) {
-    const mdp = mode === "aleatoires" ? randomBytes(9).toString("base64url") : "barreau";
-    const r = await prisma.user.updateMany({ where: { email }, data: { passwordHash: bcrypt.hashSync(mdp, 10) } });
-    if (r.count) console.log(mode === "aleatoires" ? `  ${email}  ${mdp}` : `  ${email}`);
+  const alea = () => randomBytes(9).toString("base64url");
+  if (mode === "defaut") {
+    console.log("MOTS DE PASSE : mot de passe par défaut de la base de test rétabli pour :");
+    for (const email of [...COMPTES_DEMO, ...COMPTES_SEED]) {
+      const r = await prisma.user.updateMany({ where: { email }, data: { passwordHash: bcrypt.hashSync(MDP_COMMUN, 10) } });
+      if (r.count) console.log(`  ${email}`);
+    }
+    return;
   }
+  console.log("MOTS DE PASSE (affichés une seule fois, à noter maintenant) :");
+  for (const email of COMPTES_DEMO) {
+    const mdp = alea();
+    const r = await prisma.user.updateMany({ where: { email }, data: { passwordHash: bcrypt.hashSync(mdp, 10) } });
+    if (r.count) console.log(`  ${email}  ${mdp}`);
+  }
+  // Tout autre compte actif (2 700 environ en base de test, reliquats des suites) est verrouillé par un
+  // mot de passe aléatoire unique, jamais affiché : une seule empreinte bcrypt au lieu d'une comparaison
+  // par compte (≈ 0,16 s chacune, soit plusieurs minutes). Seuls les comptes du scénario s'ouvrent.
+  const r = await prisma.user.updateMany({
+    where: { actif: true, email: { notIn: COMPTES_DEMO } },
+    data: { passwordHash: bcrypt.hashSync(alea(), 10) },
+  });
+  console.log(`  ${r.count} autre(s) compte(s) actif(s) : mot de passe aléatoire non affiché (verrouillés).`);
 }
 
 /** Identité de démonstration : logo générique, mention C-13 ; « pointe-noire » = retour aux défauts. */
