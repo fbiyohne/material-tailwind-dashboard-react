@@ -14,9 +14,21 @@ Les libellés juridiques suivent la loi n° 026-92 : le logiciel **enregistre** 
 | `npm test` (racine, vitest + jsdom) | 13 fichiers, 63 tests verts | **34 fichiers, 152 tests verts** |
 | `cd server && npm test` (base `barreau_pn_test` du socle) | 2 fichiers, 153 tests verts | **26 fichiers, 317 tests verts** (24 fichiers et 313 tests avant les 2 fichiers T30) |
 | Total | 216 | **469** (CA2 : au moins 216, au moins 94 côté front) |
-| Tests de référence supprimés ou désactivés | — | **aucun** : `git diff 76958a4 --diff-filter=D -- '*.test.*'` est vide ; `api.test.ts` compte 143 `it` et 0 `.skip/.only/.todo` sur `76958a4` comme sur HEAD |
+| Tests de référence supprimés ou désactivés | — | **aucun** : `git diff 76958a4 --diff-filter=D -- '*.test.*'` est vide ; `api.test.ts` compte 143 `it` et 0 `.skip/.only/.todo` sur `76958a4` comme sur HEAD ; assertions modifiées : voir ci-dessous |
 
-Seul fichier de test de référence modifié : `server/test/api.test.ts` (80 lignes ajoutées, 37 supprimées). Les suppressions portent sur les fixtures (calcul du `num`, nettoyage, liste RADIE remplacée par un filtre ; commits QA `192712d`, `847d147`, `fd53541`) pour isoler les tests sur la base partagée. Aucune assertion n'a été retirée (558 `expect(` avant et après).
+**Écart à CA2 et CA3 (déclaré, à valider par Fabrice).** Trois fichiers de test de référence (présents sur `76958a4`) ont été modifiés : `server/test/api.test.ts`, `src/barreau/pages/__tests__/AvocatDetail.test.jsx` et `src/barreau/components/__tests__/EditMembreModal.test.jsx`. Décompte réel : `git diff 76958a4 --numstat -- '*.test.*'` donne 61 fichiers, 5 618 lignes ajoutées, 54 supprimées, dont 49 dans `api.test.ts`, 4 dans `AvocatDetail.test.jsx` et 1 dans `EditMembreModal.test.jsx` (les 7 lignes de `pre-push.test.sh` sont des ajouts). Aucun fichier de test n'est supprimé ni désactivé (0 `.skip/.only/.todo` ajouté ; `api.test.ts` garde 143 `it`). Mais des assertions ont changé de valeur : ces changements sont des changements de comportement voulus par la revue, pas des isolations de fixtures, et contredisent donc la lettre de CA2 et CA3.
+
+| Fichier:ligne (HEAD) | Ancienne assertion | Nouvelle assertion | Constat de revue |
+|---|---|---|---|
+| `server/test/api.test.ts:541` (R2-4, `valider-stage`) | SUSPENDU et OMIS : `200`, passage INSCRIT/AVOCAT | `409`, statut et qualité inchangés | R1-8 : la mesure n'est plus levée en silence |
+| `api.test.ts:989` | `PATCH` statut SUSPENDU par le SG | même appel par l'ADMIN | R1-1 : suspension par PATCH exige `discipline_decider` (SG `403`) |
+| `api.test.ts:1434` | `PATCH` RADIE par le SG : `200` | SG `403`, ADMIN `200` | R1-7 |
+| `api.test.ts:1457, 1461, 1506, 1512` | `POST /radier` par le SG : `200` ; le SG recevait `403` pour tous les rôles | bâtonnier pour radier ; invariants `PATCH` vérifiés avec l'ADMIN ; le SG reçoit `403` (assertion explicite en 1512) | R1-7 : la radiation s'enregistre avec `discipline_decider` |
+| `AvocatDetail.test.jsx:43` | « SG, membre inscrit : Radier et Déclarer le décès ; Radier ouvre la modale » | scindé : SG voit Déclarer le décès, pas Radier (ligne 43) ; bâtonnier avec `discipline_decider` voit Radier, pas Modifier ni décès (ligne 51) | R1-7 |
+| `AvocatDetail.test.jsx:94` | titre « BATONNIER : aucun bouton… » | titre précisé « sans discipline_decider », assertions identiques | R1-7 |
+| `EditMembreModal.test.jsx:30` | rendu sans prop | rendu avec `peutRadier` | R1-7 : « Radié » proposé au seul titulaire de `discipline_decider` |
+
+Les autres lignes supprimées de `api.test.ts` (fixtures) : calcul de `num`, nettoyage des restes, liste RADIE filtrée par nom, blocs enveloppés dans `try/finally` (commits QA `192712d`, `847d147`, `fd53541`). Le nombre de `expect(` n'a pas diminué (558 initialement, davantage ensuite). Pour les lignes ✅ (CA3), aucune assertion de leurs tests propres n'a changé de valeur.
 
 ## 2. Comptage de contrôle (CA1)
 
