@@ -13,7 +13,7 @@ const LIBELLES = {
   RAPPEL: "Rappel de cotisation", MISE_EN_DEMEURE: "Mise en demeure", TRANSMISSION: "Transmission au Conseil de l'Ordre national",
   OMISSION: "Omission", REINSCRIPTION: "Réinscription", SANCTION: "Sanction enregistrée", SUSPENSION: "Interdiction temporaire",
   REPRISE: "Reprise d'exercice", RADIATION: "Radiation", DECES: "Décès", DEMISSIONNAIRE: "Démission", RETRAITE: "Retraite",
-  CESSATION: "Cessation d'activité", CHANGEMENT_STATUT: "Changement de situation",
+  CESSATION: "Cessation d'activité", CHANGEMENT_STATUT: "Changement de situation", REFORMATION: "Décision réformée",
 };
 const CAUSES = [
   ["35-4", "Art. 35-4° — contribution non acquittée"],

@@ -232,6 +232,8 @@ export const majDossier = (id, patch) =>
   api(`/discipline/${id}`, { method: "PATCH", body: { ...patch, statut: patch.statut ? patch.statut.toUpperCase() : undefined } }).then(normDossier);
 // Décision structurée (art. 36) : réservée à l'action discipline_decider côté serveur.
 export const enregistrerDecisionDossier = (id, body) => api(`/discipline/${id}/decision`, { method: "POST", body }).then(normDossier);
+/** Décision de radiation réformée sur opposition ou appel : { voie, reference, dateEffet?, motif? } (discipline_decider). */
+export const reformerDecisionDossier = (id, body) => api(`/discipline/${id}/reformation`, { method: "POST", body }).then(normDossier);
 export const supprimerDossier = (id) => api(`/discipline/${id}`, { method: "DELETE" });
 export const journalDiscipline = () => api("/discipline/journal");
 

@@ -33,6 +33,24 @@ const MODES = {
     envoyer: (membre, date, motif) => radierMembre(membre.id, { dateRadiation: date, motifRadiation: motif.trim() || undefined }),
     toast: (nom, date) => `Me ${nom} radié(e) — décision du ${formatDateCourte(date)}.`,
   },
+  // T21 : radiation décidée en mode EXPIRATION_RECOURS, rendue exécutoire depuis le dossier
+  // disciplinaire (organe, référence de la décision et pièce obligatoires).
+  execution: {
+    titre: (nom) => `Rendre exécutoire la radiation de Me ${nom}`,
+    bandeau: {
+      ton: "bleu",
+      icon: ScaleIcon,
+      texte: "La décision de radiation prend effet à l'expiration du délai de recours (R-40, provisoire). Enregistrez la date d'effet, la référence de la décision et la pièce qui atteste l'absence de recours.",
+    },
+    dateLabel: "Date d'effet",
+    dateHint: "jour où la décision devient exécutoire",
+    dateDefaut: () => dateLocaleISO(),
+    consequences: "L'avocat sera retiré du tableau de l'Ordre, du corps électoral et des cotisations ; son accès à l'espace avocat sera désactivé. L'événement est ajouté à son parcours.",
+    bouton: "Rendre exécutoire",
+    Icone: NoSymbolIcon,
+    envoyer: (membre, date, _motif, x) => radierMembre(membre.id, { dateRadiation: date, dossierId: x.dossier.id, motifRadiation: `${x.reference.trim()} — pièce : ${x.piece.trim()}` }),
+    toast: (nom, date) => `Radiation de Me ${nom} exécutoire au ${formatDateCourte(date)}.`,
+  },
   deces: {
     titre: (nom) => `Déclarer le décès de Me ${nom}`,
     bandeau: {
@@ -53,15 +71,19 @@ const MODES = {
 
 /**
  * Modale d'acte sur le statut d'un membre : radiation (date de la décision +
- * référence facultative) ou déclaration de décès (date de l'acte obligatoire).
- * `onDone` est appelé après succès pour recharger la fiche.
+ * référence facultative), radiation rendue exécutoire (`execution`, avec `dossier` :
+ * référence de la décision et pièce obligatoires) ou déclaration de décès (date de
+ * l'acte obligatoire). `onDone` est appelé après succès pour recharger la fiche.
  */
-export function ActeStatutModal({ mode, membre, open, onClose, onDone }) {
+export function ActeStatutModal({ mode, membre, dossier, open, onClose, onDone }) {
   const toast = useToast();
   const cfg = MODES[mode];
   const [date, setDate] = useState("");
   const [motif, setMotif] = useState("");
   const [erreur, setErreur] = useState("");
+  const [reference, setReference] = useState("");
+  const [piece, setPiece] = useState("");
+  const [manque, setManque] = useState({});
   const [loading, setLoading] = useState(false);
   const dateRef = useRef(null);
   const aujourdhui = dateLocaleISO();
@@ -76,10 +98,13 @@ export function ActeStatutModal({ mode, membre, open, onClose, onDone }) {
     if (open) {
       setDate(cfg.dateDefaut());
       setMotif("");
+      setReference(dossier?.reference ?? "");
+      setPiece("");
+      setManque({});
       setErreur("");
       setLoading(false);
     }
-  }, [open, cfg]);
+  }, [open, cfg, dossier?.reference]);
 
   if (!open || !membre) return null;
 
@@ -95,10 +120,21 @@ export function ActeStatutModal({ mode, membre, open, onClose, onDone }) {
       dateRef.current?.focus();
       return;
     }
+    if (mode === "execution") {
+      const m = {
+        reference: reference.trim() ? undefined : "Indiquez la référence de la décision.",
+        piece: piece.trim() ? undefined : "Indiquez la pièce qui atteste l'expiration du délai de recours.",
+      };
+      setManque(m);
+      if (m.reference || m.piece) {
+        document.getElementById(m.reference ? "execution-reference" : "execution-piece")?.focus();
+        return;
+      }
+    }
     setLoading(true);
     setErreur("");
     try {
-      await cfg.envoyer(membre, date, motif);
+      await cfg.envoyer(membre, date, motif, { dossier, reference, piece });
       toast.success(cfg.toast(membre.nom, date));
       onDone?.();
       onClose?.();
@@ -170,6 +206,27 @@ export function ActeStatutModal({ mode, membre, open, onClose, onDone }) {
           </FormField>
         )}
 
+        {mode === "execution" && (
+          <>
+            <p className="text-sm text-gris">
+              Décision : <span className="text-encre">{dossier?.sanction ?? "Radiation"}</span>
+              {dossier?.dateDecision ? <> du {formatDateCourte(dossier.dateDecision)}</> : null}
+              {dossier?.decidePar ? <> · {dossier.decidePar}</> : null}
+            </p>
+            <FormField label="Référence de la décision" required htmlFor="execution-reference" error={manque.reference}>
+              <input id="execution-reference" value={reference} maxLength={120} disabled={loading} required
+                onChange={(e) => { setReference(e.target.value); setManque({ ...manque, reference: undefined }); }}
+                className={`bpn-input ${manque.reference ? "is-invalid" : ""}`} />
+            </FormField>
+            <FormField label="Pièce justificative" required hint="certificat de non-recours ou de non-appel du greffe" htmlFor="execution-piece" error={manque.piece}>
+              <input id="execution-piece" value={piece} maxLength={160} disabled={loading} required
+                onChange={(e) => { setPiece(e.target.value); setManque({ ...manque, piece: undefined }); }}
+                placeholder="Ex. : Certificat de non-appel du greffe n° 88"
+                className={`bpn-input ${manque.piece ? "is-invalid" : ""}`} />
+            </FormField>
+          </>
+        )}
+
         {cfg.consequences && (
           <Notice ton="gris" icon={InformationCircleIcon}>{cfg.consequences}</Notice>
         )}
@@ -179,8 +236,9 @@ export function ActeStatutModal({ mode, membre, open, onClose, onDone }) {
 }
 
 ActeStatutModal.propTypes = {
-  mode: PropTypes.oneOf(["radiation", "deces"]).isRequired,
+  mode: PropTypes.oneOf(["radiation", "execution", "deces"]).isRequired,
   membre: PropTypes.shape({ id: PropTypes.number, nom: PropTypes.string, statut: PropTypes.string }),
+  dossier: PropTypes.shape({ id: PropTypes.number, reference: PropTypes.string, sanction: PropTypes.string, decidePar: PropTypes.string, dateDecision: PropTypes.string }),
   open: PropTypes.bool,
   onClose: PropTypes.func,
   onDone: PropTypes.func,

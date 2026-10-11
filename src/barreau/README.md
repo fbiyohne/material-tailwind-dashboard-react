@@ -10,10 +10,12 @@ Application React/Vite du Secrétariat Général du Barreau de Pointe-Noire.
 - `data/` : constantes et dérivations (`derivations.js` : libellés et tons des statuts, dont `decede` « Décédé », gris).
 
 ## ActeStatutModal
-`components/ActeStatutModal.jsx`, props `mode` (`"radiation"` ou `"deces"`), `membre`, `open`, `onClose`, `onDone`.
+`components/ActeStatutModal.jsx`, props `mode` (`"radiation"`, `"execution"` ou `"deces"`), `membre`, `dossier` (mode `execution`), `open`, `onClose`, `onDone`.
+- Exécution (T21, 2026-10-12) : radiation décidée en mode `EXPIRATION_RECOURS`, rendue exécutoire depuis `DossierDetail` (bouton « Rendre la radiation exécutoire », permission `discipline_decider`). Affiche la décision et l'organe ; date d'effet, référence de la décision (préremplie) et pièce justificative obligatoires ; envoie `radierMembre(id, { dateRadiation, dossierId, motifRadiation: "<référence> — pièce : <pièce>" })`.
 - Radiation : date de la décision (défaut aujourd'hui, max aujourd'hui) et « Référence et motif de la décision » (300 caractères max, facultatif) ; rappel que la décision est prononcée par le Conseil et notifiée.
 - Décès : date obligatoire (acte de décès), bouton « danger » désactivé tant que la date est vide.
 - Erreur serveur affichée sous le champ, saisie conservée ; fermeture bloquée pendant l'appel.
+- `DossierDetail` propose aussi « Enregistrer une réformation » (voie, référence, date, motif ; confirmation ; `reformerDecisionDossier`, POST /discipline/:id/reformation) tant que la décision de radiation n'est pas réformée.
 - Utilisée sur la fiche `AvocatDetail`. Pour un membre décédé, les actions Radier, Déclarer le décès, Attestation et Accès espace sont masquées.
 
 ## Export de la liste des avocats (page Avocats)

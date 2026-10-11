@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { identite } from "../data/config";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeftIcon, ShieldExclamationIcon, CheckIcon, ArrowDownTrayIcon, PaperClipIcon, PlusIcon, XMarkIcon, DocumentTextIcon, ScaleIcon, PencilSquareIcon } from "@heroicons/react/24/outline";
-import { Badge, DocumentModal, EditeurDocument, Notice, MentionJuridique, useToast, useConfirm, FormField, PageHeader, Tabs, ErrorState, TableSkeleton } from "../components";
+import { ArrowLeftIcon, ShieldExclamationIcon, CheckIcon, ArrowDownTrayIcon, PaperClipIcon, PlusIcon, XMarkIcon, DocumentTextIcon, ScaleIcon, PencilSquareIcon, NoSymbolIcon, ArrowUturnLeftIcon } from "@heroicons/react/24/outline";
+import { Badge, ActeStatutModal, DocumentModal, EditeurDocument, Notice, MentionJuridique, useToast, useConfirm, FormField, PageHeader, Tabs, ErrorState, TableSkeleton } from "../components";
 import { useAuth } from "../auth/AuthContext";
 import { STATUT_DOSSIER_META } from "../data/institutionnel";
-import { formatDate } from "../utils/format";
+import { formatDate, formatDateCourte, dateLocaleISO } from "../utils/format";
 import { assainirHtml } from "../utils/sanitizeHtml";
-import { getDossier, majDossier, archiverDoc, telechargerDecisionDisciplinePdf, getParametres, enregistrerDecisionDossier } from "../api/resources";
+import { getDossier, majDossier, archiverDoc, telechargerDecisionDisciplinePdf, getParametres, enregistrerDecisionDossier, listerEvenements, reformerDecisionDossier } from "../api/resources";
 
 const STATUTS = ["ouvert", "instruction", "audience", "decision", "classe"];
 const DECISION_VIDE = { sanctionCode: "", dureeMois: "", sursis: false, peineAccessoireMois: "", motivation: "", decidePar: "", dateDecision: new Date().toISOString().slice(0, 10), dateNotification: "" };
@@ -101,6 +101,66 @@ function DecisionForm({ dossier, regles, onDone }) {
   );
 }
 
+/**
+ * Formulaire « Enregistrer une réformation » (T21, R-35/R-36) : la décision de radiation
+ * réformée sur opposition ou appel est tracée par un événement REFORMATION côté serveur,
+ * qui rétablit la situation antérieure si l'avocat est radié par ce dossier. Rien n'est effacé.
+ */
+function ReformationForm({ dossier, onDone, onCancel }) {
+  const toast = useToast();
+  const confirm = useConfirm();
+  const [f, setF] = useState({ voie: "", reference: "", dateEffet: dateLocaleISO(), motif: "" });
+  const [envoi, setEnvoi] = useState(false);
+  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+  const pret = f.voie && f.reference.trim() && f.dateEffet && !envoi;
+
+  const valider = async () => {
+    const ok = await confirm({
+      title: "Enregistrer la réformation",
+      message: `La décision de radiation du dossier ${dossier.reference} sera inscrite comme réformée sur ${f.voie === "APPEL" ? "appel" : "opposition"}. Si l'avocat est radié par ce dossier, sa situation antérieure est rétablie. Aucun événement n'est effacé et l'action est tracée.`,
+      confirmLabel: "Enregistrer",
+    });
+    if (!ok) return;
+    setEnvoi(true);
+    try {
+      await reformerDecisionDossier(dossier.id, { voie: f.voie, reference: f.reference.trim(), dateEffet: f.dateEffet, motif: f.motif.trim() || undefined });
+      toast.success("Réformation enregistrée.");
+      onDone();
+    } catch (e) {
+      toast.error(e.message);
+      setEnvoi(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3 rounded border border-grisM p-4">
+      <p className="text-sm font-medium text-navy">Réformation de la décision</p>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <FormField label="Voie de recours" required htmlFor="reformation-voie">
+          <select id="reformation-voie" value={f.voie} onChange={set("voie")} className="bpn-input">
+            <option value="">— Choisir —</option>
+            <option value="OPPOSITION">Opposition</option>
+            <option value="APPEL">Appel</option>
+          </select>
+        </FormField>
+        <FormField label="Date d'effet" required htmlFor="reformation-date">
+          <input id="reformation-date" type="date" value={f.dateEffet} max={dateLocaleISO()} onChange={set("dateEffet")} className="bpn-input" />
+        </FormField>
+        <FormField label="Référence de la décision de réformation" required htmlFor="reformation-reference" full>
+          <input id="reformation-reference" value={f.reference} maxLength={120} onChange={set("reference")} className="bpn-input" placeholder="Ex. : Cour d'appel, arrêt n° 45 du 08/10/2026" />
+        </FormField>
+        <FormField label="Motif" hint="facultatif" htmlFor="reformation-motif" full>
+          <textarea id="reformation-motif" rows={2} maxLength={500} value={f.motif} onChange={set("motif")} className="bpn-input" />
+        </FormField>
+      </div>
+      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <button type="button" className="bpn-btn bpn-btn-ghost min-h-[44px] justify-center sm:min-h-0" onClick={onCancel} disabled={envoi}>Annuler</button>
+        <button type="button" className="bpn-btn bpn-btn-primary min-h-[44px] justify-center sm:min-h-0" onClick={valider} disabled={!pret}>Enregistrer la réformation</button>
+      </div>
+    </div>
+  );
+}
+
 export function DossierDetail() {
   const { id } = useParams();
   const toast = useToast();
@@ -114,10 +174,18 @@ export function DossierDetail() {
   const [convocation, setConvocation] = useState(false);
   const [nouvellePiece, setNouvellePiece] = useState("");
   const [editerDecision, setEditerDecision] = useState(false);
+  // Parcours de l'avocat : dit si la radiation de ce dossier est exécutée ou réformée (T21).
+  const [evenements, setEvenements] = useState(null);
+  const [executer, setExecuter] = useState(false);
+  const [reformer, setReformer] = useState(false);
 
   // getDossier journalise la consultation côté serveur (RG-13).
   const charger = () => getDossier(Number(id)).then((d) => { setDossier(d); setForm(d); }).catch(() => setDossier(false));
   useEffect(() => { charger(); }, [id]);
+  useEffect(() => {
+    if (peutDecider && dossier?.membreId && dossier.sanctionCode)
+      listerEvenements(dossier.membreId).then(setEvenements).catch(() => setEvenements([]));
+  }, [dossier, peutDecider]);
   useEffect(() => { if (peutDecider) getParametres().then((p) => setRegles(p.regles)).catch(() => {}); }, [peutDecider]);
 
   if (dossier === false) {
@@ -137,6 +205,15 @@ export function DossierDetail() {
   const set = (k) => (e) => { setForm({ ...form, [k]: e.target.value }); setEnregistre(false); };
   const meta = STATUT_DOSSIER_META[form.statut];
   const pieces = form.pieces ?? [];
+  // Radiation : exécutoire à la demande en mode EXPIRATION_RECOURS, réformable tant qu'elle ne l'a pas été.
+  const estRadiation = regles?.sanctions?.find((s) => s.code === dossier.sanctionCode)?.effet === "RADIATION";
+  const duDossier = (type) => evenements?.find((e) => e.type === type && e.dossierId === dossier.id);
+  const execution = duDossier("RADIATION");
+  const reformation = duDossier("REFORMATION");
+  const suiviRadiation = peutDecider && estRadiation && !!evenements;
+  const peutExecuter = suiviRadiation && regles.effetRadiation === "EXPIRATION_RECOURS" && !execution && !reformation;
+  const peutReformer = suiviRadiation && !reformation;
+  const apresActe = () => { setReformer(false); charger(); };
 
   const ajouterPiece = () => {
     const v = nouvellePiece.trim();
@@ -326,6 +403,37 @@ export function DossierDetail() {
                           {dossier.motivation && <p className="mt-1 text-encre">Motivation : {dossier.motivation}</p>}
                         </Notice>
                         {dossier.sursis && <MentionJuridique type="sursis" />}
+                        {suiviRadiation && (
+                          <div className="space-y-3">
+                            {reformation ? (
+                              <Notice ton="gris" icon={ArrowUturnLeftIcon} className="text-sm">
+                                Décision réformée le {formatDateCourte(reformation.dateEffet)}{reformation.reference ? ` — réf. ${reformation.reference}` : ""}. Elle ne peut plus être exécutée.
+                              </Notice>
+                            ) : execution ? (
+                              <Notice ton="gris" icon={NoSymbolIcon} className="text-sm">Radiation exécutée le {formatDateCourte(execution.dateEffet)}.</Notice>
+                            ) : peutExecuter ? (
+                              <Notice ton="or" icon={ScaleIcon} className="text-sm">
+                                Radiation décidée, non encore exécutoire : elle prend effet à l'expiration du délai de recours (R-40, provisoire).
+                              </Notice>
+                            ) : null}
+                            <div className="flex flex-wrap items-center gap-2">
+                              {peutExecuter && (
+                                <button type="button" className="bpn-btn bpn-btn-ghost min-h-[44px] text-rouge hover:!bg-rougeL hover:!text-rouge sm:min-h-0" onClick={() => setExecuter(true)}>
+                                  <NoSymbolIcon className="h-4 w-4" aria-hidden="true" /> Rendre la radiation exécutoire
+                                </button>
+                              )}
+                              {peutReformer && !reformer && (
+                                <button type="button" className="bpn-btn bpn-btn-ghost min-h-[44px] sm:min-h-0" onClick={() => setReformer(true)}>
+                                  <ArrowUturnLeftIcon className="h-4 w-4" aria-hidden="true" /> Enregistrer une réformation
+                                </button>
+                              )}
+                              {(execution || reformation) && (
+                                <Link to={`/avocats/${dossier.membreId}`} className="text-sm text-navy underline-offset-2 hover:underline">Voir le parcours de l'avocat</Link>
+                              )}
+                            </div>
+                            {reformer && <ReformationForm dossier={dossier} onDone={apresActe} onCancel={() => setReformer(false)} />}
+                          </div>
+                        )}
                       </>
                     ) : peutDecider ? (
                       regles ? <DecisionForm dossier={dossier} regles={regles} onDone={charger} />
@@ -373,6 +481,17 @@ export function DossierDetail() {
         <p className="mt-3">Objet : {dossier.objet}.</p>
         <p className="mt-3 text-xs text-gris">L'intéressé(e) pourra se faire assister du conseil de son choix.</p>
       </DocumentModal>
+
+      {executer && (
+        <ActeStatutModal
+          mode="execution"
+          open
+          membre={{ id: dossier.membreId, nom: dossier.avocatNom }}
+          dossier={{ id: dossier.id, reference: duDossier("SANCTION")?.reference ?? dossier.reference, sanction: dossier.sanction, decidePar: dossier.decidePar, dateDecision: dossier.dateDecision }}
+          onClose={() => setExecuter(false)}
+          onDone={apresActe}
+        />
+      )}
 
       <EditeurDocument
         open={editerDecision}
