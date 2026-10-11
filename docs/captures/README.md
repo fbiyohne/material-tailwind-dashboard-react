@@ -7,7 +7,8 @@ Instance : http://localhost:4100, base `barreau_pn_test` du socle. Jamais `barre
 Depuis `D:\DEVAPP\BARREAUPN`, PowerShell ou Git Bash :
 
 1. **Jeu de démonstration** (seule la base `barreau_pn_test` est acceptée) :
-   `cd server`, `DATABASE_URL` = `TEST_DATABASE_URL` de `server/.env`, puis `npm run demo -- --identite=demonstration`.
+   `cd server`, `DATABASE_URL` = `TEST_DATABASE_URL` de `server/.env`, puis `npm run demo -- --identite=demonstration --mots-de-passe-defaut`
+   (la recette se connecte avec le mot de passe commun de la base de test ; sans cette option, `--identite=demonstration` pose des mots de passe aléatoires, réservés au congrès).
 2. **Instance** : `.\scripts\relancer-test.ps1` (build du front, `prisma generate`, `migrate deploy`, démarrage sur 4100).
    Le script tourne sous PowerShell 5.1 lancé par un outil : `$ErrorActionPreference = "Continue"` et contrôle de `$LASTEXITCODE`
    après chaque commande (le stderr de `prisma generate` n'arrête plus le script) ; il refuse un `TEST_DATABASE_URL` qui ne vise pas `barreau_pn_test`.
@@ -25,7 +26,7 @@ Depuis `D:\DEVAPP\BARREAUPN`, PowerShell ou Git Bash :
    (événements, dossiers, fils, pièces, fiches) sont défaites et les membres « RECETTE … » supprimés. Restent, sans effet sur les
    effectifs du jeu : les lignes de `JournalAudit` (immuable), les archives (attestation, fin de stage) et les notifications.
    Le mode `apres` s'exécute sous l'identité de base, comme les captures `avant-*` : `npm run demo -- --identite=pointe-noire`,
-   relance de l'instance, `apres`, puis retour à `--identite=demonstration` et nouvelle relance.
+   relance de l'instance, `apres`, puis retour à `--identite=demonstration --mots-de-passe-defaut` et nouvelle relance.
 4. **Volet API** : `cd server && npx vitest run test/parcours.test.ts`. Il remet l'identité « Barreau de Pointe-Noire » :
    refaire le point 1 avant une démonstration.
 

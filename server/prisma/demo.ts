@@ -5,6 +5,12 @@
  *   npm run demo -- --identite=demonstration       # + identité « Barreau de démonstration »
  *   npm run demo -- --identite=pointe-noire        # retour à l'identité de base
  *
+ * Mots de passe des 5 comptes de démonstration (bâtonnier, SG, trésorière, admin, avocat.demo) :
+ *   --mots-de-passe-aleatoires : un mot de passe aléatoire par compte, affiché une seule fois ;
+ *   --mots-de-passe-defaut     : retour au mot de passe de la base de test (« barreau »), attendu par npm test ;
+ *   sans option : --identite=demonstration implique les aléatoires (le congrès n'expose jamais
+ *   le mot de passe public), --identite=pointe-noire implique le défaut, sinon rien ne change.
+ *
  * Garde-fou : le script lit DATABASE_URL et REFUSE toute base dont le nom n'est pas
  * exactement `barreau_pn_test`, avant d'ouvrir la moindre connexion (code de sortie 1).
  * Le DATABASE_URL du .env vise barreau_pn : il faut donc désigner la base de test
@@ -41,6 +47,11 @@ try {
 } catch {
   echec("DATABASE_URL absent ou illisible.");
 }
+const MDP_ALEA = args.includes("--mots-de-passe-aleatoires");
+const MDP_DEFAUT = args.includes("--mots-de-passe-defaut");
+if (MDP_ALEA && MDP_DEFAUT) echec("--mots-de-passe-aleatoires et --mots-de-passe-defaut sont incompatibles.");
+const modeMotsDePasse: "aleatoires" | "defaut" | null = MDP_ALEA ? "aleatoires" : MDP_DEFAUT ? "defaut"
+  : identiteVoulue === "demonstration" ? "aleatoires" : identiteVoulue === "pointe-noire" ? "defaut" : null;
 if (nomBase !== BASE_AUTORISEE) echec(`la base « ${nomBase} » est refusée : seule ${BASE_AUTORISEE} est autorisée. Aucune écriture effectuée.`);
 
 const { prisma } = await import("../src/prisma.js");
@@ -275,19 +286,21 @@ async function main() {
     create: { nom: `Me ${nomDe(0)}`, email: "avocat.demo@demo.invalid", role: "AVOCAT", membreId: ids.get(0)!, passwordHash: bcrypt.hashSync("barreau", 10), actif: true },
   });
 
-  if (args.includes("--mots-de-passe-aleatoires")) await changerMotsDePasse();
+  if (modeMotsDePasse) await changerMotsDePasse(modeMotsDePasse);
   await appliquerIdentite();
 }
 
-/** Mots de passe aléatoires pour les comptes de démonstration : affichés une seule fois, jamais écrits. */
-async function changerMotsDePasse() {
+/** Comptes de démonstration : mots de passe aléatoires (affichés une seule fois, jamais écrits) ou défaut de la base de test. */
+const COMPTES_DEMO = ["batonnier@barreau-pn.cg", "sg@barreau-pn.cg", "tresoriere@barreau-pn.cg", "admin@barreau-pn.cg", "avocat.demo@demo.invalid"];
+async function changerMotsDePasse(mode: "aleatoires" | "defaut") {
   const { randomBytes } = await import("node:crypto");
-  const emails = ["batonnier@barreau-pn.cg", "sg@barreau-pn.cg", "tresoriere@barreau-pn.cg", "admin@barreau-pn.cg", "avocat.demo@demo.invalid"];
-  console.log("MOTS DE PASSE (affichés une seule fois, à noter maintenant) :");
-  for (const email of emails) {
-    const mdp = randomBytes(9).toString("base64url");
+  console.log(mode === "aleatoires"
+    ? "MOTS DE PASSE (affichés une seule fois, à noter maintenant) :"
+    : "MOTS DE PASSE : mot de passe par défaut de la base de test rétabli pour :");
+  for (const email of COMPTES_DEMO) {
+    const mdp = mode === "aleatoires" ? randomBytes(9).toString("base64url") : "barreau";
     const r = await prisma.user.updateMany({ where: { email }, data: { passwordHash: bcrypt.hashSync(mdp, 10) } });
-    if (r.count) console.log(`  ${email}  ${mdp}`);
+    if (r.count) console.log(mode === "aleatoires" ? `  ${email}  ${mdp}` : `  ${email}`);
   }
 }
 
