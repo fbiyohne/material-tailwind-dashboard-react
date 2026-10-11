@@ -6,7 +6,7 @@ import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireAvocat, type AuthRequest } from "../middleware/auth.js";
 import { enregistrerFichier, lireFichier, supprimerFichier, typeReel } from "../lib/storage.js";
-import { cotisationDue, droitDue, statutCotisation, tarifsActuels, prochainNumeroAttestation, archiver, STATUTS_SORTIS, STATUTS_ANNUAIRE } from "../lib/business.js";
+import { cotisationDue, droitDue, statutCotisation, tarifsActuels, prochainNumeroAttestation, archiver, STATUTS_SORTIS, STATUTS_ANNUAIRE, peutAttesterInscription } from "../lib/business.js";
 import { finaliserPaiement } from "../lib/encaissement.js";
 import { CANAUX, modeSandbox, nouvelleReference, initierPaiement } from "../lib/paiement.js";
 import QRCode from "qrcode";
@@ -126,7 +126,7 @@ espaceRouter.get(
   asyncH(async (req: AuthRequest, res) => {
     const membre = await prisma.membre.findUnique({ where: { id: monMembreId(req) } });
     if (!membre) throw new HttpError(404, "Fiche introuvable");
-    if ((STATUTS_SORTIS as readonly string[]).includes(membre.statut)) throw new HttpError(409, "Attestation impossible : membre radié, décédé ou sorti du tableau");
+    if (!peutAttesterInscription(membre.statut)) throw new HttpError(409, "Attestation impossible : membre non inscrit au tableau (radié, décédé, sorti ou omis)");
     const numero = await prochainNumeroAttestation();
     const date = new Date();
     await archiver({ categorie: "Attestation d'inscription", titre: `Attestation ${numero} — Me ${membre.nom}`, reference: numero, date, membreNom: membre.nom });
@@ -766,6 +766,7 @@ espaceRouter.post(
     const membre = await prisma.membre.findUnique({ where: { id: moi }, select: { statut: true } });
     if (!membre) throw new HttpError(404, "Fiche introuvable");
     if ((STATUTS_SORTIS as readonly string[]).includes(membre.statut)) throw new HttpError(409, "Attestation impossible : membre radié, décédé ou sorti du tableau");
+    if (type === "INSCRIPTION" && !peutAttesterInscription(membre.statut)) throw new HttpError(409, "Attestation impossible : membre non inscrit au tableau (radié, décédé, sorti ou omis)");
     const libelle = type === "INSCRIPTION" ? "d'inscription" : "de non-redevance";
     const sujet = `Demande d'attestation ${libelle}`;
     const corps = precisions ? `Je sollicite une attestation ${libelle}. ${precisions}` : `Je sollicite une attestation ${libelle}.`;

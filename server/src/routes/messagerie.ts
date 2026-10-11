@@ -7,7 +7,7 @@ import { notifierNouveauMessage, emailsMembres } from "../lib/messagerieNotif.js
 import { MESSAGE_DE_AVOCAT, compterNonLusParFil, totalNonLus, jamaisLu, pieceSchema, envoyerMessage, accuser, messageAvecFil, pieceDto, envoyerPiece, htmlAccuse } from "../lib/messagerie.js";
 import { realtimeMembres } from "../lib/realtime.js";
 import { envoyerPdf, htmlVersPdf } from "../lib/pdf.js";
-import { STATUTS_SORTIS, prochainNumeroAttestation, archiver, cotisationDue, tarifsActuels } from "../lib/business.js";
+import { STATUTS_SORTIS, peutAttesterInscription, prochainNumeroAttestation, archiver, cotisationDue, tarifsActuels } from "../lib/business.js";
 import { attestationHtml, attestationNonRedevanceHtml } from "../lib/templates.js";
 
 /**
@@ -222,6 +222,7 @@ messagerieRouter.post(
     const membre = await prisma.membre.findUnique({ where: { id: conv.participants[0]?.membreId ?? 0 } });
     if (!membre) throw new HttpError(404, "Membre introuvable");
     if ((STATUTS_SORTIS as readonly string[]).includes(membre.statut)) throw new HttpError(409, "Attestation impossible : membre radié, décédé ou sorti du tableau");
+    if (conv.attestationType === "INSCRIPTION" && !peutAttesterInscription(membre.statut)) throw new HttpError(409, "Attestation impossible : membre non inscrit au tableau (radié, décédé, sorti ou omis)");
     const annee = new Date().getFullYear();
     const inscription = conv.attestationType === "INSCRIPTION";
     if (!inscription) {

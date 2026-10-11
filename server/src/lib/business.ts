@@ -181,6 +181,14 @@ export const STATUTS_HORS_TABLEAU = ["RADIE", "DECEDE"] as const;
  */
 export const STATUTS_SORTIS = [...STATUTS_HORS_TABLEAU, "DEMISSIONNAIRE", "RETRAITE", "CESSATION"] as const;
 
+/**
+ * L'attestation d'inscription affirme l'inscription au tableau : refusée aux sortis et aux omis
+ * (retirés du tableau public, R1-9). SUSPENDU reste au tableau (mention « Suspendu ») : attestation permise (point ouvert).
+ */
+export function peutAttesterInscription(statut: string): boolean {
+  return !(STATUTS_SORTIS as readonly string[]).includes(statut) && statut !== "OMIS";
+}
+
 /** Statuts visibles dans l'annuaire de l'espace avocat et joignables par la messagerie (X-01, D11). */
 export const STATUTS_ANNUAIRE = ["INSCRIT", "STAGIAIRE", "HONORAIRE"] as const;
 
