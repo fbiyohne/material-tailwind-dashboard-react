@@ -95,6 +95,14 @@ export function ReglesJuridiques({ valeur: v, onChange, onSave, enCours }) {
         </div>
       </Bloc>
 
+      <Bloc titre="Quitus" description="Durée de validité imprimée sur chaque quitus (date de fin calculée). Aucun texte ne la fixe : valeur provisoire (R-65), à confirmer par le Conseil de l'Ordre.">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormField label="Validité du quitus (mois)" hint="de 1 à 24">
+            <input type="number" min={1} max={24} value={v.quitus?.validiteMois ?? 3} onChange={(e) => maj("quitus", { validiteMois: num(e) })} className="bpn-input" />
+          </FormField>
+        </div>
+      </Bloc>
+
       <Bloc titre="Sanctions et sursis" description="Catalogue des peines : durée maximale et sursis possible par peine.">
         <div className="space-y-2">
           {v.sanctions.map((s, i) => (

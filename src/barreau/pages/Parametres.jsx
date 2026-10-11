@@ -3,13 +3,13 @@ import { Link } from "react-router-dom";
 import {
   CheckIcon,
   LockClosedIcon,
-  EnvelopeIcon,
-  DevicePhoneMobileIcon,
-  BanknotesIcon,
+  CalculatorIcon,
+  CreditCardIcon,
   BuildingLibraryIcon,
   ShieldCheckIcon,
   BellIcon,
-  AdjustmentsHorizontalIcon,
+  ChatBubbleLeftRightIcon,
+  DocumentTextIcon,
   PlusIcon,
   XMarkIcon,
   ExclamationTriangleIcon,
@@ -17,27 +17,17 @@ import {
   ScaleIcon,
   Squares2X2Icon,
 } from "@heroicons/react/24/outline";
-import { Badge, Notice, useToast, PageHeader, FormField, Tabs, DataTable, Modal, Sceau, MatriceAcces } from "../components";
+import { Badge, Notice, useToast, PageHeader, FormField, Tabs, Modal, Sceau, MatriceAcces } from "../components";
 import ReglesJuridiques from "../components/ReglesJuridiques";
 import ParametresModules from "../components/ParametresModules";
+import { PanneauPaiements, PanneauNotifications, PanneauMessagerie } from "../components/ParametresCanaux";
 import { useAuth } from "../auth/AuthContext";
-import { formatFCFA, formatDateTime } from "../utils/format";
+import { formatFCFA } from "../utils/format";
 import { appliquerConfig } from "../data/config";
 import { STATUT_META_CLES, STATUT_MEMBRE_META_CLES } from "../data/derivations";
 import { STATUT_DOSSIER_META_CLES } from "../data/institutionnel";
 import { STATUT_PUBLICATION_META_CLES } from "../data/publications";
 import { getParametres, majParametres, getNotifications, reinitialiserDonnees, listerMembres } from "../api/resources";
-
-const EVT_LABEL = {
-  RELANCE: "Relance cotisation",
-  DEMANDE_ACCUSE: "Demande d'accès — accusé",
-  DEMANDE_DECISION: "Demande d'accès — décision",
-  RECU: "Reçu émis",
-  CONVOCATION: "Convocation",
-  ACCES_AVOCAT: "Accès espace avocat",
-  MESSAGE: "Messagerie — message avocat",
-  RESET_MDP: "Réinitialisation de mot de passe",
-};
 
 const DEFAUT = {
   tarifs: { avocat: 150000, stagiaire: 75000, droitsPlaidoirie: 60000 },
@@ -211,16 +201,13 @@ export function Parametres() {
       "Tarifs et exercices enregistrés."
     );
   const sauverIdentite = () => enregistrer({ identite }, "Identité de l'institution enregistrée.");
-  const sauverReference = () =>
-    enregistrer(
-      {
-        documents: { categoriesArchives: categories, typesPublication: typesPub },
-        paiement: { canauxActifs: canaux },
-        conseil: { fonctions },
-        libellesStatuts: libelles,
-      },
-      "Données de référence enregistrées."
-    );
+  // Les anciennes « données de référence » sont réparties entre les onglets : chaque
+  // section s'enregistre seule (le serveur fusionne section par section).
+  const sauverConseil = () => enregistrer({ conseil: { fonctions } }, "Fonctions du Conseil enregistrées.");
+  const sauverLibelles = () => enregistrer({ libellesStatuts: libelles }, "Libellés des statuts enregistrés.");
+  const sauverCanaux = () => enregistrer({ paiement: { canauxActifs: canaux } }, "Canaux de paiement enregistrés.");
+  const sauverDocuments = () =>
+    enregistrer({ documents: { categoriesArchives: categories, typesPublication: typesPub } }, "Catégories de documents enregistrées.");
 
   const sauverRegles = () => {
     const { stage, ...autres } = regles;
@@ -340,55 +327,26 @@ export function Parametres() {
     </Section>
   );
 
-  const panneauReference = (
-    <div className="space-y-5">
-      <Tabs
-        ariaLabel="Catégories de données de référence"
-        tabs={[
-          { id: "documents", label: "Documents", content: (
-      <Section titre="Catégories & types de documents" description="Listes de référence utilisées dans l'archivage et les publications.">
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <div>
-            <div className={SOUS_TITRE}>Catégories d'archives</div>
-            <ListeEditable valeurs={categories} onChange={setCategories} placeholder="Nouvelle catégorie…" />
-          </div>
-          <div>
-            <div className={SOUS_TITRE}>Types de publication</div>
-            <ListeEditable valeurs={typesPub} onChange={setTypesPub} placeholder="Nouveau type…" />
-          </div>
-        </div>
-      </Section>
-          ) },
-          { id: "conseil", label: "Conseil de l'Ordre", content: (
+  /** Bouton d'enregistrement en pied de section (même motif que Tarifs et Institution). */
+  const pied = (onClick, libelle = "Enregistrer") => (
+    <div className="mt-4 flex justify-end">
+      <button className="bpn-btn bpn-btn-primary" onClick={onClick}><CheckIcon className="h-4 w-4" /> {libelle}</button>
+    </div>
+  );
+
+  // 1. Barreau et identité : institution, Conseil de l'Ordre, libellés des statuts.
+  const panneauBarreau = (
+    <Tabs
+      ariaLabel="Barreau et identité"
+      tabs={[
+        { id: "institution", label: "Institution", content: panneauIdentite },
+        { id: "conseil", label: "Conseil de l'Ordre", content: (
       <Section titre="Fonctions du Conseil de l'Ordre" description="Intitulés proposés à l'ajout ou à la modification d'un membre du Conseil (Bâtonnier, Trésorière, Membre du Conseil…).">
         <ListeEditable valeurs={fonctions} onChange={setFonctions} placeholder="Nouvelle fonction…" />
+        {pied(sauverConseil)}
       </Section>
-          ) },
-          { id: "paiement", label: "Paiement & stage", content: (
-      <Section titre="Canaux de paiement & stage" description="Moyens de paiement proposés en ligne.">
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <div>
-            <div className={SOUS_TITRE}>Canaux de paiement actifs</div>
-            <div className="overflow-hidden rounded-lg border border-grisM">
-              {CANAUX_DISPO.map((c, i) => {
-                const actif = canaux.includes(c.value);
-                return (
-                  <label key={c.value} className={`flex cursor-pointer items-center justify-between gap-3 px-3 py-2.5 text-sm transition hover:bg-grisL/40 ${i > 0 ? "border-t border-grisL" : ""}`}>
-                    <span className={actif ? "font-medium text-encre" : "text-gris"}>{c.label}</span>
-                    <input type="checkbox" checked={actif} onChange={() => basculerCanal(c.value)} className="h-4 w-4 accent-navy" />
-                  </label>
-                );
-              })}
-            </div>
-          </div>
-          <div>
-            <div className={SOUS_TITRE}>Durée du stage</div>
-            <p className="text-xs text-gris">Réglée dans l'onglet « Règles juridiques ».</p>
-          </div>
-        </div>
-      </Section>
-          ) },
-          { id: "statuts", label: "Libellés des statuts", content: (
+        ) },
+        { id: "statuts", label: "Libellés des statuts", content: (
       <Section titre="Libellés des statuts" description="Renommez l'affichage des statuts sans changer la logique. Laissez vide pour conserver le libellé par défaut.">
         <div className="grid grid-cols-1 gap-x-8 gap-y-6 lg:grid-cols-2">
           {DOMAINES_STATUT.map((dom) => (
@@ -410,21 +368,61 @@ export function Parametres() {
             </div>
           ))}
         </div>
+        {pied(sauverLibelles)}
       </Section>
-          ) },
-        ]}
-      />
+        ) },
+      ]}
+    />
+  );
 
-      <div className="flex justify-end">
-        <button className="bpn-btn bpn-btn-primary" onClick={sauverReference}><CheckIcon className="h-4 w-4" /> Enregistrer les données de référence</button>
-      </div>
+  // 5. Paiements : canaux proposés en ligne (ex-sous-onglet « Paiement & stage »), puis passerelles (T15).
+  const panneauPaiements = (
+    <div className="space-y-5">
+      <Section titre="Canaux proposés en ligne" description="Moyens de paiement affichés aux avocats lors d'un règlement en ligne.">
+        <div className="overflow-hidden rounded-lg border border-grisM">
+          {CANAUX_DISPO.map((c, i) => {
+            const actif = canaux.includes(c.value);
+            return (
+              <label key={c.value} className={`flex min-h-[44px] cursor-pointer items-center justify-between gap-3 px-3 py-2.5 text-sm transition hover:bg-grisL/40 sm:min-h-0 ${i > 0 ? "border-t border-grisL" : ""}`}>
+                <span className={actif ? "font-medium text-encre" : "text-gris"}>{c.label}</span>
+                <input type="checkbox" checked={actif} onChange={() => basculerCanal(c.value)} className="h-4 w-4 accent-navy" />
+              </label>
+            );
+          })}
+        </div>
+        {pied(sauverCanaux, "Enregistrer les canaux")}
+      </Section>
+      <PanneauPaiements />
     </div>
   );
 
+  // 9. Documents : listes de référence de l'archivage et des publications.
+  const panneauDocuments = (
+    <Section titre="Catégories & types de documents" description="Listes de référence utilisées dans l'archivage et les publications.">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div>
+          <div className={SOUS_TITRE}>Catégories d'archives</div>
+          <ListeEditable valeurs={categories} onChange={setCategories} placeholder="Nouvelle catégorie…" />
+        </div>
+        <div>
+          <div className={SOUS_TITRE}>Types de publication</div>
+          <ListeEditable valeurs={typesPub} onChange={setTypesPub} placeholder="Nouveau type…" />
+        </div>
+      </div>
+      {pied(sauverDocuments)}
+    </Section>
+  );
+
+  // « Provisoire » n'est plus dans le libellé de l'onglet : la mention est portée par le panneau.
   const panneauRegles = regles ? (
-    <ReglesJuridiques valeur={regles} onChange={setRegles} onSave={sauverRegles} />
+    <div className="space-y-5">
+      <Notice ton="or" icon={ScaleIcon}>
+        Ces règles sont provisoires : les valeurs qui ne figurent pas dans la loi n° 026-92 doivent être confirmées par le règlement intérieur de l'Ordre et du Barreau.
+      </Notice>
+      <ReglesJuridiques valeur={regles} onChange={setRegles} onSave={sauverRegles} />
+    </div>
   ) : (
-    <Section titre="Règles juridiques (provisoires)" description="Chargement des règles…" />
+    <Section titre="Règles juridiques" description="Chargement des règles…" />
   );
 
   const panneauRoles = (
@@ -456,52 +454,23 @@ export function Parametres() {
     </div>
   );
 
-  const panneauNotifications = (
-    <Section titre="Notifications" description="Canaux d'envoi (email / SMS) et journal des envois récents (RG-16).">
-      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="flex items-center justify-between rounded border border-grisM bg-grisL/40 px-3 py-2.5">
-          <span className="flex items-center gap-2 text-sm text-encre"><EnvelopeIcon className="h-4 w-4 text-gris" /> Email (SMTP)</span>
-          <Badge ton={notif?.emailSimulation === false ? "vert" : "or"} dot={false}>{notif?.emailSimulation === false ? "Configuré" : "Simulation"}</Badge>
-        </div>
-        <div className="flex items-center justify-between rounded border border-grisM bg-grisL/40 px-3 py-2.5">
-          <span className="flex items-center gap-2 text-sm text-encre"><DevicePhoneMobileIcon className="h-4 w-4 text-gris" /> SMS</span>
-          <Badge ton={notif?.smsSimulation === false ? "vert" : "or"} dot={false}>{notif?.smsSimulation === false ? "Configuré" : "Simulation"}</Badge>
-        </div>
-      </div>
-      <DataTable
-        columns={[
-          { key: "canal", label: "Canal", sortable: true, sortValue: (n) => n.canal, cell: (n) => <Badge ton={n.canal === "EMAIL" ? "bleu" : "gris"} dot={false}>{n.canal}</Badge> },
-          { key: "destinataire", label: "Destinataire", sortable: true, sortValue: (n) => n.destinataire, cell: (n) => <span className="text-gris">{n.destinataire}</span> },
-          { key: "evenement", label: "Événement", sortable: true, sortValue: (n) => EVT_LABEL[n.evenement] ?? n.evenement, cell: (n) => <span className="text-gris">{EVT_LABEL[n.evenement] ?? n.evenement}</span> },
-          { key: "statut", label: "Statut", sortable: true, sortValue: (n) => (n.statut === "ENVOYE" ? (n.simulation ? 1 : 0) : 2), cell: (n) => (
-            <Badge ton={n.statut === "ENVOYE" ? (n.simulation ? "or" : "vert") : "rouge"} dot={false}>{n.statut === "ENVOYE" ? (n.simulation ? "Simulé" : "Envoyé") : "Échec"}</Badge>
-          ) },
-          { key: "date", label: "Date", sortable: true, sortValue: (n) => new Date(n.createdAt).getTime(), cell: (n) => <span className="font-mono text-xs text-gris">{formatDateTime(n.createdAt)}</span> },
-        ]}
-        rows={notif?.journal ?? []}
-        density="compact"
-        libelle="envois"
-        emptyTitle="Aucune notification"
-        emptyDescription="Aucune notification émise pour l'instant. Les envois apparaîtront ici (mode simulation tant que SMTP/SMS ne sont pas configurés)."
-        initialSort={{ key: "date", dir: "desc" }}
-      />
-    </Section>
-  );
-
   return (
     <div className="space-y-5">
-      <PageHeader eyebrow="Système" titre="Paramètres" sousTitre="Tarifs, identité de l'institution, données de référence centralisées, rôles et notifications." />
+      <PageHeader eyebrow="Système" titre="Paramètres" sousTitre="Identité du barreau, règles juridiques, tarifs, accès, canaux de paiement et de notification, messagerie, modules et documents." />
 
       <Tabs
         ariaLabel="Sections des paramètres"
+        vertical
         tabs={[
-          { id: "tarifs", label: "Tarifs & exercices", icon: BanknotesIcon, content: panneauTarifs },
-          { id: "identite", label: "Institution", icon: BuildingLibraryIcon, content: panneauIdentite },
-          { id: "reference", label: "Données de référence", icon: AdjustmentsHorizontalIcon, content: panneauReference },
-          { id: "regles", label: "Règles juridiques (provisoires)", icon: ScaleIcon, content: panneauRegles },
-          { id: "roles", label: "Rôles & sécurité", icon: ShieldCheckIcon, content: panneauRoles },
-          { id: "notifications", label: "Notifications", icon: BellIcon, badge: notif?.journal?.length || null, content: panneauNotifications },
+          { id: "barreau", label: "Barreau et identité", icon: BuildingLibraryIcon, content: panneauBarreau },
+          { id: "regles", label: "Règles juridiques", icon: ScaleIcon, content: panneauRegles },
+          { id: "tarifs", label: "Tarifs et exercices", icon: CalculatorIcon, content: panneauTarifs },
+          { id: "roles", label: "Rôles et sécurité", icon: ShieldCheckIcon, content: panneauRoles },
+          { id: "paiements", label: "Paiements", icon: CreditCardIcon, content: panneauPaiements },
+          { id: "notifications", label: "Notifications", icon: BellIcon, badge: notif?.journal?.length || null, content: <PanneauNotifications /> },
+          { id: "messagerie", label: "Messagerie", icon: ChatBubbleLeftRightIcon, content: <PanneauMessagerie /> },
           { id: "modules", label: "Modules", icon: Squares2X2Icon, content: <ParametresModules /> },
+          { id: "documents", label: "Documents", icon: DocumentTextIcon, content: panneauDocuments },
         ]}
       />
 

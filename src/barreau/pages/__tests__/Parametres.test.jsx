@@ -44,11 +44,11 @@ beforeEach(() => {
 });
 
 describe("Parametres — règles juridiques provisoires", () => {
-  it("affiche la mention C-05 dans chacun des 6 blocs et envoie l'objet regles complet", async () => {
+  it("affiche la mention C-05 dans chacun des 7 blocs (dont Quitus, T17) et envoie l'objet regles complet", async () => {
     rendre();
     await userEvent.click(await screen.findByRole("tab", { name: /Règles juridiques/ }));
     const panneau = await screen.findByRole("tabpanel");
-    expect(within(panneau).getAllByText(/Les valeurs signalées « provisoire »/).length).toBe(6);
+    expect(within(panneau).getAllByText(/Les valeurs signalées « provisoire »/).length).toBe(7);
 
     const duree = within(panneau).getByLabelText("Durée du stage (mois)");
     await userEvent.clear(duree);

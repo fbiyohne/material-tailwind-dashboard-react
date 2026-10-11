@@ -228,7 +228,10 @@ il ne les prononce pas.
   non amorcées). Conséquence : on ne peut pas retirer *toutes* les actions d'un
   rôle, le minimum étant les défauts.
 
-Tests : `test/rbac-actions.test.ts`.
+`GET /rbac` expose aussi `rolesLectureSeule` : la ligne AVOCAT (« Espace cloisonné »),
+affichée pour information ; AVOCAT reste hors de `ROLES_MATRICE` et `PUT /rbac` la refuse (400).
+
+Tests : `test/rbac-actions.test.ts`, `test/rbac-avocat.test.ts`.
 
 ## Discipline : décision enregistrée (T11, X-02, art. 36 loi n° 026-92)
 

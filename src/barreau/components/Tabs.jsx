@@ -11,8 +11,11 @@ import PropTypes from "prop-types";
  * `content` peut être un nœud ou une fonction (rendu paresseux du panneau actif).
  * `ariaLabel` nomme la liste d'onglets (défaut « Sections ») — à distinguer
  * lorsqu'on imbrique des Tabs pour éviter deux tablists homonymes.
+ * `vertical` (écran large uniquement, ≥ lg) : colonne de navigation à gauche,
+ * liseré or à droite de l'onglet actif — pour une page à nombreux onglets
+ * (Paramètres) qui ne tiendraient pas sur une ligne. Sous lg : rendu horizontal.
  */
-export function Tabs({ tabs, defaultTab, className = "", ariaLabel = "Sections" }) {
+export function Tabs({ tabs, defaultTab, className = "", ariaLabel = "Sections", vertical = false }) {
   const base = useId();
   const [active, setActive] = useState(defaultTab ?? tabs[0]?.id);
   const refs = useRef({});
@@ -23,8 +26,8 @@ export function Tabs({ tabs, defaultTab, className = "", ariaLabel = "Sections" 
   const onKeyDown = (e) => {
     const last = tabs.length - 1;
     let next = null;
-    if (e.key === "ArrowRight") next = index === last ? 0 : index + 1;
-    else if (e.key === "ArrowLeft") next = index === 0 ? last : index - 1;
+    if (e.key === "ArrowRight" || (vertical && e.key === "ArrowDown")) next = index === last ? 0 : index + 1;
+    else if (e.key === "ArrowLeft" || (vertical && e.key === "ArrowUp")) next = index === 0 ? last : index - 1;
     else if (e.key === "Home") next = 0;
     else if (e.key === "End") next = last;
     if (next === null) return;
@@ -35,16 +38,16 @@ export function Tabs({ tabs, defaultTab, className = "", ariaLabel = "Sections" 
   };
 
   return (
-    <div className={className}>
+    <div className={`${vertical ? "lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:items-start lg:gap-6" : ""} ${className}`}>
       {/* Une seule ligne d'onglets : défilement horizontal interne quand la
           largeur manque (mobile), au lieu d'un retour à la ligne qui casse le
           liseré. Le filet gris est porté par l'enveloppe pour ne pas être rogné. */}
-      <div className="border-b border-grisM">
+      <div className={`border-b border-grisM ${vertical ? "lg:border-b-0 lg:border-r" : ""}`}>
       <div
         role="tablist"
         aria-label={ariaLabel}
         onKeyDown={onKeyDown}
-        className="-mb-px flex gap-1 overflow-x-auto [scrollbar-width:none]"
+        className={`-mb-px flex gap-1 overflow-x-auto [scrollbar-width:none] ${vertical ? "lg:-mr-px lg:mb-0 lg:flex-col lg:overflow-visible" : ""}`}
       >
         {tabs.map((t) => {
           const isActive = t.id === courant?.id;
@@ -60,7 +63,7 @@ export function Tabs({ tabs, defaultTab, className = "", ariaLabel = "Sections" 
               aria-controls={`${base}-panel-${t.id}`}
               tabIndex={isActive ? 0 : -1}
               onClick={() => setActive(t.id)}
-              className={`flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm sm:px-4 font-medium transition-colors ${
+              className={`flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm sm:px-4 font-medium transition-colors ${vertical ? "lg:border-b-0 lg:border-r-2 lg:pl-0" : ""} ${
                 isActive
                   ? "border-or text-navy"
                   : "border-transparent text-gris hover:border-grisM hover:text-encre"
@@ -85,7 +88,7 @@ export function Tabs({ tabs, defaultTab, className = "", ariaLabel = "Sections" 
           id={`${base}-panel-${courant.id}`}
           aria-labelledby={`${base}-tab-${courant.id}`}
           tabIndex={0}
-          className="pt-5 outline-none"
+          className={`pt-5 outline-none ${vertical ? "lg:pt-0" : ""}`}
         >
           {typeof courant.content === "function" ? courant.content() : courant.content}
         </div>
@@ -107,6 +110,7 @@ Tabs.propTypes = {
   defaultTab: PropTypes.string,
   className: PropTypes.string,
   ariaLabel: PropTypes.string,
+  vertical: PropTypes.bool,
 };
 
 export default Tabs;

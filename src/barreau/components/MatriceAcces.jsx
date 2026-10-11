@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { CheckIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
+import { CheckIcon, LockClosedIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
 import { useToast } from "./Toast";
 import { TableSkeleton } from "./Skeleton";
 import { ErrorState } from "./ErrorState";
@@ -67,6 +67,7 @@ export function MatriceAcces() {
         Cochez les modules accessibles à chaque profil. Le <strong className="text-encre">Secrétaire Général</strong> et
         l'<strong className="text-encre">Administrateur</strong> disposent d'un accès complet, non modifiable.
         Les colonnes « actions » (décision disciplinaire, validation du stage, omission…) sont attribuées séparément des modules ; le Secrétaire Général garde ses actions par défaut, non modifiables.
+        L'<strong className="text-encre">Avocat</strong> n'accède qu'à son espace personnel, cloisonné : il n'a aucun module de gestion.
       </p>
 
       <div className="overflow-x-auto rounded-lg border border-grisM">
@@ -116,6 +117,22 @@ export function MatriceAcces() {
                     <CheckIcon className="h-3.5 w-3.5" /> {enregistrement === r.cle ? "…" : "Enregistrer"}
                   </button>
                 </td>
+              </tr>
+            ))}
+            {/* Rôles hors matrice (Avocat) : affichés pour information, cases désactivées. */}
+            {(data.rolesLectureSeule ?? []).map((r) => (
+              <tr key={r.cle} className="border-b border-grisL bg-grisL/30">
+                <td className="sticky left-0 z-10 bg-grisL px-3 py-2.5">
+                  <span className="block font-medium text-encre">{r.libelle}</span>
+                  <span className="inline-flex items-center gap-1 whitespace-nowrap text-2xs text-gris"><LockClosedIcon className="h-3 w-3" aria-hidden="true" />{r.mention}</span>
+                </td>
+                {colonnes.map((p) => (
+                  <td key={p.cle} className="px-2 py-2.5 text-center">
+                    <input type="checkbox" disabled checked={false} readOnly className="h-4 w-4 cursor-not-allowed accent-navy"
+                      aria-label={`${r.libelle} — ${p.libelle} (non modifiable)`} />
+                  </td>
+                ))}
+                <td />
               </tr>
             ))}
           </tbody>

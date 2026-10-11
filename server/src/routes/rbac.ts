@@ -27,6 +27,8 @@ rbacRouter.get(
       actions: ACTIONS,
       rolesEditables: ROLES_MATRICE.map((r) => ({ cle: r, libelle: ROLE_LABELS[r] ?? r })),
       rolesComplet: ROLES_COMPLET.map((r) => ({ cle: r, libelle: ROLE_LABELS[r] ?? r })),
+      // Affiché pour information seulement : l'Avocat reste hors de ROLES_MATRICE (le PUT le refuse).
+      rolesLectureSeule: [{ cle: "AVOCAT", libelle: ROLE_LABELS.AVOCAT, lectureSeule: true, mention: "Espace cloisonné" }],
       matrice,
     });
   })

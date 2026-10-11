@@ -13,6 +13,18 @@ import { formatDateTime } from "../utils/format";
 const SECRETS = new Set(["abonnementCle", "cleSecrete", "cleApi", "cleWebhook", "pass"]);
 const estMasque = (v) => typeof v === "string" && v.startsWith("••••");
 
+/** Libellés des événements du journal des envois (repris de l'ancien onglet Notifications). */
+const EVT_LABEL = {
+  RELANCE: "Relance cotisation",
+  DEMANDE_ACCUSE: "Demande d'accès — accusé",
+  DEMANDE_DECISION: "Demande d'accès — décision",
+  RECU: "Reçu émis",
+  CONVOCATION: "Convocation",
+  ACCES_AVOCAT: "Accès espace avocat",
+  MESSAGE: "Messagerie — message avocat",
+  RESET_MDP: "Réinitialisation de mot de passe",
+};
+
 /** Retire du patch les secrets inchangés ou vides (le serveur conserve alors l'existant). */
 function sansSecretsInchanges(o) {
   if (Array.isArray(o) || o === null || typeof o !== "object") return o;
@@ -195,15 +207,18 @@ export function PanneauPaiements() {
 /** Notifications : SMTP, SMS, expéditeur, journal des envois. */
 export function PanneauNotifications() {
   const s = useSections(["smtp", "notifications"]);
-  const [journal, setJournal] = useState([]);
-  useEffect(() => { getNotifications().then((n) => setJournal(n?.journal ?? [])).catch(() => setJournal([])); }, []);
+  const [envois, setEnvois] = useState(null); // { journal, emailSimulation, smsSimulation }
+  useEffect(() => { getNotifications().then(setEnvois).catch(() => setEnvois(null)); }, []);
+  const journal = envois?.journal ?? [];
+  // État réel du transport (variables d'environnement) : « Simulation » tant qu'il n'est pas configuré.
+  const etat = (simulation) => <Badge ton={simulation === false ? "vert" : "or"} dot={false}>{simulation === false ? "Configuré" : "Simulation"}</Badge>;
   const smtp = s.brouillon.smtp ?? {};
   const sms = s.brouillon.notifications?.sms ?? {};
   return (
     <Etats s={s}>
       <div className="space-y-5">
         <Notice ton="gris">Les notifications sont de service et au contenu neutre : jamais le texte d'un message, d'une pièce ni une information disciplinaire.</Notice>
-        <Carte titre="E-mail (SMTP)" icon={EnvelopeIcon}>
+        <Carte titre="E-mail (SMTP)" icon={EnvelopeIcon} action={etat(envois?.emailSimulation)}>
           <div className={GRILLE}>
             <Champ id="smtp-host" label="Serveur" valeur={smtp.host} onChange={s.regler(["smtp", "host"])} />
             <Champ id="smtp-port" label="Port" valeur={smtp.port} onChange={(v) => s.regler(["smtp", "port"])(v === "" ? "" : Number(v) || v)} />
@@ -214,7 +229,7 @@ export function PanneauNotifications() {
           <div className="mt-3"><Interrupteur id="smtp-secure" label="Connexion sécurisée (TLS)" valeur={smtp.secure} onChange={s.regler(["smtp", "secure"])} /></div>
           <TestConnexion canal="smtp" desactive={s.modifie} />
         </Carte>
-        <Carte titre="SMS" icon={DevicePhoneMobileIcon}>
+        <Carte titre="SMS" icon={DevicePhoneMobileIcon} action={etat(envois?.smsSimulation)}>
           <div className="mb-3"><Interrupteur id="sms-actif" label="Activer l'envoi de SMS (simulation)" valeur={sms.actif} onChange={s.regler(["notifications", "sms", "actif"])} /></div>
           <div className={GRILLE}>
             <Champ id="sms-url" label="URL du fournisseur" valeur={sms.url} onChange={s.regler(["notifications", "sms", "url"])} hint="https://" />
@@ -227,13 +242,13 @@ export function PanneauNotifications() {
         <Carte titre="Journal des envois">
           <DataTable
             columns={[
-              { key: "canal", label: "Canal", cell: (n) => <Badge ton={n.canal === "EMAIL" ? "bleu" : "gris"} dot={false}>{n.canal}</Badge> },
-              { key: "destinataire", label: "Destinataire", cell: (n) => <span className="text-gris">{n.destinataire}</span> },
-              { key: "evenement", label: "Événement", cell: (n) => <span className="text-gris">{n.evenement}</span> },
-              { key: "statut", label: "Statut", cell: (n) => <Badge ton={n.statut === "ENVOYE" ? (n.simulation ? "or" : "vert") : "rouge"} dot={false}>{n.statut === "ENVOYE" ? (n.simulation ? "Simulé" : "Envoyé") : "Échec"}</Badge> },
-              { key: "date", label: "Date", cell: (n) => <span className="font-mono text-xs text-gris">{formatDateTime(n.createdAt)}</span> },
+              { key: "canal", label: "Canal", sortable: true, sortValue: (n) => n.canal, cell: (n) => <Badge ton={n.canal === "EMAIL" ? "bleu" : "gris"} dot={false}>{n.canal}</Badge> },
+              { key: "destinataire", label: "Destinataire", sortable: true, sortValue: (n) => n.destinataire, cell: (n) => <span className="text-gris">{n.destinataire}</span> },
+              { key: "evenement", label: "Événement", sortable: true, sortValue: (n) => EVT_LABEL[n.evenement] ?? n.evenement, cell: (n) => <span className="text-gris">{EVT_LABEL[n.evenement] ?? n.evenement}</span> },
+              { key: "statut", label: "Statut", sortable: true, sortValue: (n) => (n.statut === "ENVOYE" ? (n.simulation ? 1 : 0) : 2), cell: (n) => <Badge ton={n.statut === "ENVOYE" ? (n.simulation ? "or" : "vert") : "rouge"} dot={false}>{n.statut === "ENVOYE" ? (n.simulation ? "Simulé" : "Envoyé") : "Échec"}</Badge> },
+              { key: "date", label: "Date", sortable: true, sortValue: (n) => new Date(n.createdAt).getTime(), cell: (n) => <span className="font-mono text-xs text-gris">{formatDateTime(n.createdAt)}</span> },
             ]}
-            rows={journal} density="compact" libelle="envois"
+            rows={journal} density="compact" libelle="envois" initialSort={{ key: "date", dir: "desc" }}
             emptyTitle="Aucune notification" emptyDescription="Les envois apparaîtront ici (simulation tant que SMTP et SMS ne sont pas configurés)."
           />
         </Carte>
