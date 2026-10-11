@@ -269,3 +269,11 @@ Toutes les entrées ont pour interlocutrice Me Kalina MENGA, qui valide ou trans
 - **Question** : la reprise d'activité exige-t-elle une décision ou une formalité, ou doit-elle être automatique à l'échéance ?
 - **Valeur provisoire retenue** : reprise enregistrée à la main par le SG, avec sa date et sa référence.
 - **Interlocutrice** : Me Kalina MENGA.
+
+### PO-34 — Radiation par `/radier` ouverte au SG
+
+- **Texte** : art. 18-10° et 36 de la loi 026-92 (la radiation relève du Conseil du barreau en conseil de discipline) ; matrice R-42.
+- **Constat** (R1-7) : `POST /membres/:id/radier` est ouvert au SG (`requireRole`), sans `discipline_decider`. Le SG peut enregistrer une radiation hors dossier disciplinaire. `POST /discipline/:id/decision` est, lui, réservé au bâtonnier (403 pour le SG). La route est conservée telle quelle car les tests existants l'exigent.
+- **Question** : `/radier` doit-il être réservé au bâtonnier, ou rester un registre d'exécution historique, avec référence de décision obligatoire pour qui n'a pas `discipline_decider` ?
+- **Valeur provisoire retenue** : route inchangée ; la radiation disciplinaire passe par la décision. Restriction à faire valider par Fabrice puis Me Kalina MENGA.
+- **Interlocutrice** : Me Kalina MENGA.
