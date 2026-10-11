@@ -40,7 +40,8 @@ const { trouverChromium } = await import("../src/lib/pdf.js");
 const puppeteer = (await import("puppeteer-core")).default;
 
 const URL_APP = process.env.RECETTE_URL ?? "http://localhost:4100";
-const MDP = "barreau";
+// Comptes de la base de test (seed) ; avec « npm run demo -- --mots-de-passe-aleatoires », passer RECETTE_MDP.
+const MDP = process.env.RECETTE_MDP ?? "barreau";
 const COMPTES = {
   sg: "sg@barreau-pn.cg",
   batonnier: "batonnier@barreau-pn.cg",

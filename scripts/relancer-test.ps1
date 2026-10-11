@@ -22,6 +22,7 @@ if ($LASTEXITCODE) { throw "prisma generate en échec" }
 npx prisma migrate deploy
 if ($LASTEXITCODE) { throw "migrate deploy en échec" }
 $env:PORT = "$port"
+$env:HOST = "127.0.0.1"   # instance de test joignable depuis ce poste seulement
 $env:STATIC_DIR = "$racine\dist"
 $p = Start-Process -FilePath npm.cmd -ArgumentList "start" -WindowStyle Hidden -PassThru
 Pop-Location

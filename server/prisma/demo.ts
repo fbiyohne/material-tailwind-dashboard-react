@@ -275,7 +275,20 @@ async function main() {
     create: { nom: `Me ${nomDe(0)}`, email: "avocat.demo@demo.invalid", role: "AVOCAT", membreId: ids.get(0)!, passwordHash: bcrypt.hashSync("barreau", 10), actif: true },
   });
 
+  if (args.includes("--mots-de-passe-aleatoires")) await changerMotsDePasse();
   await appliquerIdentite();
+}
+
+/** Mots de passe aléatoires pour les comptes de démonstration : affichés une seule fois, jamais écrits. */
+async function changerMotsDePasse() {
+  const { randomBytes } = await import("node:crypto");
+  const emails = ["batonnier@barreau-pn.cg", "sg@barreau-pn.cg", "tresoriere@barreau-pn.cg", "admin@barreau-pn.cg", "avocat.demo@demo.invalid"];
+  console.log("MOTS DE PASSE (affichés une seule fois, à noter maintenant) :");
+  for (const email of emails) {
+    const mdp = randomBytes(9).toString("base64url");
+    const r = await prisma.user.updateMany({ where: { email }, data: { passwordHash: bcrypt.hashSync(mdp, 10) } });
+    if (r.count) console.log(`  ${email}  ${mdp}`);
+  }
 }
 
 /** Identité de démonstration : logo générique, mention C-13 ; « pointe-noire » = retour aux défauts. */

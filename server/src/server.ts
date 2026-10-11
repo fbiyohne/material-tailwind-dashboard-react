@@ -14,7 +14,7 @@ void rafraichirIdentite();
 // Amorce (si vide) puis charge la matrice de permissions en cache.
 void amorcerMatriceSiVide().then(() => rafraichirMatrice());
 
-const server = creerApp().listen(env.port, () => {
+const server = creerApp().listen(env.port, env.host, () => {
   logger.info({ port: env.port, env: env.nodeEnv }, `API Barreau — http://localhost:${env.port}/api`);
 });
 

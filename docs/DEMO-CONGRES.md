@@ -16,7 +16,7 @@ Poste de démonstration : instance **locale** (pas de dépendance au réseau du 
 #    TEST_DATABASE_URL est lue dans server\.env ; DATABASE_URL du .env vise la production et ne doit PAS être utilisée.
 cd D:\DEVAPP\BARREAUPN\server
 $env:DATABASE_URL = ((Get-Content .env | Where-Object { $_ -match '^TEST_DATABASE_URL=' }) -replace '^TEST_DATABASE_URL=', '' -replace '"', '')
-npm run demo -- --identite=demonstration
+npm run demo -- --identite=demonstration --mots-de-passe-aleatoires   # note les mots de passe affichés (une seule fois)
 # 3. Reconstruire le front et relancer l'instance sur http://localhost:4100
 cd D:\DEVAPP\BARREAUPN
 .\scripts\relancer-test.ps1
@@ -28,7 +28,7 @@ Contrôle d'ouverture (1 minute, avant le public) : `http://localhost:4100/api/h
 
 ## 2. Comptes
 
-Mot de passe commun : `barreau` (base de test seulement).
+Mots de passe : un mot de passe aléatoire par compte, affiché **une seule fois** en console par `npm run demo -- --identite=demonstration --mots-de-passe-aleatoires` (à noter hors du dépôt, à ne jamais écrire dans ce document). Ne jamais présenter le scénario avec le mot de passe par défaut de la base de test. L'instance écoute sur `127.0.0.1` seulement (`relancer-test.ps1` positionne `HOST`) ; ne pas l'ouvrir sur le Wi-Fi du lieu.
 
 | Rôle | Identifiant | Usage dans le scénario |
 |------|-------------|------------------------|

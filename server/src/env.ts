@@ -62,6 +62,8 @@ export const env = {
   databaseUrl: requis("DATABASE_URL"),
   jwtSecret: secretJwt(),
   port: Number(requis("PORT", "4000")),
+  // Interface d'écoute : défaut = toutes (production) ; « 127.0.0.1 » pour une démonstration sur réseau partagé.
+  host: process.env.HOST || "0.0.0.0",
   clientOrigin: requis("CLIENT_ORIGIN", "http://localhost:5173"),
   accessTtl: requis("ACCESS_TTL", "15m"),
   refreshTtlDays: Number(requis("REFRESH_TTL_DAYS", "7")),
