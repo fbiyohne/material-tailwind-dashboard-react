@@ -11,6 +11,12 @@ export function setUnauthorizedHandler(fn) {
   onUnauthorized = fn;
 }
 
+// R2-13 : tout 429 est signalé (délai en secondes) pour afficher le blocage sur n'importe quel écran.
+let onLimite = null;
+export function setLimiteHandler(fn) {
+  onLimite = fn;
+}
+
 export const getToken = () => localStorage.getItem(TOKEN_KEY);
 export const getRefreshToken = () => localStorage.getItem(REFRESH_KEY);
 
@@ -68,8 +74,9 @@ async function avecRafraichissement(faireRequete, tenterRefresh = true) {
 }
 
 export async function api(path, opts = {}) {
-  // Pas de rafraîchissement pour les routes d'auth ni les requêtes non authentifiées.
-  const res = await avecRafraichissement(() => envoyer(path, opts), opts.auth !== false && !path.startsWith("/auth/"));
+  // Pas de rafraîchissement pour les requêtes non authentifiées ni les routes d'auth, sauf /auth/me :
+  // au rechargement d'une page après expiration du jeton (15 min), la session est rafraîchie au lieu d'être perdue (R2-13).
+  const res = await avecRafraichissement(() => envoyer(path, opts), opts.auth !== false && (path === "/auth/me" || !path.startsWith("/auth/")));
 
   if (res.status === 401) {
     clearSession();
@@ -84,6 +91,7 @@ export async function api(path, opts = {}) {
     if (res.status === 429) {
       err.retryAfter = Number(res.headers.get("Retry-After")) || data?.retryAfter || 60;
       if (!data?.erreur) err.message = `Trop de requêtes, réessayez dans ${err.retryAfter} s.`;
+      onLimite?.(err.retryAfter);
     }
     throw err;
   }

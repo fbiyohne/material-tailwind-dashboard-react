@@ -1,20 +1,31 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import PropTypes from "prop-types";
-import { api, getToken, getRefreshToken, setSession, clearSession, setUnauthorizedHandler } from "../api/client";
+import { api, getToken, getRefreshToken, setSession, clearSession, setUnauthorizedHandler, setLimiteHandler } from "../api/client";
 import { connecterRealtime, deconnecterRealtime } from "../api/realtime";
 import { appliquerConfig } from "../data/config";
 
 const AuthContext = createContext(null);
 
-/** Attend le délai annoncé par un 429 (jusqu'à 15 min), en publiant les secondes restantes pour l'affichage. */
-async function attendreLimite(e, setLimite) {
-  let reste = Math.min(Number(e.retryAfter) || 0, 900);
-  while (reste > 0) {
+// Blocage 429 en cours : fin absolue (ms) et minuteur unique, partagés par tous les appels (R2-13).
+let finLimite = 0;
+let minuteur = null;
+
+/** Prolonge le blocage jusqu'au délai annoncé (15 min au plus) et publie chaque seconde les secondes restantes. */
+function signalerLimite(secondes, setLimite) {
+  finLimite = Math.max(finLimite, Date.now() + Math.min(Number(secondes) || 0, 900) * 1000);
+  if (minuteur) return;
+  const tic = () => {
+    const reste = Math.max(Math.ceil((finLimite - Date.now()) / 1000), 0);
     setLimite(reste);
-    await new Promise((ok) => setTimeout(ok, 1000));
-    reste -= 1;
-  }
-  setLimite(0);
+    minuteur = reste > 0 ? setTimeout(tic, 1000) : null;
+  };
+  tic();
+}
+
+/** Attend la fin du blocage annoncé par un 429, le délai restant étant affiché pendant l'attente. */
+async function attendreLimite(e, setLimite) {
+  signalerLimite(e.retryAfter, setLimite);
+  await new Promise((ok) => setTimeout(ok, Math.max(finLimite - Date.now(), 0)));
 }
 
 /**
@@ -48,6 +59,7 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     setUnauthorizedHandler(() => { deconnecterRealtime(); setUser(null); });
+    setLimiteHandler((s) => signalerLimite(s, setLimite));
     (async () => {
       await chargerIdentite(setLimite);
       if (getToken()) {

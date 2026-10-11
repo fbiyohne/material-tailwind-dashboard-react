@@ -12,7 +12,7 @@ vi.mock("../../api/client", () => ({
     if (path === "/auth/login") return { token: "t", refreshToken: "r", user: { role: "AVOCAT" } };
     throw Object.assign(new Error("Accès refusé"), { status: 403 });
   }),
-  getToken: () => null, getRefreshToken: () => null, setSession: vi.fn(), clearSession: vi.fn(), setUnauthorizedHandler: vi.fn(),
+  getToken: () => null, getRefreshToken: () => null, setSession: vi.fn(), clearSession: vi.fn(), setUnauthorizedHandler: vi.fn(), setLimiteHandler: vi.fn(),
 }));
 vi.mock("../../api/realtime", () => ({ connecterRealtime: vi.fn(), deconnecterRealtime: vi.fn() }));
 

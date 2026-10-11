@@ -1,7 +1,9 @@
 // R2-13 : le budget de requêtes d'un jeton valide est propre à l'utilisateur, pas à l'IP (salle derrière un seul NAT).
 import { describe, it, expect, beforeAll } from "vitest";
 import request from "supertest";
+import jwt from "jsonwebtoken";
 import { creerApp } from "../src/app.js";
+import { env } from "../src/env.js";
 
 const app = creerApp();
 async function jeton(email: string) {
@@ -18,5 +20,29 @@ describe("Limiteur par utilisateur (R2-13)", () => {
     await get(sg); await get(sg);
     expect((await get(sg)).status).toBe(429);
     expect((await get(tr)).status).toBe(200);
+  });
+
+  // Cause racine du constat QA (balayage de 54 pages, 429 pendant 13 min après ~600 requêtes) :
+  // le jeton d'accès (15 min) expirait en cours de balayage ; un jeton expiré était compté comme
+  // anonyme (600 / 15 min, compteur de l'IP déjà chargé) et recevait 429 au lieu de 401, donc le
+  // SPA ne rafraîchissait jamais sa session et restait bloqué jusqu'à la fin de la fenêtre.
+  it("jeton expiré mais authentique : 401 (rafraîchissement possible), jamais 429 sur le budget anonyme", async () => {
+    const p = creerApp({ anonyme: 2, authentifie: 50 });
+    const { sub, role, tv } = jwt.decode(sg) as { sub: number; role: string; tv: number };
+    for (let i = 0; i < 3; i++) expect((await request(p).get("/api/membres").set("Authorization", `Bearer ${sg}`)).status).toBe(200);
+    const expire = jwt.sign({ sub, role, tv, exp: Math.floor(Date.now() / 1000) - 60 }, env.jwtSecret, { algorithm: "HS256" });
+    const codes: number[] = [];
+    for (let i = 0; i < 5; i++) codes.push((await request(p).get("/api/membres").set("Authorization", `Bearer ${expire}`)).status);
+    expect(codes).toEqual([401, 401, 401, 401, 401]);
+    // Le rafraîchissement (anonyme) reste possible : il ne partage pas le compteur de l'utilisateur.
+    expect((await request(p).post("/api/auth/refresh").send({ refreshToken: "inconnu" })).status).not.toBe(429);
+  });
+
+  it("jeton forgé (mauvaise signature) : reste au budget anonyme", async () => {
+    const p = creerApp({ anonyme: 2, authentifie: 50 });
+    const faux = jwt.sign({ sub: 1, role: "ADMIN", tv: 0 }, "pas-le-secret", { algorithm: "HS256" });
+    const codes: number[] = [];
+    for (let i = 0; i < 3; i++) codes.push((await request(p).get("/api/membres").set("Authorization", `Bearer ${faux}`)).status);
+    expect(codes).toEqual([401, 401, 429]);
   });
 });

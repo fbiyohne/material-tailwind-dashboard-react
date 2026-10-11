@@ -44,6 +44,7 @@ export { VignetteTimbre } from "./VignetteTimbre";
 export { MatriceAcces } from "./MatriceAcces";
 export { BandeauExperimental } from "./BandeauExperimental";
 export { BandeauDemonstration } from "./BandeauDemonstration";
+export { BandeauLimite } from "./BandeauLimite";
 export { MentionJuridique } from "./MentionJuridique";
 export { Frise } from "./Frise";
 export { StatutMessage } from "./StatutMessage";

@@ -46,12 +46,15 @@ import { espaceRouter } from "./routes/espace.js";
 import { messagerieRouter } from "./routes/messagerie.js";
 import { installationRouter } from "./routes/installation.js";
 
-/** Identifiant (sub) du JWT valide de l'en-tête Authorization, sinon null (un jeton bidon ne relève pas la limite). */
+/** Identifiant (sub) du JWT authentique de l'en-tête Authorization, sinon null (un jeton bidon ne relève pas la limite).
+ *  R2-13 : l'expiration est ignorée ICI SEULEMENT (la signature reste vérifiée ; requireAuth refuse ensuite en 401).
+ *  Sans cela, un jeton expiré tombait sur le budget anonyme de l'IP et recevait 429 au lieu de 401 :
+ *  le SPA ne rafraîchissait jamais sa session et toute l'API restait bloquée jusqu'à la fin de la fenêtre. */
 function utilisateurDuJeton(req: express.Request): string | null {
   const h = req.headers.authorization;
   if (!h?.startsWith("Bearer ")) return null;
   try {
-    const p = jwt.verify(h.slice(7), env.jwtSecret, { algorithms: ["HS256"] });
+    const p = jwt.verify(h.slice(7), env.jwtSecret, { algorithms: ["HS256"], ignoreExpiration: true });
     return typeof p === "object" && p.sub != null ? String(p.sub) : "?";
   } catch {
     return null;

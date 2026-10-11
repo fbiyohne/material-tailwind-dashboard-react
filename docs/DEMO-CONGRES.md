@@ -124,6 +124,7 @@ Timbre : montrer l'émission en bac à sable, la vérification publique par QR (
 3. **Captures de repli** des 12 parcours (à réaliser lors de la recette des écrans et à ranger dans `docs/captures`, nommées `parcours-NN-*.png`), projetables si l'instance tombe.
 4. Si le rendu d'un PDF dépasse 30 secondes, l'ouvrir depuis les fichiers de secours et poursuivre. Si l'instance ne répond plus : `.\scripts\relancer-test.ps1`, puis reprendre au parcours suivant.
 5. Parcours à tester à 360 px de large la veille (projection sur téléphone possible).
+6. **Limite de requêtes** (R2-13) : chaque utilisateur dispose de 3000 appels par quart d'heure (un rechargement complet en consomme environ 10, `/avocats` 37). Naviguer par le menu plutôt que par rechargements complets en rafale. Si le bandeau « Trop de requêtes, réessayez dans N s. » apparaît, relancer l'instance (`.\scripts\relancer-test.ps1 -Demo`), ce qui remet les compteurs à zéro.
 
 ## 8. Formules interdites
 

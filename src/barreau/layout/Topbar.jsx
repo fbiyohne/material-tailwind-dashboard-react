@@ -14,7 +14,7 @@ import {
 import { listerMembres, getAgenda, getMesNotifications, marquerNotifLue, marquerToutesNotifsLues } from "../api/resources";
 import { useAuth } from "../auth/AuthContext";
 import { aAcces } from "../routes";
-import { ClocheNotifications, BandeauDemonstration } from "../components";
+import { ClocheNotifications, BandeauDemonstration, BandeauLimite } from "../components";
 
 // API du centre de notifications back-office, transmise à la cloche partagée.
 const API_NOTIFS = { charger: getMesNotifications, marquerLu: marquerNotifLue, marquerTout: marquerToutesNotifsLues };
@@ -159,6 +159,7 @@ export function Topbar({ title, onOpenMenu, onAddAvocat }) {
       {menu && <div className="fixed inset-0 z-40" onClick={() => setMenu(null)} aria-hidden="true" />}
     </header>
     <BandeauDemonstration />
+    <BandeauLimite />
     </>
   );
 }
