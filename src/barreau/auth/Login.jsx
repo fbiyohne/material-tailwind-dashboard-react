@@ -37,7 +37,7 @@ export function Login({ onDemande, onOubli }) {
     <AuthLayout
       devise="La probité, l'indépendance et l'honneur sont les premiers devoirs de l'avocat."
       deviseAuteur="Serment de l'avocat"
-      eyebrow="Espace sécurisé"
+      eyebrow="Espace réservé"
       titre="Connexion"
       sousTitre="Secrétariat Général — accès réservé aux membres du Conseil de l'Ordre."
       pied={

@@ -1,6 +1,25 @@
 # Points ouverts à valider avec Me Kalina MENGA
 
 Mission M-20261010-audit-ordre-avocats · Juriste-conseil Team Creatic, 2026-10-10.
+Mise à jour finale : revue sécurité et juridique T30, 2026-10-11 (PO-27 à PO-33 ajoutés, PO-15 et PO-20 complétés).
+
+## Index par thème
+
+| Thème | Points |
+|---|---|
+| Stage (durée, certificat de fin de stage) | PO-01, PO-27 |
+| Sanctions et sursis | PO-02, PO-03, PO-33 |
+| Effet de la radiation pendant les recours | PO-08, PO-09 |
+| Omission pour impayés | PO-04, PO-06 |
+| Corps électoral | PO-10, PO-20 |
+| Éligibilité | PO-11 |
+| Rôles bâtonnier / SG | PO-12 |
+| Valeur probatoire des accusés | PO-15 |
+| Confidentialité (correspondances, notifications, timbre, casier) | PO-14, PO-25, PO-29, PO-31, PO-32 |
+| Pièces jointes de 5 Mo | PO-26 |
+| Annulation d'import | PO-28 |
+| Durée du pilote | PO-17, PO-30 |
+| Prototypes (timbre, vote) | PO-13, PO-18 |
 
 Chaque point dit ce que la loi n° 026-92 du 20 août 1992 (« loi 026-92 ») règle ou ne règle pas, la valeur provisoire retenue dans le paramétrage (`docs/juridique/regles-reference.md`, identifiants R-xx) et la décision attendue. Tant qu'un point n'est pas tranché, la valeur reste marquée « provisoire » dans Paramètres et ne doit pas être présentée comme officielle au congrès.
 
@@ -113,6 +132,7 @@ Toutes les entrées ont pour interlocutrice Me Kalina MENGA, qui valide ou trans
 - **Texte** : aucune loi congolaise sur les transactions et la signature électroniques trouvée promulguée (recherche du 2026-10-10) ; art. 39 et 42 exigent la lettre recommandée.
 - **Question** : l'Ordre accepte-t-il l'accusé de lecture comme élément de preuve interne, et dans quels usages ?
 - **Valeur provisoire retenue** : « accusé de lecture de la plateforme » avec dates, empreinte SHA-256 et mention « ne vaut pas lettre recommandée — valeur probatoire à confirmer » (R-59, clause C-01).
+- **Précision technique (T30)** : l'empreinte SHA-256 porte sur le corps du message suivi des octets de la pièce jointe, en un seul calcul (`empreinteMessage`, `server/src/lib/messagerie.ts`). Un tiers ne peut donc pas vérifier l'empreinte de la pièce seule à partir de l'accusé. Les dates sont celles de l'horloge du serveur, sans horodatage par un tiers. Ces limites sont à rappeler si l'Ordre envisage un usage probatoire.
 - **Interlocutrice** : Me Kalina MENGA.
 
 ### PO-16 — Conservation des messages
@@ -148,6 +168,7 @@ Toutes les entrées ont pour interlocutrice Me Kalina MENGA, qui valide ou trans
 - **Texte** : sans objet (limite technique) ; le calcul du corps électoral à la date du scrutin s'appuie sur l'historique des situations, créé par cette mission.
 - **Question** : faut-il reprendre l'historique des situations antérieures (décisions papier) pour les scrutins à venir ?
 - **Valeur provisoire retenue** : pour un membre sans événement antérieur, sa situation à une date passée est son statut courant (hypothèse A3).
+- **Limite affichée** : l'écran du corps électoral signale cette limite (MentionJuridique ; test `Elections.test.jsx` « signale la limite de l'historique (PO-20) »). Un corps électoral calculé dans le passé n'est fiable qu'à partir du début de la journalisation des situations (octobre 2026, branche de la mission).
 - **Interlocutrice** : Me Kalina MENGA.
 
 ### PO-21 — Radiés dans la liste interne des avocats
@@ -192,4 +213,59 @@ Toutes les entrées ont pour interlocutrice Me Kalina MENGA, qui valide ou trans
 - **Constat** (T13) : une seule pièce par message, 5 Mo au plus, formats PDF, DOCX, JPG et PNG contrôlés par leurs octets (`typeReel`, `server/src/lib/storage.ts`). Relever ces limites demanderait d'augmenter la limite JSON globale de 8 Mo de toute l'API (surface de déni de service) ou d'ajouter un analyseur multipart (nouvelle dépendance).
 - **Question** : 5 Mo et une pièce par message suffisent-ils aux échanges ordinaux (conclusions, décisions scannées) ?
 - **Valeur provisoire retenue** : 1 pièce, 5 Mo. Un dossier plus lourd passe par plusieurs messages.
+- **Interlocutrice** : Me Kalina MENGA.
+
+### PO-27 — Certificat de fin de stage : obligatoire ou facultatif
+
+- **Texte** : art. 29 et 31 : l'avocat stagiaire est inscrit au tableau sur production du certificat de fin de stage délivré par le Bâtonnier de l'Ordre national (R-03).
+- **Constat** (T8) : l'option `stage.certificatObligatoire` existe en Paramètres et vaut **false** par défaut, car un test de référence appelle la validation du stage sans certificat. Une fois l'option activée, le serveur exige la date et la référence du certificat (400 sinon ; test `situation-stage.test.ts`).
+- **Question** : l'Ordre veut-il rendre le certificat obligatoire dans le logiciel dès le pilote ?
+- **Valeur provisoire retenue** : facultatif, avec la mention « Provisoire, à confirmer par les textes » sur l'écran de fin de stage.
+- **Interlocutrice** : Me Kalina MENGA.
+
+### PO-28 — Annulation d'un import de membres
+
+- **Texte** : aucun ; exigence du cahier (« annulation »).
+- **Constat** (T10) : l'import passe d'abord par un aperçu, une simulation sans écriture qui donne les créés, les mises à jour, les erreurs et les doublons. L'annulation se fait à ce stade : rien n'est écrit sans confirmation. Un import déjà validé ne s'annule pas d'un bloc. Les fiches se corrigent une à une, et chaque changement de situation est historisé.
+- **Question** : un retour arrière d'un lot déjà validé est-il nécessaire, par exemple après l'import d'une mauvaise liste ?
+- **Valeur provisoire retenue** : annulation à l'aperçu seulement. Un lot annulable demanderait une table de lots, évolution à chiffrer.
+- **Interlocutrice** : Me Kalina MENGA.
+
+### PO-29 — E-mail de notification qui reproduit le corps du message
+
+- **Texte** : art. 52 (secret professionnel) ; loi n° 29-2019, art. 64 (sécurité).
+- **Constat** (revue T30 ; F-30 est conforme et n'a pas été modifiée) : chaque nouveau message déclenche un e-mail au destinataire. Cet e-mail reproduit l'objet et le **corps** du message (`server/src/lib/messagerieNotif.ts:51`). Le texte d'une correspondance entre confrères quitte donc la plateforme : il transite par le fournisseur de messagerie électronique et arrive dans la boîte personnelle du destinataire. Le journal des notifications ne garde que l'objet générique.
+- **Question** : l'Ordre accepte-t-il que le texte des correspondances figure dans les e-mails de notification, ou faut-il n'envoyer qu'un avis (« vous avez un nouveau message ») ?
+- **Valeur provisoire retenue** : comportement inchangé (« conforme = on ne touche pas »). Le correctif tient en une ligne : retirer le corps du texte de l'e-mail. Recommandation sécurité : l'appliquer avant la production.
+- **Interlocutrice** : Me Kalina MENGA.
+
+### PO-30 — Durée et périmètre du pilote
+
+- **Texte** : aucun ; voir PO-17 pour le périmètre géographique.
+- **Question** : quelle durée pour le pilote (par exemple 3 ou 6 mois après le congrès de décembre) ? Avec quels utilisateurs (secrétariat, bâtonnier, échantillon d'avocats) et quels critères de fin (adoption, incidents, décision du Conseil) ? Les prototypes (timbre, vote) restent-ils hors pilote ?
+- **Valeur provisoire retenue** : aucune durée fixée. Démonstration au congrès sur l'instance de test, avec des données fictives. Aucune mise en production sans contrat de sous-traitance ni formalités (loi n° 29-2019, art. 33, 37 et 63).
+- **Interlocutrice** : Me Kalina MENGA.
+
+### PO-31 — Vérification publique du timbre : champ « affaire »
+
+- **Texte** : R-64 et clause C-12 (numéro, date et validité seulement) ; loi n° 29-2019 (minimisation).
+- **Constat** (revue T30) : la page publique n'affiche ni le nom de l'avocat, ni la juridiction, ni le montant. L'API publique `GET /verifier/timbre/:code` renvoie pourtant encore le libellé de l'**affaire**, qui peut contenir le nom d'une partie. Un test de référence exige ce champ, et la mission interdit de modifier ces tests. L'exposition est limitée à qui détient le code du QR.
+- **Question** : confirmer que l'affaire ne doit pas figurer dans la vérification publique.
+- **Valeur provisoire retenue** : champ conservé dans l'API mais non affiché. Le retrait tient en une ligne, après accord de Fabrice pour lever l'assertion du test.
+- **Interlocutrice** : Me Kalina MENGA.
+
+### PO-32 — Casier judiciaire dans les pièces du dossier
+
+- **Texte** : art. 24 de la loi 026-92 (casier au dossier d'admission) ; loi n° 29-2019, art. 16 et 37 (données d'infraction soumises à autorisation).
+- **Constat** : le type de pièce « CASIER » existe dans l'espace avocat (pièces justificatives, `server/src/routes/espace.ts`). Le jeu de démonstration n'en téléverse aucun.
+- **Question** : faut-il conserver le document lui-même, ou seulement enregistrer la date et la conformité du casier ? Quels organes peuvent le consulter ?
+- **Valeur provisoire retenue** : type conservé. En démonstration, aucun casier. En production, accès restreint et autorisation préalable de la Commission.
+- **Interlocutrice** : Me Kalina MENGA.
+
+### PO-33 — Fin d'une interdiction temporaire
+
+- **Texte** : art. 36 (interdiction temporaire de 12 mois au plus).
+- **Constat** (T5, T11) : une interdiction ferme fait passer l'avocat en SUSPENDU, avec une date de début et une date de fin. À l'échéance, le statut ne redevient pas INSCRIT de lui-même : il faut enregistrer un événement REPRISE. Le corps électoral, lui, tient déjà compte de la date de fin.
+- **Question** : la reprise d'activité exige-t-elle une décision ou une formalité, ou doit-elle être automatique à l'échéance ?
+- **Valeur provisoire retenue** : reprise enregistrée à la main par le SG, avec sa date et sa référence.
 - **Interlocutrice** : Me Kalina MENGA.

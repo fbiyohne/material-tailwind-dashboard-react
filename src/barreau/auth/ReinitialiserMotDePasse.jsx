@@ -46,7 +46,7 @@ export function ReinitialiserMotDePasse({ token }) {
   const base = {
     devise: "La probité, l'indépendance et l'honneur sont les premiers devoirs de l'avocat.",
     deviseAuteur: "Serment de l'avocat",
-    eyebrow: "Accès sécurisé",
+    eyebrow: "Accès réservé",
   };
 
   if (etat === "verification") {

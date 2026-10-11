@@ -49,6 +49,9 @@ const DEFAUT: IdentiteDocuments = {
   modeDemonstration: false,
 };
 
+/** Data URI image en base64 (seuls caractères admis : aucun guillemet ni chevron). */
+const LOGO_SUR = /^data:image\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=\s]*$/i;
+
 let courante: IdentiteDocuments = { ...DEFAUT };
 
 /** Identité courante (lecture synchrone au rendu des documents). */
@@ -76,7 +79,8 @@ export async function rafraichirIdentite(): Promise<void> {
       courriel: local(id.courriel, DEFAUT.courriel),
       site: local(id.site, DEFAUT.site),
       telephones: local(id.telephones, DEFAUT.telephones),
-      logo: typeof id.logo === "string" ? id.logo : "",
+      // Base64 stricte : le logo est inséré dans <img src="…"> des PDF ; un guillemet sortirait de l'attribut (T30).
+      logo: typeof id.logo === "string" && LOGO_SUR.test(id.logo) ? id.logo : "",
       modeDemonstration: id.modeDemonstration === true,
     };
   } catch {
