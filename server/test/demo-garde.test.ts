@@ -43,6 +43,20 @@ describe("npm run demo : garde-fou de base (CA15)", () => {
     expect(r.status).not.toBe(0);
   });
 
+  it("avertit si le scénario du congrès est lancé sur le schéma public partagé de barreau_pn_test (R1-13)", () => {
+    const r = lancer("postgresql://barreau:barreau_dev@127.0.0.1:1/barreau_pn_test?schema=public", "--identite=demonstration");
+    expect(r.stderr).toContain("AVERTISSEMENT");
+    expect(r.stderr).toContain("schema=demo");
+    expect(r.stdout).not.toContain("EFFECTIFS");
+  });
+
+  it("n'avertit pas sur le schéma vierge demo de barreau_pn_test (congrès, R1-13)", () => {
+    const r = lancer("postgresql://barreau:barreau_dev@127.0.0.1:1/barreau_pn_test?schema=demo", "--identite=demonstration");
+    expect(r.stderr).not.toContain("AVERTISSEMENT");
+    expect(r.stderr).not.toContain("est refusée");
+    expect(r.status).not.toBe(0); // port 1 injoignable : rien n'est écrit
+  });
+
   it("refuse un DATABASE_URL absent ou illisible", () => {
     const r = lancer("pas-une-url");
     expect(r.status).not.toBe(0);

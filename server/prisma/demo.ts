@@ -20,10 +20,12 @@
  * base explicitement, par exemple `DATABASE_URL="$TEST_DATABASE_URL" npm run demo`
  * (dotenv ne remplace pas une variable déjà définie).
  *
- * Congrès (R1-13) : la démonstration se joue sur barreau_pn_demo, base du socle NON partagée
- * avec les suites de tests (barreau_pn_test accumule des milliers de fixtures qui faussent le
- * tableau, le corps électoral et les listes). Sur cette base vierge, sans seed, le script crée
- * aussi les comptes du scénario (noms de fonction, aucun nom réel) s'ils n'existent pas.
+ * Congrès (R1-13) : la démonstration se joue dans le schéma vierge `demo` de barreau_pn_test
+ * (DATABASE_URL …/barreau_pn_test?schema=demo), NON partagé avec les suites de tests : le schéma
+ * public accumule des milliers de fixtures qui faussent le tableau, le corps électoral et les
+ * listes (avertissement si --identite=demonstration y est lancé). barreau_pn_demo, base dédiée,
+ * reste acceptée si elle est un jour provisionnée. Sur un schéma ou une base vierge, sans seed, le
+ * script crée aussi les comptes du scénario (noms de fonction, aucun nom réel) s'ils manquent.
  *
  * Idempotence : clés naturelles (num 800001 à 800200, numInscription « DEMO-… »,
  * dossiers « DEMO-AAAA-NN », sujets « [DEMO] … », références « DEMO-… »). Les autres
@@ -61,6 +63,11 @@ if (MDP_ALEA && MDP_DEFAUT) echec("--mots-de-passe-aleatoires et --mots-de-passe
 const modeMotsDePasse: "aleatoires" | "defaut" | null = MDP_ALEA ? "aleatoires" : MDP_DEFAUT ? "defaut"
   : identiteVoulue === "demonstration" ? "aleatoires" : identiteVoulue === "pointe-noire" ? "defaut" : null;
 if (!BASES_AUTORISEES.includes(nomBase)) echec(`la base « ${nomBase} » est refusée : seules ${BASES_AUTORISEES.join(" et ")} sont autorisées. Aucune écriture effectuée.`);
+// R1-13 : le schéma public de barreau_pn_test est partagé avec vitest et la recette (milliers de fixtures) ;
+// le congrès se joue dans le schéma vierge `demo` (…/barreau_pn_test?schema=demo, instance 4200).
+const schema = new URL(process.env.DATABASE_URL!).searchParams.get("schema") ?? "public";
+if (identiteVoulue === "demonstration" && nomBase === "barreau_pn_test" && schema === "public")
+  console.error("demo : AVERTISSEMENT — schéma public de barreau_pn_test, partagé avec les tests : le tableau, le corps électoral et les listes y montrent des milliers de restes de fixtures. Pour le congrès, utiliser …/barreau_pn_test?schema=demo (docs/DEMO-CONGRES.md § 1).");
 
 const { prisma } = await import("../src/prisma.js");
 const { encaisser } = await import("../src/lib/encaissement.js");

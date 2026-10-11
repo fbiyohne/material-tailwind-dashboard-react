@@ -394,11 +394,15 @@ absence de dérive schéma/base, immuabilité du journal).
 
 Données **entièrement fictives** (mention C-13), réinstallables par une seule commande sur `barreau_pn_test`.
 
-**Congrès : base dédiée `barreau_pn_demo` (R1-13).** La démonstration ne se joue jamais sur `barreau_pn_test`,
-partagée avec vitest et la recette (des milliers de fixtures y faussent tableau, corps électoral et listes). Elle se
-joue sur `barreau_pn_demo` (à provisionner dans le socle, validation de Fabrice), vierge et sans seed : le script y
-crée les comptes du scénario (noms de fonction). Instance : `.\scripts\relancer-test.ps1 -Demo` (port 4200).
-Procédure complète : `docs/DEMO-CONGRES.md` § 1.
+**Congrès : schéma vierge `demo` de `barreau_pn_test` (R1-13).** La démonstration ne se joue jamais dans le schéma
+`public`, partagé avec vitest et la recette (des milliers de fixtures y faussent tableau, corps électoral et listes ;
+`--identite=demonstration` y affiche un AVERTISSEMENT). Elle se joue avec `DATABASE_URL=…/barreau_pn_test?schema=demo`,
+schéma créé par `npx prisma migrate deploy`, sans seed : le script y crée les comptes du scénario (noms de fonction).
+Aucune nouvelle base à provisionner ; `barreau_pn_demo` reste acceptée si elle est provisionnée un jour. Instance :
+`.\scripts\relancer-test.ps1 -Demo` (port 4200). Preuve : `test/demo-base-vierge.test.ts` (schéma jetable `demo_vierge` :
+migrations, demo.ts, seuls membres DEMO, 4 comptes de l'Ordre avec leur rôle, connexion SG par l'API, schéma `public`
+inchangé, clés étrangères recréées par la migration `20261011120000_fk_evenement_schema_courant`). Procédure complète :
+`docs/DEMO-CONGRES.md` § 1.
 
 Le script lit **uniquement `DATABASE_URL`**. Celui du `.env` vise `barreau_pn` : il est refusé. On désigne
 donc la base de test explicitement (dotenv ne remplace pas une variable déjà définie) :
@@ -412,7 +416,7 @@ DATABASE_URL="…/barreau_pn_test?schema=public" npm run demo -- --identite=poin
 $env:DATABASE_URL = "postgresql://barreau:…@127.0.0.1:5432/barreau_pn_test?schema=public"; npm run demo
 ```
 
-- **Garde-fou** : le script refuse, avec un code non nul et avant toute connexion, tout `DATABASE_URL` absent, illisible ou dont le nom de base n'est pas exactement `barreau_pn_test` ou `barreau_pn_demo` (donc `barreau_pn`, `barreau_pn_test_ci` et toute autre). `TEST_DATABASE_URL` n'est jamais lu ; l'ancienne option `--base-test` est sans effet. Test : `test/demo-garde.test.ts` (9 cas, aucune connexion ouverte ; `barreau_pn_demo` accepté).
+- **Garde-fou** : le script refuse, avec un code non nul et avant toute connexion, tout `DATABASE_URL` absent, illisible ou dont le nom de base n'est pas exactement `barreau_pn_test` ou `barreau_pn_demo` (donc `barreau_pn`, `barreau_pn_test_ci` et toute autre). `TEST_DATABASE_URL` n'est jamais lu ; l'ancienne option `--base-test` est sans effet. Test : `test/demo-garde.test.ts` (11 cas, aucune connexion ouverte ; `barreau_pn_demo` accepté ; avertissement sur le schéma `public`, aucun sur `demo`).
 - **Idempotent et cloisonné** : upsert sur clés naturelles (num 800001 à 800200, numInscription `DEMO-…`, dossiers `DEMO-2026-NN`, sujets `[DEMO] …`, références `DEMO-…`). Un membre déjà créé n'est pas réécrit ; les autres membres ne sont jamais modifiés. Preuve versionnée : `test/demo-idempotence.test.ts` (dans `npm test`, ignoré si la base n'est pas `barreau_pn_test`) lance le script deux fois, compare les deux lignes `EFFECTIFS` et l'empreinte des membres hors DEMO, prise avant et après par la requête de comptage :
   ```sql
   SELECT count(*)::int AS n, max(id)::int AS max, md5(string_agg(m::text, '|' ORDER BY id)) AS h
