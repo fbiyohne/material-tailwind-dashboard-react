@@ -67,3 +67,19 @@ describe("import — simulation (F-08)", () => {
     expect(existantId).toBeGreaterThan(0);
   });
 });
+
+describe("import — historique des situations (D5, R2-5)", () => {
+  it("un changement de statut par import laisse un CHANGEMENT_STATUT; une création, un INSCRIPTION", async () => {
+    const r = await envoyer([{ num: numBase, nom: `${PREFIXE} Existant Jean`, statut: "honoraire" }, { num: numBase + 8, nom: `${PREFIXE} Nouveau Paul` }], false);
+    expect(r.body.erreurs).toEqual([]);
+    const ev = await request(app).get(`/api/membres/${existantId}/evenements`).set(...bearer(sg));
+    expect(ev.body).toHaveLength(1);
+    expect(ev.body[0]).toMatchObject({ type: "CHANGEMENT_STATUT", statutAvant: "INSCRIT", statutApres: "HONORAIRE", motif: "Import du tableau" });
+    const neuf = await prisma.membre.findUniqueOrThrow({ where: { num: numBase + 8 } });
+    const evN = await prisma.evenementSituation.findMany({ where: { membreId: neuf.id } });
+    expect(evN.map((e) => e.type)).toEqual(["INSCRIPTION"]);
+    // réimport sans changement : aucun nouvel événement
+    await envoyer([{ num: numBase, nom: `${PREFIXE} Existant Jean`, statut: "honoraire" }], false);
+    expect(await prisma.evenementSituation.count({ where: { membreId: existantId } })).toBe(1);
+  });
+});

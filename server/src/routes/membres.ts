@@ -5,7 +5,7 @@ import { StatutMembre, type Prisma } from "@prisma/client";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole, requirePermission, type AuthRequest } from "../middleware/auth.js";
-import { prochainNumInscription, prochainNumeroAttestation, archiver, avecRejeuUnicite, STATUTS_HORS_TABLEAU, STATUTS_SORTIS, tarifsActuels, cotisationDue, statutCotisation } from "../lib/business.js";
+import { prochainNumInscription, prochainNumeroAttestation, archiver, avecRejeuUnicite, STATUTS_HORS_TABLEAU, STATUTS_SORTIS, peutAttesterInscription, tarifsActuels, cotisationDue, statutCotisation } from "../lib/business.js";
 import { aLaPermission } from "../lib/rbac.js";
 import { enregistrerFichier } from "../lib/storage.js";
 import { envoyerPdf, htmlVersPdf } from "../lib/pdf.js";
@@ -446,12 +446,21 @@ membresRouter.post(
             const relu = await tx.membre.findUniqueOrThrow({ where: { id: existant.id }, select: { statut: true } });
             if (relu.statut !== existant.statut) throw ficheModifiee();
             const m = await tx.membre.update({ where: { id: existant.id }, data });
+            // D5 : un changement de statut par import laisse une trace (sinon situationADate se trompe).
+            if (m.statut !== existant.statut)
+              await tx.evenementSituation.create({
+                data: { membreId: m.id, type: "CHANGEMENT_STATUT", statutAvant: existant.statut, statutApres: m.statut, dateEffet: new Date(), motif: "Import du tableau", acteurId: req.user?.id ?? null, acteurNom: req.user?.nom ?? null },
+              });
             await reconcilierAcces(m.id, existant.statut, m.statut, tx);
           });
           maj += 1;
         } else {
+          const dateInscription = toDate(r.dateInscription) ?? new Date();
           await prisma.membre.create({
-            data: { num: r.num, numInscription: `T${r.num}`, ...base, dateInscription: toDate(r.dateInscription) ?? new Date() },
+            data: {
+              num: r.num, numInscription: `T${r.num}`, ...base, dateInscription,
+              evenements: { create: { type: "INSCRIPTION", statutApres: statut, dateEffet: dateInscription, motif: "Import du tableau", acteurId: req.user?.id ?? null, acteurNom: req.user?.nom ?? null } },
+            },
           });
           crees += 1;
         }
@@ -924,7 +933,7 @@ membresRouter.post(
   asyncH(async (req, res) => {
     const membre = await prisma.membre.findUnique({ where: { id: Number(req.params.id) } });
     if (!membre) throw new HttpError(404, "Avocat introuvable");
-    if ((STATUTS_SORTIS as readonly string[]).includes(membre.statut)) throw new HttpError(409, "Attestation impossible : membre radié, décédé ou sorti du tableau");
+    if (!peutAttesterInscription(membre.statut)) throw new HttpError(409, "Attestation impossible : membre non inscrit au tableau (radié, décédé, sorti ou omis)");
     const numero = await prochainNumeroAttestation();
     const date = new Date();
     await archiver({
@@ -945,7 +954,7 @@ membresRouter.get(
   asyncH(async (req, res) => {
     const membre = await prisma.membre.findUnique({ where: { id: Number(req.params.id) } });
     if (!membre) throw new HttpError(404, "Avocat introuvable");
-    if ((STATUTS_SORTIS as readonly string[]).includes(membre.statut)) throw new HttpError(409, "Attestation impossible : membre radié, décédé ou sorti du tableau");
+    if (!peutAttesterInscription(membre.statut)) throw new HttpError(409, "Attestation impossible : membre non inscrit au tableau (radié, décédé, sorti ou omis)");
     const numero = await prochainNumeroAttestation();
     const date = new Date();
     await archiver({ categorie: "Attestation d'inscription", titre: `Attestation ${numero} — Me ${membre.nom}`, reference: numero, date, membreNom: membre.nom });
