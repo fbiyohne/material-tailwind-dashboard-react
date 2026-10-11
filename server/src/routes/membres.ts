@@ -218,7 +218,8 @@ membresRouter.post(
 const inscriptionSchema = z.object({
   nom: z.string().min(1),
   qualite: z.enum(["AVOCAT", "STAGIAIRE", "HONORAIRE"]).default("AVOCAT"),
-  statut: z.nativeEnum(StatutMembre).default("INSCRIT"),
+  // Absent : STAGIAIRE pour un stagiaire, INSCRIT sinon (un stagiaire n'est jamais créé au tableau).
+  statut: z.nativeEnum(StatutMembre).optional(),
   sexe: z.enum(["H", "F"]).nullable().optional(),
   cabinet: z.string().optional(),
   tel: z.string().optional(),
@@ -235,15 +236,34 @@ const inscriptionSchema = z.object({
   dureeMois: z.coerce.number().int().positive().max(120).optional(),
 });
 
+/**
+ * O11 — garde de création unique, partagée par POST /membres et la branche création de l'import
+ * (même message des deux côtés). L'inscription, l'omission et les sanctions relèvent des organes de
+ * l'Ordre (loi 026-92 art. 8, 35, 36) : aucun membre n'est créé directement omis, suspendu, sorti,
+ * ni stagiaire au tableau. Renvoie le motif du refus, ou null si la création est permise.
+ */
+export function refusCreation(statut: StatutMembre, qualite: string): string | null {
+  if ((STATUTS_SORTIS as readonly string[]).includes(statut))
+    return "Statut de sortie (radié, décédé, démissionnaire, retraité, cessation) interdit à l'import comme à l'inscription : inscrivez l'avocat, puis enregistrez sa sortie depuis sa fiche (la radiation, par décision disciplinaire ; le décès, par sa déclaration).";
+  if (statut === "OMIS")
+    return "Création d'un membre omis interdite : l'omission suit le circuit de la fiche de l'avocat (onglet Situation), avec son historique.";
+  if (statut === "SUSPENDU")
+    return "Création d'un membre suspendu interdite : la suspension s'enregistre par la décision du dossier disciplinaire.";
+  if (qualite === "STAGIAIRE" && (statut === "INSCRIT" || statut === "HONORAIRE"))
+    return "Stagiaire au tableau interdit à la création (qualité stagiaire, statut inscrit ou honoraire) : inscrivez-le en stagiaire, puis utilisez « Valider la fin de stage » (fiche, onglet Stage).";
+  return null;
+}
+
 /** POST /membres — inscription d'un avocat (FR-AV-01). SG/Admin. */
 membresRouter.post(
   "/",
   requireRole("SECRETAIRE_GENERAL"),
   asyncH(async (req, res) => {
-    const data = inscriptionSchema.parse(req.body);
-    // Radiation et décès exigent une date d'acte validée : routes /radier et /deces.
-    if (data.statut === "RADIE" || data.statut === "DECEDE")
-      throw new HttpError(400, "Création impossible en statut radié ou décédé : utilisez la radiation ou la déclaration de décès.");
+    const parse = inscriptionSchema.parse(req.body);
+    const data = { ...parse, statut: parse.statut ?? (parse.qualite === "STAGIAIRE" ? "STAGIAIRE" : "INSCRIT") };
+    const refus = refusCreation(data.statut, data.qualite);
+    // 400 conservé pour radié/décédé (acte daté obligatoire : /radier, /deces) ; 409 pour les autres.
+    if (refus) throw new HttpError(data.statut === "RADIE" || data.statut === "DECEDE" ? 400 : 409, refus);
     // Rejeu sur collision : deux inscriptions concurrentes calculeraient le même
     // `num` (max+1) ; la contrainte @unique(num) rejette, on recalcule et réessaie.
     const membre = await avecRejeuUnicite(async () => {
@@ -397,6 +417,12 @@ membresRouter.post(
           // et ignorées) : les actes passent par /radier, /deces ou PATCH (machine à états cycleVie).
         };
         const existant = await prisma.membre.findUnique({ where: { num: r.num } });
+        // O11 : création (ligne nouvelle) soumise à la même garde que POST /membres.
+        const refus = existant ? null : refusCreation(statut, qualite);
+        if (refus) {
+          erreurs.push({ ligne: i + 1, message: refus });
+          continue;
+        }
         // Les statuts de sortie (radié, décédé, démissionnaire, retraité, cessation) ne s'obtiennent
         // (ni ne se quittent) par import : seuls /radier, /deces, /evenements et PATCH valident la date
         // d'acte et laissent une trace d'audit individuelle. Même statut = aller-retour autorisé.
