@@ -163,6 +163,23 @@ export async function changerSituation(c: ChangementSituation, avantEffet?: (tx:
   return { membre, evenement };
 }
 
+/**
+ * Dossier disciplinaire qui fonde une radiation (exécution par /radier, réformation) :
+ * rattaché à `membreId` (400 sinon), décision dont l'effet au catalogue est RADIATION et
+ * jamais réformée (409 sinon). `reference` : référence de la décision, lue sur l'événement
+ * écrit à son enregistrement (repli : référence du dossier).
+ */
+export async function dossierRadiation(dossierId: number, membreId: number) {
+  const [d, regles] = await Promise.all([prisma.dossierDisciplinaire.findUnique({ where: { id: dossierId } }), reglesActuelles()]);
+  if (!d || d.membreId !== membreId) throw new HttpError(400, "Dossier disciplinaire introuvable pour cet avocat.");
+  if (regles.sanctions.find((s) => s.code === d.sanctionCode)?.effet !== "RADIATION")
+    throw new HttpError(409, "Ce dossier ne porte pas de décision de radiation enregistrée.");
+  if (await prisma.evenementSituation.findFirst({ where: { dossierId, type: "REFORMATION" }, select: { id: true } }))
+    throw new HttpError(409, "La décision de radiation de ce dossier a été réformée : elle ne peut plus être exécutée ni réformée à nouveau.");
+  const decision = await prisma.evenementSituation.findFirst({ where: { dossierId }, orderBy: { id: "asc" }, select: { reference: true } });
+  return { dossier: d, reference: decision?.reference ?? d.reference };
+}
+
 // ─── Situation à une date (D10) ──────────────────────────────────────────────
 
 export interface EvenementDate { dateEffet: Date; statutAvant: StatutMembre | null; statutApres: StatutMembre | null }

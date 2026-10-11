@@ -34,7 +34,7 @@ npm run dev                   # API sur http://localhost:4000/api
 | GET | `/api/membres/:id` | authentifié |
 | POST | `/api/membres` (inscription) | SG / Admin |
 | PATCH | `/api/membres/:id` | SG / Admin |
-| POST | `/api/membres/:id/radier` | SG / Admin |
+| POST | `/api/membres/:id/radier` | `discipline_decider` (bâtonnier, Admin) |
 | GET | `/api/cotisations?annee=` | authentifié |
 | POST | `/api/cotisations/paiement` (BR-03) | SG / Trésorière |
 | POST | `/api/cotisations/:membreId/valider` | Trésorière |
@@ -51,6 +51,8 @@ Corps **optionnel** (un corps vide reste valide) :
 ```
 - `dateRadiation` : `AAAA-MM-JJ`, non postérieure à aujourd'hui ; défaut = date du jour.
 - `motifRadiation` : texte libre de 300 caractères maximum (référence et motif de la décision) ; défaut `null`.
+- `dossierId` (facultatif) : dossier disciplinaire dont la décision de radiation est rendue exécutoire (cas `regles.effetRadiation = EXPIRATION_RECOURS`). Le dossier doit appartenir à l'avocat (400), porter une sanction d'effet `RADIATION` au catalogue et ne pas avoir été réformé (409). L'événement `RADIATION` est alors rattaché au dossier (`dossierId`, référence de la décision, `details.decidePar`).
+- Réservé à l'action `discipline_decider` (bâtonnier par défaut) : un SG reçoit 403.
 - Effet : statut `RADIE`, compte espace désactivé et jetons révoqués (`synchroniserAccesAuStatut`).
 - Le serveur n'enregistre qu'une décision déjà prononcée par le Conseil (loi 026-92, art. 36). Réponse 200 : le membre mis à jour.
 
@@ -244,12 +246,26 @@ Effets, tous écrits par `changerSituation` (événement d'historique avec `doss
 | radiation, `regles.effetRadiation = ENREGISTREMENT` | `RADIE` (date = `dateDecision`, motif = libellé + référence), retiré du tableau et de l'annuaire, événement `RADIATION` |
 | radiation, `EXPIRATION_RECOURS` | événement `SANCTION` seul, statut inchangé (point ouvert) |
 
+**Radiation rendue exécutoire** (mode `EXPIRATION_RECOURS`) : `POST /api/membres/:id/radier`
+avec `dossierId` (voir plus haut) ; c'est le seul chemin d'exécution d'une radiation différée.
+
+**Décision réformée (R-35, R-36)** : `POST /api/discipline/:id/reformation`, action
+`discipline_decider`. Corps : `voie` (`OPPOSITION` | `APPEL`), `reference` (obligatoire,
+décision de réformation), `dateEffet` (non future, défaut aujourd'hui), `motif`. Le dossier
+doit porter une radiation non encore réformée (409 sinon ; une seule réformation par dossier).
+Retour en arrière tracé, jamais un effacement : un événement `REFORMATION` (`dossierId`,
+référence) rétablit le statut d'avant la radiation exécutée pour ce dossier si l'avocat est
+toujours radié ; sinon il est consigné sans changer le statut et `/radier` refuse ensuite ce
+dossier. La décision, l'événement `RADIATION` et le dossier restent ; la mention est ajoutée à
+`recours` (`dateRecours` = date d'effet). Trace : `JournalDiscipline` et `JournalAudit`
+(« décision réformée »).
+
 La fin d'une interdiction ferme ne rétablit pas le statut : un événement `REPRISE` manuel
 est nécessaire. Le PDF de décision affiche « Sanction enregistrée — organe, décision du … ».
 La lecture d'un dossier (`GET /discipline/:id`) est tracée dans `JournalAudit` par le
 middleware d'audit (R-62, CA10).
 
-Tests : `test/discipline-decision.test.ts`.
+Tests : `test/discipline-decision.test.ts`, `test/radiation-discipline.test.ts` (radiation, exécution différée, réformation).
 
 ## Messagerie : pièce jointe, empreinte, accusés, Contacter (T13, F-32 à F-34)
 

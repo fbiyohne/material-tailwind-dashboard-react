@@ -10,7 +10,7 @@ import { aLaPermission } from "../lib/rbac.js";
 import { enregistrerFichier } from "../lib/storage.js";
 import { envoyerPdf, htmlVersPdf } from "../lib/pdf.js";
 import { attestationHtml, listeAvocatsHtml, STATUT_FR, QUALITE_FR } from "../lib/templates.js";
-import { appliquerCycleVie, changerSituation, ficheModifiee, reconcilierAcces } from "../lib/cycleVie.js";
+import { appliquerCycleVie, changerSituation, dossierRadiation, ficheModifiee, reconcilierAcces } from "../lib/cycleVie.js";
 import { reglesActuelles } from "../lib/regles.js";
 import { realtimeTous } from "../lib/realtime.js";
 import { provisionnerAccesEspace } from "../lib/acces.js";
@@ -584,6 +584,8 @@ membresRouter.patch(
 const radiationSchema = z.object({
   dateRadiation: datePassee.optional(),
   motifRadiation: motifRadiation.optional(),
+  // Dossier disciplinaire dont la décision de radiation est rendue exécutoire (effetRadiation = EXPIRATION_RECOURS).
+  dossierId: z.coerce.number().int().positive().max(2_147_483_647).optional(),
 });
 
 /**
@@ -603,9 +605,14 @@ membresRouter.post(
     if (!actuel) throw new HttpError(404, "Avocat introuvable");
     if (actuel.statut === "RADIE") throw new HttpError(409, "Cet avocat est déjà radié : corrigez la date ou la référence par « Modifier ».");
     const dateRadiation = data.dateRadiation ? new Date(data.dateRadiation) : new Date();
+    // Rattachement au dossier : décision de radiation non réformée de cet avocat (400 / 409 sinon).
+    const fondement = data.dossierId ? await dossierRadiation(data.dossierId, id) : null;
+    const reference = data.motifRadiation ?? fondement?.reference ?? null;
     const { membre } = await changerSituation({
-      membreId: id, type: "RADIATION", demande: { statut: "RADIE", dateRadiation, motifRadiation: data.motifRadiation ?? null },
-      dateEffet: dateRadiation, reference: data.motifRadiation ?? null, acteur: acteurDe(req), statutAttendu: actuel.statut, // « déjà radié » revérifié sous verrou
+      membreId: id, type: "RADIATION", dateEffet: dateRadiation, reference, acteur: acteurDe(req), statutAttendu: actuel.statut, // « déjà radié » revérifié sous verrou
+      demande: { statut: "RADIE", dateRadiation, motifRadiation: data.motifRadiation ?? (fondement ? `${fondement.dossier.sanction ?? "Radiation"} — ${reference}` : null) },
+      dossierId: fondement?.dossier.id ?? null,
+      details: fondement ? { decidePar: fondement.dossier.decidePar, execution: "Radiation rendue exécutoire" } : undefined,
     });
     res.json(membre);
   })

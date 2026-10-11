@@ -6,7 +6,7 @@ import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole, type AuthRequest, requirePermission } from "../middleware/auth.js";
 import { aLaPermission } from "../lib/rbac.js";
 import { reglesActuelles } from "../lib/regles.js";
-import { changerSituation } from "../lib/cycleVie.js";
+import { changerSituation, dossierRadiation } from "../lib/cycleVie.js";
 import { prochaineReferenceDossier, archiver, avecRejeuUnicite, STATUTS_SORTIS } from "../lib/business.js";
 import { envoyerPdf } from "../lib/pdf.js";
 import { convocationDisciplineHtml, decisionDisciplineHtml } from "../lib/templates.js";
@@ -241,6 +241,60 @@ disciplineRouter.post(
     await journaliser(`Décision enregistrée — dossier ${d.reference} : ${libelle}`, req.user!.id);
     res.locals.auditDetail = "décision enregistrée";
     res.json(dossier);
+  })
+);
+
+const reformationSchema = z.object({
+  voie: z.enum(["OPPOSITION", "APPEL"]),
+  reference: z.string().trim().min(1).max(120),
+  dateEffet: z.string().date().refine((v) => new Date(v) <= new Date(), "La date ne peut pas être postérieure à aujourd'hui").optional(),
+  motif: z.string().trim().min(1).max(500).optional(),
+});
+
+/**
+ * POST /discipline/:id/reformation — décision de radiation réformée sur opposition ou appel
+ * (R-35, R-36). Retour en arrière tracé, jamais un effacement : un événement REFORMATION
+ * (référence de la décision de réformation) rétablit le statut d'avant la radiation exécutée
+ * pour ce dossier si l'avocat est toujours radié ; sinon (radiation non encore exécutoire) il
+ * est consigné sans changer le statut et /radier refuse ensuite ce dossier. La décision et
+ * l'événement RADIATION restent ; le recours est ajouté au dossier. Action discipline_decider.
+ */
+disciplineRouter.post(
+  "/:id/reformation",
+  requirePermission("discipline_decider"),
+  asyncH(async (req: AuthRequest, res) => {
+    const data = reformationSchema.parse(req.body ?? {});
+    const id = Number(req.params.id);
+    const d = Number.isInteger(id) ? await prisma.dossierDisciplinaire.findUnique({ where: { id } }) : null;
+    if (!d?.membreId) throw new HttpError(404, "Dossier introuvable");
+    await dossierRadiation(id, d.membreId); // 409 : pas une radiation, ou déjà réformée
+    const [membre, radiation] = await Promise.all([
+      prisma.membre.findUniqueOrThrow({ where: { id: d.membreId }, select: { statut: true } }),
+      prisma.evenementSituation.findFirst({ where: { dossierId: id, type: "RADIATION" }, orderBy: { id: "desc" } }),
+    ]);
+    const statutRetabli = membre.statut === "RADIE" && radiation?.statutAvant ? radiation.statutAvant : undefined;
+    const dateEffet = data.dateEffet ? new Date(data.dateEffet) : new Date();
+    const mention = `Décision réformée sur ${data.voie === "APPEL" ? "appel" : "opposition"} — ${data.reference}`;
+    await changerSituation(
+      {
+        membreId: d.membreId, type: "REFORMATION", dossierId: id, dateEffet, reference: data.reference, motif: data.motif ?? mention,
+        demande: statutRetabli ? { statut: statutRetabli } : undefined, statutAttendu: membre.statut,
+        details: { voie: data.voie, decisionReformee: d.sanction, radiationAnnulee: statutRetabli ? radiation!.id : null },
+        acteur: { id: req.user!.id, nom: req.user!.nom ?? null },
+      },
+      // Recours consigné sur le dossier dans la même transaction ; une réformation concurrente
+      // (recours déjà modifié) donne 409 et n'écrit rien.
+      async (tx) => {
+        const r = await tx.dossierDisciplinaire.updateMany({
+          where: { id, recours: d.recours },
+          data: { recours: d.recours ? `${d.recours}\n${mention}` : mention, dateRecours: dateEffet },
+        });
+        if (r.count === 0) throw new HttpError(409, "Le dossier vient d'être modifié : rechargez-le et recommencez.");
+      }
+    );
+    await journaliser(`${mention} — dossier ${d.reference}`, req.user!.id);
+    res.locals.auditDetail = "décision réformée";
+    res.json(await prisma.dossierDisciplinaire.findUniqueOrThrow({ where: { id } }));
   })
 );
 
