@@ -6,6 +6,17 @@ import { appliquerConfig } from "../data/config";
 
 const AuthContext = createContext(null);
 
+/** Attend le délai annoncé par un 429 (jusqu'à 15 min), en publiant les secondes restantes pour l'affichage. */
+async function attendreLimite(e, setLimite) {
+  let reste = Math.min(Number(e.retryAfter) || 0, 900);
+  while (reste > 0) {
+    setLimite(reste);
+    await new Promise((ok) => setTimeout(ok, 1000));
+    reste -= 1;
+  }
+  setLimite(0);
+}
+
 /**
  * Charge les paramètres (données de référence centralisées) et les applique à
  * la configuration vivante. Tolérant aux échecs : un rôle sans accès lecture
@@ -16,14 +27,14 @@ async function chargerReglages() {
 }
 
 /** Identité publique (GET /auth/identite) : écran de connexion et espace avocat, qui n'ont pas accès à /parametres. */
-async function chargerIdentite() {
+async function chargerIdentite(setLimite) {
   const lire = () => api("/auth/identite", { auth: false });
   try {
     let r;
     try { r = await lire(); } catch (e) {
       // Limite atteinte (salle derrière un NAT) : on attend le délai annoncé puis on réessaie une fois.
       if (e.status !== 429) throw e;
-      await new Promise((ok) => setTimeout(ok, Math.min(e.retryAfter, 30) * 1000));
+      await attendreLimite(e, setLimite);
       r = await lire();
     }
     appliquerConfig(r);
@@ -33,11 +44,12 @@ async function chargerIdentite() {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [limite, setLimite] = useState(0); // secondes avant la fin d'un blocage 429 (0 = aucun)
 
   useEffect(() => {
     setUnauthorizedHandler(() => { deconnecterRealtime(); setUser(null); });
     (async () => {
-      await chargerIdentite();
+      await chargerIdentite(setLimite);
       if (getToken()) {
         try {
           let moi;
@@ -46,7 +58,7 @@ export function AuthProvider({ children }) {
           } catch (e) {
             // Limite atteinte : on attend le délai annoncé puis on réessaie une fois, sans perdre la session.
             if (e.status !== 429) throw e;
-            await new Promise((r) => setTimeout(r, Math.min(e.retryAfter, 30) * 1000));
+            await attendreLimite(e, setLimite);
             moi = await api("/auth/me");
           }
           setUser(moi);
@@ -78,7 +90,7 @@ export function AuthProvider({ children }) {
     if (refreshToken) api("/auth/logout", { method: "POST", auth: false, body: { refreshToken } }).catch(() => {});
   };
 
-  return <AuthContext.Provider value={{ user, loading, login, logout }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ user, loading, limite, login, logout }}>{children}</AuthContext.Provider>;
 }
 
 AuthProvider.propTypes = { children: PropTypes.node };

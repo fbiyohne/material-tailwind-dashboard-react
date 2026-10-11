@@ -12,13 +12,15 @@ import { ActivationCompte } from "@/barreau/auth/ActivationCompte";
 import { ReinitialiserMotDePasse } from "@/barreau/auth/ReinitialiserMotDePasse";
 import { VerificationPublique } from "@/barreau/pages/VerificationPublique";
 
-function Splash() {
+function Splash({ limite = 0 }) {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-navy-3">
       <div className="animate-pulse rounded-full bg-white p-2.5"><Sceau size={48} /></div>
       <div className="text-center">
         <div className="text-2xs uppercase tracking-[0.2em] text-or-2">{identite().denomination}</div>
-        <div className="mt-1 text-sm text-white/50">Chargement…</div>
+        <div className="mt-1 text-sm text-white/50" role="status" aria-live="polite">
+          {limite > 0 ? `Trop de requêtes, réessayez dans ${limite} s.` : "Chargement…"}
+        </div>
       </div>
     </div>
   );
@@ -26,8 +28,8 @@ function Splash() {
 
 /** Affiche la connexion tant que l'utilisateur n'est pas authentifié. */
 function AuthGate() {
-  const { user, loading } = useAuth();
-  if (loading) return <Splash />;
+  const { user, loading, limite } = useAuth();
+  if (loading) return <Splash limite={limite} />;
   if (!user) return <AuthShell />;
   // Aiguillage par rôle : les avocats ont leur propre espace cloisonné ;
   // les 4 profils du Conseil de l'Ordre accèdent au back-office.

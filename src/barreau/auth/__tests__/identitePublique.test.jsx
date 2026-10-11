@@ -57,3 +57,19 @@ describe("Identité publique : limite 429", () => {
     expect(identite().modeDemonstration).toBe(true);
   });
 });
+
+// R2-13 : un blocage 429 long est annoncé avec son délai, au lieu d'un chargement muet.
+describe("Limite 429 : délai affiché", () => {
+  it("expose les secondes restantes pendant l'attente", async () => {
+    vi.useFakeTimers();
+    const { api } = await import("../../api/client");
+    api.mockImplementationOnce(async () => { throw Object.assign(new Error("429"), { status: 429, retryAfter: 120 }); });
+    function Etat() { const { limite } = useAuth(); return <p>limite:{limite}</p>; }
+    render(<AuthProvider><Etat /></AuthProvider>);
+    await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+    expect(screen.getByText(/limite:11\d/)).toBeInTheDocument();
+    await act(async () => { await vi.advanceTimersByTimeAsync(121000); });
+    expect(screen.getByText("limite:0")).toBeInTheDocument();
+    vi.useRealTimers();
+  });
+});
