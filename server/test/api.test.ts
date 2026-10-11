@@ -12,6 +12,7 @@ vi.mock("../src/lib/pdf.js", async (importOriginal) => {
   return { ...orig, htmlVersPdf: vi.fn(orig.htmlVersPdf) };
 });
 import { eligibiliteElectorale, STATUTS_HORS_TABLEAU } from "../src/lib/business.js";
+import { purgerRestesTests } from "../prisma/purger-restes-tests.js";
 
 const app = creerApp();
 const bearer = (t: string) => ["Authorization", `Bearer ${t}`] as const;
@@ -25,8 +26,18 @@ let sg = "";
 let tr = "";
 let admin = "";
 let bat = "";
+// Plusieurs blocs créent des membres sans afterAll (« TEST Vitest », « OVERPAY », « E2E msgA »…) :
+// ~21 restes par exécution faisaient monter max(num) et provoquaient des collisions de num dans
+// les autres fichiers. Ils sont retirés en fin de fichier : seuls les membres créés pendant cette
+// exécution (id > idDepart) et portant un préfixe de fixture sont visés.
+let idDepart = 0;
+
+afterAll(async () => {
+  await purgerRestesTests(prisma, true, idDepart);
+});
 
 beforeAll(async () => {
+  idDepart = (await prisma.membre.aggregate({ _max: { id: true } }))._max.id ?? 0;
   sg = (await login("sg@barreau-pn.cg")).token;
   tr = (await login("tresoriere@barreau-pn.cg")).token;
   admin = (await login("admin@barreau-pn.cg")).token;

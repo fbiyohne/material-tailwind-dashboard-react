@@ -104,11 +104,13 @@ describe("Constantes de statut (D8, D11) et règle des reçus (recus.ts)", () =>
 describe("changerSituation et tableau (base de test)", () => {
   const app = creerApp();
   const bearer = (t: string) => ["Authorization", `Bearer ${t}`] as const;
-  const base = 960000 + (Date.now() % 1000) * 5;
+  // num au-delà du maximum présent : l'ancien intervalle 960000 + heure pouvait heurter des restes.
+  let base = 0;
   const ids: number[] = [];
   let sg = "";
 
   beforeAll(async () => {
+    base = ((await prisma.membre.aggregate({ _max: { num: true } }))._max.num ?? 960000) + 1000;
     sg = (await request(app).post("/api/auth/login").send({ email: "sg@barreau-pn.cg", password: "barreau" })).body.token;
     for (const [i, statut] of (["INSCRIT", "DEMISSIONNAIRE", "RETRAITE", "CESSATION"] as const).entries()) {
       const m = await prisma.membre.create({ data: { num: base + i, numInscription: `T5-${base + i}`, nom: `T5 ${statut}`, qualite: "AVOCAT", statut, dateInscription: new Date("2015-01-01") } });

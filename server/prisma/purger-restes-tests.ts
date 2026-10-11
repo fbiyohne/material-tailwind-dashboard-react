@@ -11,7 +11,9 @@
  * statut ou son num, et ses lignes liées sans cascade (reçus, paiements, quitus). Les
  * membres du seed (ABIRA, BAKALA… num 1 à 20) et toute autre ligne ne sont jamais touchés.
  *
- * Appelée automatiquement par test/globalSetup.ts (sous le verrou de la suite) ; à la main :
+ * Appelée automatiquement par test/globalSetup.ts (sous le verrou de la suite) et, avec idMin,
+ * par le afterAll de test/api.test.ts pour ne retirer que les fixtures de l'exécution en cours ;
+ * à la main :
  *   npx tsx prisma/purger-restes-tests.ts            # simulation : affiche les effectifs
  *   npx tsx prisma/purger-restes-tests.ts --executer # suppression effective
  *
@@ -35,9 +37,10 @@ export const PREFIXES_FIXTURES = [
   "ATTEST-RADIE", "ATTEST-DECEDE", "PARITE ", "CAB ", "RENVOI ", "NOEMAIL ", "REJET PIECE",
 ];
 
-export async function purgerRestesTests(prisma: PrismaClient, executer: boolean) {
+/** idMin : ne cible que les membres d'id strictement supérieur (créés après ce point). */
+export async function purgerRestesTests(prisma: PrismaClient, executer: boolean, idMin = 0) {
   if (!estBaseDeTest(URL_TEST)) throw new Error(`Refus : la base ciblée n'est pas une base de test (${new URL(URL_TEST).pathname}).`);
-  const cible = { OR: PREFIXES_FIXTURES.map((p) => ({ nom: { startsWith: p } })) };
+  const cible = { id: { gt: idMin }, OR: PREFIXES_FIXTURES.map((p) => ({ nom: { startsWith: p } })) };
   const membres = await prisma.membre.findMany({ where: cible, select: { id: true, statut: true } });
   const ids = membres.map((m) => m.id);
   const parMembre = { where: { membreId: { in: ids } } };

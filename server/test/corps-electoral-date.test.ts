@@ -16,7 +16,9 @@ const app = creerApp();
 const bearer = (t: string) => ["Authorization", `Bearer ${t}`] as const;
 const j = (iso: string) => new Date(`${iso}T12:00:00Z`);
 const ANNEE = 2026;
-const base = 985000 + (Date.now() % 1000) * 4;
+// num au-delà du maximum présent (calculé dans le beforeAll) : l'ancien intervalle 985000 + heure
+// entrait en collision avec les restes d'exécutions précédentes. Marge de 1000 pour les POST /membres (max + 1).
+let base = 0;
 const ids: Record<string, number> = {};
 const scrutins: number[] = [];
 let sg = "";
@@ -55,6 +57,7 @@ const candidater = (sid: number, body: Record<string, unknown>) =>
   request(app).post(`/api/scrutins/${sid}/candidats`).set(...bearer(sg)).send(body);
 
 beforeAll(async () => {
+  base = ((await prisma.membre.aggregate({ _max: { num: true } }))._max.num ?? 985000) + 1000;
   sg = await login("sg@barreau-pn.cg");
   sauvegarde = (await prisma.parametres.findUnique({ where: { id: 1 } }))?.data ?? null;
 
