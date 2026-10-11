@@ -1819,6 +1819,14 @@ describe("Revue sécurité T10 — données disciplinaires, extraction en masse,
 });
 
 describe("Limiteur global (R1-12)", () => {
+  it("R1-14 : lectures publiques d'identité et d'installation hors compteur", async () => {
+    const petite = creerApp({ anonyme: 1, authentifie: 1 });
+    for (let i = 0; i < 4; i++) {
+      expect((await request(petite).get("/api/auth/identite")).status).toBe(200);
+      expect((await request(petite).get("/api/installation/etat")).status).toBe(200);
+    }
+  });
+
   it("/api/health reste hors compteur", async () => {
     const r = await request(app).get("/api/health");
     expect(r.status).toBe(200);

@@ -42,3 +42,18 @@ describe("Identité publique : connexion et espace avocat", () => {
     await waitFor(() => expect(screen.getByText(MENTION_DEMONSTRATION)).toBeInTheDocument());
   });
 });
+
+// R1-14 : une limite 429 sur /auth/identite ne doit pas faire retomber sur l'identité de base.
+describe("Identité publique : limite 429", () => {
+  it("réessaie après retryAfter au lieu de garder les défauts", async () => {
+    const { api } = await import("../../api/client");
+    appliquerConfig({ identite: { denomination: "Barreau de Pointe-Noire", modeDemonstration: false } });
+    let n = 0;
+    api.mockImplementationOnce(async () => { n++; throw Object.assign(new Error("429"), { status: 429, retryAfter: 0 }); });
+    render(<AuthProvider><Connexion /></AuthProvider>);
+    await screen.findByText("connexion");
+    expect(n).toBe(1);
+    expect(identite().denomination).toBe("Barreau de démonstration");
+    expect(identite().modeDemonstration).toBe(true);
+  });
+});

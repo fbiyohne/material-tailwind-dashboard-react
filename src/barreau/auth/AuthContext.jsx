@@ -17,7 +17,17 @@ async function chargerReglages() {
 
 /** Identité publique (GET /auth/identite) : écran de connexion et espace avocat, qui n'ont pas accès à /parametres. */
 async function chargerIdentite() {
-  try { appliquerConfig(await api("/auth/identite", { auth: false })); } catch { /* défauts conservés */ }
+  const lire = () => api("/auth/identite", { auth: false });
+  try {
+    let r;
+    try { r = await lire(); } catch (e) {
+      // Limite atteinte (salle derrière un NAT) : on attend le délai annoncé puis on réessaie une fois.
+      if (e.status !== 429) throw e;
+      await new Promise((ok) => setTimeout(ok, Math.min(e.retryAfter, 30) * 1000));
+      r = await lire();
+    }
+    appliquerConfig(r);
+  } catch { /* défauts conservés */ }
 }
 
 export function AuthProvider({ children }) {

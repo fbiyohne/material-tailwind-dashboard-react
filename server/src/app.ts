@@ -99,7 +99,7 @@ export function creerApp(limites: { anonyme?: number; authentifie?: number } = {
   // Journal d'audit transverse des mutations (RG-16 / NFR-09).
   app.use("/api", audit);
   // Limiteur global (protection DoS basique).
-  // Les appels de fond du SPA (notifications, non-lus) ne comptent pas ; un jeton présent
+  // Les appels de fond du SPA (notifications, non-lus) et les lectures publiques d identité/installation (R1-14) ne comptent pas ; un jeton présent
   // relève la limite (le SPA enchaîne plusieurs appels par page). Anonyme ou jeton invalide : 600 / 15 min.
   app.use(
     "/api",
@@ -108,7 +108,7 @@ export function creerApp(limites: { anonyme?: number; authentifie?: number } = {
       limit: (req) => (jetonValide(req) ? authentifie : anonyme),
       standardHeaders: true,
       legacyHeaders: false,
-      skip: (req) => /^\/(health|notifications|mes-notifications)(\/|$)/.test(req.path),
+      skip: (req) => /^\/(health|notifications|mes-notifications|auth\/identite|installation\/etat)(\/|$)/.test(req.path),
       handler: (_req, res) => {
         const n = Number(res.getHeader("Retry-After")) || 60;
         res.status(429).json({ erreur: `Trop de requêtes, réessayez dans ${n} s.`, retryAfter: n });
