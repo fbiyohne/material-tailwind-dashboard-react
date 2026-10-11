@@ -38,6 +38,7 @@ export function EditMembreModal({ membre, open, onClose, onSaved }) {
 
   if (!membre) return null;
   const estStagiaire = membre.qualite === "stagiaire";
+  const estOmis = membre.statut === "omis";
   const set = (k) => (e) => {
     setForm((f) => ({ ...f, [k]: e.target.value }));
     setModifie(true);
@@ -112,12 +113,14 @@ export function EditMembreModal({ membre, open, onClose, onSaved }) {
           <FormField label="Nom et prénom" required full error={erreurs.nom}>
             <input value={form.nom ?? ""} onChange={set("nom")} className={champ(erreurs.nom)} />
           </FormField>
-          <FormField label="Statut">
-            <select value={form.statut ?? "inscrit"} onChange={set("statut")} className="bpn-input">
-              <option value="inscrit">Inscrit</option>
+          {/* R1-5 : omission, réinscription et passage au tableau ont leur circuit (onglets
+              Situation et Stage) ; le serveur refuse ces transitions ici (409). */}
+          <FormField label="Statut" hint={estOmis ? "réinscription : onglet Situation" : estStagiaire ? "passage au tableau : onglet Stage" : undefined}>
+            <select value={form.statut ?? "inscrit"} onChange={set("statut")} className="bpn-input" disabled={estOmis}>
+              {estStagiaire ? <option value="stagiaire">Stagiaire</option> : <option value="inscrit">Inscrit</option>}
               <option value="suspendu">Suspendu</option>
-              <option value="omis">Omis</option>
-              <option value="honoraire">Honoraire</option>
+              {estOmis && <option value="omis">Omis</option>}
+              {!estStagiaire && <option value="honoraire">Honoraire</option>}
               <option value="radie">Radié</option>
               <option value="decede">Décédé</option>
             </select>

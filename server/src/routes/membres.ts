@@ -405,6 +405,11 @@ membresRouter.post(
           erreurs.push({ ligne: i + 1, message: "Changement de statut vers ou depuis un statut de sortie (radié, décédé, démissionnaire, retraité, cessation) interdit à l'import : utilisez la fiche de l'avocat (Radier / Déclarer le décès / Modifier)." });
           continue;
         }
+        // R1-5 : ni omission ni réinscription par import (circuit et permission omission_prononcer).
+        if (existant && r.statut?.trim() && existant.statut !== statut && (statut === "OMIS" || existant.statut === "OMIS")) {
+          erreurs.push({ ligne: i + 1, message: "Omission ou réinscription interdite à l'import : utilisez l'onglet Situation de la fiche de l'avocat." });
+          continue;
+        }
         if (simulation) {
           if (existant || creesSim.has(r.num)) maj += 1;
           else { creesSim.add(r.num); crees += 1; }
@@ -457,8 +462,20 @@ membresRouter.patch(
   asyncH(async (req: AuthRequest, res) => {
     const { statut, dateRadiation, motifRadiation, dateDeces, ...fiche } = editSchema.parse(req.body);
     const id = Number(req.params.id);
-    const actuel = await prisma.membre.findUnique({ where: { id }, select: { statut: true, dateRadiation: true, motifRadiation: true, dateDeces: true } });
+    const actuel = await prisma.membre.findUnique({ where: { id }, select: { statut: true, qualite: true, dateRadiation: true, motifRadiation: true, dateDeces: true } });
     if (!actuel) throw new HttpError(404, "Avocat introuvable");
+    // R1-5 : l'omission, la réinscription et le passage au tableau ont leur circuit et leur
+    // permission (omission_prononcer, stage_valider) ; PATCH ne peut pas les contourner.
+    const change = statut && statut !== actuel.statut;
+    if (change && (statut === "OMIS" || actuel.statut === "OMIS"))
+      throw new HttpError(409, statut === "OMIS"
+        ? "L'omission s'enregistre depuis l'onglet Situation (POST /membres/:id/evenements : rappel, mise en demeure, transmission, puis décision d'omission)."
+        : "La réinscription d'un avocat omis s'enregistre depuis l'onglet Situation (POST /membres/:id/evenements REINSCRIPTION).");
+    // Stagiaire → tableau : 403 sans stage_valider ; même avec, la seule voie est valider-stage (409).
+    if (actuel.qualite === "STAGIAIRE" && ((fiche.qualite && fiche.qualite !== "STAGIAIRE") || (change && statut === "INSCRIT"))) {
+      if (!aLaPermission(req.user!.role, "stage_valider")) throw new HttpError(403, "Accès refusé pour votre profil : la fin de stage relève de l'action stage_valider.");
+      throw new HttpError(409, "Le passage d'un stagiaire au tableau s'enregistre par « Valider la fin de stage » (fiche, onglet Stage).");
+    }
     const donnees = {
       ...fiche,
       dateNaissance: fiche.dateNaissance ? new Date(fiche.dateNaissance) : undefined,
