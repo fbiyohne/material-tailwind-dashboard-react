@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole, type AuthRequest, requirePermission } from "../middleware/auth.js";
@@ -206,20 +207,27 @@ disciplineRouter.post(
       details: { sanctionCode: s.code, dureeMois: data.dureeMois ?? null, sursis: data.sursis, decidePar },
       acteur: { id: req.user!.id, nom: req.user!.nom ?? null },
     };
-    if (effet === "SUSPENSION" && ferme) await changerSituation({ ...commun, type: "SUSPENSION", demande: { statut: "SUSPENDU" } });
+    // Atomicité et concurrence : le dossier est réservé (sanctionCode encore nul) et mis à
+    // jour dans la transaction de l'effet. Une soumission concurrente attend le verrou de
+    // ligne, ne trouve plus de dossier libre (409) et n'écrit rien ; un effet refusé annule tout.
+    const ecrireDossier = async (tx: Prisma.TransactionClient) => {
+      const r = await tx.dossierDisciplinaire.updateMany({
+        where: { id: d.id, sanctionCode: null },
+        data: {
+          sanctionCode: s.code, sanctionDureeMois: data.dureeMois ?? null, sursis: data.sursis,
+          sanctionDebut: ferme ? dateDecision : null, sanctionFin: ferme ? ajouterMois(dateDecision, data.dureeMois!) : null,
+          peineAccessoireMois: data.peineAccessoireMois ?? null, motivation: data.motivation, decidePar, dateDecision,
+          dateNotification: date(data.dateNotification), sanction: libelle, decision: data.decision ?? d.decision, statut: "DECISION",
+        },
+      });
+      if (r.count === 0) throw new HttpError(409, "Une décision est déjà enregistrée sur ce dossier.");
+    };
+    if (effet === "SUSPENSION" && ferme) await changerSituation({ ...commun, type: "SUSPENSION", demande: { statut: "SUSPENDU" } }, ecrireDossier);
     else if (effet === "RADIATION")
-      await changerSituation({ ...commun, type: "RADIATION", demande: { statut: "RADIE", dateRadiation: dateDecision, motifRadiation: `${libelle} — ${reference}` } });
-    else await changerSituation({ ...commun, type: "SANCTION" }); // statut inchangé (sursis, avertissement, réprimande)
+      await changerSituation({ ...commun, type: "RADIATION", demande: { statut: "RADIE", dateRadiation: dateDecision, motifRadiation: `${libelle} — ${reference}` } }, ecrireDossier);
+    else await changerSituation({ ...commun, type: "SANCTION" }, ecrireDossier); // statut inchangé (sursis, avertissement, réprimande)
 
-    const dossier = await prisma.dossierDisciplinaire.update({
-      where: { id: d.id },
-      data: {
-        sanctionCode: s.code, sanctionDureeMois: data.dureeMois ?? null, sursis: data.sursis,
-        sanctionDebut: ferme ? dateDecision : null, sanctionFin: ferme ? ajouterMois(dateDecision, data.dureeMois!) : null,
-        peineAccessoireMois: data.peineAccessoireMois ?? null, motivation: data.motivation, decidePar, dateDecision,
-        dateNotification: date(data.dateNotification), sanction: libelle, decision: data.decision ?? d.decision, statut: "DECISION",
-      },
-    });
+    const dossier = await prisma.dossierDisciplinaire.findUniqueOrThrow({ where: { id: d.id } });
     await journaliser(`Décision enregistrée — dossier ${d.reference} : ${libelle}`, req.user!.id);
     res.locals.auditDetail = "décision enregistrée";
     res.json(dossier);

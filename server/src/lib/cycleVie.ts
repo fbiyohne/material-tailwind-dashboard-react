@@ -73,9 +73,12 @@ export interface ChangementSituation {
  * jour de la fiche et EvenementSituation (statut avant/après, acteur, pièce) dans
  * une seule transaction — tout ou rien. Ensuite seulement : cohérence de l'accès à
  * l'espace avocat et signal temps réel « tableau ».
+ * `avantEffet` (facultatif) s'exécute en tête de la même transaction : une écriture
+ * liée (ex. réservation du dossier disciplinaire) réussit ou échoue avec l'effet.
  */
-export async function changerSituation(c: ChangementSituation) {
+export async function changerSituation(c: ChangementSituation, avantEffet?: (tx: Prisma.TransactionClient) => Promise<unknown>) {
   const { membre, evenement, avant } = await prisma.$transaction(async (tx) => {
+    if (avantEffet) await avantEffet(tx);
     const actuel = await tx.membre.findUnique({ where: { id: c.membreId } });
     if (!actuel) throw new HttpError(404, "Avocat introuvable");
     const etat = appliquerCycleVie(actuel, c.demande ?? {});
