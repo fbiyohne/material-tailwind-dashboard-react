@@ -35,7 +35,7 @@ export function VerificationPublique({ type, numero }) {
         <p className="text-xs uppercase tracking-[0.2em] text-or">Vérification d'authenticité</p>
       </div>
 
-      {type === "timbre" && <div className="mb-4 w-full max-w-md"><BandeauExperimental /></div>}
+      {type === "timbre" && <div className="mb-4 w-full max-w-md"><BandeauExperimental variante="timbre" /></div>}
 
       <div className="w-full max-w-md overflow-hidden rounded-xl bg-white text-encre shadow-modal">
         {etat.statut === "chargement" && (

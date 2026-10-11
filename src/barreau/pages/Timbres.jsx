@@ -97,7 +97,7 @@ export function Timbres() {
   return (
     <div className="space-y-5">
       <PageHeader eyebrow="Finances" titre="Timbres de plaidoirie" sousTitre="Émission d'un timbre électronique par affaire — preuve vérifiable (QR) à apposer sur les actes." />
-      <BandeauExperimental />
+      <BandeauExperimental variante="timbre" />
       <Tabs ariaLabel="Timbres" tabs={[
         { id: "emission", label: "Émission et registre", content: (
     <div className="space-y-5">

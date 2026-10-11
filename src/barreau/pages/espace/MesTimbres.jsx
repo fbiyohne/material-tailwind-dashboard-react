@@ -67,7 +67,7 @@ export function MesTimbres() {
   return (
     <div className="space-y-5">
       <PageHeader eyebrow="Mon espace" titre="Mes timbres de plaidoirie" sousTitre="Émettez un timbre par affaire, réglez le droit de plaidoirie, puis téléchargez-le ou copiez-le dans vos actes." />
-      <BandeauExperimental />
+      <BandeauExperimental variante="timbre" />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[340px_1fr]">
         {/* Émission */}

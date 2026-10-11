@@ -51,3 +51,14 @@ describe("Timbre autonome — prototype", () => {
     vi.unstubAllGlobals();
   });
 });
+
+// R2-10 — texte du bandeau propre au timbre (pas la formule du scrutin).
+import { BandeauExperimental, TEXTE_EXPERIMENTAL_TIMBRE } from "../../components/BandeauExperimental";
+describe("R2-10 bandeau timbre", () => {
+  it("dit « aucun timbre émis » et ne mentionne pas le scrutin", () => {
+    const { getByRole } = render(<BandeauExperimental variante="timbre" />);
+    const t = getByRole("note").textContent.replace(/\s+/g, " ").trim();
+    expect(t).toBe(TEXTE_EXPERIMENTAL_TIMBRE);
+    expect(t).not.toMatch(/scrutin/i);
+  });
+});
