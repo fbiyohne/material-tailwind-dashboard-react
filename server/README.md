@@ -405,7 +405,15 @@ DATABASE_URL=postgresql://barreau:barreau_dev@localhost:5432/barreau_pn_test npx
 DATABASE_URL=postgresql://barreau:barreau_dev@localhost:5432/barreau_pn_test npm run seed
 # Lancer
 npm test          # vitest + supertest (auth, BR-01/03, RBAC, RG-13)
+npx vitest run test/parcours.test.ts   # recette des 12 parcours du §5 du cahier (CA5)
 ```
+
+`test/parcours.test.ts` rejoue les 12 parcours de recette de bout en bout par l'API (un
+`describe` par parcours : import, passage au tableau, admission directe, omission,
+discipline jusqu'au sursis puis à la radiation, droits bâtonnier / SG, tableau temps réel
+et PDF, messagerie, rejet de pièce, corps électoral à une date, reçu personnalisé, journal
+d'audit). Les volets PDF exigent Chromium et `pdftotext` (sautés sinon). Fixtures préfixées
+« E2E PARCOURS », retirées en fin de fichier ; Paramètres restaurés.
 
 La base de test `barreau_pn_test` est celle du socle Docker `creatic-shared`
 (conteneur `creatic-postgres`, publié sur `127.0.0.1:5432`) : `TEST_DATABASE_URL`

@@ -51,7 +51,10 @@ membresRouter.get(
     const sort = String(req.query.sort ?? "num");
     const order = req.query.order === "desc" ? "desc" : "asc";
 
-    const orderBy = { [TRI_AUTORISE.has(sort) ? sort : "num"]: order } as Prisma.MembreOrderByWithRelationInput;
+    const champ = TRI_AUTORISE.has(sort) ? sort : "num";
+    // Date d'inscription facultative : sans « nulls last », PostgreSQL place les fiches non datées en tête
+    // du tri décroissant et masque les inscriptions les plus récentes (parcours 2 du §5).
+    const orderBy = { [champ]: champ === "dateInscription" ? { sort: order, nulls: "last" } : order } as Prisma.MembreOrderByWithRelationInput;
 
     // Projection « annuaire » : la liste est largement accessible (requireAuth),
     // on n'y expose donc pas les données personnelles sensibles (adresse, date de
