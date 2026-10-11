@@ -148,7 +148,7 @@ export function Recus() {
         </Notice>
       )}
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[320px_1fr]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
         <div className="bpn-no-print rounded-lg bg-navy-3 p-5">
           <div className="mb-4 text-xs uppercase tracking-[0.2em] text-white/40">Formulaire</div>
           <div className="space-y-3.5">
