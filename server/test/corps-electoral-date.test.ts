@@ -39,6 +39,9 @@ async function payer(membreId: number, date: string) {
   const montant = cotisationDue(null, await tarifsActuels(), "AVOCAT");
   const r = await request(app).post("/api/cotisations/paiement").set(...bearer(sg)).send({ membreId, annee: ANNEE, montant, mode: "Espèces", date });
   expect(r.status).toBe(201);
+  // R2-8 : le corps électoral retient l'horodatage serveur ; la fixture simule un
+  // versement réellement reçu à cette date (et non saisi aujourd'hui avec une date passée).
+  await prisma.recu.updateMany({ where: { membreId, annee: ANNEE }, data: { createdAt: j(date) } });
 }
 
 const dossier = (cle: string, data: Record<string, unknown>) =>

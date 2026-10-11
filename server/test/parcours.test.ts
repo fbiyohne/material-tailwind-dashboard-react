@@ -411,8 +411,11 @@ describe("Parcours 9 — dépôt d'une pièce : rejet motivé, notification, nou
 describe("Parcours 10 — corps électoral à une date donnée (cotisations + discipline) et éligibilité", () => {
   it("deux dates encadrant un paiement et une interdiction donnent deux listes ; ancienneté et peine accessoire contrôlées", async () => {
     const montant = cotisationDue(null, await tarifsActuels(), "AVOCAT");
-    const payer = async (membreId: number, date: string) =>
+    const payer = async (membreId: number, date: string) => {
       expect((await request(app).post("/api/cotisations/paiement").set(...bearer(tr)).send({ membreId, annee: 2026, montant, mode: "Espèces", date })).status).toBe(201);
+      // R2-8 : versement réellement reçu à cette date (horodatage serveur simulé).
+      await prisma.recu.updateMany({ where: { membreId, annee: 2026 }, data: { createdAt: new Date(`${date}T12:00:00Z`) } });
+    };
     const a = await creerMembre("Electeur Paiement", { dateInscription: "2015-01-10" });
     await payer(a.id, "2026-05-10");
     const b = await creerMembre("Electeur Interdit", { dateInscription: "2015-01-10" });

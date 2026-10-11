@@ -168,7 +168,8 @@ export interface SanctionDate {
   peineAccessoireMois: number | null;
   dateDecision: Date | null;
 }
-export interface RecuDate { annee: number; montant: number; date: Date; objet: string | null }
+/** createdAt : horodatage serveur de l'enregistrement (immuable), seul repère opposable (R2-8). */
+export interface RecuDate { annee: number; montant: number; date: Date; objet: string | null; createdAt?: Date }
 export interface MembreDate {
   statut: StatutMembre;
   dateInscription: Date | null;
@@ -199,7 +200,8 @@ const ajouterMois = (d: Date, mois: number) => { const r = new Date(d); r.setUTC
  *    avec sursis, il reste inscrit et `sursis` est vrai ;
  *  - peine accessoire : inéligible de dateDecision (à défaut sanctionDebut) à + peineAccessoireMois ;
  *  - cotisation payée à D : somme des reçus de cotisation (estRecuDroit) de l'exercice datés
- *    au plus tard de D ; sans aucun reçu de cotisation pour l'exercice, la ligne Cotisation
+ *    ET enregistrés par le serveur (createdAt) au plus tard de D — une date saisie antidatée ne
+ *    rend jamais électeur à une date passée (R2-8) ; sans aucun reçu de cotisation pour l'exercice, la ligne Cotisation
  *    compte si datePaiement ≤ D.
  * L'appelant passe D en fin de journée s'il veut inclure les paiements du jour.
  */
@@ -230,7 +232,7 @@ export function situationADate(
   const recusCot = recus.filter((r) => r.annee === annee && !estRecuDroit(r.objet));
   const ligne = membre.cotisations?.find((c) => c.annee === annee);
   const paye = recusCot.length
-    ? recusCot.filter((r) => r.date.getTime() <= t).reduce((s, r) => s + r.montant, 0)
+    ? recusCot.filter((r) => Math.max(r.date.getTime(), r.createdAt?.getTime() ?? 0) <= t).reduce((s, r) => s + r.montant, 0)
     : ligne?.datePaiement && ligne.datePaiement.getTime() <= t ? ligne.montantPaye : 0;
   return { statut, sursis, ineligible, annee, cotisation: ligne ? { montantDu: ligne.montantDu, montantPaye: paye } : null };
 }
@@ -257,7 +259,7 @@ export async function electeursADate(where: Prisma.MembreWhereInput, D: Date, re
       orderBy: { num: "asc" },
       include: {
         cotisations: { where: { annee } },
-        recus: { where: { annee }, select: { annee: true, montant: true, date: true, objet: true } },
+        recus: { where: { annee }, select: { annee: true, montant: true, date: true, objet: true, createdAt: true } },
         evenements: { select: { dateEffet: true, statutAvant: true, statutApres: true } },
         dossiers: {
           where: { sanctionCode: { not: null } },

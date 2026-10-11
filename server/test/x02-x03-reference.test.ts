@@ -25,6 +25,8 @@ beforeAll(async () => {
   const montant = cotisationDue(null, await tarifsActuels(), "AVOCAT");
   const p = await request(app).post("/api/cotisations/paiement").set(...bearer(sg)).send({ membreId, annee: 2026, montant, mode: "Espèces", date: "2026-05-10" });
   expect(p.status).toBe(201);
+  // R2-8 : versement réellement reçu le 10 mai (horodatage serveur simulé).
+  await prisma.recu.updateMany({ where: { membreId, annee: 2026 }, data: { createdAt: new Date("2026-05-10T12:00:00Z") } });
   const d = await prisma.dossierDisciplinaire.create({ data: { reference: `T30-REF-${num}`, membreId, avocatNom: m.nom, objet: "Preuve X-02", dateSaisine: new Date() } });
   dossierId = d.id;
 });

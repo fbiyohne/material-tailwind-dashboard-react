@@ -38,6 +38,12 @@ export async function encaisser(opts: {
 }) {
   const { membre, annee, montant, type, paiementId } = opts;
   const dateP = opts.date ?? new Date();
+  // R2-8 : pas de date de valeur dans le futur (tolérance d'un jour pour le décalage
+  // horaire du poste). Une date passée reste admise sur le reçu, mais le corps
+  // électoral ne retient que l'horodatage serveur (Recu.createdAt).
+  if (Number.isNaN(dateP.getTime()) || dateP.getTime() > Date.now() + 86_400_000) {
+    throw new HttpError(400, "Date de paiement invalide ou future.");
+  }
   const mode = opts.mode ?? undefined;
   const ref = opts.ref ?? undefined;
   const estDroit = type === "droit";
