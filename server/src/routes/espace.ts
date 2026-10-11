@@ -345,6 +345,9 @@ espaceRouter.get(
   "/annuaire",
   asyncH(async (req: AuthRequest, res) => {
     const q = String(req.query.q ?? "").trim();
+    // Le demandeur doit lui-même être de l'annuaire : ne dépend pas de la révocation asynchrone du compte.
+    const moi = await prisma.membre.findUnique({ where: { id: monMembreId(req) }, select: { statut: true } });
+    if (!moi || !(STATUTS_ANNUAIRE as readonly string[]).includes(moi.statut)) throw new HttpError(403, "Annuaire réservé aux membres inscrits");
     const membres = await prisma.membre.findMany({
       // Annuaire des confrères : on exclut sa propre fiche.
       where: {

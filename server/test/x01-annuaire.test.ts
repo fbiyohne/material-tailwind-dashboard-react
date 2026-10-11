@@ -98,3 +98,18 @@ describe("PO-21 — tableau de l'Ordre", () => {
     for (const m of membres) for (const champ of ["tel", "email", "motifRadiation", "adresse"]) expect(m).not.toHaveProperty(champ);
   });
 });
+
+describe("R1-12 — le demandeur doit lui-même figurer dans l'annuaire", () => {
+  it("un avocat sorti ou suspendu, accès non encore révoqué : 403, aucune coordonnée servie", async () => {
+    const lui = await avocatEspace("sorti");
+    const inscrit = await membreAuStatut("INSCRIT");
+    expect((await request(app).get("/api/espace/annuaire").set(...bearer(lui.token))).status).toBe(200);
+    for (const statut of ["SUSPENDU", "OMIS", "RADIE"]) {
+      // Mise à jour directe : simule la course avant la révocation asynchrone du compte.
+      await prisma.membre.update({ where: { id: lui.membreId }, data: { statut } as never });
+      const r = await request(app).get("/api/espace/annuaire").set(...bearer(lui.token));
+      expect(r.status).toBe(403);
+      expect(JSON.stringify(r.body)).not.toContain(inscrit.email);
+    }
+  });
+});
