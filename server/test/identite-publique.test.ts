@@ -25,3 +25,27 @@ describe("GET /api/auth/identite (identité publique)", () => {
     expect(Object.keys(body.identite).sort()).toEqual(["denomination", "logo", "modeDemonstration", "ordre", "ville"]);
   });
 });
+
+describe("R2-12 cache d'identité non durable", () => {
+  it("reprend une modification faite hors processus (autre process, script) en moins de 2 s", async () => {
+    const { prisma } = await import("../src/prisma.js");
+    const row = await prisma.parametres.findUnique({ where: { id: 1 } });
+    const data = (row?.data ?? {}) as Record<string, any>;
+    const avant = await request(app).get("/api/auth/identite");
+    try {
+      await prisma.parametres.upsert({
+        where: { id: 1 },
+        update: { data: { ...data, identite: { ...(data.identite ?? {}), denomination: "Barreau R2-12 externe" } } },
+        create: { id: 1, data: { identite: { denomination: "Barreau R2-12 externe" } } },
+      });
+      await new Promise((r) => setTimeout(r, 1100));
+      const r = await request(app).get("/api/auth/identite");
+      expect(r.body.identite.denomination).toBe("Barreau R2-12 externe");
+    } finally {
+      if (row) await prisma.parametres.update({ where: { id: 1 }, data: { data } });
+      await new Promise((r) => setTimeout(r, 1100));
+      const fin = await request(app).get("/api/auth/identite");
+      expect(fin.body.identite.denomination).toBe(avant.body.identite.denomination);
+    }
+  });
+});

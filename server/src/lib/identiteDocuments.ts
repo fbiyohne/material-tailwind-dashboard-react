@@ -57,8 +57,18 @@ let courante: IdentiteDocuments = { ...DEFAUT };
 /** Identité courante (lecture synchrone au rendu des documents). */
 export const identite = (): IdentiteDocuments => courante;
 
+let derniereLecture = 0;
+/** Durée max. de validité du cache : une modification faite par un autre processus (script de démo, tests) est reprise au plus tard après ce délai. */
+export const TTL_IDENTITE_MS = 1000;
+
+/** Relit la base si le cache est périmé (middleware /api) : écran et PDF partagent la même identité. */
+export async function rafraichirSiPerimee(): Promise<void> {
+  if (Date.now() - derniereLecture >= TTL_IDENTITE_MS) await rafraichirIdentite();
+}
+
 /** Recharge l'identité depuis les Paramètres (au démarrage et après chaque PUT). */
 export async function rafraichirIdentite(): Promise<void> {
+  derniereLecture = Date.now();
   try {
     const row = await prisma.parametres.findUnique({ where: { id: 1 } });
     const id = ((row?.data as { identite?: Partial<IdentiteDocuments> } | null)?.identite) ?? {};

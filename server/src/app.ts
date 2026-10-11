@@ -2,11 +2,12 @@ import express from "express";
 import path from "node:path";
 import cors from "cors";
 import helmet from "helmet";
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import jwt from "jsonwebtoken";
 import { pinoHttp } from "pino-http";
 import { randomUUID } from "node:crypto";
 import { env } from "./env.js";
+import { rafraichirSiPerimee } from "./lib/identiteDocuments.js";
 import { logger } from "./lib/logger.js";
 import { errorHandler } from "./middleware/error.js";
 import { audit } from "./middleware/audit.js";
@@ -45,15 +46,15 @@ import { espaceRouter } from "./routes/espace.js";
 import { messagerieRouter } from "./routes/messagerie.js";
 import { installationRouter } from "./routes/installation.js";
 
-/** Vrai si l'en-tête Authorization porte un JWT valide (un jeton bidon ne relève pas la limite). */
-function jetonValide(req: express.Request): boolean {
+/** Identifiant (sub) du JWT valide de l'en-tête Authorization, sinon null (un jeton bidon ne relève pas la limite). */
+function utilisateurDuJeton(req: express.Request): string | null {
   const h = req.headers.authorization;
-  if (!h?.startsWith("Bearer ")) return false;
+  if (!h?.startsWith("Bearer ")) return null;
   try {
-    jwt.verify(h.slice(7), env.jwtSecret, { algorithms: ["HS256"] });
-    return true;
+    const p = jwt.verify(h.slice(7), env.jwtSecret, { algorithms: ["HS256"] });
+    return typeof p === "object" && p.sub != null ? String(p.sub) : "?";
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -96,6 +97,8 @@ export function creerApp(limites: { anonyme?: number; authentifie?: number } = {
       },
     })
   );
+  // Identité du barreau : cache borné dans le temps (jamais plus d'une seconde de retard sur la base).
+  app.use("/api", (_req, _res, next) => void rafraichirSiPerimee().then(() => next(), next));
   // Journal d'audit transverse des mutations (RG-16 / NFR-09).
   app.use("/api", audit);
   // Limiteur global (protection DoS basique).
@@ -105,7 +108,12 @@ export function creerApp(limites: { anonyme?: number; authentifie?: number } = {
     "/api",
     rateLimit({
       windowMs: 15 * 60 * 1000,
-      limit: (req) => (jetonValide(req) ? authentifie : anonyme),
+      limit: (req) => (utilisateurDuJeton(req) ? authentifie : anonyme),
+      // R2-13 : un jeton valide a son propre budget (salle de congrès derrière un seul NAT) ; sinon l'IP.
+      keyGenerator: (req) => {
+        const u = utilisateurDuJeton(req);
+        return u ? "u:" + u : ipKeyGenerator(req.ip ?? "");
+      },
       standardHeaders: true,
       legacyHeaders: false,
       skip: (req) => /^\/(health|notifications|mes-notifications|auth\/identite|installation\/etat)(\/|$)/.test(req.path),
