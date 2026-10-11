@@ -1,6 +1,7 @@
 import nodemailer from "nodemailer";
 import { prisma } from "../prisma.js";
 import { logger } from "./logger.js";
+import { dechiffrer } from "./secrets.js";
 
 export interface SmtpConfig { host: string; port: number; secure: boolean; user?: string; pass?: string; from: string; }
 
@@ -23,13 +24,13 @@ export async function chargerSmtp(): Promise<SmtpConfig | null> {
     const row = await prisma.parametres.findUnique({ where: { id: 1 } });
     const s = (row?.data as { smtp?: Partial<SmtpConfig> } | undefined)?.smtp;
     if (s?.host) {
-      return { host: s.host, port: Number(s.port) || 587, secure: !!s.secure, user: s.user || undefined, pass: s.pass || undefined, from: s.from || "secretariat@barreau-pn.cg" };
+      return { host: s.host, port: Number(s.port) || 587, secure: !!s.secure, user: s.user || undefined, pass: s.pass ? dechiffrer(s.pass) : undefined, from: s.from || "secretariat@barreau-pn.cg" };
     }
   } catch (err) {
     // Base indisponible (ex. bootstrap avant migration) : on se rabat sur
     // l'environnement. On journalise tout de même : sinon une panne transitoire
     // de la base ferait silencieusement basculer les envois en simulation.
-    logger.warn({ err }, "Lecture de la config SMTP en base impossible — repli sur l'environnement");
+    logger.warn({ err }, "Lecture ou déchiffrement de la config SMTP en base impossible — repli sur l'environnement");
   }
   if (process.env.SMTP_HOST) {
     return { host: process.env.SMTP_HOST, port: Number(process.env.SMTP_PORT) || 587, secure: process.env.SMTP_SECURE === "true", user: process.env.SMTP_USER || undefined, pass: process.env.SMTP_PASS || undefined, from: process.env.MAIL_FROM || "secretariat@barreau-pn.cg" };

@@ -139,6 +139,14 @@ Ordre et délais (cause 35-4° et chaque étape) : l'étape *k* exige l'étape *
 ### Chromium pour le PDF
 `trouverChromium` (`src/lib/pdf.ts`) cherche dans l'ordre : `PUPPETEER_EXECUTABLE_PATH`, le cache Puppeteer, Playwright, les binaires Linux (`/usr/bin/chromium`, `google-chrome`…), puis sous Windows `C:/Program Files/Google/Chrome/Application/chrome.exe` et `C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe`. Sans binaire, les routes PDF répondent en erreur et les tests PDF s'ignorent.
 
+## Paramètres sensibles et secrets (T13, M-20261011)
+
+`src/lib/secrets.ts` chiffre au repos (AES-256-GCM, format `enc:v1:iv:tag:ct`) les secrets de `Parametres.data`, liste fermée `CHEMINS_SECRETS` : `smtp.pass`, `notifications.sms.cleApi`, `passerelles.mtn.abonnementCle|cleSecrete`, `passerelles.airtel.cleSecrete`, `passerelles.agregateur.cleApi|cleWebhook`. Clé : `PARAMS_CLE` (32 octets base64, env, jamais dans Git) ; sans elle, un PUT de secret répond 400. Un `smtp.pass` historique en clair reste lisible (`dechiffrer` le renvoie tel quel) ; l'assistant d'installation le chiffre dès que la clé existe.
+
+- `GET /api/parametres` : secrets toujours masqués (`••••` + 4 derniers caractères, rien pour un secret de moins de 12 caractères) ; sections `passerelles`, `notifications`, `smtp`, `messagerie` retirées sans la permission `parametres` (lecture et écriture).
+- `PUT /api/parametres` : valeur vide ou masquée → secret conservé ; nouvelle valeur → chiffrée. `passerelles.mode` est `z.literal("TEST")` (production verrouillée), `messagerie.pieceMaxMo` ≤ 5, `modules.masques` refuse `/`, `/parametres`, `/journal-audit`, `/tableau`, `/discipline`. Journal : noms de sections et de champs, jamais de valeur.
+- `POST /api/parametres/tester/:canal` (SG, bâtonnier, admin) : `smtp` → `verify()` (aucun message envoyé ; en local, Mailpit du socle `127.0.0.1:1025`) ; `sms`, `mtn`, `airtel`, `agregateur` → contrôle de complétude en simulation, aucun appel externe.
+
 ## Journal d'audit (T18, CA10)
 
 Routeur `src/routes/audit.ts`, middleware `src/middleware/audit.ts`, écran

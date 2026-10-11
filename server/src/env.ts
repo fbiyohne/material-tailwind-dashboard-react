@@ -55,6 +55,9 @@ export function verifierConfigProduction(avertir: (msg: string) => void): void {
   if (!process.env.SMTP_HOST && !process.env.SMTP_URL) {
     avertir("SMTP non configuré : les notifications email resteront en simulation.");
   }
+  if (!process.env.PARAMS_CLE) {
+    avertir("PARAMS_CLE absente : aucun secret (SMTP, passerelles, SMS) ne peut être enregistré chiffré depuis les Paramètres.");
+  }
 }
 
 export const env = {

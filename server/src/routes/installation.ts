@@ -6,6 +6,7 @@ import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { wizardActif } from "../lib/installation.js";
 import { creerTransport } from "../lib/mail.js";
+import { chiffrer, cleDisponible } from "../lib/secrets.js";
 
 export const installationRouter = Router();
 
@@ -59,7 +60,8 @@ installationRouter.post("/", asyncH(async (req, res) => {
       tarifs: d.tarifs,
       exerciceCourant: d.exerciceCourant,
       exercices: { premier: d.premierExercice },
-      ...(d.smtp ? { smtp: d.smtp } : {}),
+      // Mot de passe SMTP chiffré au repos dès que PARAMS_CLE est configurée (sinon clair, compatibilité).
+      ...(d.smtp ? { smtp: { ...d.smtp, pass: d.smtp.pass && cleDisponible() ? chiffrer(d.smtp.pass) : d.smtp.pass } } : {}),
       installe: true,
     };
     await tx.parametres.upsert({ where: { id: 1 }, create: { id: 1, data }, update: { data } });
