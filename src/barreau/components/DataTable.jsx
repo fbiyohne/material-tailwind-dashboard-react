@@ -48,7 +48,7 @@ export function DataTable({
               {columns.map((c) => (
                 <th key={c.key} scope="col"
                   aria-sort={c.sortable ? (t.sortKey === c.key ? (t.sortDir === "asc" ? "ascending" : "descending") : "none") : undefined}
-                  className={`${pad} ${alignCls[c.align] ?? "text-left"}`}>
+                  className={`${pad} ${alignCls[c.align] ?? "text-left"} ${c.className ?? ""}`}>
                   {c.sortable ? (
                     <button type="button" onClick={() => t.toggleSort(c.key)}
                       className="inline-flex items-center gap-1 font-medium uppercase hover:text-white print:cursor-default">
@@ -75,7 +75,7 @@ export function DataTable({
                     </td>
                   )}
                   {columns.map((c) => (
-                    <td key={c.key} className={`${pad} ${alignCls[c.align] ?? "text-left"}`}>{c.cell(row)}</td>
+                    <td key={c.key} className={`${pad} ${alignCls[c.align] ?? "text-left"} ${c.className ?? ""}`}>{c.cell(row)}</td>
                   ))}
                 </tr>
               );

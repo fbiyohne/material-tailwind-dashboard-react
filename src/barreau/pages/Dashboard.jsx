@@ -40,7 +40,7 @@ function Barre({ label, valeur, max, accent = "navy" }) {
   const largeur = max > 0 ? Math.round((valeur / max) * 100) : 0;
   return (
     <div className="flex items-center gap-3 text-sm">
-      <span className="w-36 shrink-0 truncate text-gris" title={label}>{label}</span>
+      <span className="w-28 shrink-0 truncate text-gris sm:w-44" title={label}>{label}</span>
       <span className="h-2 flex-1 overflow-hidden rounded bg-grisM">
         <span className="block h-full rounded transition-all duration-500" style={{ width: `${largeur}%`, backgroundColor: `var(--bpn-${accent})` }} />
       </span>
@@ -54,7 +54,7 @@ function CarteRepartition({ titre, sousTitre, lignes }) {
   const max = Math.max(1, ...lignes.map((l) => l.valeur));
   return (
     <div className="bpn-card">
-      <div className="bpn-card-header">
+      <div className="bpn-card-header flex-wrap gap-x-3">
         <span className="bpn-card-heading">{titre}</span>
         {sousTitre && <span className="text-xs text-gris">{sousTitre}</span>}
       </div>
@@ -164,7 +164,7 @@ export function Dashboard() {
       )}
 
       {/* 4 indicateurs (données réelles de la base) */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <StatCard index={1} label="Avocats inscrits" value={membres?.inscrits ?? "…"} sub="au tableau" accent="or" valueAccent="navy" onClick={allerVers("/avocats")} />
         <StatCard index={2} label="À jour" value={membres?.aJour ?? "…"} sub="avocats + stagiaires" accent="vert" onClick={allerVers("/cotisations?statut=ajour")} />
         <StatCard index={3} label="En retard" value={membres?.enRetard ?? "…"} sub="relances nécessaires" accent="rouge" onClick={allerVers("/cotisations?statut=retard")} className={(membres?.enRetard ?? 0) > 0 ? "!border-rouge !bg-rougeL" : ""} />
@@ -173,7 +173,7 @@ export function Dashboard() {
 
       {/* Ventilation par qualité : retardataires parmi les avocats et les stagiaires */}
       {membres?.parQualite && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
           <StatCard label="Avocats en retard" value={membres.parQualite.avocats.enRetard} sub={`sur ${membres.parQualite.avocats.effectif} avocats inscrits`} accent="rouge" onClick={allerVers("/cotisations?statut=retard")} />
           <StatCard label="Stagiaires en retard" value={membres.parQualite.stagiaires.enRetard} sub={`sur ${membres.parQualite.stagiaires.effectif} stagiaires`} accent="rouge" onClick={allerVers("/cotisations?statut=retard")} />
         </div>
@@ -182,7 +182,7 @@ export function Dashboard() {
       {/* Indicateurs institutionnels / système — servis selon le rôle (disciplinaire
           pour SG/Bâtonnier, demandes d'accès pour SG/Admin). */}
       {(data?.discipline || data?.demandesEnAttente != null || finances?.timbresAnnee != null) && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           {data?.discipline && (
             <StatCard label="Dossiers disciplinaires" value={data.discipline.enCours} sub="en cours" accent="rouge" onClick={allerVers("/discipline")} className={data.discipline.enCours > 0 ? "!border-rouge/40" : ""} />
           )}
@@ -202,7 +202,7 @@ export function Dashboard() {
           Bâtonnier ne voit pas les montants. */}
       {voitFinances && (
         <div className="bpn-card">
-          <div className="bpn-card-header">
+          <div className="bpn-card-header flex-wrap gap-x-3">
             <span className="bpn-card-heading">Situation financière {exercice}</span>
             <span className="font-mono text-xs text-gris">en FCFA</span>
           </div>
@@ -229,7 +229,7 @@ export function Dashboard() {
       )}
 
       {/* Agenda (réel) + journal d'audit (réel) */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="bpn-card">
           <div className="bpn-card-header"><span className="bpn-card-heading">Prochaines échéances</span></div>
           {echeances === null ? (
@@ -268,7 +268,7 @@ export function Dashboard() {
                 <li key={j.id ?? `${j.action}-${i}`} className="px-4 py-3">
                   <div className="text-sm text-encre">{j.action}{j.cible ? ` ${j.cible}` : ""}</div>
                   <div className="mt-0.5 flex items-center gap-2 text-xs text-gris">
-                    <span className="font-mono">{formatQuand(j.quand)}</span><span>·</span><span>{j.acteur}</span>
+                    <span className="whitespace-nowrap font-mono">{formatQuand(j.quand)}</span><span>·</span><span>{j.acteur}</span>
                   </div>
                 </li>
               ))}

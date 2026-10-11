@@ -56,7 +56,7 @@ export function Tabs({ tabs, defaultTab, className = "", ariaLabel = "Sections" 
               aria-controls={`${base}-panel-${t.id}`}
               tabIndex={isActive ? 0 : -1}
               onClick={() => setActive(t.id)}
-              className={`-mb-px flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+              className={`-mb-px flex items-center gap-2 border-b-2 px-3 py-2.5 text-sm sm:px-4 font-medium transition-colors ${
                 isActive
                   ? "border-or text-navy"
                   : "border-transparent text-gris hover:border-grisM hover:text-encre"

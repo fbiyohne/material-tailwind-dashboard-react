@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { PrinterIcon, ArrowDownTrayIcon, CheckBadgeIcon, NoSymbolIcon } from "@heroicons/react/24/outline";
-import { StatCard, Badge, PageHeader, Tabs, SelecteurExercice, DataTable, FormField, MentionJuridique } from "../components";
+import { StatCard, Badge, PageHeader, Tabs, SelecteurExercice, DataTable, MentionJuridique } from "../components";
 import { exporterExcel } from "../utils/exports";
 import { formatDate } from "../utils/format";
 import { telechargerCsv } from "../utils/exportCsv";
@@ -16,9 +16,15 @@ const MOTIF_LABEL = {
 
 const COLONNES_ELECTEURS = [
   { key: "num", label: "N°", sortable: true, sortValue: (m) => m._num, cell: (m) => <span className="font-mono text-xs text-gris">{m._num}</span> },
-  { key: "nom", label: "Avocat électeur", sortable: true, sortValue: (m) => m.nom, cell: (m) => <span className="font-medium">Me {m.nom}</span> },
-  { key: "cabinet", label: "Cabinet", sortable: true, sortValue: (m) => m.cabinet, cell: (m) => <span className="text-gris">{m.cabinet}</span> },
-  { key: "inscrit", label: "Inscrit depuis", sortable: true, sortValue: (m) => m.dateInscription ?? "", cell: (m) => <span className="text-xs text-gris">{formatDate(m.dateInscription)}</span> },
+  { key: "nom", label: "Avocat électeur", sortable: true, sortValue: (m) => m.nom, cell: (m) => (
+    <>
+      <span className="font-medium">Me {m.nom}</span>
+      {/* Mobile : cabinet et date passent sous le nom (colonnes masquées sous 640 px). */}
+      <span className="mt-0.5 block text-xs text-gris sm:hidden">{m.cabinet || "—"} · {formatDate(m.dateInscription)}</span>
+    </>
+  ) },
+  { key: "cabinet", label: "Cabinet", className: "hidden sm:table-cell", sortable: true, sortValue: (m) => m.cabinet, cell: (m) => <span className="text-gris">{m.cabinet || "—"}</span> },
+  { key: "inscrit", label: "Inscrit depuis", className: "hidden sm:table-cell", sortable: true, sortValue: (m) => m.dateInscription ?? "", cell: (m) => <span className="text-xs text-gris">{formatDate(m.dateInscription)}</span> },
 ];
 
 const COLONNES_EXCLUSIONS = [
@@ -71,9 +77,10 @@ export function CorpsElectoral() {
     <div className="space-y-5">
       <PageHeader className="bpn-no-print" eyebrow="Membres" titre="Corps électoral" sousTitre="Liste générée automatiquement : avocats inscrits, à jour de cotisations et non suspendus (RG-04 à RG-06).">
         <SelecteurExercice valeur={exercice} onChange={setExercice} />
-        <FormField label="Situation à la date du">
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="bpn-input" />
-        </FormField>
+        <label className="flex items-center gap-2">
+          <span className="bpn-label mr-1">Situation au</span>
+          <input type="date" aria-label="Situation à la date du" value={date} onChange={(e) => setDate(e.target.value)} className="bpn-input !w-auto" />
+        </label>
       </PageHeader>
 
       <MentionJuridique nature="provisoire" article="PO-20" className="bpn-no-print">
@@ -81,7 +88,7 @@ export function CorpsElectoral() {
       </MentionJuridique>
 
       {/* Statistiques (FR-CE) */}
-      <div className="bpn-no-print grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="bpn-no-print grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <StatCard label="Électeurs qualifiés" value={electeurs.length} sub="aptes à voter" accent="vert" />
         <StatCard label="Exclus — cotisations" value={exclusCotisation.length} sub="non à jour" accent="rouge" />
         <StatCard label="Exclus — statut" value={exclusStatut.length} sub="suspendu, radié, omis, décédé, sorti" accent="gris" />
@@ -97,7 +104,7 @@ export function CorpsElectoral() {
             badge: electeurs.length || null,
             content: (
               <>
-                <div className="bpn-no-print mb-4 flex justify-end gap-2">
+                <div className="bpn-no-print mb-4 flex flex-wrap justify-end gap-2 [&>button]:whitespace-nowrap">
                   <button type="button" onClick={() => window.print()} className="bpn-btn bpn-btn-ghost">
                     <PrinterIcon className="h-4 w-4" /> Imprimer
                   </button>
@@ -113,7 +120,7 @@ export function CorpsElectoral() {
 
                 {/* Liste électorale (imprimable) */}
                 <div className="bpn-print-zone bpn-card">
-                  <div className="bpn-card-header">
+                  <div className="bpn-card-header flex-wrap gap-x-3">
                     <span className="bpn-card-heading">
                       Liste du corps électoral {date ? `au ${formatDate(date)}` : exercice} — {identite().denomination}
                     </span>

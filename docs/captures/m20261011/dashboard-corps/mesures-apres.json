@@ -1,0 +1,26 @@
+{
+  "dashboard-1280": {
+    "sw": 1280,
+    "iw": 1280
+  },
+  "dashboard-360": {
+    "sw": 360,
+    "iw": 360
+  },
+  "corps-electoral-1280": {
+    "sw": 1280,
+    "iw": 1280
+  },
+  "corps-electoral-exclusions-1280": {
+    "sw": 1280,
+    "iw": 1280
+  },
+  "corps-electoral-360": {
+    "sw": 360,
+    "iw": 360
+  },
+  "corps-electoral-exclusions-360": {
+    "sw": 360,
+    "iw": 360
+  }
+}
