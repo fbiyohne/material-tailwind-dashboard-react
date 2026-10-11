@@ -1,0 +1,34 @@
+/*
+ * Direction 1 : « Institutionnelle sobre » (PROPOSITION, non appliquée).
+ * Lecture de gauche à droite, comme un registre : en-tête aligné à gauche, colonne de libellés
+ * fixe (40 mm), filets fins marine. Seule marque : un court onglet or qui ouvre chaque partie.
+ * Pas de cadre : le document s'imprime et se photocopie sans perte (seul l'encart de validité a un fond).
+ */
+
+.entete { position: relative; padding-bottom: 4mm; border-bottom: .75pt solid var(--marine); }
+.entete::after { content: ""; position: absolute; left: 0; bottom: -1.6pt; width: 24mm; height: 2.4pt; background: var(--or); }
+
+.titre-bloc { margin: 8mm 0 5mm; }
+
+.champ { border-bottom: .5pt solid var(--gris-m); }
+.champ:first-child { border-top: .5pt solid var(--gris-m); }
+
+.corps { padding-left: calc(var(--col-libelle) + var(--gouttiere)); }
+.encart { margin-left: calc(var(--col-libelle) + var(--gouttiere)); background: var(--or-l); border-left: 2.4pt solid var(--or); }
+
+h2.section::before { content: ""; display: inline-block; width: 6mm; height: 2pt; background: var(--or); vertical-align: middle; margin: 0 2.5mm 1pt 0; }
+
+th { color: var(--marine); border-bottom: .75pt solid var(--marine); }
+td { border-bottom: .4pt solid var(--gris-m); }
+td.mono { color: var(--or-fonce); }
+tfoot td { border-top: .75pt solid var(--marine); border-bottom: 0; }
+
+.meta { padding: 3mm 0; border-top: .5pt solid var(--gris-m); border-bottom: .5pt solid var(--gris-m); }
+
+.signatures { margin-left: calc(var(--col-libelle) + var(--gouttiere)); }
+.fait-a { padding-left: calc(var(--col-libelle) + var(--gouttiere)); }
+
+.verif { padding-top: 4mm; border-top: .5pt solid var(--gris-m); }
+
+.vignette { border: .75pt solid var(--marine); position: relative; }
+.vignette::before { content: ""; position: absolute; left: 6mm; top: -1.2pt; width: 18mm; height: 2.4pt; background: var(--or); }
