@@ -4,6 +4,9 @@ import { prisma } from "../prisma.js";
 import { asyncH } from "../middleware/error.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { rafraichirIdentite } from "../lib/identiteDocuments.js";
+import { isDeepStrictEqual } from "node:util";
+import { aLaPermission } from "../lib/rbac.js";
+import { HttpError } from "../middleware/error.js";
 import { fusionnerRegles, reglesSchema, stageSchema, REGLES_DEFAUT, REGLES_SECTION_DEFAUT } from "../lib/regles.js";
 
 export const parametresRouter = Router();
@@ -99,16 +102,29 @@ const majSchema = z.object({
   }).partial().optional(),
 }).strict();
 
-/** Mise à jour des paramètres — réservée au Secrétaire Général / Admin. */
+/** Règles qui commandent l'effet d'une décision (sanction, radiation, électorat, éligibilité) : séparation bâtonnier / SG (R-42). */
+const REGLES_DE_DECISION = ["sanctions", "effetRadiation", "sursisAutorise", "peineAccessoireMaxMois", "electoral", "eligibilite", "exclurePeineAccessoire"] as const;
+
+/** Mise à jour des paramètres — SG, bâtonnier ou Admin ; les règles de décision exigent discipline_decider (SG exclu). */
 parametresRouter.put(
   "/",
-  requireRole("SECRETAIRE_GENERAL"),
+  requireRole("SECRETAIRE_GENERAL", "BATONNIER"),
   asyncH(async (req, res) => {
     // Validation stricte : interdit les clés arbitraires et les valeurs qui
     // corrompraient les calculs (tarifs négatifs) ou les listes (entrées vides).
     const patch = majSchema.parse(req.body);
     const row = await prisma.parametres.findUnique({ where: { id: 1 } });
     const base = (row?.data as object) ?? DEFAUT;
+    // Anti-escalade (comme rbac.ts) : modifier une règle de décision exige discipline_decider.
+    if (patch.regles) {
+      const courant = fusionnerRegles(row?.data) as unknown as Record<string, unknown>;
+      const modifiees = REGLES_DE_DECISION.filter((k) => !isDeepStrictEqual(courant[k], (patch.regles as Record<string, unknown>)[k]));
+      if (modifiees.length) {
+        if (!aLaPermission(req.user!.role, "discipline_decider"))
+          throw new HttpError(403, "Accès refusé : modifier les règles de décision (" + modifiees.join(", ") + ") relève de l'action discipline_decider.");
+        res.locals.auditDetail = "règles modifiées : " + modifiees.join(", ");
+      }
+    }
     const data: Record<string, unknown> = { ...base, ...patch };
     // Le stage porte deux règles indépendantes : une mise à jour partielle ne doit pas effacer l'autre.
     if (patch.stage) data.stage = { ...((base as { stage?: object }).stage ?? {}), ...patch.stage };

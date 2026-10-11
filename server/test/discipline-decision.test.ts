@@ -46,7 +46,7 @@ const auTableau = async (membreId: number) => {
   return t.body.sections.some((s: { membres: { id: number }[] }) => s.membres.some((m) => m.id === membreId));
 };
 const putRegles = async (regles: Record<string, unknown>) => {
-  const r = await request(app).put("/api/parametres").set(...bearer(sg)).send({ regles: { ...REGLES_SECTION_DEFAUT, ...regles } });
+  const r = await request(app).put("/api/parametres").set(...bearer(bat)).send({ regles: { ...REGLES_SECTION_DEFAUT, ...regles } });
   expect(r.status).toBe(200);
 };
 

@@ -171,10 +171,10 @@ describe("Scrutins — CONSEIL_BARREAU, dateScrutin et éligibilité des candida
     // CA8 : le seuil passe à 10 ans en Paramètres → la même candidature est refusée, sans redémarrage.
     const { stage: _s, ...regles } = structuredClone(REGLES_DEFAUT);
     regles.eligibilite.BATONNIER.ancienneteMinAns = 10;
-    expect((await request(app).put("/api/parametres").set(...bearer(sg)).send({ regles })).status).toBe(200);
+    expect((await request(app).put("/api/parametres").set(...bearer(await login("admin@barreau-pn.cg"))).send({ regles })).status).toBe(200);
     expect((await candidater(sid, { nom: "X03 F bis", membreId: ids.F })).status).toBe(409);
     regles.eligibilite.BATONNIER.ancienneteMinAns = 8;
-    await request(app).put("/api/parametres").set(...bearer(sg)).send({ regles });
+    await request(app).put("/api/parametres").set(...bearer(await login("admin@barreau-pn.cg"))).send({ regles });
 
     // Sans fiche rattachée (candidat libre), le contrôle ne s'applique pas : comportement historique.
     expect((await candidater(sid, { nom: "Me Candidat libre" })).status).toBe(201);

@@ -62,7 +62,7 @@ describe("Règles juridiques — modification sans redémarrage (CA8)", () => {
     const { stage: _s, ...regles } = structuredClone(REGLES_DEFAUT);
     regles.sanctions[2].dureeMaxMois = 6;
     regles.eligibilite.BATONNIER.ancienneteMinAns = 10;
-    const put = await request(app).put("/api/parametres").set(...bearer(sg)).send({ regles });
+    const put = await request(app).put("/api/parametres").set(...bearer(admin)).send({ regles });
     expect(put.status).toBe(200);
     const r = await reglesActuelles();
     expect(r.sanctions[2].dureeMaxMois).toBe(6);
