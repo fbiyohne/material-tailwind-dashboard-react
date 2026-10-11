@@ -156,6 +156,19 @@ describe("Autres causes, sorties volontaires et reprise", () => {
     expect(r.body.evenement).toMatchObject({ type: "REPRISE", statutAvant: "SUSPENDU", statutApres: "INSCRIT" });
   });
 
+  it("R1-8 REPRISE : refusée (409) tant qu'une interdiction ferme court, permise après sanctionFin ou avec sursis", async () => {
+    const m = await creer("reprise-ferme");
+    expect((await request(app).patch(`/api/membres/${m.id}`).set(...bearer(sg)).send({ statut: "SUSPENDU" })).status).toBe(200);
+    const d = await prisma.dossierDisciplinaire.create({ data: { membreId: m.id, avocatNom: "R1-8", dateSaisine: new Date("2026-01-01"), reference: `R18-${Date.now()}`, objet: "R1-8", sanctionCode: "INTERDICTION_TEMPORAIRE", sursis: false, sanctionFin: new Date("2026-06-01") } as never });
+    try {
+      expect((await evt(sg, m.id, { type: "REPRISE", dateEffet: "2026-05-01" })).status).toBe(409);
+      expect((await evt(sg, m.id, { type: "REPRISE", dateEffet: "2026-06-02" })).status).toBe(201);
+    } finally {
+      await prisma.evenementSituation.deleteMany({ where: { dossierId: d.id } });
+      await prisma.dossierDisciplinaire.delete({ where: { id: d.id } });
+    }
+  });
+
   it("type inconnu, date future ou membre absent : 400 / 404", async () => {
     const m = await creer("validation");
     expect((await evt(sg, m.id, { type: "RADIATION" })).status).toBe(400);

@@ -538,9 +538,9 @@ describe("Cycle du stage — rapports & validation (Bâtonnier)", () => {
         const m = await prisma.membre.create({ data: { ...base, num: n + 2 + i, numInscription: `V${n + 2 + i}`, nom: `VS ${statut}`, statut } });
         crees.push(m.id);
         const r = await request(app).post(`/api/membres/${m.id}/valider-stage`).set(...bearer(admin));
-        expect(r.status).toBe(200);
+        expect(r.status).toBe(409); // R1-8 : la mesure n'est plus levée en silence
         const apres = await prisma.membre.findUnique({ where: { id: m.id } });
-        expect(apres).toMatchObject({ statut: "INSCRIT", qualite: "AVOCAT", dateRadiation: null, motifRadiation: null, dateDeces: null });
+        expect(apres).toMatchObject({ statut, qualite: "STAGIAIRE", dateRadiation: null, motifRadiation: null, dateDeces: null });
       }
       expect((await request(app).post("/api/membres/abc/valider-stage").set(...bearer(admin))).status).toBe(400);
     } finally {
@@ -1346,7 +1346,7 @@ describe("Cycle de vie — radiation motivée, décès, garde-fou DELETE, RBAC (
 
   it("CA-01 : radiation avec date et motif → RADIE, valeurs conservées, journal « Radiation d'un avocat »", async () => {
     const id = await creer("radiation");
-    const r = await request(app).post(`/api/membres/${id}/radier`).set(...bearer(sg)).send({ dateRadiation: "2026-10-01", motifRadiation: "Décision du Conseil n° 12" });
+    const r = await request(app).post(`/api/membres/${id}/radier`).set(...bearer(bat)).send({ dateRadiation: "2026-10-01", motifRadiation: "Décision du Conseil n° 12" });
     expect(r.status).toBe(200);
     expect(r.body.statut).toBe("RADIE");
     expect(r.body.dateRadiation).toMatch(/^2026-10-01/);
@@ -1357,13 +1357,13 @@ describe("Cycle de vie — radiation motivée, décès, garde-fou DELETE, RBAC (
 
   it("CA-01 : radiation sans corps → date du jour, motif null (compatibilité)", async () => {
     const id = await creer("radiation-defaut");
-    const r = await request(app).post(`/api/membres/${id}/radier`).set(...bearer(sg));
+    const r = await request(app).post(`/api/membres/${id}/radier`).set(...bearer(bat));
     expect(r.status).toBe(200);
     expect(r.body.statut).toBe("RADIE");
     expect(r.body.dateRadiation).toMatch(new RegExp(`^${aujourdhui}`));
     expect(r.body.motifRadiation).toBeNull();
     // Motif trop long refusé (≤ 300 caractères).
-    expect((await request(app).post(`/api/membres/${id}/radier`).set(...bearer(sg)).send({ motifRadiation: "x".repeat(301) })).status).toBe(400);
+    expect((await request(app).post(`/api/membres/${id}/radier`).set(...bearer(bat)).send({ motifRadiation: "x".repeat(301) })).status).toBe(400);
   });
 
   it("CA-02 : déclaration de décès — validations (400), 404, 403 Trésorière", async () => {
@@ -1409,7 +1409,7 @@ describe("Cycle de vie — radiation motivée, décès, garde-fou DELETE, RBAC (
 
   it("C-03 : la liste n'expose jamais motifRadiation ; la fiche le renvoie avec les dates", async () => {
     const id = await creer("motif");
-    await request(app).post(`/api/membres/${id}/radier`).set(...bearer(sg)).send({ dateRadiation: "2026-10-02", motifRadiation: "Décision n° 7" });
+    await request(app).post(`/api/membres/${id}/radier`).set(...bearer(bat)).send({ dateRadiation: "2026-10-02", motifRadiation: "Décision n° 7" });
     // Liste filtrée sur le nom créé : indépendante du nombre de RADIE présents en base (pageSize=200 ne suffisait plus).
     const nom = (await request(app).get(`/api/membres/${id}`).set(...bearer(sg))).body.nom as string;
     const liste = await request(app).get(`/api/membres?statut=RADIE&q=${encodeURIComponent(nom)}`).set(...bearer(sg));
@@ -1451,7 +1451,8 @@ describe("Cycle de vie — radiation motivée, décès, garde-fou DELETE, RBAC (
   it("R2-4 : machine à états — invariants d'acte, transitions refusées, effacement à la sortie", async () => {
     const id = await creer("r2-4");
     const patch = (b: object) => request(app).patch(`/api/membres/${id}`).set(...bearer(sg)).send(b);
-    const radier = (b: object = {}) => request(app).post(`/api/membres/${id}/radier`).set(...bearer(sg)).send(b);
+    // R1-7 : la radiation s'enregistre avec discipline_decider (bâtonnier par défaut).
+    const radier = (b: object = {}) => request(app).post(`/api/membres/${id}/radier`).set(...bearer(bat)).send(b);
     const deces = (d = "2026-09-15") => request(app).post(`/api/membres/${id}/deces`).set(...bearer(sg)).send({ dateDeces: d });
     const lire = () => prisma.membre.findUniqueOrThrow({ where: { id } });
     // PATCH RADIE sans date → 400 ; avec date → 200.
@@ -1496,11 +1497,14 @@ describe("Cycle de vie — radiation motivée, décès, garde-fou DELETE, RBAC (
       expect(jeton, role).toBeTruthy();
       expect((await request(app).post("/api/membres").set(...bearer(jeton)).send({ nom: "T4 interdit" })).status, `${role} POST`).toBe(403);
       expect((await request(app).patch(`/api/membres/${id}`).set(...bearer(jeton)).send({ nom: "T4 interdit" })).status, `${role} PATCH`).toBe(403);
-      expect((await request(app).post(`/api/membres/${id}/radier`).set(...bearer(jeton))).status, `${role} radier`).toBe(403);
+      // R1-7 : le bâtonnier détient discipline_decider (radiation autorisée, cf. radier-permission.test.ts).
+      if (role !== "BATONNIER") expect((await request(app).post(`/api/membres/${id}/radier`).set(...bearer(jeton))).status, `${role} radier`).toBe(403);
       expect((await request(app).post(`/api/membres/${id}/deces`).set(...bearer(jeton)).send({ dateDeces: "2026-09-15" })).status, `${role} deces`).toBe(403);
       expect((await request(app).delete(`/api/membres/${id}`).set(...bearer(jeton))).status, `${role} DELETE`).toBe(403);
     }
     expect((await request(app).delete(`/api/membres/${id}`).set(...bearer(sg))).status).toBe(403);
+    // R1-7 : le SG n'enregistre pas de radiation sans discipline_decider.
+    expect((await request(app).post(`/api/membres/${id}/radier`).set(...bearer(sg))).status, "SG radier").toBe(403);
     expect((await request(app).get(`/api/membres/${id}`).set(...bearer(sg))).body.statut).toBe("INSCRIT");
     await prisma.user.deleteMany({ where: { nom: { startsWith: "T4 " } } });
   });
@@ -1708,7 +1712,7 @@ describe("Revue sécurité T10 — données disciplinaires, extraction en masse,
     consultJwt = (await request(app).post("/api/auth/login").send({ email: consultEmail, password: "consultpass8" })).body.token;
     const r = await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: `T10 Radie ${suffixe}`, qualite: "AVOCAT" });
     radieId = r.body.id;
-    await request(app).post(`/api/membres/${radieId}/radier`).set(...bearer(sg)).send({ dateRadiation: "2026-10-01", motifRadiation: "MOTIF-SECRET-T10" });
+    await request(app).post(`/api/membres/${radieId}/radier`).set(...bearer(bat)).send({ dateRadiation: "2026-10-01", motifRadiation: "MOTIF-SECRET-T10" });
   });
   afterAll(async () => {
     await prisma.user.deleteMany({ where: { email: { in: [avocatEmail, consultEmail] } } });

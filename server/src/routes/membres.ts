@@ -410,6 +410,16 @@ membresRouter.post(
           erreurs.push({ ligne: i + 1, message: "Omission ou réinscription interdite à l'import : utilisez l'onglet Situation de la fiche de l'avocat." });
           continue;
         }
+        // R1-1 : ni suspension ni levée de suspension par import (décision disciplinaire enregistrée),
+        // et un stagiaire existant ne passe pas au tableau par import (valider-stage, action stage_valider).
+        if (existant && r.statut?.trim() && existant.statut !== statut && (statut === "SUSPENDU" || existant.statut === "SUSPENDU")) {
+          erreurs.push({ ligne: i + 1, message: "Suspension ou levée de suspension interdite à l'import : utilisez la fiche de l'avocat." });
+          continue;
+        }
+        if (existant?.qualite === "STAGIAIRE" && (qualite !== "STAGIAIRE" || (r.statut?.trim() && statut === "INSCRIT" && existant.statut !== "INSCRIT"))) {
+          erreurs.push({ ligne: i + 1, message: "Passage d'un stagiaire au tableau interdit à l'import : utilisez « Valider la fin de stage » (fiche, onglet Stage)." });
+          continue;
+        }
         if (simulation) {
           if (existant || creesSim.has(r.num)) maj += 1;
           else { creesSim.add(r.num); crees += 1; }
@@ -476,6 +486,11 @@ membresRouter.patch(
       if (!aLaPermission(req.user!.role, "stage_valider")) throw new HttpError(403, "Accès refusé pour votre profil : la fin de stage relève de l'action stage_valider.");
       throw new HttpError(409, "Le passage d'un stagiaire au tableau s'enregistre par « Valider la fin de stage » (fiche, onglet Stage).");
     }
+    // R1-1 : un suspendu ne revient pas au tableau par PATCH tant qu'une interdiction temporaire ferme
+    // court encore (sanctionFin future) : la levée avant terme relève de discipline_decider.
+    if (statut && statut !== actuel.statut && actuel.statut === "SUSPENDU" && !(STATUTS_SORTIS as readonly string[]).includes(statut) && !aLaPermission(req.user!.role, "discipline_decider") &&
+      (await prisma.dossierDisciplinaire.findFirst({ where: { membreId: id, sanctionCode: { not: null }, sursis: false, sanctionFin: { gt: new Date() } }, select: { id: true } })))
+      throw new HttpError(403, "Interdiction temporaire en cours : seule une décision enregistrée par le titulaire de l'action discipline_decider (bâtonnier par défaut) peut la lever avant son terme.");
     const donnees = {
       ...fiche,
       dateNaissance: fiche.dateNaissance ? new Date(fiche.dateNaissance) : undefined,
@@ -508,13 +523,15 @@ const radiationSchema = z.object({
 });
 
 /**
- * POST /membres/:id/radier — enregistre une radiation prononcée par le Conseil
- * (l'outil n'est qu'un registre d'exécution). Corps optionnel : date (défaut :
- * aujourd'hui) et référence de la décision. SG/Admin.
+ * POST /membres/:id/radier — enregistre une radiation décidée par le Conseil siégeant
+ * en conseil de discipline (art. 36 loi n° 026-92 ; l'outil n'est qu'un registre
+ * d'exécution). Corps optionnel : date (défaut : aujourd'hui) et référence de la
+ * décision. Action discipline_decider (bâtonnier par défaut, ADMIN) : le SG saisit
+ * et instruit mais n'enregistre pas la décision (D1, R-42, CA6) → 403.
  */
 membresRouter.post(
   "/:id/radier",
-  requireRole("SECRETAIRE_GENERAL"),
+  requirePermission("discipline_decider"),
   asyncH(async (req: AuthRequest, res) => {
     const data = radiationSchema.parse(req.body ?? {});
     const id = Number(req.params.id);
@@ -624,6 +641,8 @@ membresRouter.post(
     if (cause === "35-1" && c.motif) throw new HttpError(400, "Omission pour maladie ou infirmité : n'inscrivez ici aucune donnée médicale, le code d'article suffit.");
     if (c.type === "REINSCRIPTION" && membre.statut !== "OMIS") throw new HttpError(409, "Seul un avocat omis peut être réinscrit.");
     if (c.type === "REPRISE" && membre.statut !== "SUSPENDU") throw new HttpError(409, "La reprise ne concerne qu'un avocat suspendu.");
+    if (c.type === "REPRISE" && (await prisma.dossierDisciplinaire.findFirst({ where: { membreId, sanctionCode: { not: null }, sursis: false, sanctionFin: { gt: dateEffet } }, select: { id: true } })))
+      throw new HttpError(409, "Reprise impossible : une interdiction temporaire décidée par le conseil de discipline court encore à cette date.");
     if (c.type === "OMISSION" && (sorti || membre.statut === "OMIS")) throw new HttpError(409, "Omission impossible : membre déjà omis ou sorti du tableau.");
     if ((SORTIES_VOLONTAIRES as readonly string[]).includes(c.type) && sorti) throw new HttpError(409, "Ce membre est déjà sorti du tableau.");
 
@@ -798,6 +817,9 @@ membresRouter.post(
     // Un stagiaire sorti (radié, décédé, démissionnaire, retraité, cessation) ne revient pas au tableau par une validation de stage.
     if ((STATUTS_SORTIS as readonly string[]).includes(membre.statut))
       throw new HttpError(409, "Validation impossible : le stagiaire est sorti du barreau (radié, décédé ou sortie volontaire). Rétablissez d'abord son statut par la fiche.");
+    // Un stagiaire suspendu ou omis ne passe pas au tableau : ce serait lever la mesure en silence.
+    if (membre.statut !== "STAGIAIRE" && membre.statut !== "INSCRIT")
+      throw new HttpError(409, `Validation impossible : le stagiaire est ${membre.statut === "SUSPENDU" ? "suspendu" : membre.statut === "OMIS" ? "omis" : "dans un statut incompatible"}. Levez d'abord la mesure par la fiche.`);
     const { stage } = await reglesActuelles();
     if (stage.certificatObligatoire && !(corps.dateCertificat && corps.refCertificat))
       throw new HttpError(400, `Le certificat de fin de stage (date et référence), délivré par le ${ORGANE_CERTIFICAT}, est obligatoire.`);
