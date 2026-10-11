@@ -3,8 +3,8 @@ import { TicketIcon, ArrowDownTrayIcon, ClipboardDocumentIcon, ShieldCheckIcon }
 import { Badge, VignetteTimbre, PageHeader, BandeauExperimental, FormField, Notice, useToast, TableSkeleton, ErrorState, EmptyState } from "../../components";
 import { canauxActifs } from "../../data/config";
 import { formatFCFA, formatDate } from "../../utils/format";
-import { exporterPng, copierPng } from "../../utils/exports";
-import { getEspaceTimbres, creerEspaceTimbre } from "../../api/resources";
+import { timbrePng, copierTimbre, timbreSvg, telechargerBlob, telechargerSvg } from "../../utils/timbreImage";
+import { getEspaceTimbres, creerEspaceTimbre, tracerUsageTimbre } from "../../api/resources";
 
 const CANAL_LABEL = { MTN: "MTN Money", AIRTEL: "Airtel Money", CARTE: "Carte bancaire", VIREMENT: "Virement" };
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
@@ -51,13 +51,26 @@ export function MesTimbres() {
     } catch (e) { toast.error(e.message); } finally { setEmission(false); }
   };
 
-  const telecharger = () => succes && exporterPng("#vignette-timbre", `Timbre-${succes.numero}`).catch((e) => toast.error(e.message));
-  const copier = async () => {
-    if (!succes) return;
-    const ok = await copierPng("#vignette-timbre").catch(() => false);
-    if (ok) toast.success("Timbre copié — collez-le dans votre document (Ctrl+V).");
-    else { toast.error("Copie non disponible — téléchargement du PNG."); telecharger(); }
+  const noeud = () => document.getElementById("vignette-timbre");
+  const urlVerif = (t) => `${window.location.origin}${t.verif || `/verifier/timbre/${encodeURIComponent(t.code)}`}`;
+  const tracer = (mode) => tracerUsageTimbre(succes.id, mode).catch(() => {});
+  const telecharger = async () => {
+    try { telechargerBlob(await timbrePng(noeud()), `Timbre-${succes.numero}.png`); tracer("png"); }
+    catch (e) { toast.error(e.message); }
   };
+  const telechargerEnSvg = async () => {
+    try { telechargerSvg(await timbreSvg(apercu, urlVerif(apercu), { prototype: data.prototype }), `Timbre-${succes.numero}.svg`); tracer("svg"); }
+    catch (e) { toast.error(e.message); }
+  };
+  const copier = async () => {
+    try {
+      const r = await copierTimbre(noeud(), `Timbre-${succes.numero}.png`);
+      (r.copie ? toast.success : toast.info)(r.message);
+      tracer("copie");
+    } catch (e) { toast.error(e.message); }
+  };
+  // Reprend un timbre déjà émis dans l'aperçu pour le copier ou le télécharger.
+  const reprendre = (t) => setSucces({ ...t, membre: { nom: moi?.nom } });
 
   const canaux = useMemo(() => (canauxActifs().length ? canauxActifs() : ["MTN", "AIRTEL", "CARTE", "VIREMENT"]), []);
 
@@ -89,9 +102,10 @@ export function MesTimbres() {
             </button>
             {succes && (
               <>
+                <button type="button" onClick={copier} className="bpn-btn bpn-btn-or w-full justify-center"><ClipboardDocumentIcon className="h-4 w-4" /> Copier mon timbre</button>
                 <div className="grid grid-cols-2 gap-2">
-                  <button type="button" onClick={telecharger} className="bpn-btn bpn-btn-ghost justify-center"><ArrowDownTrayIcon className="h-4 w-4" /> PNG</button>
-                  <button type="button" onClick={copier} className="bpn-btn bpn-btn-ghost justify-center"><ClipboardDocumentIcon className="h-4 w-4" /> Copier</button>
+                  <button type="button" onClick={telecharger} className="bpn-btn bpn-btn-ghost justify-center"><ArrowDownTrayIcon className="h-4 w-4" /> Télécharger PNG</button>
+                  <button type="button" onClick={telechargerEnSvg} className="bpn-btn bpn-btn-ghost justify-center"><ArrowDownTrayIcon className="h-4 w-4" /> Télécharger SVG</button>
                 </div>
                 <a href={`/verifier/timbre/${encodeURIComponent(succes.code)}`} target="_blank" rel="noreferrer" className="block text-center text-xs text-gris underline hover:text-navy">Page de vérification</a>
               </>
@@ -102,7 +116,7 @@ export function MesTimbres() {
 
         {/* Aperçu */}
         <div className="flex justify-center rounded-lg border border-grisM bg-grisL/40 p-6">
-          <VignetteTimbre timbre={apercu} />
+          <VignetteTimbre timbre={apercu} prototype={data.prototype} />
         </div>
       </div>
 
@@ -123,6 +137,7 @@ export function MesTimbres() {
                 </span>
                 <span className="flex shrink-0 items-center gap-3">
                   <span className="text-xs text-gris">{formatDate(t.createdAt)}</span>
+                  <button type="button" onClick={() => reprendre(t)} className="text-xs font-medium text-navy hover:text-or-fonce">Copier / télécharger</button>
                   <a href={`/verifier/timbre/${encodeURIComponent(t.code)}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-medium text-navy hover:text-or-fonce"><ShieldCheckIcon className="h-4 w-4" /> Vérifier</a>
                 </span>
               </li>

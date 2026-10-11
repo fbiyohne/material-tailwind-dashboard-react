@@ -2,6 +2,7 @@ import PropTypes from "prop-types";
 import { Sceau } from "./Sceau";
 import { QRCode } from "./QRCode";
 import { identite } from "../data/config";
+import { CLAUSE_TIMBRE, MENTION_PROTOTYPE } from "../utils/timbreImage";
 import { formatFCFA, formatDate } from "../utils/format";
 
 /** Bandeau guilloché (deux ondes entrelacées) — signe « document de sécurité ». */
@@ -28,7 +29,7 @@ function Guilloche({ id, flip = false }) {
  * sécurité (cadre guilloché, filigrane, identifiant scellé, QR de vérification).
  * Largeur fixe, sans mask/filter → capture PNG (téléchargement / presse-papier) fidèle.
  */
-export function VignetteTimbre({ timbre, idAttr = "vignette-timbre" }) {
+export function VignetteTimbre({ timbre, idAttr = "vignette-timbre", prototype = false }) {
   const { ordre, denomination } = identite();
   const nom = timbre.membre?.nom ?? timbre.membreNom ?? "";
   const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -109,6 +110,9 @@ export function VignetteTimbre({ timbre, idAttr = "vignette-timbre" }) {
               </div>
             </div>
 
+            <p className="mt-2 text-[9.5px] leading-snug text-[#4A5568]">{CLAUSE_TIMBRE}</p>
+            {prototype && <p className="mt-1.5 text-[10px] font-bold uppercase tracking-wide text-rouge">{MENTION_PROTOTYPE}</p>}
+
             {annule && (
               <div className="mt-3 rounded-[3px] border border-rouge bg-rougeL px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-rouge">
                 Timbre annulé
@@ -131,6 +135,7 @@ export function VignetteTimbre({ timbre, idAttr = "vignette-timbre" }) {
 VignetteTimbre.propTypes = {
   timbre: PropTypes.object.isRequired,
   idAttr: PropTypes.string,
+  prototype: PropTypes.bool,
 };
 
 export default VignetteTimbre;

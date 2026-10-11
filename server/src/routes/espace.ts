@@ -167,7 +167,7 @@ espaceRouter.get(
   "/timbres",
   asyncH(async (req: AuthRequest, res) => {
     const timbres = await prisma.timbre.findMany({ where: { membreId: monMembreId(req) }, orderBy: { id: "desc" } });
-    res.json({ montant: MONTANT_TIMBRE, timbres: timbres.map((t) => ({ ...t, verif: cheminVerif("t", t.code) })) });
+    res.json({ montant: MONTANT_TIMBRE, prototype: modeSandbox, timbres: timbres.map((t) => ({ ...t, verif: cheminVerif("t", t.code) })) });
   })
 );
 
@@ -188,6 +188,22 @@ espaceRouter.post(
     // Montant fixé par l'Ordre (non modifiable côté client).
     const timbre = await emettreTimbre({ membre, affaire: data.affaire, reference: data.reference, juridiction: data.juridiction, montant: MONTANT_TIMBRE, canal: data.canal });
     res.status(201).json({ ...timbre, verif: cheminVerif("t", timbre.code) });
+  })
+);
+
+/**
+ * POST /espace/timbres/:id/usage — trace la copie ou le téléchargement d'un timbre
+ * (CL-TIMBRE : rien d'autre que le fait et le mode n'est consigné). Propriétaire seul.
+ */
+espaceRouter.post(
+  "/timbres/:id/usage",
+  asyncH(async (req: AuthRequest, res) => {
+    const { mode } = z.object({ mode: z.enum(["copie", "png", "svg"]) }).parse(req.body);
+    const timbre = await prisma.timbre.findUnique({ where: { id: Number(req.params.id) } });
+    if (!timbre) throw new HttpError(404, "Timbre introuvable");
+    if (timbre.membreId !== monMembreId(req)) throw new HttpError(403, "Ce timbre n'est pas le vôtre.");
+    res.locals.auditDetail = `timbre N° ${timbre.numero}, ${mode}`;
+    res.json({ ok: true });
   })
 );
 
