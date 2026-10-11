@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { MagnifyingGlassIcon, BookOpenIcon, EnvelopeIcon, PhoneIcon } from "@heroicons/react/24/outline";
+import { useNavigate } from "react-router-dom";
+import { MagnifyingGlassIcon, BookOpenIcon, EnvelopeIcon, PhoneIcon, ChatBubbleLeftRightIcon } from "@heroicons/react/24/outline";
 import { Badge, PageHeader, DataTable, useToast } from "../../components";
 import { QUALITE_LABEL } from "../../data/derivations";
 import { getEspaceAnnuaire } from "../../api/resources";
@@ -7,6 +8,7 @@ import { getEspaceAnnuaire } from "../../api/resources";
 /** Espace avocat — annuaire des confrères (lecture seule, coordonnées pro). */
 export function EspaceAnnuaire() {
   const toast = useToast();
+  const navigate = useNavigate();
   const [membres, setMembres] = useState(null);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState(false);
@@ -42,6 +44,12 @@ export function EspaceAnnuaire() {
       cell: (m) => (m.email
         ? <a href={`mailto:${m.email}`} className="inline-flex items-center gap-1 text-xs text-navy transition hover:underline"><EnvelopeIcon className="h-3.5 w-3.5" />{m.email}</a>
         : <span className="text-gris">—</span>) },
+    { key: "contacter", label: "",
+      cell: (m) => (
+        <button type="button" className="bpn-btn bpn-btn-ghost" aria-label={`Contacter Me ${m.nom}`}
+          onClick={() => navigate("/messagerie", { state: { destinataireMembreId: m.id } })}>
+          <ChatBubbleLeftRightIcon className="h-4 w-4" /> Contacter
+        </button>) },
   ];
 
   return (

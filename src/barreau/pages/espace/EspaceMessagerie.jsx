@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChatBubbleLeftRightIcon, PaperAirplaneIcon, PlusIcon, BuildingLibraryIcon, UserIcon, ArrowLeftIcon } from "@heroicons/react/24/outline";
-import { Badge, Modal, PageHeader, useToast, TableSkeleton, ErrorState, EmptyState, MessageBulle } from "../../components";
+import { useLocation, useNavigate } from "react-router-dom";
+import { ChatBubbleLeftRightIcon, PaperAirplaneIcon, PlusIcon, BuildingLibraryIcon, UserIcon, ArrowLeftIcon, DocumentCheckIcon } from "@heroicons/react/24/outline";
+import { Badge, Modal, PageHeader, useToast, TableSkeleton, ErrorState, EmptyState, MessageBulle, MentionJuridique, ChampPieceJointe, PiedMessage } from "../../components";
+import { identite } from "../../data/config";
 import {
   getEspaceMessagerie, getEspaceConversation, creerEspaceConversation,
-  repondreEspaceConversation, getEspaceAnnuaire,
+  repondreEspaceConversation, getEspaceAnnuaire, demanderAttestation,
 } from "../../api/resources";
 import { useMessagerieRealtime } from "../../hooks/useMessagerieRealtime";
 
 /** Composeur d'un nouveau fil (administration ou confrère). */
-function NouveauFil({ open, onClose, onCree }) {
+function NouveauFil({ open, onClose, onCree, destinataireInitial }) {
   const toast = useToast();
   const [cible, setCible] = useState("administration"); // administration | confrere
   const [sujet, setSujet] = useState("");
@@ -16,6 +18,7 @@ function NouveauFil({ open, onClose, onCree }) {
   const [destinataire, setDestinataire] = useState("");
   const [confreres, setConfreres] = useState([]);
   const [envoi, setEnvoi] = useState(false);
+  const [piece, setPiece] = useState(null);
 
   // Annuaire (soi-même exclu côté serveur) chargé une seule fois ; la liste est
   // conservée entre les ouvertures successives de la modale.
@@ -23,8 +26,13 @@ function NouveauFil({ open, onClose, onCree }) {
 
   // Réinitialise le formulaire à chaque ouverture.
   useEffect(() => {
-    if (open) { setCible("administration"); setSujet(""); setCorps(""); setDestinataire(""); }
-  }, [open]);
+    if (open) {
+      // « Contacter » depuis l'annuaire : fil vers le confrère, destinataire prérempli.
+      setCible(destinataireInitial ? "confrere" : "administration");
+      setSujet(""); setCorps(""); setPiece(null);
+      setDestinataire(destinataireInitial ? String(destinataireInitial) : "");
+    }
+  }, [open, destinataireInitial]);
 
   const envoyer = async () => {
     if (!sujet.trim() || !corps.trim()) return toast.error("Renseignez l'objet et le message.");
@@ -36,6 +44,7 @@ function NouveauFil({ open, onClose, onCree }) {
         corps: corps.trim(),
         avecAdministration: cible === "administration",
         destinataireMembreId: cible === "confrere" ? Number(destinataire) : undefined,
+        ...(piece ? { piece } : {}),
       });
       toast.success("Message envoyé.");
       onCree(id);
@@ -99,8 +108,66 @@ function NouveauFil({ open, onClose, onCree }) {
           <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-gris">Message</div>
           <textarea aria-label="Message" value={corps} onChange={(e) => setCorps(e.target.value)} rows={5} placeholder="Votre message…" className="bpn-input resize-none" maxLength={5000} />
         </div>
+        <ChampPieceJointe piece={piece} onChange={setPiece} onErreur={toast.error} disabled={envoi} />
       </div>
     </Modal>
+  );
+}
+
+/** Demande d'attestation : ouvre un fil avec l'administration, qui la délivre en pièce jointe. */
+function DemandeAttestation({ open, onClose, onCree }) {
+  const toast = useToast();
+  const [type, setType] = useState("INSCRIPTION");
+  const [precisions, setPrecisions] = useState("");
+  const [envoi, setEnvoi] = useState(false);
+  useEffect(() => { if (open) { setType("INSCRIPTION"); setPrecisions(""); } }, [open]);
+  const envoyer = async () => {
+    setEnvoi(true);
+    try {
+      const { id } = await demanderAttestation(type, precisions.trim());
+      toast.success("Demande envoyée à l'administration.");
+      onCree(id);
+    } catch (e) {
+      toast.error(e.message);
+    } finally {
+      setEnvoi(false);
+    }
+  };
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Demander une attestation"
+      footer={
+        <>
+          <button className="bpn-btn bpn-btn-ghost" onClick={onClose}>Annuler</button>
+          <button className="bpn-btn bpn-btn-primary" onClick={envoyer} disabled={envoi}>{envoi ? "Envoi…" : "Envoyer la demande"}</button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <div>
+          <label htmlFor="att-type" className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gris">Type d'attestation</label>
+          <select id="att-type" value={type} onChange={(e) => setType(e.target.value)} className="bpn-input">
+            <option value="INSCRIPTION">Attestation d'inscription</option>
+            <option value="NON_REDEVANCE">Attestation de non-redevance</option>
+          </select>
+        </div>
+        <div>
+          <label htmlFor="att-prec" className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gris">Précisions (facultatif)</label>
+          <textarea id="att-prec" value={precisions} onChange={(e) => setPrecisions(e.target.value)} rows={3} maxLength={1000} className="bpn-input resize-none" />
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+/** Clause d'information (loi n° 29-2019), reprise de docs/juridique/clauses-congres.md. */
+function ClauseInformation() {
+  return (
+    <MentionJuridique nature="loi" article="Loi n° 29-2019 du 10 octobre 2019">
+      {identite().denomination}, responsable du traitement, enregistre vos données d'identité, de contact, d'inscription, de cotisation et de situation au tableau pour tenir le tableau et le registre de l'Ordre (loi n° 026-92), gérer les cotisations, les élections et la messagerie professionnelle. Le tableau est public ; les autres données ne sont accessibles qu'aux organes de l'Ordre habilités. Vous pouvez demander l'accès à vos données et leur rectification auprès du secrétariat du Barreau. Les données sont conservées tant que vous êtes membre, puis selon les durées indiquées dans la politique de confidentialité. Formats de pièces admis : PDF, DOCX, JPG, PNG ; 5 Mo au plus par message. Les messages ne remplacent pas les formes de notification prévues par la loi (lettre recommandée, signification).
+    </MentionJuridique>
   );
 }
 
@@ -113,6 +180,11 @@ export function EspaceMessagerie() {
   const [fil, setFil] = useState(null); // conversation détaillée
   const [reponse, setReponse] = useState("");
   const [modal, setModal] = useState(false);
+  const [modalAtt, setModalAtt] = useState(false);
+  const [piece, setPiece] = useState(null);
+  const [destinataireInitial, setDestinataireInitial] = useState(null);
+  const location = useLocation();
+  const navigate = useNavigate();
   const [envoi, setEnvoi] = useState(false);
   const finRef = useRef(null);
 
@@ -122,6 +194,14 @@ export function EspaceMessagerie() {
       .catch((e) => { setErreur(true); toast.error(e.message); });
 
   useEffect(() => { setErreur(false); chargerListe(); /* eslint-disable-line */ }, []);
+  // Arrivée depuis « Contacter » (annuaire) : ouvre le composeur prérempli, puis efface l'état de navigation.
+  useEffect(() => {
+    const id = location.state?.destinataireMembreId;
+    if (!id) return;
+    setDestinataireInitial(id);
+    setModal(true);
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.state]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { finRef.current?.scrollIntoView({ behavior: "smooth" }); }, [fil]);
 
   // Temps réel : un nouveau message recharge la liste et, si concerné, le fil ouvert.
@@ -130,6 +210,7 @@ export function EspaceMessagerie() {
   const ouvrir = (id) => {
     setSelId(id);
     setFil(null);
+    setPiece(null);
     getEspaceConversation(id)
       .then((d) => {
         setFil(d);
@@ -145,8 +226,9 @@ export function EspaceMessagerie() {
     if (!reponse.trim() || !selId) return;
     setEnvoi(true);
     try {
-      await repondreEspaceConversation(selId, reponse.trim());
+      await repondreEspaceConversation(selId, reponse.trim(), piece);
       setReponse("");
+      setPiece(null);
       const d = await getEspaceConversation(selId);
       setFil(d);
       chargerListe();
@@ -165,7 +247,10 @@ export function EspaceMessagerie() {
   return (
     <div className="space-y-5">
       <PageHeader eyebrow="Mon espace" titre="Messagerie" sousTitre="Échangez avec le Secrétariat de l'Ordre ou avec vos confrères.">
-        <button className="bpn-btn bpn-btn-primary" onClick={() => setModal(true)}>
+        <button className="bpn-btn bpn-btn-ghost" onClick={() => setModalAtt(true)}>
+          <DocumentCheckIcon className="h-4 w-4" /> Demander une attestation
+        </button>
+        <button className="bpn-btn bpn-btn-primary" onClick={() => { setDestinataireInitial(null); setModal(true); }}>
           <PlusIcon className="h-4 w-4" /> Nouveau message
         </button>
       </PageHeader>
@@ -235,11 +320,13 @@ export function EspaceMessagerie() {
                     etiquette={m.estMoi ? null : m.estAdministration ? "Administration" : m.auteurNom}
                     corps={m.corps}
                     date={m.createdAt}
+                    pied={(m.piece || m.estMoi) ? <PiedMessage message={m} base="/espace/messagerie" estMoi={m.estMoi} /> : null}
                   />
                 ))}
                 <div ref={finRef} />
               </div>
-              <div className="border-t border-grisL p-3">
+              <div className="space-y-2 border-t border-grisL p-3">
+                <ChampPieceJointe piece={piece} onChange={setPiece} onErreur={toast.error} disabled={envoi} />
                 <div className="flex items-end gap-2">
                   <textarea
                     value={reponse}
@@ -260,7 +347,10 @@ export function EspaceMessagerie() {
         </div>
       </div>
 
-      <NouveauFil open={modal} onClose={() => setModal(false)} onCree={(id) => { setModal(false); chargerListe(id); }} />
+      <ClauseInformation />
+
+      <NouveauFil open={modal} destinataireInitial={destinataireInitial} onClose={() => setModal(false)} onCree={(id) => { setModal(false); chargerListe(id); }} />
+      <DemandeAttestation open={modalAtt} onClose={() => setModalAtt(false)} onCree={(id) => { setModalAtt(false); chargerListe(id); }} />
     </div>
   );
 }

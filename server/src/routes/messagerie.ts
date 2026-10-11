@@ -73,6 +73,8 @@ messagerieRouter.get(
         sujet: c.sujet,
         expediteur: avocat ? `Me ${avocat.nom}` : "Avocat",
         membreId: avocat?.id ?? null,
+        attestationType: c.attestationType,
+        attestationNumero: c.attestationNumero,
         updatedAt: c.updatedAt,
         apercu: dernier ? { corps: dernier.corps.slice(0, 140), auteurNom: dernier.auteurNom, estAdministration: dernier.estAdministration, createdAt: dernier.createdAt } : null,
         nonLus: nonLusParFil.get(c.id) ?? 0,
@@ -123,6 +125,8 @@ messagerieRouter.get(
       sujet: conv.sujet,
       expediteur: avocat ? `Me ${avocat.nom}` : "Avocat",
       membreId: avocat?.id ?? null,
+      attestationType: conv.attestationType,
+      attestationNumero: conv.attestationNumero,
       messages: conv.messages.map((m) => ({
         id: m.id,
         corps: m.corps,

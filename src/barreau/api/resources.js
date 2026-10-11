@@ -321,13 +321,15 @@ export const getEspaceMessagerie = () => api("/espace/messagerie");
 export const getEspaceMessagerieNonLus = () => api("/espace/messagerie/non-lus");
 export const getEspaceConversation = (id) => api(`/espace/messagerie/${id}`);
 export const creerEspaceConversation = (body) => api("/espace/messagerie", { method: "POST", body });
-export const repondreEspaceConversation = (id, corps) => api(`/espace/messagerie/${id}`, { method: "POST", body: { corps } });
+export const repondreEspaceConversation = (id, corps, piece) => api(`/espace/messagerie/${id}`, { method: "POST", body: { corps, ...(piece ? { piece } : {}) } });
+export const demanderAttestation = (type, precisions) => api("/espace/attestations/demandes", { method: "POST", body: { type, ...(precisions ? { precisions } : {}) } });
 
 // Messagerie interne — côté administration (Secrétariat)
 export const getMessagerie = () => api("/messagerie");
 export const getMessagerieNonLus = () => api("/messagerie/non-lus");
 export const getConversationAdmin = (id) => api(`/messagerie/${id}`);
-export const repondreConversationAdmin = (id, corps) => api(`/messagerie/${id}`, { method: "POST", body: { corps } });
+export const repondreConversationAdmin = (id, corps, piece) => api(`/messagerie/${id}`, { method: "POST", body: { corps, ...(piece ? { piece } : {}) } });
+export const delivrerAttestationFil = (id) => api(`/messagerie/${id}/attestation`, { method: "POST" });
 
 // ─── Activation de compte (page publique « Activer mon espace ») ──────────
 export const getActivation = (token) => api(`/auth/activation/${token}`, { auth: false });

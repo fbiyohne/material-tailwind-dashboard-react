@@ -48,3 +48,4 @@ export { Frise } from "./Frise";
 export { StatutMessage } from "./StatutMessage";
 export { SituationPanel } from "./SituationPanel";
 export { ContacterModal } from "./ContacterModal";
+export { ChampPieceJointe, PiedMessage, lirePieceJointe, PIECE_MAX } from "./PieceJointe";

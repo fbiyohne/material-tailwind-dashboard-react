@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChatBubbleLeftRightIcon, PaperAirplaneIcon, UserIcon, ArrowLeftIcon } from "@heroicons/react/24/outline";
-import { Badge, PageHeader, useToast, TableSkeleton, ErrorState, EmptyState, MessageBulle } from "../components";
-import { getMessagerie, getConversationAdmin, repondreConversationAdmin } from "../api/resources";
+import { ChatBubbleLeftRightIcon, PaperAirplaneIcon, UserIcon, ArrowLeftIcon, DocumentCheckIcon } from "@heroicons/react/24/outline";
+import { Badge, PageHeader, useToast, TableSkeleton, ErrorState, EmptyState, MessageBulle, ChampPieceJointe, PiedMessage } from "../components";
+import { getMessagerie, getConversationAdmin, repondreConversationAdmin, delivrerAttestationFil } from "../api/resources";
 import { useMessagerieRealtime } from "../hooks/useMessagerieRealtime";
 
 /** Back-office — messagerie de l'administration (fils adressés par les avocats). */
@@ -13,6 +13,7 @@ export function Messagerie() {
   const [fil, setFil] = useState(null);
   const [reponse, setReponse] = useState("");
   const [envoi, setEnvoi] = useState(false);
+  const [piece, setPiece] = useState(null);
   const finRef = useRef(null);
 
   const chargerListe = () =>
@@ -27,6 +28,7 @@ export function Messagerie() {
   const ouvrir = (id) => {
     setSelId(id);
     setFil(null);
+    setPiece(null);
     getConversationAdmin(id)
       .then((d) => { setFil(d); setConvs((cs) => cs?.map((c) => (c.id === id ? { ...c, nonLus: 0 } : c))); })
       .catch((e) => toast.error(e.message));
@@ -36,8 +38,23 @@ export function Messagerie() {
     if (!reponse.trim() || !selId) return;
     setEnvoi(true);
     try {
-      await repondreConversationAdmin(selId, reponse.trim());
+      await repondreConversationAdmin(selId, reponse.trim(), piece);
       setReponse("");
+      setPiece(null);
+      setFil(await getConversationAdmin(selId));
+      chargerListe();
+    } catch (e) {
+      toast.error(e.message);
+    } finally {
+      setEnvoi(false);
+    }
+  };
+
+  const delivrer = async () => {
+    setEnvoi(true);
+    try {
+      const { numero } = await delivrerAttestationFil(selId);
+      toast.success(`Attestation n° ${numero} délivrée et jointe au fil.`);
       setFil(await getConversationAdmin(selId));
       chargerListe();
     } catch (e) {
@@ -105,15 +122,25 @@ export function Messagerie() {
             <>
               <div className="bpn-card-header">
                 <span className="bpn-card-heading truncate">{fil.sujet}</span>
-                <Badge ton="bleu" dot={false}>{fil.expediteur}</Badge>
+                <div className="flex shrink-0 items-center gap-2">
+                  {fil.attestationType && !fil.attestationNumero && (
+                    <button className="bpn-btn bpn-btn-primary" onClick={delivrer} disabled={envoi}>
+                      <DocumentCheckIcon className="h-4 w-4" /> Délivrer l'attestation
+                    </button>
+                  )}
+                  {fil.attestationNumero && fil.attestationNumero !== "EN_COURS" && <Badge ton="vert" dot={false}>Attestation {fil.attestationNumero}</Badge>}
+                  <Badge ton="bleu" dot={false}>{fil.expediteur}</Badge>
+                </div>
               </div>
               <div className="flex-1 space-y-3 overflow-y-auto p-4">
                 {fil.messages.map((m) => (
-                  <MessageBulle key={m.id} aDroite={m.estAdministration} etiquette={m.auteurNom} corps={m.corps} date={m.createdAt} />
+                  <MessageBulle key={m.id} aDroite={m.estAdministration} etiquette={m.auteurNom} corps={m.corps} date={m.createdAt}
+                    pied={(m.piece || m.estAdministration) ? <PiedMessage message={m} base="/messagerie" estMoi={m.estAdministration} /> : null} />
                 ))}
                 <div ref={finRef} />
               </div>
-              <div className="border-t border-grisL p-3">
+              <div className="space-y-2 border-t border-grisL p-3">
+                <ChampPieceJointe piece={piece} onChange={setPiece} onErreur={toast.error} disabled={envoi} />
                 <div className="flex items-end gap-2">
                   <textarea
                     value={reponse}
