@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { ToastProvider } from "../../components/Toast";
 import { ConfirmProvider } from "../../components/ConfirmDialog";
-import { AnciensMembres } from "../AnciensMembres";
+import { AnciensMembres, CL_ANCIENS_MEMBRES } from "../AnciensMembres";
 import { Avocats } from "../Avocats";
 import { listerMembres, journaliserExport } from "../../api/resources";
 import { telechargerTexte } from "../../utils/exportCsv";
@@ -38,9 +38,19 @@ describe("Anciens membres", () => {
     expect(screen.getByRole("cell", { name: "Décès" })).toBeTruthy();
     expect(screen.getByText("Sortie du tableau")).toBeTruthy();
     expect(screen.getByText("15 septembre 2026")).toBeTruthy();
-    expect(screen.getByText(/en consultation seule/)).toBeTruthy();
+    // Bandeau : texte de la clause CL-ANCIENS-MEMBRES de l'avis juridique, mot pour mot.
+    expect(CL_ANCIENS_MEMBRES).toBe("Registre des avocats sortis du tableau, en consultation seule. Le motif disciplinaire n'est visible que des personnes habilitées. Chaque consultation et chaque export sont tracés.");
+    expect(screen.getByText(CL_ANCIENS_MEMBRES)).toBeTruthy();
     // Sans permission discipline, le motif « Radiation » n'est pas proposé (R-62).
     expect(screen.queryByRole("option", { name: "Radiation" })).toBeNull();
+  });
+
+  it("tri par date de sortie décroissante, fiches sans date en dernier", async () => {
+    listerMembres.mockResolvedValue({ items: [{ ...sortis[0], id: 9, nom: "SANS Date", dateSortie: null }, ...sortis] });
+    rendre(<AnciensMembres />);
+    await screen.findByText("Me SANS Date");
+    const noms = screen.getAllByText(/^Me /).map((e) => e.textContent);
+    expect(noms).toEqual(["Me NGOMA Paul", "Me MBEMBA Luc", "Me SANS Date"]);
   });
 
   it("état vide quand aucun ancien membre", async () => {

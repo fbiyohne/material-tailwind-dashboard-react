@@ -20,6 +20,10 @@ const MOTIFS = [
   { value: "CESSATION", label: "Cessation d'activité" },
 ];
 
+// Clause CL-ANCIENS-MEMBRES de l'avis juridique M-20261011 (docs/juridique/clauses-congres.md), mot pour mot.
+export const CL_ANCIENS_MEMBRES =
+  "Registre des avocats sortis du tableau, en consultation seule. Le motif disciplinaire n'est visible que des personnes habilitées. Chaque consultation et chaque export sont tracés.";
+
 // Le motif et la date viennent du serveur (motifSortie / dateSortie), déjà masqués selon R-62.
 const COLONNES_EXPORT = [
   { label: "N° inscription", valeur: (m) => m.numInscription },
@@ -87,11 +91,11 @@ export function AnciensMembres() {
       cell: (m) => <span className="font-mono text-xs text-gris">{m.numInscription || "—"}</span> },
     { key: "nom", label: "Avocat", sortable: true, sortValue: (m) => m.nom,
       cell: (m) => <span className="font-medium">Me {m.nom}</span> },
-    { key: "cabinet", label: "Cabinet", sortable: true, sortValue: (m) => m.cabinet,
+    { key: "cabinet", label: "Cabinet", className: "hidden sm:table-cell", sortable: true, sortValue: (m) => m.cabinet,
       cell: (m) => <span className="text-gris">{m.cabinet || "—"}</span> },
     { key: "motif", label: "Motif de sortie", sortable: true, sortValue: (m) => m.motifSortie,
       cell: (m) => <span>{m.motifSortie}</span> },
-    { key: "dateSortie", label: "Date de sortie", sortable: true, sortValue: (m) => m.dateSortie,
+    { key: "dateSortie", label: "Date de sortie", sortable: true, sortValue: (m) => m.dateSortie ?? "", // sans date : en dernier en tri décroissant
       cell: (m) => <span className="text-gris">{m.dateSortie ? formatDate(String(m.dateSortie).slice(0, 10)) : "—"}</span> },
     { key: "actions", label: "Actions", align: "right",
       cell: (m) => <button type="button" onClick={() => navigate(`/avocats/${m.id}`)} className="bpn-btn bpn-btn-ghost bpn-btn-sm">Fiche</button> },
@@ -107,9 +111,7 @@ export function AnciensMembres() {
           : <button type="button" className="bpn-btn bpn-btn-ghost" disabled>Exporter</button>}
       </PageHeader>
 
-      <Notice ton="or" icon={InformationCircleIcon}>
-        Registre des avocats sortis du tableau, en consultation seule. Le motif disciplinaire n'est visible que des personnes habilitées. Chaque consultation et chaque export sont tracés.
-      </Notice>
+      <Notice ton="or" icon={InformationCircleIcon}>{CL_ANCIENS_MEMBRES}</Notice>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
         <div className="relative min-w-0 flex-1 sm:min-w-[14rem]">
@@ -121,10 +123,10 @@ export function AnciensMembres() {
           {MOTIFS.filter((x) => !x.disc || voitDiscipline).map((x) => <option key={x.value} value={x.value}>{x.label}</option>)}
         </select>
         <label className="flex flex-col gap-1 text-xs text-gris sm:w-40">Sorti à partir du
-          <input type="date" value={du} max={au || undefined} onChange={(e) => setParam("du", e.target.value)} className="bpn-input" />
+          <input type="date" value={du} max={au || undefined} onChange={(e) => setParam("du", e.target.value)} className="bpn-input h-10" />
         </label>
         <label className="flex flex-col gap-1 text-xs text-gris sm:w-40">Jusqu'au
-          <input type="date" value={au} min={du || undefined} onChange={(e) => setParam("au", e.target.value)} className="bpn-input" />
+          <input type="date" value={au} min={du || undefined} onChange={(e) => setParam("au", e.target.value)} className="bpn-input h-10" />
         </label>
       </div>
 

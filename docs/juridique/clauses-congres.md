@@ -170,3 +170,9 @@ Emplacement : ajout aux CGU de l'espace avocat (voir C-02), près de la fonction
 Emplacement : contrat entre l'Ordre et chaque prestataire de paiement, de SMS ou d'e-mail (art. 63). À faire signer avant toute activation hors du mode test.
 
 > Le prestataire traite les données sur la seule instruction de l'Ordre et en assure la confidentialité et la sécurité. Il informe l'Ordre de toute violation de données sous 24 heures, déclare son pays d'hébergement, et restitue puis efface les données en fin de contrat. Pour un prestataire de paiement : il indique le numéro et la date de son agrément CEMAC, crédite les fonds directement au compte de l'Ordre, et Creatic Technologies ne détient aucun fonds.
+
+### Clause CL-ANCIENS-MEMBRES
+
+Emplacement : bandeau en tête de la page « Anciens membres » (/anciens-membres), constante `CL_ANCIENS_MEMBRES` de src/barreau/pages/AnciensMembres.jsx (avis juridique M-20261011, ajout du 2026-10-12). Fondement : loi 29-2019 art. 16 et R-62.
+
+> Registre des avocats sortis du tableau, en consultation seule. Le motif disciplinaire n'est visible que des personnes habilitées. Chaque consultation et chaque export sont tracés.
