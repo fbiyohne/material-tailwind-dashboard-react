@@ -598,6 +598,10 @@ membresRouter.patch(
     // R1-5 : l'omission, la réinscription et le passage au tableau ont leur circuit et leur
     // permission (omission_prononcer, stage_valider) ; PATCH ne peut pas les contourner.
     const change = statut && statut !== actuel.statut;
+    // T6 : le décès s'enregistre par /deces, sur pièce justificative (acte ou certificat) ; PATCH ne
+    // fait que corriger la date d'un décès déjà déclaré.
+    if (change && statut === "DECEDE")
+      throw new HttpError(409, "Le décès s'enregistre par « Déclarer le décès » (POST /membres/:id/deces), sur présentation de l'acte ou du certificat de décès.");
     if (change && (statut === "OMIS" || actuel.statut === "OMIS"))
       throw new HttpError(409, statut === "OMIS"
         ? "L'omission s'enregistre depuis l'onglet Situation (POST /membres/:id/evenements : rappel, mise en demeure, transmission, puis décision d'omission)."
@@ -690,22 +694,32 @@ membresRouter.post(
 );
 
 /**
+ * Déclaration de décès (T6) : date d'effet et pièce justificative (acte ou certificat de décès,
+ * avec sa référence) obligatoires. Schéma strict : toute autre clé (cause, motif, détails) est
+ * refusée en 400 — aucune donnée de santé (loi n° 29-2019, art. 17 ; R-15).
+ */
+const decesSchema = z.object({
+  dateDeces: datePassee,
+  piece: z.string().trim().min(1, "Indiquez la pièce justificative (acte ou certificat de décès et sa référence).").max(160),
+}).strict();
+
+/**
  * POST /membres/:id/deces — déclaration de décès sur présentation de l'acte.
- * Date obligatoire, non future. Statut DECEDE : compte espace désactivé et
- * jetons révoqués (synchroniserAccesAuStatut). SG/Admin.
+ * Date obligatoire, non future, et pièce justificative. Statut DECEDE : compte espace
+ * désactivé et jetons révoqués (synchroniserAccesAuStatut). SG/Admin.
  */
 membresRouter.post(
   "/:id/deces",
   requireRole("SECRETAIRE_GENERAL"),
   asyncH(async (req: AuthRequest, res) => {
-    const { dateDeces } = z.object({ dateDeces: datePassee }).parse(req.body ?? {});
+    const { dateDeces, piece } = decesSchema.parse(req.body ?? {});
     const id = Number(req.params.id);
     const actuel = await prisma.membre.findUnique({ where: { id }, select: { statut: true, dateRadiation: true, motifRadiation: true, dateDeces: true } });
     if (!actuel) throw new HttpError(404, "Avocat introuvable");
     if (actuel.statut === "DECEDE") throw new HttpError(409, "Le décès de cet avocat est déjà enregistré : corrigez la date par « Modifier ».");
-    // Aucun motif ni détail : donnée de santé (loi n° 29-2019, art. 17).
+    // Aucun motif ni détail : donnée de santé (loi n° 29-2019, art. 17). La pièce est la référence de l'événement.
     const date = new Date(dateDeces);
-    const { membre } = await changerSituation({ membreId: id, type: "DECES", demande: { statut: "DECEDE", dateDeces: date }, dateEffet: date, acteur: acteurDe(req), statutAttendu: actuel.statut });
+    const { membre } = await changerSituation({ membreId: id, type: "DECES", demande: { statut: "DECEDE", dateDeces: date }, dateEffet: date, reference: piece, acteur: acteurDe(req), statutAttendu: actuel.statut });
     res.json(membre);
   })
 );
@@ -988,13 +1002,12 @@ membresRouter.post(
 );
 
 /**
- * DELETE /membres/:id — suppression définitive d'un membre (avocat/stagiaire),
- * réservée aux erreurs de saisie et doublons. ADMIN seul. Refusée (409) dès
- * qu'une pièce comptable existe (reçu, paiement, quitus) : l'AUDCIF OHADA
- * impose leur conservation 10 ans — la radiation ou le décès sont alors la
- * seule voie. Sans pièce, les relations à cascade déclarée (cotisations,
- * droits de plaidoirie, pièces du dossier) et la mise à NULL des dossiers
- * disciplinaires sont assurées au niveau base par les contraintes FK.
+ * DELETE /membres/:id — suppression définitive d'une fiche créée par erreur (saisie, doublon).
+ * ADMIN seul. Refusée (409) dès que la fiche a un historique : événement de parcours, paiement,
+ * reçu ou quitus (pièces comptables à conserver, AUDCIF OHADA), timbre émis ou dossier
+ * disciplinaire — l'historique est une archive de l'Ordre ; la voie est alors une sortie
+ * (démission, cessation…). Sans historique, les relations à cascade déclarée (cotisations,
+ * droits de plaidoirie, pièces du dossier) sont supprimées par les contraintes FK.
  */
 membresRouter.delete(
   "/:id",
@@ -1003,15 +1016,25 @@ membresRouter.delete(
     const id = Number(req.params.id);
     const membre = await prisma.membre.findUnique({ where: { id } });
     if (!membre) throw new HttpError(404, "Avocat introuvable");
-    const pieces = await Promise.all([
-      prisma.recu.count({ where: { membreId: id } }),
-      prisma.paiement.count({ where: { membreId: id } }),
-      prisma.quitus.count({ where: { membreId: id } }),
-    ]);
-    if (pieces.some((n) => n > 0)) {
-      throw new HttpError(409, "Suppression impossible : pièces comptables à conserver 10 ans (OHADA) ; utilisez radiation ou décès");
-    }
-    await prisma.membre.delete({ where: { id } });
+    const where = { membreId: id };
+    // Contrôle et suppression sous verrou de la fiche : un acte de parcours concurrent
+    // (changerSituation verrouille la même ligne) ne peut pas être effacé en cascade.
+    await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "Membre" WHERE id = ${id} FOR UPDATE`;
+      const historique = await Promise.all([
+        tx.evenementSituation.count({ where }),
+        tx.paiement.count({ where }),
+        tx.recu.count({ where }),
+        tx.quitus.count({ where }),
+        tx.timbre.count({ where }),
+        tx.dossierDisciplinaire.count({ where }),
+      ]);
+      if (historique.some((n) => n > 0)) {
+        throw new HttpError(409, "Suppression impossible : cette fiche a un historique (parcours, paiements, pièces comptables à conserver 10 ans selon l'OHADA, documents émis ou dossier disciplinaire). Enregistrez plutôt sa sortie du tableau (démission, cessation, retraite) depuis le parcours de l'avocat.");
+      }
+      await tx.membre.delete({ where: { id } });
+    });
+    res.locals.auditDetail = `fiche créée par erreur, n° ${membre.num}, sans historique`;
     res.json({ ok: true, nom: membre.nom });
   })
 );

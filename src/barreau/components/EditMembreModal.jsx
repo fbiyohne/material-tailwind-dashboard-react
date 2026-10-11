@@ -129,7 +129,8 @@ export function EditMembreModal({ membre, open, onClose, onSaved, peutRadier = f
               {estOmis && <option value="omis">Omis</option>}
               {!estStagiaire && !radieVerrouille && <option value="honoraire">Honoraire</option>}
               {(peutRadier || membre.statut === "radie") && <option value="radie">Radié</option>}
-              <option value="decede">Décédé</option>
+              {/* T6 : le décès se déclare par l'action « Déclarer le décès » (pièce obligatoire) ; ici, correction de sa date seulement. */}
+              {membre.statut === "decede" && <option value="decede">Décédé</option>}
             </select>
           </FormField>
           <FormField label="Sexe" hint="reporting de parité">

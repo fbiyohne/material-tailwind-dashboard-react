@@ -1252,7 +1252,7 @@ describe("Cycle de vie — statut DECEDE (migration T3)", () => {
     expect(m.status).toBe(201);
     expect((await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: "Direct décédé", statut: "DECEDE" })).status).toBe(400);
     expect((await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: "Direct radié", statut: "RADIE" })).status).toBe(400);
-    const d = await request(app).post(`/api/membres/${m.body.id}/deces`).set(...bearer(sg)).send({ dateDeces: "2026-09-15" });
+    const d = await request(app).post(`/api/membres/${m.body.id}/deces`).set(...bearer(sg)).send({ dateDeces: "2026-09-15", piece: "Acte de décès n° 1" });
     expect(d.body.statut).toBe("DECEDE");
     const liste = await request(app).get("/api/membres?statut=DECEDE").set(...bearer(sg));
     expect(liste.body.total).toBeGreaterThanOrEqual(1);
@@ -1370,16 +1370,16 @@ describe("Cycle de vie — radiation motivée, décès, garde-fou DELETE, RBAC (
   it("CA-02 : déclaration de décès — validations (400), 404, 403 Trésorière", async () => {
     const id = await creer("deces-valid");
     expect((await request(app).post(`/api/membres/${id}/deces`).set(...bearer(sg)).send({})).status).toBe(400);
-    expect((await request(app).post(`/api/membres/${id}/deces`).set(...bearer(sg)).send({ dateDeces: "2099-01-01" })).status).toBe(400);
-    expect((await request(app).post(`/api/membres/${id}/deces`).set(...bearer(tr)).send({ dateDeces: "2026-09-15" })).status).toBe(403);
-    expect((await request(app).post(`/api/membres/99999999/deces`).set(...bearer(sg)).send({ dateDeces: "2026-09-15" })).status).toBe(404);
+    expect((await request(app).post(`/api/membres/${id}/deces`).set(...bearer(sg)).send({ dateDeces: "2099-01-01", piece: "Acte de décès n° 1" })).status).toBe(400);
+    expect((await request(app).post(`/api/membres/${id}/deces`).set(...bearer(tr)).send({ dateDeces: "2026-09-15", piece: "Acte de décès n° 1" })).status).toBe(403);
+    expect((await request(app).post(`/api/membres/99999999/deces`).set(...bearer(sg)).send({ dateDeces: "2026-09-15", piece: "Acte de décès n° 1" })).status).toBe(404);
     expect((await request(app).get(`/api/membres/${id}`).set(...bearer(sg))).body.statut).toBe("INSCRIT");
   });
 
   it("CA-02 : décès par SG → DECEDE + dateDeces, journal « Déclaration de décès », compte espace coupé (login 401)", async () => {
     const av = await creerAvocatEspace("t4-deces");
     expect((await request(app).post("/api/auth/login").send({ email: av.email, password: "avocatpass8" })).status).toBe(200);
-    const r = await request(app).post(`/api/membres/${av.membreId}/deces`).set(...bearer(sg)).send({ dateDeces: "2026-09-15" });
+    const r = await request(app).post(`/api/membres/${av.membreId}/deces`).set(...bearer(sg)).send({ dateDeces: "2026-09-15", piece: "Acte de décès n° 1" });
     expect(r.status).toBe(200);
     expect(r.body.statut).toBe("DECEDE");
     expect(r.body.dateDeces).toMatch(/^2026-09-15/);
@@ -1399,7 +1399,7 @@ describe("Cycle de vie — radiation motivée, décès, garde-fou DELETE, RBAC (
     const prov = await request(app).post(`/api/membres/${membreId}/acces`).set(...bearer(sg));
     expect(prov.status).toBe(201);
     const token = prov.body.lien.split("/activer/")[1];
-    expect((await request(app).post(`/api/membres/${membreId}/deces`).set(...bearer(sg)).send({ dateDeces: "2026-09-15" })).status).toBe(200);
+    expect((await request(app).post(`/api/membres/${membreId}/deces`).set(...bearer(sg)).send({ dateDeces: "2026-09-15", piece: "Acte de décès n° 1" })).status).toBe(200);
     expect((await request(app).post("/api/auth/activer").send({ token, password: "avocatpass8" })).status).toBe(404);
     const u = await prisma.user.findUnique({ where: { membreId } });
     expect(u?.actif).toBe(false);
@@ -1426,7 +1426,7 @@ describe("Cycle de vie — radiation motivée, décès, garde-fou DELETE, RBAC (
 
   it("PATCH : correction d'une saisie — statut INSCRIT et dateDeces null (200)", async () => {
     const id = await creer("correction");
-    await request(app).post(`/api/membres/${id}/deces`).set(...bearer(sg)).send({ dateDeces: "2026-09-15" });
+    await request(app).post(`/api/membres/${id}/deces`).set(...bearer(sg)).send({ dateDeces: "2026-09-15", piece: "Acte de décès n° 1" });
     const r = await request(app).patch(`/api/membres/${id}`).set(...bearer(sg)).send({ statut: "INSCRIT", dateDeces: null });
     expect(r.status).toBe(200);
     expect(r.body.statut).toBe("INSCRIT");
@@ -1439,15 +1439,17 @@ describe("Cycle de vie — radiation motivée, décès, garde-fou DELETE, RBAC (
     expect(r2.body.motifRadiation).toBe("Décision n° 8");
   });
 
-  it("R2-1 : PATCH DECEDE sans date → 400 ; date future → 400 ; avec date → 200 ; déjà décédé daté → 200", async () => {
+  it("R2-1 / T6 : PATCH vers DECEDE → 409 (déclaration par /deces, pièce obligatoire) ; date future → 400 ; décédé : date corrigeable, jamais effacée", async () => {
     const id = await creer("r2-1");
     const patch = (b: object) => request(app).patch(`/api/membres/${id}`).set(...bearer(sg)).send(b);
-    expect((await patch({ statut: "DECEDE" })).status).toBe(400);
-    expect((await patch({ statut: "DECEDE", dateDeces: null })).status).toBe(400);
+    // T6 : le passage à DECEDE ne se fait plus par PATCH (il contournerait la pièce justificative).
+    expect((await patch({ statut: "DECEDE" })).status).toBe(409);
+    expect((await patch({ statut: "DECEDE", dateDeces: "2026-09-15" })).status).toBe(409);
     expect((await patch({ dateDeces: "2099-01-01" })).status).toBe(400);
     expect((await patch({ statut: "RADIE", dateRadiation: "2099-01-01" })).status).toBe(400);
-    expect((await patch({ statut: "DECEDE", dateDeces: "2026-09-15" })).status).toBe(200);
+    expect((await request(app).post(`/api/membres/${id}/deces`).set(...bearer(sg)).send({ dateDeces: "2026-09-15", piece: "Acte de décès n° 1" })).status).toBe(200);
     expect((await patch({ cabinet: "Cab" })).status).toBe(200);
+    expect((await patch({ statut: "DECEDE", dateDeces: "2026-09-10" })).status).toBe(200); // correction de la date
     expect((await patch({ statut: "DECEDE", dateDeces: null })).status).toBe(400);
   });
 
@@ -1456,7 +1458,7 @@ describe("Cycle de vie — radiation motivée, décès, garde-fou DELETE, RBAC (
     const patch = (b: object) => request(app).patch(`/api/membres/${id}`).set(...bearer(sg)).send(b);
     // R1-7 : la radiation s'enregistre avec discipline_decider (bâtonnier par défaut).
     const radier = (b: object = {}) => request(app).post(`/api/membres/${id}/radier`).set(...bearer(bat)).send(b);
-    const deces = (d = "2026-09-15") => request(app).post(`/api/membres/${id}/deces`).set(...bearer(sg)).send({ dateDeces: d });
+    const deces = (d = "2026-09-15") => request(app).post(`/api/membres/${id}/deces`).set(...bearer(sg)).send({ dateDeces: d, piece: "Acte de décès n° 1" });
     const lire = () => prisma.membre.findUniqueOrThrow({ where: { id } });
     // R1-7 : PATCH vers RADIE exige discipline_decider (SG 403) ; invariants vérifiés avec l'ADMIN.
     const patchAdmin = (b: object) => request(app).patch(`/api/membres/${id}`).set(...bearer(admin)).send(b);
@@ -1505,7 +1507,7 @@ describe("Cycle de vie — radiation motivée, décès, garde-fou DELETE, RBAC (
       expect((await request(app).patch(`/api/membres/${id}`).set(...bearer(jeton)).send({ nom: "T4 interdit" })).status, `${role} PATCH`).toBe(403);
       // R1-7 : le bâtonnier détient discipline_decider (radiation autorisée, cf. radier-permission.test.ts).
       if (role !== "BATONNIER") expect((await request(app).post(`/api/membres/${id}/radier`).set(...bearer(jeton))).status, `${role} radier`).toBe(403);
-      expect((await request(app).post(`/api/membres/${id}/deces`).set(...bearer(jeton)).send({ dateDeces: "2026-09-15" })).status, `${role} deces`).toBe(403);
+      expect((await request(app).post(`/api/membres/${id}/deces`).set(...bearer(jeton)).send({ dateDeces: "2026-09-15", piece: "Acte de décès n° 1" })).status, `${role} deces`).toBe(403);
       expect((await request(app).delete(`/api/membres/${id}`).set(...bearer(jeton))).status, `${role} DELETE`).toBe(403);
     }
     expect((await request(app).delete(`/api/membres/${id}`).set(...bearer(sg))).status).toBe(403);
@@ -1738,7 +1740,7 @@ describe("Revue sécurité T10 — données disciplinaires, extraction en masse,
     expect(avocatJwt).toBeTruthy();
     expect((await request(app).get("/api/membres/export/pdf").set(...bearer(avocatJwt))).status).toBe(403);
     expect((await request(app).post("/api/membres/export").set(...bearer(avocatJwt)).send({ format: "csv", filtre: "tous", lignes: 1 })).status).toBe(403);
-    expect((await request(app).post(`/api/membres/${radieId}/deces`).set(...bearer(avocatJwt)).send({ dateDeces: "2026-09-15" })).status).toBe(403);
+    expect((await request(app).post(`/api/membres/${radieId}/deces`).set(...bearer(avocatJwt)).send({ dateDeces: "2026-09-15", piece: "Acte de décès n° 1" })).status).toBe(403);
     expect((await request(app).post("/api/membres/import").set(...bearer(avocatJwt)).send({ membres: [{ num: 999999, nom: "T10 Intrus" }] })).status).toBe(403);
     expect(await prisma.membre.findUnique({ where: { num: 999999 } })).toBeNull();
   });

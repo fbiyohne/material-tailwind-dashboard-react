@@ -45,7 +45,7 @@ describe("R1-6 — décision disciplinaire atomique", () => {
 
   it("effet refusé (radiation d'un décédé) : 409 et dossier sans décision, resoumission possible", async () => {
     const { membreId, id } = await preparer("Decede");
-    expect((await request(app).post(`/api/membres/${membreId}/deces`).set(...bearer(sg)).send({ dateDeces: "2026-01-02" })).status).toBe(200);
+    expect((await request(app).post(`/api/membres/${membreId}/deces`).set(...bearer(sg)).send({ dateDeces: "2026-01-02", piece: "Acte de décès n° 1" })).status).toBe(200);
     expect((await decider(id, { sanctionCode: "RADIATION" })).status).toBe(409);
     const d = await prisma.dossierDisciplinaire.findUniqueOrThrow({ where: { id } });
     expect(d.sanctionCode).toBeNull();

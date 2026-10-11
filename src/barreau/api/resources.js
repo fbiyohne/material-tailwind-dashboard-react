@@ -68,7 +68,8 @@ export function modifierMembre(id, patch) {
 /** Radiation : corps optionnel { dateRadiation: 'AAAA-MM-JJ', motifRadiation } (défaut serveur : aujourd'hui, sans motif). */
 export const radierMembre = (id, body = {}) => api(`/membres/${id}/radier`, { method: "POST", body }).then(normaliserMembre);
 /** Déclaration de décès (date de l'acte, AAAA-MM-JJ, obligatoire). SG/Admin. */
-export const declarerDeces = (id, dateDeces) => api(`/membres/${id}/deces`, { method: "POST", body: { dateDeces } }).then(normaliserMembre);
+// T6 : pièce justificative (acte ou certificat de décès et sa référence) obligatoire côté serveur.
+export const declarerDeces = (id, dateDeces, piece) => api(`/membres/${id}/deces`, { method: "POST", body: { dateDeces, piece } }).then(normaliserMembre);
 /** Liste des avocats en PDF (rendu serveur) selon les filtres courants : { q, statut, qualite, qualiteNot, ids }. */
 export const telechargerAvocatsPdf = (params = {}) => {
   const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v != null && v !== "")).toString();

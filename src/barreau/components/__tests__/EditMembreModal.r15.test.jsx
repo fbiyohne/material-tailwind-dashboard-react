@@ -42,7 +42,8 @@ describe("EditMembreModal — radiation réservée à discipline_decider (R1-7)"
   it("SG (sans permission) : « Radié » n'est pas proposé pour un inscrit", () => {
     rendre({ qualite: "titulaire", statut: "inscrit" });
     expect(screen.queryByRole("option", { name: "Radié" })).not.toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "Décédé" })).toBeInTheDocument();
+    // T6 : le décès se déclare par l'action dédiée (pièce justificative), pas par la fiche.
+    expect(screen.queryByRole("option", { name: "Décédé" })).not.toBeInTheDocument();
   });
 
   it("titulaire de discipline_decider : « Radié » proposé", () => {
@@ -50,9 +51,9 @@ describe("EditMembreModal — radiation réservée à discipline_decider (R1-7)"
     expect(screen.getByRole("option", { name: "Radié" })).toBeInTheDocument();
   });
 
-  it("radié, SG : seuls « Radié » et « Décédé », date et référence corrigeables", () => {
+  it("radié, SG : seul « Radié », date et référence corrigeables (décès : action dédiée, T6)", () => {
     rendre({ qualite: "titulaire", statut: "radie", dateRadiation: "2026-10-01", motifRadiation: "Décision n° 17" });
-    expect(within(screen.getByLabelText(/^Statut/)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Radié", "Décédé"]);
+    expect(within(screen.getByLabelText(/^Statut/)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Radié"]);
     expect(screen.getByLabelText(/Date de la décision/)).toHaveValue("2026-10-01");
     expect(screen.getByText(/conseil de discipline/)).toBeInTheDocument();
   });

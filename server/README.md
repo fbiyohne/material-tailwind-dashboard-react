@@ -71,13 +71,14 @@ POST /api/membres/42/deces
 Authorization: Bearer <jeton>
 Content-Type: application/json
 
-{ "dateDeces": "2026-09-15" }
+{ "dateDeces": "2026-09-15", "piece": "Acte de décès n° 412 du 16/09/2026" }
 ```
 Réponse 200 (extrait) :
 ```json
 { "id": 42, "num": 42, "nom": "…", "statut": "DECEDE", "dateDeces": "2026-09-15T00:00:00.000Z" }
 ```
-Erreurs : 400 (date absente, invalide ou postérieure à aujourd'hui), 403 (rôle non autorisé), 404 (membre inconnu).
+Erreurs : 400 (date absente, invalide ou postérieure à aujourd'hui ; pièce justificative absente ; toute autre clé du corps, dont une cause du décès — schéma strict, aucune donnée de santé : loi 29-2019 art. 17, R-15), 403 (rôle non autorisé), 404 (membre inconnu).
+`piece` (1 à 160 caractères) : acte ou certificat de décès et sa référence, enregistré comme référence de l'événement `DECES` du parcours. Un passage à `DECEDE` par `PATCH` est refusé (409) : PATCH ne corrige que la date d'un décès déjà déclaré.
 Effet : statut `DECEDE`, compte espace désactivé, jetons révoqués. Un membre décédé est exclu du tableau de l'Ordre, du corps électoral, des cotisations et des relances.
 
 ### GET /api/membres/export/pdf
@@ -99,7 +100,7 @@ Journalise un export produit dans le navigateur (CSV, XLSX, TXT, ou PDF de repli
 - Journal d'audit : « Export de la liste des avocats — Avocat (format=…; filtre=…; lignes=…) », avec l'agent, l'IP et l'horodatage.
 
 ### DELETE /api/membres/:id
-Admin seul. **409** « Suppression impossible : pièces comptables à conserver 10 ans (OHADA) ; utilisez radiation ou décès » dès que le membre a au moins un reçu, un paiement ou un quitus. Sans pièce (erreur de saisie, doublon), la suppression est définitive.
+Admin seul. Réservé à une fiche créée par erreur (saisie, doublon). **409** « Suppression impossible : cette fiche a un historique (… pièces comptables à conserver 10 ans selon l'OHADA …). Enregistrez plutôt sa sortie du tableau (démission, cessation, retraite) … » dès que le membre a au moins un événement de parcours, un paiement, un reçu, un quitus, un timbre ou un dossier disciplinaire. Contrôle et suppression se font sous verrou de la fiche (`FOR UPDATE`) : un acte concurrent ne peut pas être effacé en cascade. Sans historique, la suppression est définitive et journalisée (« Suppression — Avocat (fiche créée par erreur, n° …, sans historique) »).
 
 ### POST /api/membres/import
 

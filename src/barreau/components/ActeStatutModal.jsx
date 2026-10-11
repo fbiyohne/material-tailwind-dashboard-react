@@ -64,7 +64,7 @@ const MODES = {
     consequences: null,
     bouton: "Déclarer le décès",
     Icone: HeartIcon,
-    envoyer: (membre, date) => declarerDeces(membre.id, date),
+    envoyer: (membre, date, _motif, x) => declarerDeces(membre.id, date, x.piece.trim()),
     toast: (nom, date) => `Décès de Me ${nom} enregistré au ${formatDateCourte(date)}.`,
   },
 };
@@ -73,7 +73,7 @@ const MODES = {
  * Modale d'acte sur le statut d'un membre : radiation (date de la décision +
  * référence facultative), radiation rendue exécutoire (`execution`, avec `dossier` :
  * référence de la décision et pièce obligatoires) ou déclaration de décès (date de
- * l'acte obligatoire). `onDone` est appelé après succès pour recharger la fiche.
+ * l'acte et pièce justificative obligatoires, T6). `onDone` est appelé après succès pour recharger la fiche.
  */
 export function ActeStatutModal({ mode, membre, dossier, open, onClose, onDone }) {
   const toast = useToast();
@@ -118,6 +118,11 @@ export function ActeStatutModal({ mode, membre, dossier, open, onClose, onDone }
     if (date > aujourdhui) {
       setErreur("La date ne peut pas être postérieure à aujourd'hui.");
       dateRef.current?.focus();
+      return;
+    }
+    if (mode === "deces" && !piece.trim()) {
+      setManque({ piece: "Indiquez l'acte ou le certificat de décès et sa référence." });
+      document.getElementById("deces-piece")?.focus();
       return;
     }
     if (mode === "execution") {
@@ -225,6 +230,15 @@ export function ActeStatutModal({ mode, membre, dossier, open, onClose, onDone }
                 className={`bpn-input ${manque.piece ? "is-invalid" : ""}`} />
             </FormField>
           </>
+        )}
+
+        {mode === "deces" && (
+          <FormField label="Pièce justificative" required hint="acte ou certificat de décès, avec sa référence — aucune cause ni donnée de santé" htmlFor="deces-piece" error={manque.piece}>
+            <input id="deces-piece" value={piece} maxLength={160} disabled={loading} required
+              onChange={(e) => { setPiece(e.target.value); setManque({}); }}
+              placeholder="Ex. : Acte de décès n° 412 du 16/09/2026, état civil"
+              className={`bpn-input ${manque.piece ? "is-invalid" : ""}`} />
+          </FormField>
         )}
 
         {cfg.consequences && (

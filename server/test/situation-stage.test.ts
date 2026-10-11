@@ -150,7 +150,7 @@ describe("D5 — PATCH, /radier et /deces écrivent un EvenementSituation", () =
 
   it("/deces : événement DECES daté de l'acte, sans motif", async () => {
     const m = await creer(`AVOC T8 deces ${Date.now()}`);
-    expect((await request(app).post(`/api/membres/${m.id}/deces`).set(...bearer(sg)).send({ dateDeces: "2026-06-01" })).status).toBe(200);
+    expect((await request(app).post(`/api/membres/${m.id}/deces`).set(...bearer(sg)).send({ dateDeces: "2026-06-01", piece: "Acte de décès n° 1" })).status).toBe(200);
     const evts = await evenements(m.id);
     expect(evts).toHaveLength(1);
     expect(evts[0]).toMatchObject({ type: "DECES", statutAvant: "INSCRIT", statutApres: "DECEDE", motif: null });

@@ -79,13 +79,23 @@ describe("ActeStatutModal — décès", () => {
     expect(screen.queryByLabelText(/motif/i)).not.toBeInTheDocument();
   });
 
+  it("T6 : sans pièce justificative, rien n'est envoyé et le champ est signalé", async () => {
+    rendre({ mode: "deces" });
+    await userEvent.type(screen.getByLabelText(/Date du décès/), "2026-09-15");
+    await userEvent.click(screen.getByRole("button", { name: "Déclarer le décès" }));
+    expect(await screen.findByText(/acte ou le certificat de décès/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Pièce justificative/)).toHaveFocus();
+    expect(declarerDeces).not.toHaveBeenCalled();
+  });
+
   it("déclare le décès et notifie", async () => {
     declarerDeces.mockResolvedValue({ ...membre, statut: "decede" });
     const onDone = vi.fn();
     rendre({ mode: "deces", onDone });
     await userEvent.type(screen.getByLabelText(/Date du décès/), "2026-09-15");
+    await userEvent.type(screen.getByLabelText(/Pièce justificative/), "Acte de décès n° 412");
     await userEvent.click(screen.getByRole("button", { name: "Déclarer le décès" }));
-    await waitFor(() => expect(declarerDeces).toHaveBeenCalledWith(7, "2026-09-15"));
+    await waitFor(() => expect(declarerDeces).toHaveBeenCalledWith(7, "2026-09-15", "Acte de décès n° 412"));
     expect(onDone).toHaveBeenCalled();
     expect(screen.getByRole("status")).toHaveTextContent("Décès de Me BAKALA Jean enregistré au 15/09/2026.");
   });
