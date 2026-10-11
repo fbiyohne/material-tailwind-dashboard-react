@@ -86,3 +86,44 @@ describe("R1-5 — l'import ne fait ni omission ni réinscription", () => {
     expect((await importer([{ num: m.num, nom: m.nom, statut: "omis" }])).body).toMatchObject({ maj: 1, erreurs: [] });
   });
 });
+
+describe("R1-5 (reprise QA) — l'import ne fait passer aucun stagiaire au tableau ni ne crée d'omis", () => {
+  const importer = (membres: unknown[], qualiteDefaut?: string, q = "") =>
+    request(app).post(`/api/membres/import${q}`).set(...bearer(sg)).send({ membres, qualiteDefaut });
+  const lire = (id: number) => prisma.membre.findUnique({ where: { id } });
+  // num loin du max : la base de test est partagée, un POST /membres concurrent prend max+1.
+  const creer = (data: Record<string, unknown>) =>
+    prisma.membre.create({ data: { num: num + 5000 + ++n, nom: `${PREFIXE} ${n}`, qualite: "AVOCAT", statut: "INSCRIT", ...data } as never });
+
+  it("(a) stagiaire importé {avocat, inscrit} ou {stagiaire, honoraire} : erreur de ligne, simulation comprise, stagiaire inchangé", async () => {
+    const s = await creer({ qualite: "STAGIAIRE", statut: "STAGIAIRE" });
+    for (const ligne of [{ qualite: "avocat", statut: "inscrit" }, { qualite: "stagiaire", statut: "honoraire" }, { qualite: "honoraire" }]) {
+      for (const q of ["?simulation=1", ""]) {
+        const r = await importer([{ num: s.num, nom: s.nom, ...ligne }], undefined, q);
+        expect(r.body.maj, JSON.stringify(ligne) + q).toBe(0);
+        expect(r.body.erreurs[0]?.message).toMatch(/Valider la fin de stage/);
+      }
+    }
+    expect(await lire(s.id)).toMatchObject({ qualite: "STAGIAIRE", statut: "STAGIAIRE" });
+  });
+
+  it("(b) sans colonne qualité, la qualité d'un membre existant n'est jamais réécrite par la qualité par défaut de la page", async () => {
+    const s = await creer({ qualite: "STAGIAIRE", statut: "STAGIAIRE" });
+    await importer([{ num: s.num, nom: s.nom }], "AVOCAT"); // page « Avocats inscrits »
+    expect(await lire(s.id)).toMatchObject({ qualite: "STAGIAIRE", statut: "STAGIAIRE" });
+    const a = await creer({});
+    const r = await importer([{ num: a.num, nom: a.nom, cabinet: "Cab R15b" }], "STAGIAIRE"); // page « Avocats stagiaires »
+    expect(r.body).toMatchObject({ maj: 1, erreurs: [] });
+    expect(await lire(a.id)).toMatchObject({ qualite: "AVOCAT", statut: "INSCRIT", cabinet: "Cab R15b" });
+  });
+
+  it("(c) création par import d'un membre « omis » : erreur de ligne, simulation comprise, aucun membre créé", async () => {
+    const nouveau = num + 5900;
+    for (const q of ["?simulation=1", ""]) {
+      const r = await importer([{ num: nouveau, nom: `${PREFIXE} omis neuf`, statut: "omis" }], undefined, q);
+      expect(r.body.crees, q).toBe(0);
+      expect(r.body.erreurs[0]?.message).toMatch(/omission/i);
+    }
+    expect(await prisma.membre.count({ where: { num: nouveau } })).toBe(0);
+  });
+});

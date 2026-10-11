@@ -405,9 +405,10 @@ membresRouter.post(
           erreurs.push({ ligne: i + 1, message: "Changement de statut vers ou depuis un statut de sortie (radié, décédé, démissionnaire, retraité, cessation) interdit à l'import : utilisez la fiche de l'avocat (Radier / Déclarer le décès / Modifier)." });
           continue;
         }
-        // R1-5 : ni omission ni réinscription par import (circuit et permission omission_prononcer).
-        if (existant && r.statut?.trim() && existant.statut !== statut && (statut === "OMIS" || existant.statut === "OMIS")) {
-          erreurs.push({ ligne: i + 1, message: "Omission ou réinscription interdite à l'import : utilisez l'onglet Situation de la fiche de l'avocat." });
+        // R1-5 : ni omission ni réinscription par import (circuit et permission omission_prononcer),
+        // ni création directe d'un omis (l'omission suit le circuit de la fiche, avec son historique).
+        if (r.statut?.trim() && (existant ? existant.statut !== statut && (statut === "OMIS" || existant.statut === "OMIS") : statut === "OMIS")) {
+          erreurs.push({ ligne: i + 1, message: "Omission ou réinscription interdite à l'import (création d'un membre omis comprise) : utilisez l'onglet Situation de la fiche de l'avocat." });
           continue;
         }
         // R1-1 : ni suspension ni levée de suspension par import (décision disciplinaire enregistrée),
@@ -416,7 +417,8 @@ membresRouter.post(
           erreurs.push({ ligne: i + 1, message: "Suspension ou levée de suspension interdite à l'import : la suspension s'enregistre par la décision du dossier disciplinaire, sa levée par la fiche de l'avocat (reprise)." });
           continue;
         }
-        if (existant?.qualite === "STAGIAIRE" && (qualite !== "STAGIAIRE" || (r.statut?.trim() && statut === "INSCRIT" && existant.statut !== "INSCRIT"))) {
+        // R1-5 : ni qualité ni statut du tableau (INSCRIT, HONORAIRE) pour un stagiaire existant.
+        if (existant?.qualite === "STAGIAIRE" && (qualite !== "STAGIAIRE" || (r.statut?.trim() && (statut === "INSCRIT" || statut === "HONORAIRE") && existant.statut !== statut))) {
           erreurs.push({ ligne: i + 1, message: "Passage d'un stagiaire au tableau interdit à l'import : utilisez « Valider la fin de stage » (fiche, onglet Stage)." });
           continue;
         }
@@ -429,7 +431,8 @@ membresRouter.post(
           // inchangé, l'horodatage existant est conservé (aucune perte de précision).
           const dIns = toDate(r.dateInscription);
           const memeJour = dIns && existant.dateInscription && dIns.toISOString().slice(0, 10) === existant.dateInscription.toISOString().slice(0, 10);
-          const data = { ...base, statut: r.statut?.trim() ? statut : undefined, dateInscription: memeJour ? undefined : dIns };
+          // Colonne qualité absente : la qualité existante n'est pas écrasée par la qualité par défaut de la page (R1-5).
+          const data = { ...base, qualite: r.qualite?.trim() ? qualite : undefined, statut: r.statut?.trim() ? statut : undefined, dateInscription: memeJour ? undefined : dIns };
           const m = await prisma.membre.update({ where: { num: r.num }, data });
           // Cohérence de l'espace avocat (décédé/radié → compte coupé ; rétabli sinon).
           if (m.statut !== existant.statut) await synchroniserAccesAuStatut(m.id, m.statut);
