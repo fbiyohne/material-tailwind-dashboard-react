@@ -417,9 +417,15 @@ membresRouter.post(
           erreurs.push({ ligne: i + 1, message: "Suspension ou levée de suspension interdite à l'import : la suspension s'enregistre par la décision du dossier disciplinaire, sa levée par la fiche de l'avocat (reprise)." });
           continue;
         }
-        // R1-5 : ni qualité ni statut du tableau (INSCRIT, HONORAIRE) pour un stagiaire existant.
-        if (existant?.qualite === "STAGIAIRE" && (qualite !== "STAGIAIRE" || (r.statut?.trim() && (statut === "INSCRIT" || statut === "HONORAIRE") && existant.statut !== statut))) {
-          erreurs.push({ ligne: i + 1, message: "Passage d'un stagiaire au tableau interdit à l'import : utilisez « Valider la fin de stage » (fiche, onglet Stage)." });
+        // R1-5 : aucun stagiaire au tableau par import. Un stagiaire existant ne reçoit pas d'autre qualité
+        // (y compris la qualité par défaut de la page : ligne refusée plutôt que réécrite), et aucune ligne ne
+        // produit la paire effective (colonne absente = valeur existante) qualité STAGIAIRE + statut
+        // INSCRIT/HONORAIRE, création comprise, sauf aller-retour inchangé.
+        const qEff = existant && !r.qualite?.trim() ? existant.qualite : qualite;
+        const sEff = existant && !r.statut?.trim() ? existant.statut : statut;
+        const stagiaireAuTableau = qEff === "STAGIAIRE" && (sEff === "INSCRIT" || sEff === "HONORAIRE") && !(existant?.qualite === "STAGIAIRE" && existant.statut === sEff);
+        if ((existant?.qualite === "STAGIAIRE" && qualite !== "STAGIAIRE") || stagiaireAuTableau) {
+          erreurs.push({ ligne: i + 1, message: "Stagiaire au tableau interdit à l'import (qualité ou statut inscrit, honoraire) : utilisez « Valider la fin de stage » (fiche, onglet Stage)." });
           continue;
         }
         if (simulation) {
@@ -485,7 +491,7 @@ membresRouter.patch(
         ? "L'omission s'enregistre depuis l'onglet Situation (POST /membres/:id/evenements : rappel, mise en demeure, transmission, puis décision d'omission)."
         : "La réinscription d'un avocat omis s'enregistre depuis l'onglet Situation (POST /membres/:id/evenements REINSCRIPTION).");
     // Stagiaire → tableau : 403 sans stage_valider ; même avec, la seule voie est valider-stage (409).
-    if (actuel.qualite === "STAGIAIRE" && ((fiche.qualite && fiche.qualite !== "STAGIAIRE") || (change && statut === "INSCRIT"))) {
+    if (actuel.qualite === "STAGIAIRE" && ((fiche.qualite && fiche.qualite !== "STAGIAIRE") || (change && (statut === "INSCRIT" || statut === "HONORAIRE")))) {
       if (!aLaPermission(req.user!.role, "stage_valider")) throw new HttpError(403, "Accès refusé pour votre profil : la fin de stage relève de l'action stage_valider.");
       throw new HttpError(409, "Le passage d'un stagiaire au tableau s'enregistre par « Valider la fin de stage » (fiche, onglet Stage).");
     }

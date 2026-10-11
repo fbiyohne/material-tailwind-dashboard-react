@@ -127,3 +127,45 @@ describe("R1-5 (reprise QA) — l'import ne fait passer aucun stagiaire au table
     expect(await prisma.membre.count({ where: { num: nouveau } })).toBe(0);
   });
 });
+
+describe("R1-5 (reprise QA 2) — aucun stagiaire au tableau (inscrit, honoraire) hors valider-stage", () => {
+  const importer = (membres: unknown[], q = "") => request(app).post(`/api/membres/import${q}`).set(...bearer(sg)).send({ membres });
+  const lire = (id: number) => prisma.membre.findUnique({ where: { id } });
+  const creer = (data: Record<string, unknown>) =>
+    prisma.membre.create({ data: { num: num + 6000 + ++n, nom: `${PREFIXE} ${n}`, qualite: "AVOCAT", statut: "INSCRIT", ...data } as never });
+
+  it("PATCH {statut: HONORAIRE} ou {qualite: HONORAIRE} d'un stagiaire : SG 403, ADMIN 409, stagiaire inchangé", async () => {
+    const s = await creer({ qualite: "STAGIAIRE", statut: "STAGIAIRE" });
+    for (const corps of [{ statut: "HONORAIRE" }, { qualite: "HONORAIRE" }]) {
+      expect((await patch(s.id, corps)).status, JSON.stringify(corps)).toBe(403);
+      const r = await request(app).patch(`/api/membres/${s.id}`).set(...bearer(admin)).send(corps);
+      expect(r.status, JSON.stringify(corps)).toBe(409);
+      expect(r.body.erreur).toMatch(/fin de stage/i);
+    }
+    expect(await lire(s.id)).toMatchObject({ qualite: "STAGIAIRE", statut: "STAGIAIRE" });
+  });
+
+  it("import d'un nouveau membre {stagiaire, inscrit} ou {stagiaire, honoraire} : erreur de ligne, simulation comprise, aucun membre créé", async () => {
+    const nouveau = num + 6900;
+    for (const statut of ["inscrit", "honoraire"]) {
+      for (const q of ["?simulation=1", ""]) {
+        const r = await importer([{ num: nouveau, nom: `${PREFIXE} stagiaire neuf`, qualite: "stagiaire", statut }], q);
+        expect(r.body.crees, statut + q).toBe(0);
+        expect(r.body.erreurs[0]?.message).toMatch(/Valider la fin de stage/);
+      }
+    }
+    expect(await prisma.membre.count({ where: { num: nouveau } })).toBe(0);
+  });
+
+  it("import qualité « stagiaire » sans colonne statut sur un avocat inscrit : erreur de ligne, avocat inchangé ; {stagiaire, stagiaire} reste permis", async () => {
+    const a = await creer({});
+    for (const q of ["?simulation=1", ""]) {
+      const r = await importer([{ num: a.num, nom: a.nom, qualite: "stagiaire" }], q);
+      expect(r.body.maj, q).toBe(0);
+      expect(r.body.erreurs[0]?.message).toMatch(/Valider la fin de stage/);
+    }
+    expect(await lire(a.id)).toMatchObject({ qualite: "AVOCAT", statut: "INSCRIT" });
+    expect((await importer([{ num: a.num, nom: a.nom, qualite: "stagiaire", statut: "stagiaire" }])).body).toMatchObject({ maj: 1, erreurs: [] });
+    expect(await lire(a.id)).toMatchObject({ qualite: "STAGIAIRE", statut: "STAGIAIRE" });
+  });
+});
