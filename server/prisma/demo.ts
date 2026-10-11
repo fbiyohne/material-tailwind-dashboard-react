@@ -15,10 +15,15 @@
  *   le mot de passe public), --identite=pointe-noire implique le défaut, sinon rien ne change.
  *
  * Garde-fou : le script lit DATABASE_URL et REFUSE toute base dont le nom n'est pas
- * exactement `barreau_pn_test`, avant d'ouvrir la moindre connexion (code de sortie 1).
- * Le DATABASE_URL du .env vise barreau_pn : il faut donc désigner la base de test
- * explicitement, par exemple `DATABASE_URL="$TEST_DATABASE_URL" npm run demo`
+ * exactement `barreau_pn_test` ou `barreau_pn_demo`, avant d'ouvrir la moindre connexion
+ * (code de sortie 1). Le DATABASE_URL du .env vise barreau_pn : il faut donc désigner la
+ * base explicitement, par exemple `DATABASE_URL="$TEST_DATABASE_URL" npm run demo`
  * (dotenv ne remplace pas une variable déjà définie).
+ *
+ * Congrès (R1-13) : la démonstration se joue sur barreau_pn_demo, base du socle NON partagée
+ * avec les suites de tests (barreau_pn_test accumule des milliers de fixtures qui faussent le
+ * tableau, le corps électoral et les listes). Sur cette base vierge, sans seed, le script crée
+ * aussi les comptes du scénario (noms de fonction, aucun nom réel) s'ils n'existent pas.
  *
  * Idempotence : clés naturelles (num 800001 à 800200, numInscription « DEMO-… »,
  * dossiers « DEMO-AAAA-NN », sujets « [DEMO] … », références « DEMO-… »). Les autres
@@ -31,7 +36,7 @@ import "dotenv/config";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 
-const BASE_AUTORISEE = "barreau_pn_test";
+const BASES_AUTORISEES = ["barreau_pn_test", "barreau_pn_demo"];
 const IDENTITES = ["demonstration", "pointe-noire"] as const;
 
 function echec(message: string): never {
@@ -55,7 +60,7 @@ const MDP_DEFAUT = args.includes("--mots-de-passe-defaut");
 if (MDP_ALEA && MDP_DEFAUT) echec("--mots-de-passe-aleatoires et --mots-de-passe-defaut sont incompatibles.");
 const modeMotsDePasse: "aleatoires" | "defaut" | null = MDP_ALEA ? "aleatoires" : MDP_DEFAUT ? "defaut"
   : identiteVoulue === "demonstration" ? "aleatoires" : identiteVoulue === "pointe-noire" ? "defaut" : null;
-if (nomBase !== BASE_AUTORISEE) echec(`la base « ${nomBase} » est refusée : seule ${BASE_AUTORISEE} est autorisée. Aucune écriture effectuée.`);
+if (!BASES_AUTORISEES.includes(nomBase)) echec(`la base « ${nomBase} » est refusée : seules ${BASES_AUTORISEES.join(" et ")} sont autorisées. Aucune écriture effectuée.`);
 
 const { prisma } = await import("../src/prisma.js");
 const { encaisser } = await import("../src/lib/encaissement.js");
@@ -282,6 +287,12 @@ async function main() {
     })),
   });
 
+  // Comptes du scénario : créés seulement s'ils manquent (base barreau_pn_demo sans seed) ;
+  // ceux du seed de barreau_pn_test ne sont pas modifiés (update vide).
+  for (const [email, nom, role] of COMPTES_ORDRE) {
+    await prisma.user.upsert({ where: { email }, update: {}, create: { nom, email, role, passwordHash: bcrypt.hashSync("barreau", 10), actif: true } });
+  }
+
   // Compte de l'espace avocat (mot de passe de démonstration : « barreau »).
   await prisma.user.upsert({
     where: { email: "avocat.demo@demo.invalid" },
@@ -292,6 +303,14 @@ async function main() {
   if (modeMotsDePasse) await changerMotsDePasse(modeMotsDePasse);
   await appliquerIdentite();
 }
+
+/** Comptes de l'Ordre du scénario, désignés par leur fonction (données fictives). */
+const COMPTES_ORDRE = [
+  ["batonnier@barreau-pn.cg", "Bâtonnier (démonstration)", "BATONNIER"],
+  ["sg@barreau-pn.cg", "Secrétaire général (démonstration)", "SECRETAIRE_GENERAL"],
+  ["tresoriere@barreau-pn.cg", "Trésorière (démonstration)", "TRESORIERE"],
+  ["admin@barreau-pn.cg", "Administrateur (démonstration)", "ADMIN"],
+] as const;
 
 /** Comptes du scénario : mots de passe aléatoires affichés une seule fois (jamais écrits ailleurs). */
 const COMPTES_DEMO = ["batonnier@barreau-pn.cg", "sg@barreau-pn.cg", "tresoriere@barreau-pn.cg", "admin@barreau-pn.cg", "avocat.demo@demo.invalid"];

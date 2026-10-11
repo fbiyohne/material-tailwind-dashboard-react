@@ -8,23 +8,26 @@ Public visé : avocats réunis en congrès à Brazzaville. Le logiciel est montr
 
 ## 1. Prérequis et installation
 
-Poste de démonstration : instance **locale** (pas de dépendance au réseau du lieu), base `barreau_pn_test` du socle Docker partagé, port 4100. Le script refuse toute autre base (garde-fou : seul le nom exact `barreau_pn_test` est accepté).
+Poste de démonstration : instance **locale** (pas de dépendance au réseau du lieu), base **`barreau_pn_demo`** du socle Docker partagé, port **4200**. Cette base est réservée au congrès et n'est **jamais** partagée avec les suites de tests (R1-13) : `barreau_pn_test`, où tournent vitest et la recette, accumule des milliers de fixtures (« 5456 inscrits », 1 211 électeurs, restes « E2E… » ou « TIMBRE Test… » à numéros négatifs dans /avocats et /timbres) qui rendent le scénario illisible. Le script n'accepte que `barreau_pn_test` (recette) et `barreau_pn_demo` (congrès), noms exacts.
+
+**Préalable unique, à valider par Fabrice** : provisionner `barreau_pn_demo` dans le socle (outil `socle_provisionner`, moteur postgres, rôle `barreau`, confirmation requise), puis la déclarer dans `registre.json` du socle. Sur cette base vierge, ne **pas** lancer `npm run seed` : `npm run demo` crée lui-même les comptes du scénario (noms de fonction, aucun nom réel), et la base ne contient alors que les données DEMO.
 
 ```powershell
 # 1. Socle démarré (PostgreSQL, MailHog) : vérifier avec l'outil socle_etat, sinon socle_demarrer.
 # 2. Jeu de démonstration + identité de démonstration (depuis D:\DEVAPP\BARREAUPN\server).
 #    TEST_DATABASE_URL est lue dans server\.env ; DATABASE_URL du .env vise la production et ne doit PAS être utilisée.
 cd D:\DEVAPP\BARREAUPN\server
-$env:DATABASE_URL = ((Get-Content .env | Where-Object { $_ -match '^TEST_DATABASE_URL=' }) -replace '^TEST_DATABASE_URL=', '' -replace '"', '')
+$env:DATABASE_URL = ((Get-Content .env | Where-Object { $_ -match '^TEST_DATABASE_URL=' }) -replace '^TEST_DATABASE_URL=', '' -replace '"', '') -replace '/barreau_pn_test', '/barreau_pn_demo'
+npx prisma migrate deploy                                             # schéma de barreau_pn_demo à jour
 npm run demo -- --identite=demonstration --mots-de-passe-aleatoires   # note les mots de passe affichés (une seule fois)
-# 3. Reconstruire le front et relancer l'instance sur http://localhost:4100
+# 3. Reconstruire le front et relancer l'instance du congrès sur http://localhost:4200
 cd D:\DEVAPP\BARREAUPN
-.\scripts\relancer-test.ps1
+.\scripts\relancer-test.ps1 -Demo
 ```
 
 La ligne `EFFECTIFS` affichée par le script confirme le contenu : 60 avocats courants, 15 stagiaires, 10 cabinets, 4 dossiers disciplinaires (`DEMO-2026-01` à `04`), 1 omission au stade de la transmission, 1 scrutin test, 4 fils de messagerie, 12 timbres internes et 18 externes. Deux exécutions donnent les mêmes effectifs (idempotent). Aucun e-mail réel n'est émis (MailHog du socle uniquement, aucun SMS).
 
-Contrôle d'ouverture (1 minute, avant le public) : `http://localhost:4100/api/health` répond 200 ; le bandeau de démonstration et la dénomination « Barreau de démonstration » sont visibles ; le tableau PDF s'ouvre.
+Contrôle d'ouverture (1 minute, avant le public) : `http://localhost:4200/api/health` répond 200 ; le Tableau ne compte que les avocats DEMO (environ 60 inscrits, aucun « E2E », « TIMBRE Test » ni numéro négatif en tête de /avocats trié par numéro) ; le bandeau de démonstration et la dénomination « Barreau de démonstration » sont visibles ; le tableau PDF s'ouvre.
 
 ## 2. Comptes
 
@@ -81,7 +84,7 @@ Le logiciel **enregistre** les décisions des organes de l'Ordre ; il ne les pro
 
 ## 5. Bascule d'identité et remise à zéro
 
-**Identité de démonstration (par défaut au congrès)**, depuis `D:\DEVAPP\BARREAUPN\server` avec `DATABASE_URL` pointant sur `barreau_pn_test` (voir § 1) :
+**Identité de démonstration (par défaut au congrès)**, depuis `D:\DEVAPP\BARREAUPN\server` avec `DATABASE_URL` pointant sur `barreau_pn_demo` (voir § 1) :
 
 ```powershell
 npm run demo -- --identite=demonstration   # Barreau de démonstration, logo générique, mode démonstration actif, mots de passe aléatoires (affichés une fois)
@@ -99,12 +102,12 @@ Le serveur déjà lancé garde l'identité en cache : relancer `.\scripts\relanc
 
 ```powershell
 # Instantané (après npm run demo, avant la première répétition)
-docker exec creatic-postgres pg_dump -U barreau -Fc barreau_pn_test -f /tmp/demo-congres.dump
-# Remise à zéro (arrêter l'instance 4100 avant, puis relancer .\scripts\relancer-test.ps1)
-docker exec creatic-postgres pg_restore -U barreau -d barreau_pn_test --clean --if-exists /tmp/demo-congres.dump
+docker exec creatic-postgres pg_dump -U barreau -Fc barreau_pn_demo -f /tmp/demo-congres.dump
+# Remise à zéro (arrêter l'instance 4200 avant, puis relancer .\scripts\relancer-test.ps1 -Demo)
+docker exec creatic-postgres pg_restore -U barreau -d barreau_pn_demo --clean --if-exists /tmp/demo-congres.dump
 ```
 
-La restauration remplace le contenu de `barreau_pn_test` : à ne faire que sur cette base, jamais sur `barreau_pn`. Ces commandes sont à répéter une fois avant le congrès (elles n'ont pas été rejouées lors de la rédaction).
+La restauration remplace le contenu de `barreau_pn_demo` : à ne faire que sur cette base, jamais sur `barreau_pn`. Ces commandes sont à répéter une fois avant le congrès (elles n'ont pas été rejouées lors de la rédaction).
 
 ## 6. Texte oral : timbre et vote (prototypes)
 

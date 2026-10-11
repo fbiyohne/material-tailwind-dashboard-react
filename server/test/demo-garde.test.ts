@@ -35,6 +35,14 @@ describe("npm run demo : garde-fou de base (CA15)", () => {
     expect(r.stdout).not.toContain("EFFECTIFS");
   });
 
+  it("accepte la base dédiée au congrès barreau_pn_demo (R1-13, non partagée avec les tests)", () => {
+    // Port 1 injoignable : le garde-fou doit laisser passer, puis la connexion échoue sans rien écrire.
+    const r = lancer("postgresql://barreau:barreau_dev@127.0.0.1:1/barreau_pn_demo?schema=public");
+    expect(r.stderr).not.toContain("est refusée");
+    expect(r.stdout).not.toContain("EFFECTIFS");
+    expect(r.status).not.toBe(0);
+  });
+
   it("refuse un DATABASE_URL absent ou illisible", () => {
     const r = lancer("pas-une-url");
     expect(r.status).not.toBe(0);
