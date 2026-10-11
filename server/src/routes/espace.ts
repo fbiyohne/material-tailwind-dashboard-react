@@ -752,6 +752,38 @@ espaceRouter.post(
   })
 );
 
+const demandeAttestationSchema = z.object({ type: z.enum(["INSCRIPTION", "NON_REDEVANCE"]), precisions: z.string().trim().max(1000).optional() });
+
+/** POST /espace/attestations/demandes — l'avocat demande une attestation : fil avec l'administration, qui la délivre en pièce jointe. */
+espaceRouter.post(
+  "/attestations/demandes",
+  asyncH(async (req: AuthRequest, res) => {
+    const { type, precisions } = demandeAttestationSchema.parse(req.body);
+    const moi = monMembreId(req);
+    const membre = await prisma.membre.findUnique({ where: { id: moi }, select: { statut: true } });
+    if (!membre) throw new HttpError(404, "Fiche introuvable");
+    if ((STATUTS_SORTIS as readonly string[]).includes(membre.statut)) throw new HttpError(409, "Attestation impossible : membre radié, décédé ou sorti du tableau");
+    const libelle = type === "INSCRIPTION" ? "d'inscription" : "de non-redevance";
+    const sujet = `Demande d'attestation ${libelle}`;
+    const corps = precisions ? `Je sollicite une attestation ${libelle}. ${precisions}` : `Je sollicite une attestation ${libelle}.`;
+    const auteurNom = await monNom(req);
+    const conv = await envoyerMessage(corps, undefined, (data) =>
+      prisma.conversation.create({
+        data: {
+          sujet, avecAdministration: true, attestationType: type,
+          participants: { create: [{ membreId: moi }] },
+          messages: { create: { ...data, auteurMembreId: moi, auteurNom, estAdministration: false } },
+        },
+        include: { messages: { select: { id: true } } },
+      })
+    );
+    res.locals.auditDetail = `message #${conv.messages[0]?.id}`;
+    notifierAdministration(sujet, auteurNom, corps);
+    realtimeAdministration({ type: "messagerie", conversationId: conv.id });
+    res.status(201).json({ id: conv.id });
+  })
+);
+
 const repondreSchema = z.object({ corps: z.string().trim().min(1).max(5000), piece: pieceSchema });
 
 /** POST /espace/messagerie/:id — répond dans un fil dont l'avocat est participant. */
