@@ -365,3 +365,6 @@ export const listerEvenements = (membreId) => api(`/membres/${membreId}/evenemen
 export const enregistrerEvenement = (membreId, body) => api(`/membres/${membreId}/evenements`, { method: "POST", body });
 // « Contacter » : l'administration ouvre un fil de messagerie vers l'avocat.
 export const contacterMembre = (body) => api("/messagerie", { method: "POST", body });
+
+// Test de connexion d un canal (smtp, sms, mtn, airtel, agregateur) : simulation, aucun envoi reel.
+export const testerCanal = (canal) => api(`/parametres/tester/${canal}`, { method: "POST" });
