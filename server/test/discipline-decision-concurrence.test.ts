@@ -53,3 +53,39 @@ describe("R1-6 — décision disciplinaire atomique", () => {
     expect((await decider(id, { sanctionCode: "AVERTISSEMENT" })).status).toBe(200);
   });
 });
+
+/**
+ * R2-9 (revue) — le dossier est réaffecté à un autre avocat entre la lecture de la route et
+ * l'écriture de la décision : la réservation est conditionnée au membreId lu, donc 409 et rien
+ * n'est écrit (ni décision, ni événement, ni changement de statut sur l'un ou l'autre avocat).
+ */
+describe("R2-9 — dossier réaffecté pendant l'enregistrement de la décision", () => {
+  it("réaffectation concurrente : 409, ancien et nouvel avocat intacts, dossier libre", async () => {
+    const { membreId: ancien, id } = await preparer("Ancien");
+    const { membreId: nouveau } = await preparer("Nouveau");
+    let reponse!: Promise<request.Response>;
+    await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "DossierDisciplinaire" WHERE id = ${id} FOR UPDATE`;
+      reponse = decider(id, { sanctionCode: "INTERDICTION_TEMPORAIRE", dureeMois: 3 }).then((x) => x);
+      for (let i = 0; i < 100; i++) {
+        const [{ n }] = await tx.$queryRaw<{ n: number }[]>`SELECT count(*)::int AS n FROM pg_stat_activity WHERE pg_backend_pid() = ANY(pg_blocking_pids(pid))`;
+        if (n > 0) break;
+        await new Promise((r) => setTimeout(r, 50));
+        if (i === 99) throw new Error("la requête n'a pas atteint le verrou du dossier");
+      }
+      await tx.dossierDisciplinaire.update({ where: { id }, data: { membreId: nouveau } });
+    }, { timeout: 15000 });
+    const r = await reponse;
+    expect(r.status, JSON.stringify(r.body)).toBe(409);
+    const d = await prisma.dossierDisciplinaire.findUniqueOrThrow({ where: { id } });
+    expect(d.membreId).toBe(nouveau);
+    expect(d.sanctionCode).toBeNull();
+    for (const m of [ancien, nouveau]) {
+      expect((await prisma.membre.findUniqueOrThrow({ where: { id: m } })).statut).toBe("INSCRIT");
+      expect(await prisma.evenementSituation.count({ where: { membreId: m, dossierId: id } })).toBe(0);
+    }
+    // Le dossier reste disponible pour le nouvel avocat.
+    expect((await decider(id, { sanctionCode: "AVERTISSEMENT" })).status).toBe(200);
+    expect(await prisma.evenementSituation.count({ where: { membreId: nouveau, dossierId: id } })).toBe(1);
+  });
+});

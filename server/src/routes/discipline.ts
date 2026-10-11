@@ -210,9 +210,11 @@ disciplineRouter.post(
     // Atomicité et concurrence : le dossier est réservé (sanctionCode encore nul) et mis à
     // jour dans la transaction de l'effet. Une soumission concurrente attend le verrou de
     // ligne, ne trouve plus de dossier libre (409) et n'écrit rien ; un effet refusé annule tout.
+    // R2-9 : la réservation exige aussi le membreId lu ; un dossier réaffecté entre-temps donne 409
+    // avant toute écriture sur la situation de l'avocat (changerSituation appelle ce callback en premier).
     const ecrireDossier = async (tx: Prisma.TransactionClient) => {
       const r = await tx.dossierDisciplinaire.updateMany({
-        where: { id: d.id, sanctionCode: null },
+        where: { id: d.id, sanctionCode: null, membreId: d.membreId },
         data: {
           sanctionCode: s.code, sanctionDureeMois: data.dureeMois ?? null, sursis: data.sursis,
           sanctionDebut: ferme ? dateDecision : null, sanctionFin: ferme ? ajouterMois(dateDecision, data.dureeMois!) : null,
@@ -220,7 +222,7 @@ disciplineRouter.post(
           dateNotification: date(data.dateNotification), sanction: libelle, decision: data.decision ?? d.decision, statut: "DECISION",
         },
       });
-      if (r.count === 0) throw new HttpError(409, "Une décision est déjà enregistrée sur ce dossier.");
+      if (r.count === 0) throw new HttpError(409, "Une décision est déjà enregistrée sur ce dossier, ou il a été rattaché à un autre avocat : rechargez le dossier.");
     };
     // Statut lu avant la décision, revérifié sous verrou par changerSituation (R1-11) : une radiation ou
     // un décès concurrent donne 409 au lieu d'être écrasé ; une interdiction ferme ne lève jamais une radiation.
