@@ -36,21 +36,25 @@ const QUALITE_LABEL = { AVOCAT: "Avocats", STAGIAIRE: "Stagiaires", HONORAIRE: "
 const STATUT_LABEL = { INSCRIT: "Inscrits", SUSPENDU: "Suspendus", OMIS: "Omis", RADIE: "Radiés", HONORAIRE: "Honoraires", STAGIAIRE: "Stagiaires", DECEDE: "Décédés" };
 
 /** Barre de proportion (identité visuelle du Barreau : piste grise, remplissage accentué). */
-function Barre({ label, valeur, max, accent = "navy" }) {
+function Barre({ label, valeur, max, accent = "navy", large = false }) {
   const largeur = max > 0 ? Math.round((valeur / max) * 100) : 0;
+  // Mobile : libellé entier sur sa ligne, valeur à droite, barre dessous ;
+  // dès 640 px : libellé | barre | valeur sur une seule ligne (colonne de
+  // libellé élargie dans une carte pleine largeur, ex. noms de cabinets).
+  const colonnes = large ? "sm:grid-cols-[18rem_minmax(0,1fr)_2.5rem]" : "sm:grid-cols-[11rem_minmax(0,1fr)_2.5rem]";
   return (
-    <div className="flex items-center gap-3 text-sm">
-      <span className="w-28 shrink-0 truncate text-gris sm:w-44" title={label}>{label}</span>
-      <span className="h-2 flex-1 overflow-hidden rounded bg-grisM">
+    <div className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 text-sm ${colonnes}`}>
+      <span className="text-gris sm:truncate" title={label}>{label}</span>
+      <span className="text-right font-mono text-navy sm:order-last">{valeur}</span>
+      <span className="col-span-2 h-2 overflow-hidden rounded bg-grisM sm:col-span-1">
         <span className="block h-full rounded transition-all duration-500" style={{ width: `${largeur}%`, backgroundColor: `var(--bpn-${accent})` }} />
       </span>
-      <span className="w-10 shrink-0 text-right font-mono text-navy">{valeur}</span>
     </div>
   );
 }
 
 /** Carte de synthèse démographique (composition du Barreau) — visible par tous les rôles. */
-function CarteRepartition({ titre, sousTitre, lignes }) {
+function CarteRepartition({ titre, sousTitre, lignes, large = false }) {
   const max = Math.max(1, ...lignes.map((l) => l.valeur));
   return (
     <div className="bpn-card">
@@ -60,7 +64,7 @@ function CarteRepartition({ titre, sousTitre, lignes }) {
       </div>
       <div className="space-y-2.5 p-4">
         {lignes.length === 0 ? <p className="text-center text-sm text-gris">—</p> : lignes.map((l) => (
-          <Barre key={l.label} label={l.label} valeur={l.valeur} max={max} accent={l.accent} />
+          <Barre key={l.label} label={l.label} valeur={l.valeur} max={max} accent={l.accent} large={large} />
         ))}
       </div>
     </div>
@@ -222,7 +226,7 @@ export function Dashboard() {
           <CarteRepartition titre="Inscriptions par décennie" sousTitre="ancienneté au serment" lignes={parDecennie} />
           {topCabinets.length > 0 && (
             <div className="md:col-span-2">
-              <CarteRepartition titre="Principaux cabinets" sousTitre="par effectif · personnes morales" lignes={topCabinets} />
+              <CarteRepartition titre="Principaux cabinets" sousTitre="par effectif · personnes morales" lignes={topCabinets} large />
             </div>
           )}
         </div>
@@ -267,8 +271,8 @@ export function Dashboard() {
               {journal.map((j, i) => (
                 <li key={j.id ?? `${j.action}-${i}`} className="px-4 py-3">
                   <div className="text-sm text-encre">{j.action}{j.cible ? ` ${j.cible}` : ""}</div>
-                  <div className="mt-0.5 flex items-center gap-2 text-xs text-gris">
-                    <span className="whitespace-nowrap font-mono">{formatQuand(j.quand)}</span><span>·</span><span>{j.acteur}</span>
+                  <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-gris">
+                    <span className="whitespace-nowrap font-mono">{formatQuand(j.quand)}</span><span aria-hidden="true">·</span><span>{j.acteur}</span>
                   </div>
                 </li>
               ))}

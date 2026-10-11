@@ -1,26 +1,12 @@
 {
-  "dashboard-1280": {
-    "sw": 1280,
-    "iw": 1280
-  },
-  "dashboard-360": {
-    "sw": 360,
-    "iw": 360
-  },
-  "corps-electoral-1280": {
-    "sw": 1280,
-    "iw": 1280
-  },
-  "corps-electoral-exclusions-1280": {
-    "sw": 1280,
-    "iw": 1280
-  },
-  "corps-electoral-360": {
-    "sw": 360,
-    "iw": 360
-  },
-  "corps-electoral-exclusions-360": {
-    "sw": 360,
-    "iw": 360
-  }
+  "outil": "Playwright (MCP), Chromium",
+  "date": "2026-10-11T21:01:30.864Z",
+  "build": "index-fa460ad9.js (vite build du code final, servi par l'instance de test 4100)",
+  "note": "scrollWidth 352 / 1272 : innerWidth inclut la barre de défilement verticale (8 px) ; aucun débordement horizontal. libellesTronques = éléments à info-bulle dont le texte est rogné. lignesOnglets = nombre de rangées de la liste d'onglets.",
+  "dashboard-1280": { "scrollWidth": 1272, "innerWidth": 1280, "sansDebordement": true, "lignesOnglets": null, "libellesTronques": [], "datesJournalSurUneLigne": true },
+  "dashboard-360": { "scrollWidth": 352, "innerWidth": 360, "sansDebordement": true, "lignesOnglets": null, "libellesTronques": [], "datesJournalSurUneLigne": true },
+  "corps-electoral-1280": { "scrollWidth": 1272, "innerWidth": 1280, "sansDebordement": true, "lignesOnglets": 1, "libellesTronques": [], "datesJournalSurUneLigne": true },
+  "corps-electoral-exclusions-1280": { "scrollWidth": 1272, "innerWidth": 1280, "sansDebordement": true, "lignesOnglets": 1, "libellesTronques": [], "datesJournalSurUneLigne": true },
+  "corps-electoral-360": { "scrollWidth": 352, "innerWidth": 360, "sansDebordement": true, "lignesOnglets": 1, "libellesTronques": [], "datesJournalSurUneLigne": true },
+  "corps-electoral-exclusions-360": { "scrollWidth": 352, "innerWidth": 360, "sansDebordement": true, "lignesOnglets": 1, "libellesTronques": [], "datesJournalSurUneLigne": true }
 }

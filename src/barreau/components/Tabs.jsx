@@ -36,11 +36,15 @@ export function Tabs({ tabs, defaultTab, className = "", ariaLabel = "Sections" 
 
   return (
     <div className={className}>
+      {/* Une seule ligne d'onglets : défilement horizontal interne quand la
+          largeur manque (mobile), au lieu d'un retour à la ligne qui casse le
+          liseré. Le filet gris est porté par l'enveloppe pour ne pas être rogné. */}
+      <div className="border-b border-grisM">
       <div
         role="tablist"
         aria-label={ariaLabel}
         onKeyDown={onKeyDown}
-        className="flex flex-wrap gap-1 border-b border-grisM"
+        className="-mb-px flex gap-1 overflow-x-auto [scrollbar-width:none]"
       >
         {tabs.map((t) => {
           const isActive = t.id === courant?.id;
@@ -56,7 +60,7 @@ export function Tabs({ tabs, defaultTab, className = "", ariaLabel = "Sections" 
               aria-controls={`${base}-panel-${t.id}`}
               tabIndex={isActive ? 0 : -1}
               onClick={() => setActive(t.id)}
-              className={`-mb-px flex items-center gap-2 border-b-2 px-3 py-2.5 text-sm sm:px-4 font-medium transition-colors ${
+              className={`flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm sm:px-4 font-medium transition-colors ${
                 isActive
                   ? "border-or text-navy"
                   : "border-transparent text-gris hover:border-grisM hover:text-encre"
@@ -72,6 +76,7 @@ export function Tabs({ tabs, defaultTab, className = "", ariaLabel = "Sections" 
             </button>
           );
         })}
+      </div>
       </div>
 
       {courant && (

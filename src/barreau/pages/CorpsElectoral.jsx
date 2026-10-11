@@ -99,7 +99,8 @@ export function CorpsElectoral() {
         tabs={[
           {
             id: "liste",
-            label: "Liste électorale",
+            // Libellé court sous 640 px : les deux onglets tiennent sur une ligne à 360 px.
+            label: <><span className="sm:hidden">Liste</span><span className="hidden sm:inline">Liste électorale</span></>,
             icon: CheckBadgeIcon,
             badge: electeurs.length || null,
             content: (
