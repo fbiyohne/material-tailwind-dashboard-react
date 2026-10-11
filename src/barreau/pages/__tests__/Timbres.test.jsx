@@ -62,3 +62,31 @@ describe("R2-10 bandeau timbre", () => {
     expect(t).not.toMatch(/scrutin/i);
   });
 });
+
+// R2-10 (reprise QA) — sur les PAGES du timbre, le bandeau porte le texte timbre, jamais la formule du scrutin.
+const texteNote = (n) => n.textContent.replace(/\s+/g, " ").trim();
+describe("R2-10 pages du timbre : bandeau propre au timbre", () => {
+  it("Timbres (back-office)", async () => {
+    render(enveloppe(<Timbres />));
+    const t = texteNote(await screen.findByRole("note", BANDEAU));
+    expect(t).toBe(TEXTE_EXPERIMENTAL_TIMBRE);
+    expect(t).not.toMatch(/scrutin/i);
+  });
+
+  it("MesTimbres (espace avocat)", async () => {
+    render(enveloppe(<MesTimbres />));
+    const t = texteNote(await screen.findByRole("note", BANDEAU));
+    expect(t).toBe(TEXTE_EXPERIMENTAL_TIMBRE);
+    expect(t).not.toMatch(/scrutin/i);
+  });
+
+  it("VerificationPublique d'un timbre", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ valide: true, type: "timbre", numero: "45", date: "2026-10-01" }) }));
+    render(<VerificationPublique type="timbre" numero="ABC" />);
+    await screen.findByText("Document authentique");
+    const t = texteNote(screen.getByRole("note", BANDEAU));
+    expect(t).toBe(TEXTE_EXPERIMENTAL_TIMBRE);
+    expect(t).not.toMatch(/scrutin/i);
+    vi.unstubAllGlobals();
+  });
+});

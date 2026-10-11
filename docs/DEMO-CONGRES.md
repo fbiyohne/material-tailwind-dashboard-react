@@ -111,7 +111,7 @@ La restauration ne remplace que le schéma `demo` (option `-n demo` : le schéma
 
 ## 6. Texte oral : timbre et vote (prototypes)
 
-À dire tel quel, en présentant les écrans *Timbres* et *Élections* (bandeau C-11 visible : « Expérimental — non utilisable pour un scrutin officiel ou une émission réelle. Aucun paiement réel n'est effectué. ») :
+À dire tel quel, en présentant les écrans *Timbres* et *Élections* (bandeau C-11 visible, sur *Timbres* : « Expérimental — prototype : aucun timbre n'est émis et aucun paiement réel n'est effectué. » ; sur *Élections* : « Expérimental — non utilisable pour un scrutin officiel ou une émission réelle. Aucun paiement réel n'est effectué. ») :
 
 > « Ces deux modules sont des prototypes présentés à titre expérimental : aucun timbre n'est émis et aucun paiement n'est effectué. Le vote électronique n'est pas prévu par la loi n° 026-92 et ne peut servir à un scrutin officiel sans délibération de l'Ordre. Nous les montrons pour recueillir vos avis, pas pour les proposer en l'état. »
 

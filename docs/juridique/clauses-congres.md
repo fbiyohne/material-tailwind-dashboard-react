@@ -82,9 +82,15 @@ Emplacement : action « Valider le stage » (`StagePanel.jsx`). Champs exigés :
 
 Emplacement : `BandeauExperimental.jsx`, sur tous les écrans du vote électronique et du timbre autonome (CA13). Fondement : loi 026-92, art. 15 et 21 ; Règlement n° 04/18/CEMAC/UMAC/COBAC (encaissement réservé aux prestataires agréés, texte à vérifier).
 
+Écrans du vote électronique (`Elections`, `EspaceScrutins`, constante `TEXTE_EXPERIMENTAL`) :
+
 > Expérimental — non utilisable pour un scrutin officiel ou une émission réelle. Aucun paiement réel n'est effectué.
 
-La première phrase est le texte minimal exigé par CA13 ; la seconde s'ajoute sur les écrans qui touchent un paiement.
+Écrans du timbre autonome (`Timbres`, `MesTimbres`, `VerificationPublique` de type timbre, `variante="timbre"`, constante `TEXTE_EXPERIMENTAL_TIMBRE`, depuis R2-10) :
+
+> Expérimental — prototype : aucun timbre n'est émis et aucun paiement réel n'est effectué.
+
+La formule « non utilisable pour un scrutin officiel… » est réservée au vote : sur un écran de timbre, la mention du scrutin était incohérente (retour QA R2-10). Le texte du timbre reprend la clause orale « TIMBRE ET VOTE » (aucun timbre émis, aucun paiement réel). Ce partage du texte C-11 en deux variantes est à faire approuver par le juriste-conseil.
 
 ### C-12 — Page publique de vérification d'un timbre
 

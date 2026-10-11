@@ -1,10 +1,10 @@
 import { BeakerIcon } from "@heroicons/react/24/outline";
 
-/** Texte exact imposé par l'avis juridique (écrans du vote et du timbre autonome). */
+/** Texte exact imposé par l'avis juridique C-11 pour le vote électronique (variante par défaut). */
 export const TEXTE_EXPERIMENTAL =
   "Expérimental — non utilisable pour un scrutin officiel ou une émission réelle. Aucun paiement réel n'est effectué.";
 
-/** Texte propre au timbre autonome (C-11/C-12) : ne reprend pas la formule du vote. */
+/** Texte C-11 propre au timbre autonome (variante="timbre") : ne reprend pas la formule du scrutin. */
 export const TEXTE_EXPERIMENTAL_TIMBRE =
   "Expérimental — prototype : aucun timbre n'est émis et aucun paiement réel n'est effectué.";
 
@@ -14,7 +14,9 @@ export const TEXTE_EXPERIMENTAL_TIMBRE =
  * doit rester visible pendant toute la démonstration.
  */
 export function BandeauExperimental({ variante }) {
-  const timbre = variante === "timbre";
+  // Source unique : le texte affiché est la constante exportée, « Expérimental » mis en gras.
+  const texte = variante === "timbre" ? TEXTE_EXPERIMENTAL_TIMBRE : TEXTE_EXPERIMENTAL;
+  const tete = "Expérimental";
   return (
     <div
       role="note"
@@ -23,10 +25,8 @@ export function BandeauExperimental({ variante }) {
     >
       <BeakerIcon className="mt-0.5 h-5 w-5 shrink-0 text-or-fonce" aria-hidden="true" />
       <p>
-        <strong className="font-semibold text-or-fonce">Expérimental</strong>{" "}
-        {timbre
-          ? "— prototype : aucun timbre n'est émis et aucun paiement réel n'est effectué."
-          : "— non utilisable pour un scrutin officiel ou une émission réelle. Aucun paiement réel n'est effectué."}
+        <strong className="font-semibold text-or-fonce">{tete}</strong>
+        {texte.slice(tete.length)}
       </p>
     </div>
   );
