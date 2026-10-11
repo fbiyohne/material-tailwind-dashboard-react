@@ -144,4 +144,33 @@ describe("R2-2 — réinscription et reprise rétablissent la situation d'avant 
     expect(r.status, JSON.stringify(r.body)).toBe(201);
     expect(r.body.evenement).toMatchObject({ statutAvant: "OMIS", statutApres: "HONORAIRE" });
   });
+  /**
+   * Multi-cycles avec antidatage : l'événement d'entrée est choisi dans l'ordre d'insertion
+   * (transitions sérialisées sous verrou), pas par dateEffet saisie librement. Une seconde
+   * omission antidatée avant la première ne doit pas faire rétablir l'INSCRIT du premier cycle.
+   */
+  async function cycleAntidate(id: number) {
+    expect((await evt(bat, id, { type: "OMISSION", cause: "35-2", dateEffet: "2026-06-01", reference: "CNO-R22-M1" })).status).toBe(201);
+    expect((await evt(bat, id, { type: "REINSCRIPTION", dateEffet: "2026-07-01", reference: "CNO-R22-M2" })).status).toBe(201);
+    await interdire(id); // 2026-09-01, 12 mois
+    const o = await evt(bat, id, { type: "OMISSION", cause: "35-2", dateEffet: "2026-05-01", reference: "CNO-R22-M3" });
+    expect(o.status, JSON.stringify(o.body)).toBe(201);
+    expect(o.body.evenement).toMatchObject({ statutAvant: "SUSPENDU", statutApres: "OMIS" });
+    const r = await reinscrire(id);
+    expect(r.status, JSON.stringify(r.body)).toBe(201);
+    expect(r.body.evenement).toMatchObject({ statutAvant: "OMIS", statutApres: "SUSPENDU" });
+    expect(await statut(id)).toBe("SUSPENDU");
+    expect((await evt(sg, id, { type: "REPRISE", reference: "Fin" })).status).toBe(409);
+    expect(await statut(id)).toBe("SUSPENDU");
+  }
+
+  it("avocat : omission/réinscription, puis interdiction ferme, puis omission antidatée et réinscription : SUSPENDU, reprise 409", async () => {
+    await cycleAntidate(await creer("avocat-multicycle", { qualite: "AVOCAT", statut: "INSCRIT" }));
+  });
+
+  it("stagiaire : même enchaînement multi-cycles antidaté : SUSPENDU, reprise 409, jamais INSCRIT au tableau", async () => {
+    const id = await creer("stagiaire-multicycle", { qualite: "STAGIAIRE", statut: "STAGIAIRE" });
+    await cycleAntidate(id);
+    expect(await auTableau(id)).not.toBe("STAGIAIRE/INSCRIT");
+  });
 });

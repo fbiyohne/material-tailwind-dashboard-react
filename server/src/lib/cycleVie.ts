@@ -83,7 +83,7 @@ const STATUTS_RETABLISSABLES: StatutMembre[] = ["INSCRIT", "STAGIAIRE", "HONORAI
 
 /**
  * Statut rétabli à la fin d'une omission ou d'une suspension (R2-2) : statutAvant de
- * l'événement qui a fait entrer le membre dans son statut actuel (les événements sans
+ * dernier événement inséré qui a fait entrer le membre dans son statut actuel (les événements sans
  * changement de statut sont ignorés) ; à défaut (fiche sans historique), repli sur la qualité.
  * Priorités : un membre omis alors qu'il était SUSPENDU redevient SUSPENDU (stagiaire compris),
  * l'interdiction ne se lève que par une REPRISE, gardée tant qu'elle court ; sinon un stagiaire
@@ -92,7 +92,9 @@ const STATUTS_RETABLISSABLES: StatutMembre[] = ["INSCRIT", "STAGIAIRE", "HONORAI
 async function statutRetabli(tx: Prisma.TransactionClient, membre: { id: number; statut: StatutMembre; qualite: string }): Promise<StatutMembre> {
   const entree = await tx.evenementSituation.findFirst({
     where: { membreId: membre.id, statutApres: membre.statut, statutAvant: { in: STATUTS_RETABLISSABLES.filter((s) => s !== membre.statut) } },
-    orderBy: [{ dateEffet: "desc" }, { id: "desc" }],
+    // Ordre d'insertion = vraie chronologie (transitions sérialisées sous verrou FOR UPDATE) ;
+    // dateEffet est saisie et peut être antidatée, elle ne désigne pas la dernière entrée.
+    orderBy: { id: "desc" },
     select: { statutAvant: true },
   });
   if (entree?.statutAvant === "SUSPENDU") return "SUSPENDU";
