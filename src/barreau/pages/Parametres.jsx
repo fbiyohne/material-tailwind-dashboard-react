@@ -15,9 +15,11 @@ import {
   ExclamationTriangleIcon,
   TrashIcon,
   ScaleIcon,
+  Squares2X2Icon,
 } from "@heroicons/react/24/outline";
 import { Badge, Notice, useToast, PageHeader, FormField, Tabs, DataTable, Modal, Sceau, MatriceAcces } from "../components";
 import ReglesJuridiques from "../components/ReglesJuridiques";
+import ParametresModules from "../components/ParametresModules";
 import { useAuth } from "../auth/AuthContext";
 import { formatFCFA, formatDateTime } from "../utils/format";
 import { appliquerConfig } from "../data/config";
@@ -499,6 +501,7 @@ export function Parametres() {
           { id: "regles", label: "Règles juridiques (provisoires)", icon: ScaleIcon, content: panneauRegles },
           { id: "roles", label: "Rôles & sécurité", icon: ShieldCheckIcon, content: panneauRoles },
           { id: "notifications", label: "Notifications", icon: BellIcon, badge: notif?.journal?.length || null, content: panneauNotifications },
+          { id: "modules", label: "Modules", icon: Squares2X2Icon, content: <ParametresModules /> },
         ]}
       />
 

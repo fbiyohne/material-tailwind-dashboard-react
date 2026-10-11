@@ -1,0 +1,32 @@
+{
+  "360": {
+    "scrollWidth": 360,
+    "innerWidth": 360,
+    "clientWidth": 360,
+    "lignesMinHauteur": 44,
+    "interrupteurs": 25,
+    "desactives": [
+      "Afficher Tableau de bord dans le menu",
+      "Afficher Tableau de l'Ordre dans le menu",
+      "Afficher Discipline dans le menu",
+      "Afficher Paramètres dans le menu",
+      "Afficher Journal d'audit dans le menu"
+    ],
+    "ongletsRangees": 1
+  },
+  "1280": {
+    "scrollWidth": 1280,
+    "innerWidth": 1280,
+    "clientWidth": 1280,
+    "lignesMinHauteur": 44,
+    "interrupteurs": 25,
+    "desactives": [
+      "Afficher Tableau de bord dans le menu",
+      "Afficher Tableau de l'Ordre dans le menu",
+      "Afficher Discipline dans le menu",
+      "Afficher Paramètres dans le menu",
+      "Afficher Journal d'audit dans le menu"
+    ],
+    "ongletsRangees": 1
+  }
+}

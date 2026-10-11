@@ -48,21 +48,24 @@ export function ParametresModules() {
                 const visible = fige || !masques.has(item.path);
                 const Icon = item.icon;
                 return (
-                  <li key={item.path} className="flex items-center gap-3 px-3 py-2.5">
-                    <Icon className="h-[18px] w-[18px] shrink-0 text-gris" aria-hidden="true" />
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm text-encre">{item.name}</div>
-                      {fige && <div className="text-xs text-gris">non désactivable : obligation de traçabilité</div>}
-                    </div>
-                    <input
-                      type="checkbox"
-                      role="switch"
-                      className="h-4 w-4 shrink-0 accent-navy disabled:opacity-50"
-                      aria-label={`Afficher ${item.name} dans le menu`}
-                      checked={visible}
-                      disabled={fige}
-                      onChange={() => basculer(item.path)}
-                    />
+                  <li key={item.path}>
+                    {/* Toute la ligne est cliquable : cible tactile >= 44 px. */}
+                    <label className={`flex min-h-[44px] items-center gap-3 px-3 py-2.5 ${fige ? "cursor-not-allowed" : "cursor-pointer hover:bg-grisL/40"}`}>
+                      <Icon className="h-[18px] w-[18px] shrink-0 text-gris" aria-hidden="true" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm text-encre">{item.name}</span>
+                        {fige && <span className="block text-xs text-gris">non désactivable : obligation de traçabilité</span>}
+                      </span>
+                      <input
+                        type="checkbox"
+                        role="switch"
+                        className="h-4 w-4 shrink-0 accent-navy disabled:opacity-50"
+                        aria-label={`Afficher ${item.name} dans le menu`}
+                        checked={visible}
+                        disabled={fige}
+                        onChange={() => basculer(item.path)}
+                      />
+                    </label>
                   </li>
                 );
               })}

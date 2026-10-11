@@ -127,5 +127,9 @@ Corrections appliquées pendant l'audit :
 
 Écarts connus : pas de mode sombre (absent du projet entier, hors périmètre « pas de refonte globale ») ; l'infobulle `title` n'apparaît qu'au survol (l'information reste écrite dans le libellé et lue par les lecteurs d'écran via `decrire` / le texte masqué) ; police DM Sans reprise du projet sans nouvel embarquement.
 
+## Paramètres → Modules (T16, M-20261011)
+
+`components/ParametresModules.jsx`, monté dans l'onglet « Modules » de `pages/Parametres.jsx`. Un interrupteur par entrée de `routes.jsx` ; toute la ligne est cliquable (cible de 44 px). L'enregistrement écrit `parametres.modules.masques` (chemins de route) puis `appliquerConfig`, et `layout/Sidebar.jsx` retire ces chemins du menu. `/`, `/parametres`, `/journal-audit`, `/tableau` et `/discipline` (`MODULES_OBLIGATOIRES`, `data/config.js`) restent toujours affichés : « non désactivable : obligation de traçabilité ». Masquage d'affichage seulement : les droits restent régis par la matrice RBAC. Captures et mesures : `docs/captures/m20261011/parametres-modules/`.
+
 ## Tests
 `npm test` à la racine (vitest) : sérialisation CSV/TXT (`utils/__tests__/exportCsv.test.js`), `normaliserMembre` et `StatutBadge` (`api/__tests__/resources.test.jsx`), modales et fiche avocat (`components/__tests__`, `pages/__tests__`).
