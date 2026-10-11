@@ -54,7 +54,12 @@ export const PARAMETRES_DEFAUT = {
   // Surcharges de libellés d'affichage des statuts (la logique/les clés enum ne
   // changent pas — on ne renomme que ce qui s'affiche). Vide = libellé par défaut.
   libellesStatuts: { membre: {}, cotisation: {}, dossier: {}, publication: {} },
+  // Modules masqués du menu (affichage seulement : les droits restent ceux de la matrice RBAC).
+  modules: { masques: [] },
 };
+
+/** Modules jamais masquables : accès aux réglages et obligations de traçabilité / tenue du tableau. */
+export const MODULES_OBLIGATOIRES = ["/", "/parametres", "/journal-audit", "/tableau", "/discipline"];
 
 const clone = (o) => JSON.parse(JSON.stringify(o));
 
@@ -81,6 +86,7 @@ export function appliquerConfig(patch) {
   if (patch.paiement) config.paiement = { ...config.paiement, ...patch.paiement };
   if (patch.stage) config.stage = { ...config.stage, ...patch.stage };
   if (patch.conseil) config.conseil = { ...config.conseil, ...patch.conseil };
+  if (patch.modules) config.modules = { masques: Array.isArray(patch.modules.masques) ? patch.modules.masques : [] };
   if (patch.libellesStatuts) {
     const l = config.libellesStatuts;
     for (const dom of Object.keys(patch.libellesStatuts)) {
@@ -125,3 +131,7 @@ export const fonctionsConseil = () => config.conseil?.fonctions ?? PARAMETRES_DE
 /** Libellé d'un statut, surchargé en Paramètres ou repli sur le défaut fourni. */
 export const libelleStatut = (domaine, cle, defaut) =>
   config.libellesStatuts?.[domaine]?.[cle] || defaut;
+
+/** Un module est masqué du menu s'il figure dans les paramètres et n'est pas obligatoire. */
+export const moduleMasque = (chemin) =>
+  !MODULES_OBLIGATOIRES.includes(chemin) && (config.modules?.masques ?? []).includes(chemin);

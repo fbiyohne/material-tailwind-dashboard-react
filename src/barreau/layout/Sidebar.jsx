@@ -4,7 +4,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import { XMarkIcon, ArrowRightOnRectangleIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import { sectionsPourUser } from "../routes";
 import { Sceau } from "../components";
-import { identite } from "../data/config";
+import { identite, moduleMasque, onConfigChange } from "../data/config";
 import { useAuth } from "../auth/AuthContext";
 import { getCotisations, listerDossiers, getMessagerieNonLus, listerToutesPieces } from "../api/resources";
 import { onRealtime } from "../api/realtime";
@@ -31,7 +31,12 @@ const ROLE_LABEL = {
 export function Sidebar({ open, onClose }) {
   const { user, logout } = useAuth();
   const location = useLocation();
-  const sections = sectionsPourUser(user); // RBAC : menu filtré par permissions.
+  // Masquage d'affichage (Paramètres → Modules), recalculé à chaque changement de configuration.
+  const [, rafraichir] = useState(0);
+  useEffect(() => onConfigChange(() => rafraichir((n) => n + 1)), []);
+  const sections = sectionsPourUser(user) // RBAC : menu filtré par permissions.
+    .map((s) => ({ ...s, items: s.items.filter((i) => !moduleMasque(i.path)) }))
+    .filter((s) => s.items.length > 0);
 
   // Pastilles de notification calculées sur des données réelles (et non codées
   // en dur) : cotisations impayées de l'exercice courant et dossiers
