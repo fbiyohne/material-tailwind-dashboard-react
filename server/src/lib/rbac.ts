@@ -111,13 +111,14 @@ export async function rafraichirMatrice(): Promise<void> {
  * Clés effectives d'une catégorie (modules ou actions) : lignes en base si le
  * rôle en a dans cette catégorie, sinon les défauts. Le repli est PAR CATÉGORIE :
  * une base qui ne contient que des lignes de modules ne retire aucune action.
- * ponytail: conséquence, un rôle ne peut pas être privé de TOUTES ses actions
- * (aucune ligne = défauts) ; ajouter une ligne sentinelle si ce besoin apparaît.
+ * Exception : la ligne sentinelle SENTINELLE_ACTIONS (posée par PUT /rbac quand
+ * l'ADMIN retire toutes les actions) marque la catégorie comme renseignée et vide.
  */
+export const SENTINELLE_ACTIONS = "actions:aucune";
 function effectives(role: string, catalogue: string[], defauts: Record<string, string[]>): string[] {
   const set = cache[role];
   const enBase = set ? catalogue.filter((c) => set.has(c)) : [];
-  return enBase.length ? enBase : defauts[role] ?? [];
+  return enBase.length || (catalogue === ACTION_CLES && set?.has(SENTINELLE_ACTIONS)) ? enBase : defauts[role] ?? [];
 }
 
 /** Permissions effectives d'un rôle (modules + actions). ADMIN = tout ; le SG a tous les modules et ses actions R-42 fixes. */

@@ -6,7 +6,7 @@ import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole, type AuthRequest } from "../middleware/auth.js";
 import {
   PERMISSIONS, PERMISSION_CLES, ACTIONS, ACTION_CLES, ROLES_MATRICE, ROLES_COMPLET, ROLE_LABELS,
-  permissionsDeRole, rafraichirMatrice,
+  permissionsDeRole, rafraichirMatrice, SENTINELLE_ACTIONS,
 } from "../lib/rbac.js";
 
 /**
@@ -60,7 +60,10 @@ rbacRouter.put(
     }
     await prisma.$transaction([
       prisma.rolePermission.deleteMany({ where: { role: role as Role } }),
-      prisma.rolePermission.createMany({ data: cles.map((permission) => ({ role: role as Role, permission })) }),
+      prisma.rolePermission.createMany({
+        // Aucune action cochée : ligne sentinelle, sinon le repli par catégorie rendrait les défauts.
+        data: (cles.some((p) => ACTION_CLES.includes(p)) ? cles : [...cles, SENTINELLE_ACTIONS]).map((permission) => ({ role: role as Role, permission })),
+      }),
     ]);
     await rafraichirMatrice();
     res.json({ ok: true, role, permissions: cles });

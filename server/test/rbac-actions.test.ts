@@ -63,13 +63,25 @@ describe("RBAC — actions (T3, R-42)", () => {
     expect(g.body.matrice.BATONNIER).toContain("membres");
   });
 
-  it("repli par catégorie : après un PUT /rbac sur les seules clés de modules, le bâtonnier conserve discipline_decider", async () => {
+  it("R2-4 : PUT /rbac par l'ADMIN avec les seuls modules retire TOUTES les actions du bâtonnier (pas de repli silencieux)", async () => {
     const put = await request(app).put("/api/rbac").set(...bearer(admin)).send({ role: "BATONNIER", permissions: MODULES_BATONNIER });
     expect(put.status).toBe(200);
-    expect((await request(mini).get("/decider").set(...bearer(bat))).status).toBe(200);
+    expect(aLaPermission("BATONNIER", "discipline_decider")).toBe(false);
+    expect((await request(mini).get("/decider").set(...bearer(bat))).status).toBe(403);
+    const g = await request(app).get("/api/rbac").set(...bearer(admin));
+    expect(g.body.matrice.BATONNIER).not.toContain("discipline_decider");
+    expect(g.body.matrice.BATONNIER).not.toContain("actions:aucune");
     const me = await request(app).get("/api/auth/me").set(...bearer(bat));
-    expect(me.body.permissions).toContain("discipline_decider");
+    expect(me.body.permissions).not.toContain("discipline_decider");
     expect(me.body.permissions).toContain("membres");
+    expect((await request(app).put("/api/rbac").set(...bearer(admin)).send({ role: "BATONNIER", permissions: ["actions:aucune"] })).status).toBe(400);
+  });
+
+  it("repli par catégorie : une ancienne base sans aucune ligne d'action garde les défauts", async () => {
+    await prisma.rolePermission.deleteMany({ where: { role: "BATONNIER" } });
+    await prisma.rolePermission.createMany({ data: MODULES_BATONNIER.map((permission) => ({ role: "BATONNIER" as const, permission })) });
+    await rafraichirMatrice();
+    expect(aLaPermission("BATONNIER", "discipline_decider")).toBe(true);
   });
 
   it("PUT /rbac avec une clé d'action honore la liste : retirer discipline_decider donne 403 au bâtonnier, puis restauration", async () => {
