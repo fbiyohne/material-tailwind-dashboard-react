@@ -208,19 +208,19 @@ export function Quitus() {
           <div className="mb-4 text-xs uppercase tracking-[0.2em] text-white/40">Générer un quitus</div>
           <div className="space-y-3.5">
             <label className="block">
-              <span className="mb-1 block text-xs uppercase tracking-wide text-white/55">Exercice</span>
+              <span className="mb-1 block text-xs uppercase tracking-wide text-white/70">Exercice</span>
               <select value={exercice} onChange={(e) => { setExercice(Number(e.target.value)); setMembreId(null); setSucces(null); }} className="bpn-input-dark">
                 {EXERCICES.map((a) => <option key={a} value={a}>{a}</option>)}
               </select>
             </label>
             <label className="block">
-              <span className="mb-1 block text-xs uppercase tracking-wide text-white/55">Avocat bénéficiaire</span>
+              <span className="mb-1 block text-xs uppercase tracking-wide text-white/70">Avocat bénéficiaire</span>
               <select value={membreActif?.id ?? ""} onChange={(e) => setMembreId(Number(e.target.value))} disabled={eligiblesRestants.length === 0} className="bpn-input-dark disabled:opacity-50">
                 {eligiblesRestants.length === 0 ? <option>Aucun avocat à certifier</option> : eligiblesRestants.map((m) => <option key={m.id} value={m.id}>{m.num}. Me {m.nom} — à jour ✓</option>)}
               </select>
             </label>
             <label className="block">
-              <span className="mb-1 block text-xs uppercase tracking-wide text-white/55">N° automatique</span>
+              <span className="mb-1 block text-xs uppercase tracking-wide text-white/70">N° automatique</span>
               <input value={numero} readOnly className="bpn-input-dark opacity-70" />
             </label>
             {peutGenerer && (

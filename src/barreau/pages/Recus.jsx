@@ -27,7 +27,7 @@ const aujourdhui = () => new Date().toISOString().slice(0, 10);
 function Champ({ label, children }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-xs uppercase tracking-wide text-white/55">{label}</span>
+      <span className="mb-1 block text-xs uppercase tracking-wide text-white/70">{label}</span>
       {children}
     </label>
   );
