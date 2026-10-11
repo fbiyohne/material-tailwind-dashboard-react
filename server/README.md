@@ -390,6 +390,23 @@ Une purge de conservation légitime se fait par un DBA, explicitement :
 Test : `test/migrations.test.ts` (rejeu double des deux SQL sur `barreau_pn_test`,
 absence de dérive schéma/base, immuabilité du journal).
 
+## Jeu de démonstration du congrès (`npm run demo`, T25, CA15)
+
+Données **entièrement fictives** (mention C-13), réinstallables par une seule commande sur `barreau_pn_test`.
+
+```bash
+npm run demo                                  # installe ou complète les données
+npm run demo -- --identite=demonstration      # + identité « Barreau de démonstration » (logo générique, mention C-13)
+npm run demo -- --identite=pointe-noire       # retour à l'identité de base (supprime la section identite des Paramètres)
+```
+
+- **Garde-fou** : le script refuse, avec un code non nul et avant toute connexion, toute base dont le nom n'est pas exactement `barreau_pn_test` (donc `barreau_pn`, `barreau_pn_test_ci` et toute autre). `npm run demo` ajoute `--base-test`, qui vise `TEST_DATABASE_URL` : le `DATABASE_URL` du `.env` est celui de la production. Test : `test/demo-garde.test.ts`.
+- **Idempotent** : upsert sur clés naturelles (num 800001 à 800200, numInscription `DEMO-…`, dossiers `DEMO-2026-NN`, sujets `[DEMO] …`, références `DEMO-…`). Deux exécutions donnent les mêmes effectifs (ligne `EFFECTIFS` affichée en fin de script). Les autres membres ne sont jamais lus ni modifiés ; un membre déjà créé n'est pas réécrit.
+- **Contenu** : 60 avocats courants, 4 avocats suivis en discipline et 1 en omission (soit 64 inscrits, 1 radié), 15 stagiaires, 1 honoraire, 10 cabinets ; cotisations de l'exercice courant à jour, partielles et en retard, encaissées par `encaisser()` (reçus et archives cohérents, aucun e-mail envoyé) ; 4 dossiers `DEMO-2026-01` à `04` (classement, avertissement, interdiction temporaire de 6 mois avec sursis, radiation enregistrée) ; 1 omission au stade de la transmission (rappel, mise en demeure, transmission horodatés, exercice précédent) ; scrutin test « conseil du barreau » (dateScrutin 12/12/2026, 3 candidats) ; 4 fils de messagerie dont une demande d'attestation en attente ; 12 timbres internes et 18 timbres externes (import MTN) ; compte de l'espace avocat `avocat.demo@demo.invalid` (mot de passe `barreau`, base de test seulement).
+- **Fictif** : noms assemblés par syllabes, e-mails `@demo.invalid`, téléphones `+242 00 000 …`. Aucun casier judiciaire ni pièce téléversé.
+- **Identité** : `--identite=demonstration` pose la dénomination, la ville, les signataires et le logo `assets/demo/logo-demonstration.png` (remplaçable) dans les Paramètres et active `modeDemonstration`. **Brazzaville n'est pas activable** (identité refusée) : aucun nom ni logo d'un barreau réel sans son accord écrit (PO-22). Un serveur déjà démarré garde l'identité en cache : le redémarrer ou enregistrer les Paramètres.
+- **Suite de tests** : lancer `npm run demo -- --identite=pointe-noire` avant `npm test` (certains tests de PDF attendent l'identité de base). Les données `DEMO` restent en base et ne gênent pas la suite.
+
 ## Sécurité & production
 - **Auth** : access token (15 min) + refresh token (7 j, rotation), `/auth/refresh`, `/auth/logout`
 - **Rate-limit** sur `/auth/login` + limiteur global par IP (600 requêtes / 15 min sans jeton ou avec jeton invalide ; 3000 avec un JWT valide, vérifié par signature ; `/health`, `/notifications` et `/mes-notifications` exclus ; mesuré : environ 13 appels `/api` par page en rechargement complet, soit plus de 200 pages / 15 min) ; 429 = `{ erreur, retryAfter }` + en-tête `Retry-After`, le client ne déconnecte que sur 401 ; en-têtes **helmet**
