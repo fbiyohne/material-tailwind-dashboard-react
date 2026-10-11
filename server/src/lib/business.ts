@@ -1,4 +1,4 @@
-import type { Qualite, TypeScrutin } from "@prisma/client";
+import type { Prisma, Qualite, TypeScrutin } from "@prisma/client";
 import type { Regles } from "./regles.js";
 import { prisma } from "../prisma.js";
 
@@ -149,9 +149,9 @@ export async function prochainNumInscription(): Promise<{ num: number; numInscri
  * concurrence (pas de doublon) et monotone (pas de réutilisation d'un numéro après
  * suppression d'archive), contrairement à l'ancien `count+1`.
  */
-export async function prochainNumeroAttestation(): Promise<string> {
+export async function prochainNumeroAttestation(client: Prisma.TransactionClient = prisma): Promise<string> {
   const annee = new Date().getFullYear();
-  const compteur = await prisma.compteur.upsert({
+  const compteur = await client.compteur.upsert({
     where: { cle: `ATT-${annee}` },
     create: { cle: `ATT-${annee}`, valeur: 1 },
     update: { valeur: { increment: 1 } },
@@ -244,13 +244,13 @@ export function motifIneligibilite(
   return ok ? null : `ancienneté insuffisante : ${cond.stricte ? "plus de" : "au moins"} ${cond.ancienneteMinAns} ans d'inscription au tableau requis à la date du scrutin`;
 }
 
-/** Archive automatiquement un document (BR-05 / RG-14). */
+/** Archive automatiquement un document (BR-05 / RG-14). `client` : transaction en cours, le cas échéant. */
 export async function archiver(entree: {
   categorie: string;
   titre: string;
   reference?: string;
   date?: Date;
   membreNom?: string;
-}) {
-  return prisma.archive.create({ data: entree });
+}, client: Prisma.TransactionClient = prisma) {
+  return client.archive.create({ data: entree });
 }

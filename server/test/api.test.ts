@@ -508,24 +508,33 @@ describe("Cycle du stage — rapports & validation (Bâtonnier)", () => {
   });
 
   it("R2-4 : valider-stage refuse un RADIE/DECEDE (409, rien modifié) et ne laisse aucune donnée d'acte sur un SUSPENDU/OMIS", async () => {
-    const n = 950000 + (Date.now() % 10000);
+    // num et numInscription au-delà du maximum présent : aucune collision avec les restes de
+    // barreau_pn_test (Date.now() % 10000 cyclait toutes les 10 s) ; fixtures retirées en fin de test.
+    const n = ((await prisma.membre.aggregate({ _max: { num: true } }))._max.num ?? 950000) + 1;
     const base = { qualite: "STAGIAIRE" as const };
-    const rad = await prisma.membre.create({ data: { ...base, num: n, numInscription: `V${n}`, nom: "VS Radié", statut: "RADIE", dateRadiation: new Date("2026-03-01"), motifRadiation: "Décision n° 4" } });
-    const dec = await prisma.membre.create({ data: { ...base, num: n + 1, numInscription: `V${n + 1}`, nom: "VS Décédé", statut: "DECEDE", dateDeces: new Date("2026-03-02") } });
-    for (const m of [rad, dec]) {
-      const r = await request(app).post(`/api/membres/${m.id}/valider-stage`).set(...bearer(admin));
-      expect(r.status).toBe(409);
-      const apres = await prisma.membre.findUnique({ where: { id: m.id } });
-      expect(apres).toMatchObject({ statut: m.statut, qualite: "STAGIAIRE", dateRadiation: m.dateRadiation, dateDeces: m.dateDeces, motifRadiation: m.motifRadiation });
+    const crees: number[] = [];
+    try {
+      const rad = await prisma.membre.create({ data: { ...base, num: n, numInscription: `V${n}`, nom: "VS Radié", statut: "RADIE", dateRadiation: new Date("2026-03-01"), motifRadiation: "Décision n° 4" } });
+      const dec = await prisma.membre.create({ data: { ...base, num: n + 1, numInscription: `V${n + 1}`, nom: "VS Décédé", statut: "DECEDE", dateDeces: new Date("2026-03-02") } });
+      crees.push(rad.id, dec.id);
+      for (const m of [rad, dec]) {
+        const r = await request(app).post(`/api/membres/${m.id}/valider-stage`).set(...bearer(admin));
+        expect(r.status).toBe(409);
+        const apres = await prisma.membre.findUnique({ where: { id: m.id } });
+        expect(apres).toMatchObject({ statut: m.statut, qualite: "STAGIAIRE", dateRadiation: m.dateRadiation, dateDeces: m.dateDeces, motifRadiation: m.motifRadiation });
+      }
+      for (const [i, statut] of (["SUSPENDU", "OMIS"] as const).entries()) {
+        const m = await prisma.membre.create({ data: { ...base, num: n + 2 + i, numInscription: `V${n + 2 + i}`, nom: `VS ${statut}`, statut } });
+        crees.push(m.id);
+        const r = await request(app).post(`/api/membres/${m.id}/valider-stage`).set(...bearer(admin));
+        expect(r.status).toBe(200);
+        const apres = await prisma.membre.findUnique({ where: { id: m.id } });
+        expect(apres).toMatchObject({ statut: "INSCRIT", qualite: "AVOCAT", dateRadiation: null, motifRadiation: null, dateDeces: null });
+      }
+      expect((await request(app).post("/api/membres/abc/valider-stage").set(...bearer(admin))).status).toBe(400);
+    } finally {
+      await prisma.membre.deleteMany({ where: { id: { in: crees } } });
     }
-    for (const [i, statut] of (["SUSPENDU", "OMIS"] as const).entries()) {
-      const m = await prisma.membre.create({ data: { ...base, num: n + 2 + i, numInscription: `V${n + 2 + i}`, nom: `VS ${statut}`, statut } });
-      const r = await request(app).post(`/api/membres/${m.id}/valider-stage`).set(...bearer(admin));
-      expect(r.status).toBe(200);
-      const apres = await prisma.membre.findUnique({ where: { id: m.id } });
-      expect(apres).toMatchObject({ statut: "INSCRIT", qualite: "AVOCAT", dateRadiation: null, motifRadiation: null, dateDeces: null });
-    }
-    expect((await request(app).post("/api/membres/abc/valider-stage").set(...bearer(admin))).status).toBe(400);
   });
 });
 
@@ -846,23 +855,29 @@ describe("Droits de plaidoirie — paiement & reçu (miroir BR-03)", () => {
     const annee = new Date().getFullYear();
     const tag = Date.now();
     const ids: Record<string, number> = {};
-    for (const statut of ["INSCRIT", "DECEDE", "RADIE"]) {
-      const m = await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: `RELDROIT ${statut} ${tag}`, qualite: "AVOCAT", email: `reldroit-${statut.toLowerCase()}-${tag}@test.cg` });
-      ids[statut] = m.body.id;
+    // /droits/relances envoie un email à chaque avocat impayé : les fixtures de ce test (avec email)
+    // sont retirées en fin de test pour ne pas grossir ce volume à chaque exécution.
+    try {
+      for (const statut of ["INSCRIT", "DECEDE", "RADIE"]) {
+        const m = await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: `RELDROIT ${statut} ${tag}`, qualite: "AVOCAT", email: `reldroit-${statut.toLowerCase()}-${tag}@test.cg` });
+        ids[statut] = m.body.id;
+      }
+      await prisma.membre.updateMany({ where: { id: { in: [ids.DECEDE, ids.RADIE] } }, data: { statut: "DECEDE" } });
+      await prisma.membre.update({ where: { id: ids.RADIE }, data: { statut: "RADIE" } });
+      const rel = await request(app).post(`/api/droits/relances?annee=${annee}`).set(...bearer(sg));
+      expect(rel.status).toBe(200);
+      const emails: string[] = rel.body.destinataires.map((d: any) => d.email);
+      expect(emails).toContain(`reldroit-inscrit-${tag}@test.cg`);
+      expect(emails).not.toContain(`reldroit-decede-${tag}@test.cg`);
+      expect(emails).not.toContain(`reldroit-radie-${tag}@test.cg`);
+      const grille = await request(app).get(`/api/droits?annee=${annee}`).set(...bearer(tr));
+      const idsGrille = grille.body.lignes.map((l: any) => l.membre.id);
+      expect(idsGrille).toContain(ids.INSCRIT);
+      expect(idsGrille).not.toContain(ids.DECEDE);
+      expect(idsGrille).not.toContain(ids.RADIE);
+    } finally {
+      await prisma.membre.deleteMany({ where: { id: { in: Object.values(ids).filter(Boolean) } } });
     }
-    await prisma.membre.updateMany({ where: { id: { in: [ids.DECEDE, ids.RADIE] } }, data: { statut: "DECEDE" } });
-    await prisma.membre.update({ where: { id: ids.RADIE }, data: { statut: "RADIE" } });
-    const rel = await request(app).post(`/api/droits/relances?annee=${annee}`).set(...bearer(sg));
-    expect(rel.status).toBe(200);
-    const emails: string[] = rel.body.destinataires.map((d: any) => d.email);
-    expect(emails).toContain(`reldroit-inscrit-${tag}@test.cg`);
-    expect(emails).not.toContain(`reldroit-decede-${tag}@test.cg`);
-    expect(emails).not.toContain(`reldroit-radie-${tag}@test.cg`);
-    const grille = await request(app).get(`/api/droits?annee=${annee}`).set(...bearer(tr));
-    const idsGrille = grille.body.lignes.map((l: any) => l.membre.id);
-    expect(idsGrille).toContain(ids.INSCRIT);
-    expect(idsGrille).not.toContain(ids.DECEDE);
-    expect(idsGrille).not.toContain(ids.RADIE);
   });
 
   it("enregistre un paiement et reflète le solde ; montant négatif rejeté (400)", async () => {
@@ -1556,12 +1571,18 @@ describe("Export PDF de la liste des avocats (T5, CA-08)", () => {
 });
 
 describe("Import du tableau — décès, dates, accès espace, audit (T6)", () => {
-  const num = 930000 + (Date.now() % 10000);
+  // num au-delà du maximum présent : 930000 + (Date.now() % 10000) cyclait toutes les 10 s et
+  // retombait sur les restes de barreau_pn_test (« R25 … » jamais retirés) → R2-5, R1-2, CA-09 instables.
+  let num = 0;
+  beforeAll(async () => {
+    num = ((await prisma.membre.aggregate({ _max: { num: true } }))._max.num ?? 930000) + 1;
+  });
   const importer = (membres: object[]) => request(app).post("/api/membres/import").set(...bearer(sg)).send({ membres });
   afterAll(async () => {
-    const ms = await prisma.membre.findMany({ where: { nom: { startsWith: "T6 " } }, select: { id: true } });
+    const fixtures = { OR: [{ nom: { startsWith: "T6 " } }, { nom: { startsWith: "R25 " } }] };
+    const ms = await prisma.membre.findMany({ where: fixtures, select: { id: true } });
     await prisma.user.deleteMany({ where: { membreId: { in: ms.map((m) => m.id) } } });
-    await prisma.membre.deleteMany({ where: { nom: { startsWith: "T6 " } } });
+    await prisma.membre.deleteMany({ where: { id: { in: ms.map((m) => m.id) } } });
   });
 
   it("CA-09 / R1-9 : statut décédé refusé à l'import (même avec date), date invalide ignorée, num non numérique en erreur", async () => {
@@ -1680,7 +1701,16 @@ describe("Revue sécurité T10 — données disciplinaires, extraction en masse,
   });
   afterAll(async () => {
     await prisma.user.deleteMany({ where: { email: { in: [avocatEmail, consultEmail] } } });
-    await prisma.membre.deleteMany({ where: { nom: { startsWith: "T10 " } } });
+    // Reçus, paiements et quitus n'ont pas de cascade : retirés avant les membres (un reçu accroché
+    // à « T10 Hostile » faisait échouer cette suppression et laissait tout le bloc en base).
+    const ids = (await prisma.membre.findMany({ where: { nom: { startsWith: "T10 " } }, select: { id: true } })).map((m) => m.id);
+    const parMembre = { where: { membreId: { in: ids } } };
+    await prisma.$transaction([
+      prisma.recu.deleteMany(parMembre),
+      prisma.paiement.deleteMany(parMembre),
+      prisma.quitus.deleteMany(parMembre),
+      prisma.membre.deleteMany({ where: { id: { in: ids } } }),
+    ]);
   });
 
   it("AVOCAT → 403 sur export PDF, journal d'export, déclaration de décès et import", async () => {

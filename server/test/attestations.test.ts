@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import request from "supertest";
 import { creerApp } from "../src/app.js";
 import { prisma } from "../src/prisma.js";
@@ -9,6 +9,19 @@ import { trouverChromium } from "../src/lib/pdf.js";
  * demande de l'avocat → fil administration ; délivrance par l'administration →
  * PDF joint, attestationNumero, archive ; refus à l'avocat ; numérotation ATT continue.
  */
+// Panne simulée de la génération PDF (Chromium) pour vérifier la libération de la réservation.
+const pdfEnPanne = vi.hoisted(() => ({ actif: false }));
+// Panne simulée de l'archivage, APRÈS génération du PDF : la délivrance doit être atomique.
+const archiveEnPanne = vi.hoisted(() => ({ actif: false }));
+vi.mock("../src/lib/business.js", async (original) => {
+  const mod = await original<typeof import("../src/lib/business.js")>();
+  return { ...mod, archiver: (...a: Parameters<typeof mod.archiver>) => (archiveEnPanne.actif ? Promise.reject(new Error("panne archive simulée")) : mod.archiver(...a)) };
+});
+vi.mock("../src/lib/pdf.js", async (original) => {
+  const mod = await original<typeof import("../src/lib/pdf.js")>();
+  return { ...mod, htmlVersPdf: (...a: Parameters<typeof mod.htmlVersPdf>) => (pdfEnPanne.actif ? Promise.reject(new Error("panne PDF simulée")) : mod.htmlVersPdf(...a)) };
+});
+
 const app = creerApp();
 const bearer = (t: string) => ["Authorization", `Bearer ${t}`] as const;
 const crees: number[] = [];
@@ -35,6 +48,8 @@ afterAll(async () => {
   await prisma.user.deleteMany({ where: { id: { in: users.map((u) => u.id) } } });
   await prisma.membre.deleteMany({ where: { id: { in: crees } } });
 });
+
+const compteurATT = async () => (await prisma.compteur.findUnique({ where: { cle: `ATT-${new Date().getFullYear()}` } }))?.valeur ?? 0;
 
 const demander = (type = "INSCRIPTION") =>
   request(app).post("/api/espace/attestations/demandes").set(...bearer(avocat.token)).send({ type });
@@ -95,5 +110,51 @@ describe("Délivrance par l'administration", () => {
     expect(r2.status).toBe(201);
     const n = (x: string) => Number(x.split("-")[2]);
     expect(n(r2.body.numero)).toBeGreaterThan(n(r1.body.numero));
+  }, 60000);
+});
+
+describe("Délivrance — échec de génération du PDF", () => {
+  it("rien n'est envoyé ni archivé, la réservation est libérée et une nouvelle délivrance reste possible", async () => {
+    const d = await demander();
+    const avant = await compteurATT();
+    pdfEnPanne.actif = true;
+    try {
+      expect((await request(app).post(`/api/messagerie/${d.body.id}/attestation`).set(...bearer(sg))).status).toBe(500);
+    } finally {
+      pdfEnPanne.actif = false;
+    }
+    const conv = await prisma.conversation.findUnique({ where: { id: d.body.id }, include: { messages: true } });
+    expect(conv!.attestationNumero).toBeNull();
+    expect(conv!.messages).toHaveLength(1);
+    expect(await compteurATT()).toBe(avant); // aucun numéro consommé : numérotation continue
+    if (!aChromium) return;
+    const r = await request(app).post(`/api/messagerie/${d.body.id}/attestation`).set(...bearer(sg));
+    expect(r.status).toBe(201);
+    expect((await prisma.conversation.findUnique({ where: { id: d.body.id } }))!.attestationNumero).toBe(r.body.numero);
+  }, 60000);
+});
+
+describe("Délivrance — échec après génération du PDF (archivage)", () => {
+  it.skipIf(!aChromium)("atomique : aucun message envoyé, réservation libérée, une seule délivrance ensuite", async () => {
+    const d = await demander();
+    const avant = await compteurATT();
+    archiveEnPanne.actif = true;
+    try {
+      expect((await request(app).post(`/api/messagerie/${d.body.id}/attestation`).set(...bearer(sg))).status).toBe(500);
+    } finally {
+      archiveEnPanne.actif = false;
+    }
+    let conv = await prisma.conversation.findUnique({ where: { id: d.body.id }, include: { messages: true } });
+    expect(conv!.attestationNumero).toBeNull();
+    expect(conv!.messages).toHaveLength(1);
+    expect(await compteurATT()).toBe(avant); // numéro rendu : numérotation continue
+    expect(await prisma.archive.count({ where: { reference: `ATT-${new Date().getFullYear()}-${String(avant + 1).padStart(3, "0")}` } })).toBe(0);
+    const r = await request(app).post(`/api/messagerie/${d.body.id}/attestation`).set(...bearer(sg));
+    expect(r.status).toBe(201);
+    expect(Number(r.body.numero.split("-")[2])).toBe(avant + 1);
+    conv = await prisma.conversation.findUnique({ where: { id: d.body.id }, include: { messages: true } });
+    expect(conv!.messages.filter((m) => m.pieceMime === "application/pdf")).toHaveLength(1);
+    expect(conv!.attestationNumero).toBe(r.body.numero);
+    expect(await prisma.archive.count({ where: { reference: r.body.numero } })).toBe(1);
   }, 60000);
 });

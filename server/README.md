@@ -287,6 +287,15 @@ le membre n'existe pas, 409 s'il est sorti (`STATUTS_SORTIS`, plus d'accès à l
 Le journal d'audit ne reçoit que `message #id`. Les réponses de liste et de fil portent
 désormais `membreId` (lien vers la fiche).
 
+**Demandes d'attestation (T14, F-35)** — `POST /espace/attestations/demandes { type:
+"INSCRIPTION" | "NON_REDEVANCE", precisions? }` (avocat ; 409 si sorti) ouvre un fil
+administration portant `attestationType`. `POST /messagerie/:id/attestation` (permission
+`messagerie` ; avocat → 403 ; fil sans demande → 404 ; non-redevance → 409 si cotisation de
+l'exercice non soldée) délivre en **une seule transaction** : verrou du fil (seconde délivrance
+→ 409), numéro `ATT-AAAA-NNN` (compteur existant), PDF joint en réponse de l'administration,
+`archiver()` et `attestationNumero`. Tout échec (PDF, base) annule l'ensemble, compteur compris :
+pas de PDF envoyé sans numéro, pas de trou de numérotation (`test/attestations.test.ts`).
+
 **Cloisonnement (R-58)** — l'administration, ADMIN compris, ne voit jamais un fil entre
 confrères : liste filtrée, fil, pièce et accusé répondent 404.
 

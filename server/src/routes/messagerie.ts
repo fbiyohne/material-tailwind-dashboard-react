@@ -203,7 +203,11 @@ messagerieRouter.post(
 /**
  * POST /messagerie/:id/attestation — délivre l'attestation demandée dans le fil :
  * numéro ATT continu, PDF joint comme réponse de l'administration, archive créée.
- * Une seule délivrance par demande (réservation atomique, libérée si la génération échoue).
+ * Tout se fait dans UNE transaction : verrou du fil (une seule délivrance, 409 ensuite),
+ * numéro ATT, PDF, message, archive. Tout échec (PDF, base) annule l'ensemble, compteur
+ * compris : ni PDF envoyé sans numéro, ni second numéro, ni trou dans la numérotation.
+ * ponytail: verrous fil + compteur ATT tenus pendant la génération du PDF (~1-2 s) ; générer
+ * hors transaction si le volume de délivrances simultanées le justifie.
  */
 messagerieRouter.post(
   "/:id/attestation",
@@ -220,28 +224,29 @@ messagerieRouter.post(
       const [tarifs, cot] = await Promise.all([tarifsActuels(), prisma.cotisation.findUnique({ where: { membreId_annee: { membreId: membre.id, annee } } })]);
       if (cotisationDue(cot, tarifs, membre.qualite) - (cot?.montantPaye ?? 0) > 0) throw new HttpError(409, "Attestation impossible : cotisation de l'exercice non soldée.");
     }
-    const reserve = await prisma.conversation.updateMany({ where: { id, attestationNumero: null }, data: { attestationNumero: "EN_COURS" } });
-    if (reserve.count === 0) throw new HttpError(409, "Attestation déjà délivrée pour cette demande.");
-    try {
-      const numero = await prochainNumeroAttestation();
+    const auteurNom = await monNomAdmin(req);
+    const { numero, corps, message } = await prisma.$transaction(async (tx) => {
+      // Verrou de ligne : une délivrance concurrente attend, puis voit le numéro posé → 409.
+      const reserve = await tx.conversation.updateMany({ where: { id, attestationNumero: null }, data: { attestationNumero: "EN_COURS" } });
+      if (reserve.count === 0) throw new HttpError(409, "Attestation déjà délivrée pour cette demande.");
+      const numero = await prochainNumeroAttestation(tx);
       const date = new Date();
       const pdf = await htmlVersPdf(inscription ? attestationHtml(membre, numero, date) : attestationNonRedevanceHtml(membre, numero, annee, date));
-      const auteurNom = await monNomAdmin(req);
       const corps = `Veuillez trouver ci-joint votre attestation ${inscription ? "d'inscription" : "de non-redevance"} n° ${numero}.`;
-      const message = await envoyerMessage(corps, { nomFichier: `Attestation-${numero}.pdf`, donnees: Buffer.from(pdf).toString("base64") /* puppeteer renvoie un Uint8Array */ }, (data) =>
-        prisma.message.create({ data: { ...data, conversationId: id, auteurMembreId: null, auteurNom, estAdministration: true } })
-      );
-      await archiver({
-        categorie: inscription ? "Attestation d'inscription" : "Attestation de non-redevance",
-        titre: `Attestation ${numero} — Me ${membre.nom}`, reference: numero, date, membreNom: membre.nom,
+      // envoyerMessage retire le fichier stocké si l'écriture échoue.
+      const message = await envoyerMessage(corps, { nomFichier: `Attestation-${numero}.pdf`, donnees: Buffer.from(pdf).toString("base64") /* puppeteer renvoie un Uint8Array */ }, async (data) => {
+        const m = await tx.message.create({ data: { ...data, conversationId: id, auteurMembreId: null, auteurNom, estAdministration: true } });
+        await archiver({
+          categorie: inscription ? "Attestation d'inscription" : "Attestation de non-redevance",
+          titre: `Attestation ${numero} — Me ${membre.nom}`, reference: numero, date, membreNom: membre.nom,
+        }, tx);
+        await tx.conversation.update({ where: { id }, data: { attestationNumero: numero, updatedAt: new Date(), adminLastReadAt: new Date() } });
+        return m;
       });
-      await prisma.conversation.update({ where: { id }, data: { attestationNumero: numero, updatedAt: new Date(), adminLastReadAt: new Date() } });
-      res.locals.auditDetail = `message #${message.id}`;
-      notifierAvocat([membre.id], id, auteurNom, conv.sujet, corps, "réponse de l'administration", `L'administration du Barreau (${auteurNom}) a répondu à votre demande d'attestation.`);
-      res.status(201).json({ numero, messageId: message.id });
-    } catch (err) {
-      await prisma.conversation.updateMany({ where: { id, attestationNumero: "EN_COURS" }, data: { attestationNumero: null } });
-      throw err;
-    }
+      return { numero, corps, message };
+    }, { timeout: 60000, maxWait: 60000 });
+    res.locals.auditDetail = `message #${message.id}`;
+    notifierAvocat([membre.id], id, auteurNom, conv.sujet, corps, "réponse de l'administration", `L'administration du Barreau (${auteurNom}) a répondu à votre demande d'attestation.`);
+    res.status(201).json({ numero, messageId: message.id });
   })
 );
