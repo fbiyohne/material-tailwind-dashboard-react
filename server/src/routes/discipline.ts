@@ -222,9 +222,15 @@ disciplineRouter.post(
       });
       if (r.count === 0) throw new HttpError(409, "Une décision est déjà enregistrée sur ce dossier.");
     };
-    if (effet === "SUSPENSION" && ferme) await changerSituation({ ...commun, type: "SUSPENSION", demande: { statut: "SUSPENDU" } }, ecrireDossier);
-    else if (effet === "RADIATION")
-      await changerSituation({ ...commun, type: "RADIATION", demande: { statut: "RADIE", dateRadiation: dateDecision, motifRadiation: `${libelle} — ${reference}` } }, ecrireDossier);
+    // Statut lu avant la décision, revérifié sous verrou par changerSituation (R1-11) : une radiation ou
+    // un décès concurrent donne 409 au lieu d'être écrasé ; une interdiction ferme ne lève jamais une radiation.
+    const statutAttendu = (await prisma.membre.findUniqueOrThrow({ where: { id: d.membreId }, select: { statut: true } })).statut;
+    if (effet === "SUSPENSION" && ferme) {
+      if (statutAttendu === "RADIE" || statutAttendu === "DECEDE")
+        throw new HttpError(409, "Interdiction temporaire impossible : l'avocat est radié ou décédé.");
+      await changerSituation({ ...commun, statutAttendu, type: "SUSPENSION", demande: { statut: "SUSPENDU" } }, ecrireDossier);
+    } else if (effet === "RADIATION")
+      await changerSituation({ ...commun, statutAttendu, type: "RADIATION", demande: { statut: "RADIE", dateRadiation: dateDecision, motifRadiation: `${libelle} — ${reference}` } }, ecrireDossier);
     else await changerSituation({ ...commun, type: "SANCTION" }, ecrireDossier); // statut inchangé (sursis, avertissement, réprimande)
 
     const dossier = await prisma.dossierDisciplinaire.findUniqueOrThrow({ where: { id: d.id } });

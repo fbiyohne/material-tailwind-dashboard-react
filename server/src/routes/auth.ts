@@ -12,6 +12,7 @@ import { emettrePaire, rafraichir, revoquer, revoquerTousLesJetons } from "../li
 import { envoyerEmail } from "../lib/notifications.js";
 import { notifier, usersSecretariat } from "../lib/centreNotifications.js";
 import { permissionsDeRole } from "../lib/rbac.js";
+import { STATUTS_BLOQUANTS } from "../lib/acces.js";
 
 export const authRouter = Router();
 
@@ -113,15 +114,27 @@ authRouter.post(
   "/activer",
   asyncH(async (req, res) => {
     const { token, password } = activerSchema.parse(req.body);
-    const user = await prisma.user.findUnique({ where: { activationToken: token } });
-    if (!user || !user.activationExpire || user.activationExpire < new Date()) {
-      throw new HttpError(404, "Lien d'activation invalide ou expiré");
-    }
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { passwordHash: bcrypt.hashSync(password, 10), actif: true, activationToken: null, activationExpire: null },
+    const passwordHash = bcrypt.hashSync(password, 10);
+    // Sous verrou de la fiche (R1-11) : un membre radié, omis, suspendu ou sorti n'active
+    // jamais son compte, même avec un lien encore présent (défense en profondeur).
+    const email = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({ where: { activationToken: token } });
+      if (!user || !user.activationExpire || user.activationExpire < new Date()) {
+        throw new HttpError(404, "Lien d'activation invalide ou expiré");
+      }
+      if (user.membreId) {
+        await tx.$queryRaw`SELECT id FROM "Membre" WHERE id = ${user.membreId} FOR UPDATE`;
+        const membre = await tx.membre.findUnique({ where: { id: user.membreId }, select: { statut: true } });
+        if (!membre || STATUTS_BLOQUANTS.includes(membre.statut)) throw new HttpError(409, "Accès impossible : membre radié, omis, suspendu, sorti ou décédé");
+      }
+      const r = await tx.user.updateMany({
+        where: { id: user.id, activationToken: token }, // lien invalidé entre-temps : rien n'est activé
+        data: { passwordHash, actif: true, activationToken: null, activationExpire: null },
+      });
+      if (r.count === 0) throw new HttpError(404, "Lien d'activation invalide ou expiré");
+      return user.email;
     });
-    res.json({ ok: true, email: user.email });
+    res.json({ ok: true, email });
   })
 );
 

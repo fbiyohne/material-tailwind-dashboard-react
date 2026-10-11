@@ -48,37 +48,44 @@ export interface AccesProvisionne {
  * l'approbation d'une demande d'accès.
  */
 export async function provisionnerAccesEspace(membreId: number): Promise<AccesProvisionne> {
-  const membre = await prisma.membre.findUnique({ where: { id: membreId } });
-  if (!membre) throw new HttpError(404, "Avocat introuvable");
-  if (STATUTS_BLOQUANTS.includes(membre.statut)) throw new HttpError(409, "Accès impossible : membre radié, omis, suspendu ou décédé");
-  if (!membre.email) throw new HttpError(400, "Renseignez d'abord l'email de l'avocat sur sa fiche");
+  // Contrôle du statut et écriture du compte sous verrou de la fiche (R1-11) : une radiation
+  // concurrente (changerSituation) attend ce verrou, puis trouve le compte et invalide le lien.
+  const leurre = bcrypt.hashSync(crypto.randomBytes(24).toString("hex"), 10); // mot de passe inutilisable avant activation, calculé hors verrou
+  const { membre, token, existant } = await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM "Membre" WHERE id = ${membreId} FOR UPDATE`;
+    const membre = await tx.membre.findUnique({ where: { id: membreId } });
+    if (!membre) throw new HttpError(404, "Avocat introuvable");
+    if (STATUTS_BLOQUANTS.includes(membre.statut)) throw new HttpError(409, "Accès impossible : membre radié, omis, suspendu ou décédé");
+    if (!membre.email) throw new HttpError(400, "Renseignez d'abord l'email de l'avocat sur sa fiche");
 
-  const existant = await prisma.user.findUnique({ where: { membreId } });
-  if (existant?.actif) throw new HttpError(409, "Un accès actif existe déjà pour cet avocat");
-  // L'email doit être libre (ou déjà celui de ce compte avocat en attente).
-  const homonyme = await prisma.user.findUnique({ where: { email: membre.email } });
-  if (homonyme && homonyme.membreId !== membreId) {
-    throw new HttpError(409, "Cet email est déjà utilisé par un autre compte");
-  }
+    const existant = await tx.user.findUnique({ where: { membreId } });
+    if (existant?.actif) throw new HttpError(409, "Un accès actif existe déjà pour cet avocat");
+    // L'email doit être libre (ou déjà celui de ce compte avocat en attente).
+    const homonyme = await tx.user.findUnique({ where: { email: membre.email } });
+    if (homonyme && homonyme.membreId !== membreId) {
+      throw new HttpError(409, "Cet email est déjà utilisé par un autre compte");
+    }
 
-  const token = crypto.randomBytes(32).toString("hex");
-  const activationExpire = new Date(Date.now() + 7 * 86_400_000); // 7 jours
-  if (existant) {
-    await prisma.user.update({ where: { id: existant.id }, data: { activationToken: token, activationExpire } });
-  } else {
-    await prisma.user.create({
-      data: {
-        nom: `Me ${membre.nom}`,
-        email: membre.email,
-        role: "AVOCAT",
-        membreId,
-        actif: false,
-        activationToken: token,
-        activationExpire,
-        passwordHash: bcrypt.hashSync(crypto.randomBytes(24).toString("hex"), 10), // inutilisable avant activation
-      },
-    });
-  }
+    const token = crypto.randomBytes(32).toString("hex");
+    const activationExpire = new Date(Date.now() + 7 * 86_400_000); // 7 jours
+    if (existant) {
+      await tx.user.update({ where: { id: existant.id }, data: { activationToken: token, activationExpire } });
+    } else {
+      await tx.user.create({
+        data: {
+          nom: `Me ${membre.nom}`,
+          email: membre.email,
+          role: "AVOCAT",
+          membreId,
+          actif: false,
+          activationToken: token,
+          activationExpire,
+          passwordHash: leurre,
+        },
+      });
+    }
+    return { membre: { nom: membre.nom, email: membre.email }, token, existant };
+  });
 
   const lien = `${env.clientOrigin}/activer/${token}`;
   void envoyerEmail({
