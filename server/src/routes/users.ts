@@ -22,9 +22,11 @@ const ROLES = ["SECRETAIRE_GENERAL", "BATONNIER", "TRESORIERE", "ADMIN", "SECRET
  * ou agir sur un compte ADMIN existant (création, promotion, reset de mot de passe).
  * Un Secrétaire Général gère ainsi les comptes métier sans pouvoir se hisser ADMIN.
  */
+const PROTEGES: Role[] = ["ADMIN", "BATONNIER"];
 function interdireEscaladeAdmin(acteur: Role, roleCible?: Role | null) {
-  if (acteur !== "ADMIN" && roleCible === "ADMIN") {
-    throw new HttpError(403, "Seul un administrateur peut gérer les comptes administrateur");
+  // Le rôle BATONNIER détient les actions de décision (R-42) : le SG ne peut pas s'en octroyer l'usage.
+  if (acteur !== "ADMIN" && roleCible && PROTEGES.includes(roleCible)) {
+    throw new HttpError(403, "Seul un administrateur peut gérer les comptes administrateur et bâtonnier");
   }
 }
 

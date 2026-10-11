@@ -97,3 +97,24 @@ describe("RBAC — actions (T3, R-42)", () => {
     expect((await request(mini).get("/decider").set(...bearer(sg))).status).toBe(403);
   });
 });
+
+describe("Anti-escalade SG (revue R1-3)", () => {
+  it("le SG ne crée pas de compte BATONNIER (403) et ne réinitialise pas son mot de passe", async () => {
+    const r = await request(app).post("/api/users").set(...bearer(sg))
+      .send({ nom: "Faux bâtonnier", email: "faux-bat@test.cg", role: "BATONNIER", password: "motdepasse8" });
+    expect(r.status).toBe(403);
+    const users = await request(app).get("/api/users").set(...bearer(admin));
+    const vrai = users.body.find((u: any) => u.role === "BATONNIER");
+    const reset = await request(app).post(`/api/users/${vrai.id}/password`).set(...bearer(sg)).send({ password: "piratage88" });
+    expect(reset.status).toBe(403);
+  });
+
+  it("le SG ne peut pas ajouter discipline_decider à ACCUEIL (403) ; l'ADMIN le peut puis restauration", async () => {
+    const avant = (await request(app).get("/api/rbac").set(...bearer(sg))).body.matrice.ACCUEIL as string[];
+    const r = await request(app).put("/api/rbac").set(...bearer(sg)).send({ role: "ACCUEIL", permissions: [...avant, "discipline_decider"] });
+    expect(r.status).toBe(403);
+    // Sans changement sur les actions, le SG garde la main sur les modules.
+    const ok = await request(app).put("/api/rbac").set(...bearer(sg)).send({ role: "ACCUEIL", permissions: avant });
+    expect(ok.status).toBe(200);
+  });
+});

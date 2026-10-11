@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { Role } from "@prisma/client";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
-import { requireAuth, requireRole } from "../middleware/auth.js";
+import { requireAuth, requireRole, type AuthRequest } from "../middleware/auth.js";
 import {
   PERMISSIONS, PERMISSION_CLES, ACTIONS, ACTION_CLES, ROLES_MATRICE, ROLES_COMPLET, ROLE_LABELS,
   permissionsDeRole, rafraichirMatrice,
@@ -42,7 +42,7 @@ const CLES_CONNUES = new Set([...PERMISSION_CLES, ...ACTION_CLES]);
 /** PUT /rbac — remplace les permissions (modules et actions) d'un rôle éditable. Clé inconnue : 400. */
 rbacRouter.put(
   "/",
-  asyncH(async (req, res) => {
+  asyncH(async (req: AuthRequest, res) => {
     const { role, permissions } = majSchema.parse(req.body);
     if (!ROLES_MATRICE.includes(role as Role)) {
       throw new HttpError(400, "Ce rôle n'est pas modifiable dans la matrice.");
@@ -50,6 +50,14 @@ rbacRouter.put(
     const inconnues = permissions.filter((p) => !CLES_CONNUES.has(p));
     if (inconnues.length) throw new HttpError(400, `Permission(s) inconnue(s) : ${inconnues.join(", ")}`);
     const cles = [...new Set(permissions)];
+    // Anti-escalade : seules les actions de décision sont réservées à l'ADMIN ; le SG ne peut pas les modifier.
+    if (req.user!.role !== "ADMIN") {
+      const actuelles = new Set(permissionsDeRole(role as Role).filter((p) => ACTION_CLES.includes(p)));
+      const demandees = new Set(cles.filter((p) => ACTION_CLES.includes(p)));
+      if (actuelles.size !== demandees.size || [...demandees].some((p) => !actuelles.has(p))) {
+        throw new HttpError(403, "Seul un administrateur peut modifier les permissions d'action");
+      }
+    }
     await prisma.$transaction([
       prisma.rolePermission.deleteMany({ where: { role: role as Role } }),
       prisma.rolePermission.createMany({ data: cles.map((permission) => ({ role: role as Role, permission })) }),
