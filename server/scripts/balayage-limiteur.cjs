@@ -3,6 +3,8 @@
 // Usage (depuis server/) : [EXPIRE_A=n] [BLOCAGE=1] [SORTIE=dossier] node scripts/balayage-limiteur.cjs <url> <libelle> [passes]
 // Compte SG de la base de test (mot de passe « barreau »). Chrome : CHROME, sinon l'emplacement Windows standard.
 //  EXPIRE_A : après n rechargements, le jeton d'accès est remplacé par un jeton authentique expiré (les 15 min écoulées).
+//  SATURER  : n requêtes anonymes depuis la même IP avant le balayage (autres postes d'une salle derrière un NAT ;
+//             condition du constat QA). Avec ACCESS_TTL court côté serveur (ex. 60s), l'expiration est réelle.
 //  BLOCAGE  : phase 2, un 429 (Retry-After 783 s, valeur du constat) est simulé sur les 5 écrans signalés.
 const { createRequire } = require("node:module");
 const path = require("node:path");
@@ -27,6 +29,13 @@ const connexion = async () => (await fetch(BASE + "/api/auth/login", { method: "
   const expire = jwt.sign({ sub: d.sub, role: d.role, tv: d.tv, exp: Math.floor(Date.now() / 1000) - 5 }, secret, { algorithm: "HS256" });
   const EXPIRE_A = Number(process.env.EXPIRE_A || 0);
 
+  const saturation = {};
+  for (let i = 0; i < Number(process.env.SATURER || 0); i++) {
+    const s = (await fetch(BASE + "/api/route-anonyme-inexistante")).status;
+    saturation[s] = (saturation[s] || 0) + 1;
+  }
+  if (process.env.SATURER) console.log("trafic anonyme préalable " + JSON.stringify(saturation));
+
   const browser = await puppeteer.launch({ executablePath: process.env.CHROME || "C:/Program Files/Google/Chrome/Application/chrome.exe", headless: true, args: ["--no-sandbox"] });
   const page = await browser.newPage();
   let seau = [];
@@ -34,7 +43,7 @@ const connexion = async () => (await fetch(BASE + "/api/auth/login", { method: "
     const u = r.url();
     if (!u.includes("/api/")) return;
     const h = r.headers();
-    seau.push({ statut: r.status(), reste: h["ratelimit-remaining"] != null ? Number(h["ratelimit-remaining"]) : null, retry: h["retry-after"] ?? null });
+    seau.push({ refresh: u.includes("/api/auth/refresh"), statut: r.status(), reste: h["ratelimit-remaining"] != null ? Number(h["ratelimit-remaining"]) : null, retry: h["retry-after"] ?? null });
   });
   await page.goto(BASE + "/", { waitUntil: "domcontentloaded" });
   await page.evaluate((t, r) => { localStorage.setItem("bpn_token", t); localStorage.setItem("bpn_refresh", r); }, login.token, login.refreshToken);
@@ -61,14 +70,18 @@ const connexion = async () => (await fetch(BASE + "/api/auth/login", { method: "
         retryAfter: seau.find((x) => x.retry)?.retry ?? null,
         chargementMuet: /Chargement…/.test(texte) && !/Trop de requêtes/.test(texte),
         messageLimite: (texte.match(/Trop de requêtes[^\n]*/) || [null])[0],
-        connexion: /Mot de passe/i.test(texte) && /Se connecter|Connexion/i.test(texte),
+        refresh: seau.filter((x) => x.refresh).map((x) => x.statut),
+        // Formulaire de connexion (identifiant + mot de passe), pas le simple mot « mot de passe » (faux positif de /profil).
+        connexion: await page.evaluate(() => !!document.querySelector('input[autocomplete="username"]') && !!document.querySelector('input[type="password"]')).catch(() => false),
+        sessionConservee: await page.evaluate(() => !!localStorage.getItem("bpn_refresh")).catch(() => false),
       };
       lignes.push(l);
-      console.log(`${String(l.t).padStart(4)}s p${l.passe} ${largeur} ${route.padEnd(20)} api=${l.requetesApi} comptees=${l.compteesLimiteur} ${JSON.stringify(l.statuts)} reste=${l.resteMin} retry=${l.retryAfter}${l.chargementMuet ? " CHARGEMENT-MUET" : ""}${l.messageLimite ? " MSG=" + l.messageLimite : ""}${l.connexion ? " ECRAN-CONNEXION" : ""}`);
+      if (route === "/reunions") await page.screenshot({ path: `${SORTIE}/r2-13-${LIBELLE}-reunions-${largeur}.png` });
+      console.log(`${String(l.t).padStart(4)}s p${l.passe} ${largeur} ${route.padEnd(20)} api=${l.requetesApi} comptees=${l.compteesLimiteur} ${JSON.stringify(l.statuts)} reste=${l.resteMin} retry=${l.retryAfter}${l.chargementMuet ? " CHARGEMENT-MUET" : ""}${l.messageLimite ? " MSG=" + l.messageLimite : ""}${l.refresh.length ? " REFRESH=" + l.refresh.join(",") : ""}${l.connexion ? " ECRAN-CONNEXION" : ""}${l.sessionConservee ? "" : " SESSION-PERDUE"}`);
     }
   }
   const total = lignes.reduce((a, l) => a + l.requetesApi, 0), comptees = lignes.reduce((a, l) => a + l.compteesLimiteur, 0);
-  const bilan = { libelle: LIBELLE, url: BASE, rechargements: lignes.length, dureeS: Math.round((Date.now() - debut) / 1000), requetesApi: total, compteesLimiteur: comptees, parRechargement: +(comptees / lignes.length).toFixed(1), maxParRechargement: Math.max(...lignes.map((l) => l.compteesLimiteur)), rechargementsAvec429: lignes.filter((l) => l.statuts[429]).length, chargementsMuets: lignes.filter((l) => l.chargementMuet).length, ecransConnexion: lignes.filter((l) => l.connexion).length };
+  const bilan = { libelle: LIBELLE, url: BASE, rechargements: lignes.length, dureeS: Math.round((Date.now() - debut) / 1000), requetesApi: total, compteesLimiteur: comptees, parRechargement: +(comptees / lignes.length).toFixed(1), maxParRechargement: Math.max(...lignes.map((l) => l.compteesLimiteur)), rechargementsAvec429: lignes.filter((l) => l.statuts[429]).length, chargementsMuets: lignes.filter((l) => l.chargementMuet).length, ecransConnexion: lignes.filter((l) => l.connexion).length, sessionsPerdues: lignes.filter((l) => !l.sessionConservee).length, rafraichissements: lignes.flatMap((l) => l.refresh), saturationPrealable: saturation };
   console.log("BILAN " + JSON.stringify(bilan));
 
   const blocage = [];

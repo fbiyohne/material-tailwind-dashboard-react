@@ -211,8 +211,14 @@ authRouter.post(
 
 const refreshSchema = z.object({ refreshToken: z.string().min(1) });
 
+// R2-13 : limiteur propre au rafraîchissement, hors budget anonyme global (salle derrière un NAT).
+// Anti-DoS seulement : le refresh token (48 octets aléatoires) ne se devine pas. 300 / 15 min / IP couvre
+// une salle d'une centaine de postes (un rafraîchissement par session et par 15 min, ACCESS_TTL).
+const refreshLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 300, standardHeaders: true, legacyHeaders: false, message: { erreur: "Trop de requêtes, réessayez plus tard." } });
+
 authRouter.post(
   "/refresh",
+  refreshLimiter,
   asyncH(async (req, res) => {
     const { refreshToken } = refreshSchema.parse(req.body);
     const paire = await rafraichir(refreshToken);

@@ -119,7 +119,9 @@ export function creerApp(limites: { anonyme?: number; authentifie?: number } = {
       },
       standardHeaders: true,
       legacyHeaders: false,
-      skip: (req) => /^\/(health|notifications|mes-notifications|auth\/identite|installation\/etat)(\/|$)/.test(req.path),
+      // R2-13 : /auth/refresh a son propre limiteur (routes/auth.ts) : le rafraîchissement d'une session ne dépend
+      // plus du budget anonyme de l'IP, partagé par toute une salle derrière un NAT.
+      skip: (req) => /^\/(health|notifications|mes-notifications|auth\/identite|auth\/refresh|installation\/etat)(\/|$)/.test(req.path),
       handler: (_req, res) => {
         const n = Number(res.getHeader("Retry-After")) || 60;
         res.status(429).json({ erreur: `Trop de requêtes, réessayez dans ${n} s.`, retryAfter: n });

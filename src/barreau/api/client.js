@@ -31,7 +31,15 @@ export function clearSession() {
 // Compat : ancien nom utilisé ailleurs.
 export const setToken = (t) => (t ? localStorage.setItem(TOKEN_KEY, t) : clearSession());
 
+/** Erreur 429 signalée au contexte (compte à rebours affiché) ; la session n'est jamais touchée. */
+function erreurLimite(secondes, message) {
+  onLimite?.(secondes);
+  return Object.assign(new Error(message || `Trop de requêtes, réessayez dans ${secondes} s.`), { status: 429, retryAfter: secondes });
+}
+const delaiAnnonce = (res, data) => Number(res.headers.get("Retry-After")) || data?.retryAfter || 60;
+
 let refreshing = null;
+/** true : session rafraîchie ; false : jeton refusé (ou réseau) ; { limite: s } : 429, jeton toujours valable (R2-13). */
 async function rafraichir() {
   const rt = getRefreshToken();
   if (!rt) return false;
@@ -41,6 +49,7 @@ async function rafraichir() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refreshToken: rt }),
     });
+    if (res.status === 429) return { limite: delaiAnnonce(res) };
     if (!res.ok) return false;
     setSession(await res.json());
     return true;
@@ -66,9 +75,11 @@ async function avecRafraichissement(faireRequete, tenterRefresh = true) {
   let res = await faireRequete();
   if (res.status === 401 && tenterRefresh) {
     refreshing = refreshing ?? rafraichir();
-    const ok = await refreshing;
+    const r = await refreshing;
     refreshing = null;
-    if (ok) res = await faireRequete();
+    if (r === true) res = await faireRequete();
+    // Rafraîchissement limité : ni clearSession ni onUnauthorized, on attend le délai (R2-13).
+    else if (r?.limite) throw erreurLimite(r.limite);
   }
   return res;
 }
@@ -86,14 +97,8 @@ export async function api(path, opts = {}) {
   const data = res.status === 204 ? null : await res.json().catch(() => null);
   if (!res.ok) {
     // Le statut est porté par l'erreur : seul un 401 met fin à la session (jamais 429/5xx).
-    const err = new Error(data?.erreur || `Erreur ${res.status}`);
-    err.status = res.status;
-    if (res.status === 429) {
-      err.retryAfter = Number(res.headers.get("Retry-After")) || data?.retryAfter || 60;
-      if (!data?.erreur) err.message = `Trop de requêtes, réessayez dans ${err.retryAfter} s.`;
-      onLimite?.(err.retryAfter);
-    }
-    throw err;
+    if (res.status === 429) throw erreurLimite(delaiAnnonce(res, data), data?.erreur);
+    throw Object.assign(new Error(data?.erreur || `Erreur ${res.status}`), { status: res.status });
   }
   return data;
 }
@@ -118,7 +123,7 @@ export async function telechargerPdf(path, filename) {
     if (token) headers.Authorization = `Bearer ${token}`;
     return fetch(`${BASE}${path}`, { headers });
   };
-  const res = await avecRafraichissement(charger);
+  const res = await avecRafraichissement(charger).catch((e) => { onglet?.close(); throw e; });
   if (!res.ok) {
     onglet?.close();
     if (res.status === 401) { clearSession(); onUnauthorized?.(); }
@@ -154,7 +159,7 @@ export async function ouvrirFichierAuth(path) {
     if (token) headers.Authorization = `Bearer ${token}`;
     return fetch(`${BASE}${path}`, { headers });
   };
-  const res = await avecRafraichissement(charger);
+  const res = await avecRafraichissement(charger).catch((e) => { onglet?.close(); throw e; });
   if (!res.ok) {
     onglet?.close();
     if (res.status === 401) { clearSession(); onUnauthorized?.(); }

@@ -45,4 +45,17 @@ describe("Limiteur par utilisateur (R2-13)", () => {
     for (let i = 0; i < 3; i++) codes.push((await request(p).get("/api/membres").set("Authorization", `Bearer ${faux}`)).status);
     expect(codes).toEqual([401, 401, 429]);
   });
+
+  // Reprise QA : le budget anonyme de l'IP est saturé par les autres postes de la salle (NAT) ;
+  // le rafraîchissement d'une session authentique ne doit pas en dépendre (sinon le SG est éjecté).
+  it("budget anonyme saturé : POST /auth/refresh avec un refresh token valide répond 200", async () => {
+    const p = creerApp({ anonyme: 2, authentifie: 50 });
+    const { refreshToken } = (await request(app).post("/api/auth/login").send({ email: "sg@barreau-pn.cg", password: "barreau" })).body;
+    await request(p).get("/api/membres");
+    await request(p).get("/api/membres");
+    expect((await request(p).get("/api/membres")).status).toBe(429);
+    const r = await request(p).post("/api/auth/refresh").send({ refreshToken });
+    expect(r.status).toBe(200);
+    expect(r.body.token).toBeTruthy();
+  });
 });

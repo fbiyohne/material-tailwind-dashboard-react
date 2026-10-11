@@ -1,108 +1,1031 @@
-{"bilan":{"libelle":"apres","url":"http://127.0.0.1:4311","rechargements":108,"dureeS":222,"requetesApi":1452,"compteesLimiteur":1122,"parRechargement":10.4,"maxParRechargement":37,"rechargementsAvec429":0,"chargementsMuets":0,"ecransConnexion":4},"blocage":[{"mode":"total","largeur":1280,"route":"/reunions","message":"Trop de requêtes, réessayez dans 781 s.","chargementMuet":false,"scrollWidth":1280},{"mode":"total","largeur":1280,"route":"/assemblees","message":"Trop de requêtes, réessayez dans 781 s.","chargementMuet":false,"scrollWidth":1280},{"mode":"total","largeur":1280,"route":"/publications","message":"Trop de requêtes, réessayez dans 781 s.","chargementMuet":false,"scrollWidth":1280},{"mode":"total","largeur":1280,"route":"/lettre-batonnier","message":"Trop de requêtes, réessayez dans 781 s.","chargementMuet":false,"scrollWidth":1280},{"mode":"total","largeur":1280,"route":"/profil","message":"Trop de requêtes, réessayez dans 781 s.","chargementMuet":false,"scrollWidth":1280},{"mode":"total","largeur":360,"route":"/reunions","message":"Trop de requêtes, réessayez dans 781 s.","chargementMuet":false,"scrollWidth":360},{"mode":"total","largeur":360,"route":"/assemblees","message":"Trop de requêtes, réessayez dans 781 s.","chargementMuet":false,"scrollWidth":360},{"mode":"total","largeur":360,"route":"/publications","message":"Trop de requêtes, réessayez dans 781 s.","chargementMuet":false,"scrollWidth":360},{"mode":"total","largeur":360,"route":"/lettre-batonnier","message":"Trop de requêtes, réessayez dans 781 s.","chargementMuet":false,"scrollWidth":360},{"mode":"total","largeur":360,"route":"/profil","message":"Trop de requêtes, réessayez dans 781 s.","chargementMuet":false,"scrollWidth":360},{"mode":"donnees","largeur":1280,"route":"/reunions","message":"Trop de requêtes, réessayez dans 782 s.","chargementMuet":false,"scrollWidth":1280},{"mode":"donnees","largeur":1280,"route":"/assemblees","message":"Trop de requêtes, réessayez dans 782 s.","chargementMuet":false,"scrollWidth":1280},{"mode":"donnees","largeur":1280,"route":"/publications","message":"Trop de requêtes, réessayez dans 782 s.","chargementMuet":false,"scrollWidth":1280},{"mode":"donnees","largeur":1280,"route":"/lettre-batonnier","message":"Trop de requêtes, réessayez dans 782 s.","chargementMuet":false,"scrollWidth":1280},{"mode":"donnees","largeur":1280,"route":"/profil","message":"Trop de requêtes, réessayez dans 782 s.","chargementMuet":false,"scrollWidth":1280},{"mode":"donnees","largeur":360,"route":"/reunions","message":"Trop de requêtes, réessayez dans 782 s.","chargementMuet":false,"scrollWidth":360},{"mode":"donnees","largeur":360,"route":"/assemblees","message":"Trop de requêtes, réessayez dans 782 s.","chargementMuet":false,"scrollWidth":360},{"mode":"donnees","largeur":360,"route":"/publications","message":"Trop de requêtes, réessayez dans 782 s.","chargementMuet":false,"scrollWidth":360},{"mode":"donnees","largeur":360,"route":"/lettre-batonnier","message":"Trop de requêtes, réessayez dans 782 s.","chargementMuet":false,"scrollWidth":360},{"mode":"donnees","largeur":360,"route":"/profil","message":"Trop de requêtes, réessayez dans 782 s.","chargementMuet":false,"scrollWidth":360}],"lignes":[[2,1,1280,"/",11,{"200":13,"304":3},2987,null,false],
-[5,1,1280,"/avocats",37,{"200":28,"304":12},2950,null,false],
-[8,1,1280,"/stagiaires",9,{"200":1,"304":11},2941,null,false],
-[10,1,1280,"/cabinets",9,{"200":1,"304":11},2932,null,false],
-[12,1,1280,"/tableau",9,{"200":1,"304":11},2923,null,false],
-[14,1,1280,"/pieces",9,{"200":1,"304":11},2914,null,false],
-[16,1,1280,"/corps-electoral",9,{"200":1,"304":11},2905,null,false],
-[21,1,1280,"/cotisations",9,{"304":12},2896,null,false],
-[23,1,1280,"/quitus",12,{"200":3,"304":12},2884,null,false],
-[25,1,1280,"/recus",10,{"200":1,"304":12},2874,null,false],
-[28,1,1280,"/droits-plaidoirie",9,{"200":1,"304":11},2865,null,false],
-[29,1,1280,"/timbres",10,{"200":1,"304":12},2855,null,false],
-[32,1,1280,"/reunions",9,{"200":1,"304":11},2846,null,false],
-[33,1,1280,"/assemblees",9,{"200":1,"304":11},2837,null,false],
-[35,1,1280,"/discipline",8,{"304":11},2829,null,false],
-[37,1,1280,"/elections",9,{"200":1,"304":11},2820,null,false],
-[39,1,1280,"/conseil",9,{"200":1,"304":11},2811,null,false],
-[41,1,1280,"/messagerie",9,{"200":1,"304":11},2802,null,false],
-[43,1,1280,"/archives",9,{"200":1,"304":11},2793,null,false],
-[45,1,1280,"/annuaire",9,{"304":12},2784,null,false],
-[47,1,1280,"/publications",9,{"200":1,"304":11},2775,null,false],
-[49,1,1280,"/lettre-batonnier",9,{"200":1,"304":11},2766,null,false],
-[51,1,1280,"/parametres",10,{"200":1,"304":13},2756,null,false],
-[53,1,1280,"/utilisateurs",10,{"200":2,"304":11},2746,null,false],
-[55,1,1280,"/journal-audit",9,{"200":1,"304":11},2737,null,false],
-[56,1,1280,"/profil",8,{"304":11},2729,null,false],
-[58,1,1280,"/avocats/7862",11,{"200":2,"304":12},2718,null,false],
-[61,1,360,"/",11,{"304":14},2707,null,false],
-[63,1,360,"/avocats",37,{"304":40},2670,null,false],
-[65,1,360,"/stagiaires",9,{"304":12},2661,null,false],
-[66,1,360,"/cabinets",9,{"304":12},2652,null,false],
-[68,1,360,"/tableau",9,{"200":1,"304":11},2643,null,false],
-[70,1,360,"/pieces",9,{"304":12},2634,null,false],
-[73,1,360,"/corps-electoral",9,{"304":12},2625,null,false],
-[77,1,360,"/cotisations",9,{"304":12},2616,null,false],
-[79,1,360,"/quitus",12,{"304":15},2604,null,false],
-[81,1,360,"/recus",10,{"304":13},2594,null,false],
-[83,1,360,"/droits-plaidoirie",9,{"304":12},2585,null,false],
-[85,1,360,"/timbres",10,{"304":13},2575,null,false],
-[87,1,360,"/reunions",9,{"304":12},2566,null,false],
-[88,1,360,"/assemblees",9,{"304":12},2557,null,false],
-[90,1,360,"/discipline",8,{"304":11},2549,null,false],
-[92,1,360,"/elections",9,{"304":12},2540,null,false],
-[94,1,360,"/conseil",9,{"304":12},2531,null,false],
-[96,1,360,"/messagerie",9,{"304":12},2522,null,false],
-[97,1,360,"/archives",9,{"304":12},2513,null,false],
-[99,1,360,"/annuaire",9,{"304":12},2504,null,false],
-[101,1,360,"/publications",9,{"304":12},2495,null,false],
-[103,1,360,"/lettre-batonnier",9,{"304":12},2486,null,false],
-[105,1,360,"/parametres",10,{"304":14},2476,null,false],
-[107,1,360,"/utilisateurs",10,{"304":13},2466,null,false],
-[108,1,360,"/journal-audit",9,{"304":12},2457,null,false],
-[110,1,360,"/profil",8,{"304":11},2449,null,false],
-[112,1,360,"/avocats/7862",11,{"304":14},2438,null,false],
-[114,2,1280,"/",11,{"304":14},2427,null,false],
-[117,2,1280,"/avocats",37,{"304":40},2390,null,false],
-[119,2,1280,"/stagiaires",9,{"304":12},2381,null,false],
-[121,2,1280,"/cabinets",9,{"304":12},2372,null,false],
-[123,2,1280,"/tableau",9,{"200":1,"304":11},2363,null,false],
-[125,2,1280,"/pieces",9,{"304":12},2354,null,false],
-[127,2,1280,"/corps-electoral",11,{"200":1,"304":12,"401":1},598,null,false],
-[131,2,1280,"/cotisations",9,{"304":12},2335,null,false],
-[134,2,1280,"/quitus",12,{"304":15},2323,null,false],
-[135,2,1280,"/recus",10,{"304":13},2313,null,false],
-[139,2,1280,"/droits-plaidoirie",9,{"304":12},2304,null,false],
-[141,2,1280,"/timbres",10,{"304":13},2294,null,false],
-[142,2,1280,"/reunions",9,{"304":12},2285,null,false],
-[144,2,1280,"/assemblees",9,{"304":12},2276,null,false],
-[146,2,1280,"/discipline",8,{"304":11},2268,null,false],
-[148,2,1280,"/elections",9,{"304":12},2259,null,false],
-[150,2,1280,"/conseil",9,{"304":12},2250,null,false],
-[152,2,1280,"/messagerie",9,{"304":12},2241,null,false],
-[154,2,1280,"/archives",9,{"304":12},2232,null,false],
-[156,2,1280,"/annuaire",9,{"304":12},2223,null,false],
-[158,2,1280,"/publications",9,{"304":12},2214,null,false],
-[159,2,1280,"/lettre-batonnier",9,{"304":12},2205,null,false],
-[161,2,1280,"/parametres",10,{"304":14},2195,null,false],
-[163,2,1280,"/utilisateurs",10,{"304":13},2185,null,false],
-[165,2,1280,"/journal-audit",9,{"200":1,"304":11},2176,null,false],
-[167,2,1280,"/profil",8,{"304":11},2168,null,false],
-[168,2,1280,"/avocats/7862",11,{"304":14},2157,null,false],
-[170,2,360,"/",11,{"304":14},2146,null,false],
-[173,2,360,"/avocats",37,{"304":40},2109,null,false],
-[174,2,360,"/stagiaires",9,{"304":12},2100,null,false],
-[176,2,360,"/cabinets",9,{"304":12},2091,null,false],
-[178,2,360,"/tableau",9,{"200":1,"304":11},2082,null,false],
-[180,2,360,"/pieces",9,{"304":12},2073,null,false],
-[182,2,360,"/corps-electoral",9,{"304":12},2064,null,false],
-[186,2,360,"/cotisations",9,{"304":12},2055,null,false],
-[189,2,360,"/quitus",12,{"304":15},2043,null,false],
-[190,2,360,"/recus",10,{"304":13},2033,null,false],
-[193,2,360,"/droits-plaidoirie",9,{"304":12},2024,null,false],
-[195,2,360,"/timbres",10,{"304":13},2014,null,false],
-[196,2,360,"/reunions",9,{"304":12},2005,null,false],
-[198,2,360,"/assemblees",9,{"304":12},1996,null,false],
-[200,2,360,"/discipline",8,{"304":11},1988,null,false],
-[202,2,360,"/elections",9,{"304":12},1979,null,false],
-[204,2,360,"/conseil",9,{"304":12},1970,null,false],
-[206,2,360,"/messagerie",9,{"304":12},1961,null,false],
-[208,2,360,"/archives",9,{"304":12},1952,null,false],
-[210,2,360,"/annuaire",9,{"304":12},1943,null,false],
-[212,2,360,"/publications",9,{"304":12},1934,null,false],
-[214,2,360,"/lettre-batonnier",9,{"304":12},1925,null,false],
-[215,2,360,"/parametres",10,{"304":14},1915,null,false],
-[217,2,360,"/utilisateurs",10,{"304":13},1905,null,false],
-[219,2,360,"/journal-audit",9,{"304":12},1896,null,false],
-[220,2,360,"/profil",8,{"304":11},1888,null,false],
-[222,2,360,"/avocats/7862",11,{"304":14},1877,null,false]]}
+{
+ "bilan": {
+  "libelle": "nat-apres",
+  "url": "http://127.0.0.1:4331",
+  "rechargements": 54,
+  "dureeS": 124,
+  "requetesApi": 730,
+  "compteesLimiteur": 564,
+  "parRechargement": 10.4,
+  "maxParRechargement": 37,
+  "rechargementsAvec429": 0,
+  "chargementsMuets": 0,
+  "ecransConnexion": 0,
+  "sessionsPerdues": 0,
+  "rafraichissements": [
+   200,
+   200
+  ],
+  "saturationPrealable": {
+   "404": 599,
+   "429": 1
+  }
+ },
+ "lignes": [
+  {
+   "t": 4,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/",
+   "requetesApi": 16,
+   "compteesLimiteur": 11,
+   "statuts": {
+    "200": 13,
+    "304": 3
+   },
+   "resteMin": 2987,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 7,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/avocats",
+   "requetesApi": 40,
+   "compteesLimiteur": 37,
+   "statuts": {
+    "200": 28,
+    "304": 12
+   },
+   "resteMin": 2950,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 10,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/stagiaires",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "200": 1,
+    "304": 11
+   },
+   "resteMin": 2941,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 12,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/cabinets",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "200": 1,
+    "304": 11
+   },
+   "resteMin": 2932,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 14,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/tableau",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "200": 1,
+    "304": 11
+   },
+   "resteMin": 2923,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 17,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/pieces",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "200": 1,
+    "304": 11
+   },
+   "resteMin": 2914,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 19,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/corps-electoral",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "200": 1,
+    "304": 11
+   },
+   "resteMin": 2905,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 24,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/cotisations",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "304": 12
+   },
+   "resteMin": 2896,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 27,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/quitus",
+   "requetesApi": 15,
+   "compteesLimiteur": 12,
+   "statuts": {
+    "200": 3,
+    "304": 12
+   },
+   "resteMin": 2884,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 29,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/recus",
+   "requetesApi": 13,
+   "compteesLimiteur": 10,
+   "statuts": {
+    "200": 1,
+    "304": 12
+   },
+   "resteMin": 2874,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 33,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/droits-plaidoirie",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "200": 1,
+    "304": 11
+   },
+   "resteMin": 2865,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 35,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/timbres",
+   "requetesApi": 13,
+   "compteesLimiteur": 10,
+   "statuts": {
+    "200": 1,
+    "304": 12
+   },
+   "resteMin": 2855,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 37,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/reunions",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "200": 1,
+    "304": 11
+   },
+   "resteMin": 2846,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 39,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/assemblees",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "200": 1,
+    "304": 11
+   },
+   "resteMin": 2837,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 41,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/discipline",
+   "requetesApi": 11,
+   "compteesLimiteur": 8,
+   "statuts": {
+    "304": 11
+   },
+   "resteMin": 2829,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 43,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/elections",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "200": 1,
+    "304": 11
+   },
+   "resteMin": 2820,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 45,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/conseil",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "200": 1,
+    "304": 11
+   },
+   "resteMin": 2811,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 47,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/messagerie",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "200": 1,
+    "304": 11
+   },
+   "resteMin": 2802,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 49,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/archives",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "200": 1,
+    "304": 11
+   },
+   "resteMin": 2793,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 51,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/annuaire",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "304": 12
+   },
+   "resteMin": 2784,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 54,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/publications",
+   "requetesApi": 14,
+   "compteesLimiteur": 11,
+   "statuts": {
+    "200": 2,
+    "304": 11,
+    "401": 1
+   },
+   "resteMin": 299,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [
+    200
+   ],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 56,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/lettre-batonnier",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "200": 1,
+    "304": 11
+   },
+   "resteMin": 2765,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 58,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/parametres",
+   "requetesApi": 14,
+   "compteesLimiteur": 10,
+   "statuts": {
+    "200": 1,
+    "304": 13
+   },
+   "resteMin": 2755,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 60,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/utilisateurs",
+   "requetesApi": 13,
+   "compteesLimiteur": 10,
+   "statuts": {
+    "200": 2,
+    "304": 11
+   },
+   "resteMin": 2745,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 63,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/journal-audit",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "200": 1,
+    "304": 11
+   },
+   "resteMin": 2736,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 65,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/profil",
+   "requetesApi": 11,
+   "compteesLimiteur": 8,
+   "statuts": {
+    "304": 11
+   },
+   "resteMin": 2728,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 67,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/avocats/7862",
+   "requetesApi": 14,
+   "compteesLimiteur": 11,
+   "statuts": {
+    "200": 2,
+    "304": 12
+   },
+   "resteMin": 2717,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 69,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/",
+   "requetesApi": 14,
+   "compteesLimiteur": 11,
+   "statuts": {
+    "304": 14
+   },
+   "resteMin": 2706,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 72,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/avocats",
+   "requetesApi": 40,
+   "compteesLimiteur": 37,
+   "statuts": {
+    "304": 40
+   },
+   "resteMin": 2669,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 74,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/stagiaires",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "304": 12
+   },
+   "resteMin": 2660,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 77,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/cabinets",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "304": 12
+   },
+   "resteMin": 2651,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 79,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/tableau",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "200": 1,
+    "304": 11
+   },
+   "resteMin": 2642,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 81,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/pieces",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "304": 12
+   },
+   "resteMin": 2633,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 83,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/corps-electoral",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "304": 12
+   },
+   "resteMin": 2624,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 88,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/cotisations",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "304": 12
+   },
+   "resteMin": 2615,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 90,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/quitus",
+   "requetesApi": 15,
+   "compteesLimiteur": 12,
+   "statuts": {
+    "304": 15
+   },
+   "resteMin": 2603,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 92,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/recus",
+   "requetesApi": 13,
+   "compteesLimiteur": 10,
+   "statuts": {
+    "304": 13
+   },
+   "resteMin": 2593,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 95,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/droits-plaidoirie",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "304": 12
+   },
+   "resteMin": 2584,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 96,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/timbres",
+   "requetesApi": 13,
+   "compteesLimiteur": 10,
+   "statuts": {
+    "304": 13
+   },
+   "resteMin": 2574,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 99,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/reunions",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "304": 12
+   },
+   "resteMin": 2565,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 101,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/assemblees",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "304": 12
+   },
+   "resteMin": 2556,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 102,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/discipline",
+   "requetesApi": 11,
+   "compteesLimiteur": 8,
+   "statuts": {
+    "304": 11
+   },
+   "resteMin": 2548,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 104,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/elections",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "304": 12
+   },
+   "resteMin": 2539,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 106,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/conseil",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "304": 12
+   },
+   "resteMin": 2530,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 107,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/messagerie",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "304": 12
+   },
+   "resteMin": 2521,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 109,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/archives",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "304": 12
+   },
+   "resteMin": 2512,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 111,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/annuaire",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "304": 12
+   },
+   "resteMin": 2503,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 113,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/publications",
+   "requetesApi": 14,
+   "compteesLimiteur": 11,
+   "statuts": {
+    "200": 1,
+    "304": 12,
+    "401": 1
+   },
+   "resteMin": 298,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [
+    200
+   ],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 115,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/lettre-batonnier",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "304": 12
+   },
+   "resteMin": 2484,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 116,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/parametres",
+   "requetesApi": 14,
+   "compteesLimiteur": 10,
+   "statuts": {
+    "304": 14
+   },
+   "resteMin": 2474,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 118,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/utilisateurs",
+   "requetesApi": 13,
+   "compteesLimiteur": 10,
+   "statuts": {
+    "304": 13
+   },
+   "resteMin": 2464,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 120,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/journal-audit",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "200": 1,
+    "304": 11
+   },
+   "resteMin": 2455,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 122,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/profil",
+   "requetesApi": 11,
+   "compteesLimiteur": 8,
+   "statuts": {
+    "304": 11
+   },
+   "resteMin": 2447,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 124,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/avocats/7862",
+   "requetesApi": 14,
+   "compteesLimiteur": 11,
+   "statuts": {
+    "304": 14
+   },
+   "resteMin": 2436,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  }
+ ],
+ "blocage": []
+}
