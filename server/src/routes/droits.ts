@@ -30,8 +30,10 @@ droitsRouter.post(
       return (st === "retard" || st === "partiel") && m.email;
     });
 
+    // Envois par lots de 5 en parallèle : en séquentiel, chaque cible coûte environ 15 ms
+    // (config SMTP + journal e-mail + journal SMS), soit plus de 30 s au-delà de 2 000 avocats.
     let envoyes = 0;
-    for (const m of cibles) {
+    const relancer = async (m: (typeof cibles)[number]) => {
       const d = m.droitsPlaidoirie[0];
       const du = droitDue(d, tarifs, m.qualite);
       const solde = du - (d?.montantPaye ?? 0);
@@ -49,7 +51,8 @@ droitsRouter.post(
         });
       }
       envoyes += 1;
-    }
+    };
+    for (let i = 0; i < cibles.length; i += 5) await Promise.all(cibles.slice(i, i + 5).map(relancer));
     res.json({ annee, envoyes, simulation: await emailEnSimulation(), destinataires: cibles.map((m) => ({ nom: m.nom, email: m.email })) });
   })
 );

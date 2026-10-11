@@ -12,7 +12,8 @@ const tsx = path.resolve("node_modules/tsx/dist/cli.mjs");
 
 function lancer(url: string, ...args: string[]) {
   return spawnSync(process.execPath, [tsx, "prisma/demo.ts", ...args], {
-    env: { ...process.env, DATABASE_URL: url, TEST_DATABASE_URL: url },
+    // TEST_DATABASE_URL vise la vraie base de test : le script ne doit lire que DATABASE_URL.
+    env: { ...process.env, DATABASE_URL: url, TEST_DATABASE_URL: base("barreau_pn_test") },
     encoding: "utf8",
     timeout: 60_000,
   });
@@ -22,14 +23,20 @@ describe("npm run demo : garde-fou de base (CA15)", () => {
   it.each(["barreau_pn", "barreau_pn_test_ci", "barreau_pn_test2", "autre", "postgres"])(
     "refuse la base %s avec un code non nul",
     (nom) => {
-      const r = lancer(base(nom), "--base-test");
+      const r = lancer(base(nom));
       expect(r.status).not.toBe(0);
       expect(r.stderr).toContain("barreau_pn_test");
     },
   );
 
-  it("refuse aussi sans l'option --base-test quand DATABASE_URL vise la production", () => {
-    const r = lancer(base("barreau_pn"));
+  it("refuse la production même avec l'ancienne option --base-test (TEST_DATABASE_URL ignoré)", () => {
+    const r = lancer(base("barreau_pn"), "--base-test");
+    expect(r.status).not.toBe(0);
+    expect(r.stdout).not.toContain("EFFECTIFS");
+  });
+
+  it("refuse un DATABASE_URL absent ou illisible", () => {
+    const r = lancer("pas-une-url");
     expect(r.status).not.toBe(0);
   });
 

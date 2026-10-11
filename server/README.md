@@ -394,18 +394,30 @@ absence de dérive schéma/base, immuabilité du journal).
 
 Données **entièrement fictives** (mention C-13), réinstallables par une seule commande sur `barreau_pn_test`.
 
+Le script lit **uniquement `DATABASE_URL`**. Celui du `.env` vise `barreau_pn` : il est refusé. On désigne
+donc la base de test explicitement (dotenv ne remplace pas une variable déjà définie) :
+
 ```bash
-npm run demo                                  # installe ou complète les données
-npm run demo -- --identite=demonstration      # + identité « Barreau de démonstration » (logo générique, mention C-13)
-npm run demo -- --identite=pointe-noire       # retour à l'identité de base (supprime la section identite des Paramètres)
+# Git Bash
+DATABASE_URL="postgresql://barreau:…@127.0.0.1:5432/barreau_pn_test?schema=public" npm run demo
+DATABASE_URL="…/barreau_pn_test?schema=public" npm run demo -- --identite=demonstration  # + identité « Barreau de démonstration »
+DATABASE_URL="…/barreau_pn_test?schema=public" npm run demo -- --identite=pointe-noire   # retour à l'identité de base
+# PowerShell
+$env:DATABASE_URL = "postgresql://barreau:…@127.0.0.1:5432/barreau_pn_test?schema=public"; npm run demo
 ```
 
-- **Garde-fou** : le script refuse, avec un code non nul et avant toute connexion, toute base dont le nom n'est pas exactement `barreau_pn_test` (donc `barreau_pn`, `barreau_pn_test_ci` et toute autre). `npm run demo` ajoute `--base-test`, qui vise `TEST_DATABASE_URL` : le `DATABASE_URL` du `.env` est celui de la production. Test : `test/demo-garde.test.ts`.
-- **Idempotent** : upsert sur clés naturelles (num 800001 à 800200, numInscription `DEMO-…`, dossiers `DEMO-2026-NN`, sujets `[DEMO] …`, références `DEMO-…`). Deux exécutions donnent les mêmes effectifs (ligne `EFFECTIFS` affichée en fin de script). Les autres membres ne sont jamais lus ni modifiés ; un membre déjà créé n'est pas réécrit.
+- **Garde-fou** : le script refuse, avec un code non nul et avant toute connexion, tout `DATABASE_URL` absent, illisible ou dont le nom de base n'est pas exactement `barreau_pn_test` (donc `barreau_pn`, `barreau_pn_test_ci` et toute autre). `TEST_DATABASE_URL` n'est jamais lu ; l'ancienne option `--base-test` est sans effet. Test : `test/demo-garde.test.ts` (8 cas, aucune connexion ouverte).
+- **Idempotent et cloisonné** : upsert sur clés naturelles (num 800001 à 800200, numInscription `DEMO-…`, dossiers `DEMO-2026-NN`, sujets `[DEMO] …`, références `DEMO-…`). Un membre déjà créé n'est pas réécrit ; les autres membres ne sont jamais modifiés. Preuve versionnée : `test/demo-idempotence.test.ts` (dans `npm test`, ignoré si la base n'est pas `barreau_pn_test`) lance le script deux fois, compare les deux lignes `EFFECTIFS` et l'empreinte des membres hors DEMO, prise avant et après par la requête de comptage :
+  ```sql
+  SELECT count(*)::int AS n, max(id)::int AS max, md5(string_agg(m::text, '|' ORDER BY id)) AS h
+    FROM "Membre" m WHERE num NOT BETWEEN 800001 AND 800200;
+  ```
+  Relevé du 2026-10-11 sur `barreau_pn_test` : 5 982 membres hors DEMO (dont environ 5 900 restes de fixtures de tests, non purgés : leur purge attend l'accord de Fabrice), identiques avant et après ; deux exécutions donnent la même ligne :
+  `EFFECTIFS {"membres":{"AVOCAT/RADIE":1,"HONORAIRE/HONORAIRE":1,"STAGIAIRE/STAGIAIRE":15,"AVOCAT/INSCRIT":64},"cabinets":10,"cotisations":80,"recus":62,"dossiers":4,"evenements":6,"scrutins":1,"fils":4,"messages":7,"timbres":12,"timbresExternes":18}`
 - **Contenu** : 60 avocats courants, 4 avocats suivis en discipline et 1 en omission (soit 64 inscrits, 1 radié), 15 stagiaires, 1 honoraire, 10 cabinets ; cotisations de l'exercice courant à jour, partielles et en retard, encaissées par `encaisser()` (reçus et archives cohérents, aucun e-mail envoyé) ; 4 dossiers `DEMO-2026-01` à `04` (classement, avertissement, interdiction temporaire de 6 mois avec sursis, radiation enregistrée) ; 1 omission au stade de la transmission (rappel, mise en demeure, transmission horodatés, exercice précédent) ; scrutin test « conseil du barreau » (dateScrutin 12/12/2026, 3 candidats) ; 4 fils de messagerie dont une demande d'attestation en attente ; 12 timbres internes et 18 timbres externes (import MTN) ; compte de l'espace avocat `avocat.demo@demo.invalid` (mot de passe `barreau`, base de test seulement).
 - **Fictif** : noms assemblés par syllabes, e-mails `@demo.invalid`, téléphones `+242 00 000 …`. Aucun casier judiciaire ni pièce téléversé.
 - **Identité** : `--identite=demonstration` pose la dénomination, la ville, les signataires et le logo `assets/demo/logo-demonstration.png` (remplaçable) dans les Paramètres et active `modeDemonstration`. **Brazzaville n'est pas activable** (identité refusée) : aucun nom ni logo d'un barreau réel sans son accord écrit (PO-22). Un serveur déjà démarré garde l'identité en cache : le redémarrer ou enregistrer les Paramètres.
-- **Suite de tests** : lancer `npm run demo -- --identite=pointe-noire` avant `npm test` (certains tests de PDF attendent l'identité de base). Les données `DEMO` restent en base et ne gênent pas la suite.
+- **Suite de tests** : lancer la démonstration avec `--identite=pointe-noire` avant `npm test` (certains tests de PDF attendent l'identité de base). Les données `DEMO` ne gênent pas la suite. Comparaison A/B du 2026-10-11, même machine, même code (92b5b7a), deux copies de `barreau_pn_test` qui ne diffèrent que par les lignes DEMO : 307/307 verts dans les deux cas (134,1 s sans DEMO, 134,8 s avec). Les échecs observés auparavant (R1-6 à 30 s, PDF en `TimeoutError`) tenaient à la charge de la machine et au rendu PDF qui attendait un réseau au repos : corrigés dans `routes/droits.ts` (relances par lots de 5, 38,7 s ramenées à 12 s pour 2 360 cibles) et `lib/pdf.ts` (`load` borné puis polices bornées, test `test/pdf-chargement.test.ts`). `npx vitest run test/demo-garde.test.ts` prend moins de 20 s, mais attend d'abord le verrou de la suite (`globalSetup`) si une autre suite serveur tourne sur la même base.
 
 ## Sécurité & production
 - **Auth** : access token (15 min) + refresh token (7 j, rotation), `/auth/refresh`, `/auth/logout`

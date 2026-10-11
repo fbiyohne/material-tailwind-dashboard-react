@@ -5,10 +5,11 @@
  *   npm run demo -- --identite=demonstration       # + identité « Barreau de démonstration »
  *   npm run demo -- --identite=pointe-noire        # retour à l'identité de base
  *
- * Garde-fou : le script REFUSE toute base dont le nom n'est pas exactement
- * `barreau_pn_test`, avant d'ouvrir la moindre connexion. `npm run demo` ajoute
- * `--base-test`, qui vise TEST_DATABASE_URL (le DATABASE_URL du .env est celui de la
- * production : sans cette option il est refusé).
+ * Garde-fou : le script lit DATABASE_URL et REFUSE toute base dont le nom n'est pas
+ * exactement `barreau_pn_test`, avant d'ouvrir la moindre connexion (code de sortie 1).
+ * Le DATABASE_URL du .env vise barreau_pn : il faut donc désigner la base de test
+ * explicitement, par exemple `DATABASE_URL="$TEST_DATABASE_URL" npm run demo`
+ * (dotenv ne remplace pas une variable déjà définie).
  *
  * Idempotence : clés naturelles (num 800001 à 800200, numInscription « DEMO-… »,
  * dossiers « DEMO-AAAA-NN », sujets « [DEMO] … », références « DEMO-… »). Les autres
@@ -34,10 +35,6 @@ const args = process.argv.slice(2);
 const identiteVoulue = args.find((a) => a.startsWith("--identite="))?.slice("--identite=".length);
 if (identiteVoulue !== undefined && !(IDENTITES as readonly string[]).includes(identiteVoulue))
   echec(`identité « ${identiteVoulue} » inconnue (valeurs : ${IDENTITES.join(", ")}). Brazzaville n'est pas activable sans l'accord écrit de ce barreau.`);
-if (args.includes("--base-test")) {
-  if (!process.env.TEST_DATABASE_URL) echec("TEST_DATABASE_URL absent : impossible de viser la base de test.");
-  process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
-}
 let nomBase = "";
 try {
   nomBase = new URL(process.env.DATABASE_URL ?? "").pathname.replace(/^\//, "");

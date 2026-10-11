@@ -2,7 +2,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import type { Response } from "express";
-import puppeteer, { type Browser } from "puppeteer-core";
+import puppeteer, { TimeoutError, type Browser, type Page } from "puppeteer-core";
+import { logger } from "./logger.js";
 
 const existe = (p?: string | null): p is string => {
   try { return !!p && fs.existsSync(p); } catch { return false; }
@@ -72,7 +73,7 @@ async function getNavigateur(): Promise<Browser> {
 // Hôtes externes autorisés au rendu (polices Google uniquement). Toute autre
 // ressource réseau est bloquée : défense en profondeur contre une injection HTML
 // dans un champ libre (ex. nom = `<img src=http://evil/…>`) qui déclencherait
-// sinon une requête sortante côté serveur (SSRF aveugle) via `networkidle0`.
+// sinon une requête sortante côté serveur (SSRF aveugle).
 const HOTES_AUTORISES = new Set(["fonts.googleapis.com", "fonts.gstatic.com"]);
 
 /** Nouvelle page Chromium avec interception des ressources externes non autorisées. */
@@ -94,14 +95,35 @@ async function nouvellePage() {
   return page;
 }
 
+/** Délais du rendu (ms), modifiables par les tests. */
+export const DELAIS_PDF = { chargement: 20_000, polices: 5_000 };
+
+/**
+ * Charge le HTML sans dépendre d'un réseau « au repos » : attente de l'événement load
+ * (feuilles de style, images), bornée, puis des polices, bornée. Un délai dépassé (police
+ * Google lente, machine chargée) n'est pas une erreur : le PDF sort avec la police de repli.
+ * Remplace « networkidle0 », qui échouait au bout de 30 s dès qu'une requête traînait.
+ */
+async function charger(page: Page, html: string) {
+  try {
+    await page.setContent(html, { waitUntil: "load", timeout: DELAIS_PDF.chargement });
+  } catch (err) {
+    if (!(err instanceof TimeoutError)) throw err;
+    logger.warn("PDF : chargement des ressources au-delà du délai, rendu avec les polices de repli");
+  }
+  let minuteur: NodeJS.Timeout | undefined;
+  await Promise.race([
+    page.evaluate(() => document.fonts.ready.then(() => undefined)).catch(() => undefined),
+    new Promise((r) => (minuteur = setTimeout(r, DELAIS_PDF.polices))),
+  ]);
+  clearTimeout(minuteur);
+}
+
 /** Convertit un document HTML en PDF A4 (qualité vectorielle). */
 export async function htmlVersPdf(html: string): Promise<Buffer> {
   const page = await nouvellePage();
   try {
-    // « networkidle0 » est accepté à l'exécution par setContent (attente du
-    // chargement complet des ressources) ; les typings de cette version le
-    // restreignent à tort à load/domcontentloaded, d'où le cast.
-    await page.setContent(html, { waitUntil: "networkidle0" } as unknown as Parameters<typeof page.setContent>[1]);
+    await charger(page, html);
     return (await page.pdf({
       format: "A4",
       printBackground: true,
@@ -129,7 +151,7 @@ export async function envoyerDocumentPdf(res: Response, html: string, filename: 
   const page = await nouvellePage();
   try {
     await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 2 });
-    await page.setContent(html, { waitUntil: "networkidle0" } as unknown as Parameters<typeof page.setContent>[1]);
+    await charger(page, html);
     const hauteur = await page.evaluate(() => {
       const el = document.querySelector(".doc-root");
       return el ? Math.ceil((el as HTMLElement).getBoundingClientRect().height) : document.body.scrollHeight;
