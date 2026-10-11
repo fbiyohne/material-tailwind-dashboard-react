@@ -275,6 +275,7 @@ Toutes les entrées ont pour interlocutrice Me Kalina MENGA, qui valide ou trans
 - **Texte** : art. 18-10° et 36 de la loi 026-92 (la radiation relève du Conseil du barreau en conseil de discipline) ; matrice R-42.
 - **Constat** (R1-7) : `POST /membres/:id/radier` et `PATCH /membres/:id` (statut RADIE) étaient ouverts au SG (`requireRole`), sans `discipline_decider`.
 - **Décision** : corrigé. La route exige l'action `discipline_decider` (bâtonnier par défaut, ADMIN) ; le SG reçoit 403 (`radier-permission.test.ts`). `PATCH /membres/:id` applique la même règle au passage en RADIE et à la levée d'une radiation ; le SG garde la correction de la date et de la référence d'un radié, et la déclaration de décès. La référence de la décision reste facultative, comme avant.
+- **Valeur provisoire retenue** : le SG ne radie pas ; seule l'autorité disciplinaire (`discipline_decider`) radie.
 - **Reste à confirmer** : si Me Kalina MENGA veut que le SG enregistre aussi les radiations, il faut changer ses actions par défaut (R-42, `lib/rbac.ts`), car les actions du SG ne s'éditent pas dans la matrice. À valider par Fabrice et Me MENGA.
 - **Interlocutrice** : Me Kalina MENGA.
 
@@ -282,9 +283,41 @@ Toutes les entrées ont pour interlocutrice Me Kalina MENGA, qui valide ou trans
 - **Texte** : art. 35 de la loi 026-92 (l'omission retire du tableau) ; PO-21 (le tableau et son PDF ne montrent que des membres en exercice, sans motif de sortie).
 - **Constat** (R1-9) : `GET /tableau` et son PDF ne filtraient que `STATUTS_SORTIS`, donc les OMIS figuraient avec la mention « (Omis) ».
 - **Décision** : corrigé. Les OMIS sont exclus (`routes/tableau.ts`, test `tableau-dashboard.test.ts`). Les SUSPENDU restent au tableau avec la mention « (Suspendu) » : valeur **provisoire**, car l'interdiction temporaire n'est pas un retrait du tableau en l'état des textes lus.
+- **Valeur provisoire retenue** : omis exclus du tableau public, suspendus conservés avec la mention « (Suspendu) ».
 - **Reste à confirmer** : si l'avocat suspendu doit être masqué du tableau public. À valider par Me Kalina MENGA.
 
 ### PO-36 — Interdiction temporaire visant un avocat omis ou sorti
 - **Constat** (R2-3) : `POST /discipline/:id/decision` ne refusait l'interdiction ferme que pour RADIE et DECEDE. Un avocat OMIS, DEMISSIONNAIRE, RETRAITE ou CESSATION passait SUSPENDU, revenait au tableau public (où SUSPENDU figure, PO-35) et voyait son omission levée hors du circuit et de `omission_prononcer`.
 - **Décision** : corrigé. L'interdiction ferme est refusée (409, rien n'est écrit) pour OMIS et tout statut de `STATUTS_SORTIS`. Test `discipline-decision.test.ts` « R2-3 » (OMIS, DEMISSIONNAIRE). Les autres sanctions (avertissement, réprimande, interdiction avec sursis) restent enregistrables sans changement de statut.
+- **Valeur provisoire retenue** : interdiction ferme refusée (409) pour un avocat omis ou sorti.
 - **Reste à confirmer** : si une interdiction prononcée contre un avocat omis doit être enregistrée pour exécution à sa réinscription (au lieu d'un refus). À valider par Me Kalina MENGA.
+
+### PO-37 — Durée de validité du quitus
+- **Texte** : aucun texte trouvé (R-65).
+- **Constat** : Mission M-20261011 : la durée, jusque-là écrite en dur, devient le paramètre `regles.quitus.validiteMois`.
+- **Valeur provisoire retenue** : 3 mois à compter de la délivrance, date de fin affichée. À faire confirmer par le Conseil de l'Ordre (délibération).
+- **Interlocutrice** : Me Kalina MENGA.
+
+### PO-38 — Délibération sur le timbre de plaidoirie (copie et usage)
+- **Texte** : R-63 : aucune base juridique trouvée pour un timbre autonome.
+- **Constat** : Le timbre est copiable depuis l'espace avocat : une image est reproductible, l'authenticité ne repose que sur la vérification en ligne par QR.
+- **Valeur provisoire retenue** : Prototype en bac à sable, mention « PROTOTYPE, sans valeur », timbre rattaché à une seule affaire, aucune émission réelle. Usage réel : délibération du Conseil de l'Ordre national, acceptation des greffes ou du ministère de la Justice, encaissement par un prestataire agréé.
+- **Interlocutrice** : Me Kalina MENGA.
+
+### PO-39 — Agrément de l'agrégateur de paiement
+- **Texte** : Règlement n° 04/18/CEMAC/UMAC/COBAC du 21/12/2018 ; Règlement COBAC R-2019/01 (textes non relus, synthèses secondaires).
+- **Constat** : CinetPay n'est qu'un exemple d'agrégateur : son agrément, ou son adossement à un établissement agréé couvrant le Congo, n'est pas vérifié.
+- **Valeur provisoire retenue** : Passerelles verrouillées en mode test ; aucun encaissement réel. À vérifier auprès de la BEAC/COBAC avant tout passage en production, avec un contrat direct entre l'Ordre et le prestataire.
+- **Interlocutrice** : Me Kalina MENGA.
+
+### PO-40 — Loi sur les transactions électroniques
+- **Texte** : aucune loi congolaise sur les transactions et la signature électroniques confirmée (avant-projet signalé dans la presse).
+- **Constat** : Le code de vérification des QR est un contrôle d'authenticité, sans certificat qualifié.
+- **Valeur provisoire retenue** : Aucun document ne revendique de portée probatoire ; le code est présenté comme un code de vérification. À faire vérifier au JO (sgg.cg) ou par un cabinet local.
+- **Interlocutrice** : Me Kalina MENGA.
+
+### PO-41 — Pièces comptables : AUDCIF ou SYCEBNL
+- **Texte** : Acte uniforme OHADA relatif au droit comptable et à l'information financière (2017), article cité de mémoire ; applicabilité à un ordre professionnel non établie.
+- **Constat** : La durée de conservation des reçus (dix ans) et le référentiel comptable applicable restent à confirmer (HJ-I).
+- **Valeur provisoire retenue** : Conservation des reçus émis au moins dix ans ; aucune suppression d'un reçu émis. Renvoi à la conformité-finance.
+- **Interlocutrice** : Me Kalina MENGA.

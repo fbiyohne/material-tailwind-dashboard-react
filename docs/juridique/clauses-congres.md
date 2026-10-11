@@ -152,3 +152,21 @@ Emplacement : lettre d'accord à faire signer avant la bascule d'identité vers 
 Emplacement : complément oral et écrit du bandeau C-11, dans le scénario.
 
 > Prototype présenté à titre expérimental : aucun timbre émis ni aucun paiement réel ; le vote électronique n'est pas prévu par la loi n° 026-92 et ne peut servir à un scrutin officiel sans délibération de l'Ordre.
+
+### Clause CL-POLITIQUE-CONFIDENTIALITE
+
+Emplacement : ajout à la politique de confidentialité (voir C-03 et C-04).
+
+> Destinataires techniques : prestataires d'envoi d'e-mails et de SMS, prestataire de paiement agréé, hébergeur ({pays}). Ils agissent sur instruction de l'Ordre et sont tenus à la confidentialité. Les documents émis par l'Ordre peuvent être vérifiés publiquement par leur code : seuls le numéro, la date, le statut et, pour le quitus, le nom et le numéro d'inscription du titulaire sont affichés.
+
+### Clause CL-CGU-ESPACE-AVOCAT
+
+Emplacement : ajout aux CGU de l'espace avocat (voir C-02), près de la fonction « Copier mon timbre ».
+
+> Le timbre que vous copiez ou téléchargez est personnel et rattaché à une seule affaire. Sa réutilisation pour un autre acte est interdite et peut constituer un faux.
+
+### Clause CL-CONTRAT-PRESTATAIRE
+
+Emplacement : contrat entre l'Ordre et chaque prestataire de paiement, de SMS ou d'e-mail (art. 63). À faire signer avant toute activation hors du mode test.
+
+> Le prestataire traite les données sur la seule instruction de l'Ordre et en assure la confidentialité et la sécurité. Il informe l'Ordre de toute violation de données sous 24 heures, déclare son pays d'hébergement, et restitue puis efface les données en fin de contrat. Pour un prestataire de paiement : il indique le numéro et la date de son agrément CEMAC, crédite les fonds directement au compte de l'Ordre, et Creatic Technologies ne détient aucun fonds.

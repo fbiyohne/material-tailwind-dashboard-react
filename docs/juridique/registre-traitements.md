@@ -27,6 +27,7 @@ Mission M-20261010-audit-ordre-avocats · Juriste-conseil Team Creatic, 2026-10-
 | T-8 | Élections et vote | Établir le corps électoral à la date du scrutin, recevoir les candidatures, enregistrer les votes | Avocats électeurs et candidats | Statut, ancienneté, cotisation à jour, candidature, bulletin | Commission électorale, bâtonnier | Procès-verbal conservé comme archive de l'Ordre ; le vote électronique reste un prototype | Déclaration (art. 33) |
 | T-9 | Timbre de plaidoirie (prototype) | Émettre et vérifier des timbres en bac à sable ; statistiques par mois et par canal ; import de données externes | Avocats | Référence, date, montant, canal, nom de l'avocat dans les données importées | Trésorier ; vérification publique limitée au numéro, à la date et à la validité (R-64) | À fixer ; aucune émission réelle | Déclaration (art. 33) avant tout usage réel |
 | T-10 | Comptes et accès | Authentifier, gérer les droits | Utilisateurs | Identifiant, e-mail, mot de passe, rôle, dernière connexion | ADMIN | Vie du compte | Déclaration (art. 33) |
+| T-11 | Page publique de vérification (QR des quitus, reçus et timbres) | Permettre à un tiers de contrôler qu'un document a été émis par l'Ordre et d'en connaître le statut | Titulaires de quitus, de reçus et de timbres | Quitus : numéro, date de délivrance, date de fin, statut, nom et numéro d'inscription (déjà publics au tableau, art. 34). Reçu : numéro, date, exercice couvert, sans montant, adresse ni téléphone. Timbre : numéro, date, statut, sans nom (R-64). Avocat sorti : libellé neutre « titulaire non inscrit au tableau à ce jour » (PO-21) | Public, sans compte | Aucune donnée propre à la page ; ni cookie ni traceur tiers | Dispense probable (art. 31), à confirmer. Limitation de débit par adresse IP ; jeton signé pour les nouveaux documents ; anciennes URL sans jeton valables pour les documents antérieurs à la bascule seulement |
 
 La santé n'est jamais enregistrée : l'omission pour maladie (art. 35-1°) se limite au code d'article (loi 29-2019, art. 17).
 
@@ -46,6 +47,18 @@ Seules les mesures vérifiées figurent comme démontrées ; les autres sont des
 | Démonstration isolée de la production | Oui (garde-fou sur le nom de la base du script) | Script de démonstration |
 
 Le logiciel et le scénario n'affirment ni protection de bout en bout, ni valeur probatoire, ni horodatage de tiers (clauses C-01 et C-11).
+
+## 3 bis. Sous-traitants techniques (art. 63)
+
+Prestataires qui reçoivent des données pour le compte du Barreau. Contrat de sous-traitance à signer avec chacun (clause CL-CONTRAT-PRESTATAIRE, `clauses-congres.md`). Aucun n'est encore retenu : les pays sont à renseigner à la signature.
+
+| Prestataire | Finalité | Données transmises | Pays d'hébergement | État |
+|---|---|---|---|---|
+| Fournisseur SMTP (e-mail) | Avis de service neutres (« nouveau message sur votre espace ») | Adresse e-mail du destinataire, objet neutre ; jamais le corps d'un message ni une pièce (loi 026-92, art. 52 ; R-58) | [à renseigner] | Mode test ; contrat à signer |
+| Fournisseur SMS | Avis de service neutres, sans prospection | Numéro de téléphone, texte neutre ; aucun contenu de message ni information disciplinaire | [à renseigner] | Mode test ; contrat à signer ; identifiant d'expéditeur à enregistrer chez les opérateurs (non vérifié) |
+| Prestataire de paiement agréé CEMAC (Mobile Money, agrégateur) | Encaisser cotisations et timbres ; fonds versés directement au compte de l'Ordre | Référence, montant, numéro de téléphone du payeur | [à renseigner] | Mode test verrouillé ; agrément à vérifier (PO-39) ; Creatic ne détient jamais de fonds |
+
+Si un prestataire héberge hors du Congo, appliquer le §4 (art. 23).
 
 ## 4. Transfert hors du Congo (art. 23) — à signaler
 
@@ -72,4 +85,4 @@ Accès, rectification et opposition : demande au secrétariat du Barreau (clause
 
 ## 8. Points à confirmer
 
-Installation de la Commission (HJ-D) ; qualification du tableau comme registre public dispensé (HJ-C) ; lieu d'hébergement ; durées « provisoire » ; durée de conservation des pièces comptables (HJ-I).
+Installation de la Commission (HJ-D) ; hébergement et agrément des prestataires du §3 bis (PO-39) ; qualification du tableau comme registre public dispensé (HJ-C) ; lieu d'hébergement ; durées « provisoire » ; durée de conservation des pièces comptables (HJ-I).

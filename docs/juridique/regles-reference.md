@@ -102,6 +102,7 @@ Les clés de paramétrage sont des propositions pour `Parametres.data.regles` (d
 | R-62 | Données disciplinaires | Réservées aux rôles habilités, consultation journalisée, exclues de l'annuaire, des exports, de la liste des membres et de l'espace des tiers | — (règle d'accès) | loi n° 29-2019, art. 16 et 37 | légal |
 | R-63 | Timbre de plaidoirie autonome | Prototype en sandbox ; aucune base juridique trouvée (texte ou délibération du Conseil national), aucune émission réelle | `timbre.modeSandbox = true` | aucun texte — à confirmer | provisoire |
 | R-64 | Page publique de vérification d'un timbre | Numéro, date et validité seulement ; aucune donnée personnelle | — | loi n° 29-2019, art. 7 | légal |
+| R-65 | Validité du quitus | 3 mois à compter de la délivrance ; la date de fin est affichée en clair sur le document et sur la page de vérification ; le quitus devient caduc si l'avocat est omis, suspendu ou sorti après sa délivrance (statut courant affiché) | `regles.quitus.validiteMois = 3` (entier de 1 à 24) | aucun texte — à confirmer | provisoire |
 
 ## 6. Hors tableau, pour mémoire
 
