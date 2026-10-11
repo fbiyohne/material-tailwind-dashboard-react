@@ -10,6 +10,9 @@ import { montantEnLettresFCFA } from "./montantEnLettres.js";
 import { esc, fmtFCFA, fmtDateFr } from "./documentsCommun.js";
 import { identite, MENTION_DEMONSTRATION } from "./identiteDocuments.js";
 import { cachetBatonnier, cachetTresoriere } from "./cachets.js";
+import { cheminVerif } from "./signature.js";
+import { finValiditeQuitus } from "./business.js";
+import { REGLES_DEFAUT } from "./regles.js";
 
 /** Cachet officiel (image) ou rien si l'asset est absent. */
 const cachetImg = (src: string, size = 128) =>
@@ -80,7 +83,8 @@ const styles = `
   .filet span { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); font-size:10px; line-height:1; color:#C4990A; }
   .navy { color:#1A3A6B; } .or { color:#C4990A; } .gris { color:#7A756A; }
   .row-nd { display:flex; justify-content:space-between; }
-  .champ { display:flex; gap:8px; align-items:baseline; border-bottom:1px dotted rgba(122,117,106,.5); padding-bottom:6px; }
+  .champ { display:flex; gap:8px; align-items:baseline; border-bottom:1px dotted rgba(122,117,106,.5); padding-bottom:6px; font-size:12pt; }
+  .champ .nom { font-size:14pt; font-weight:700; color:#1A3A6B; }
   .champ.multi { align-items:flex-start; min-height:42px; }
   .champ b { flex:0 0 auto; font-weight:700; }
   .champ span { flex:1; }
@@ -91,7 +95,8 @@ const styles = `
   .sig { text-align:center; }
   .sig .line { width:208px; border-top:1px dotted #7A756A; margin-top:48px; }
   .verif { display:flex; align-items:center; gap:16px; }
-  .verif .t { font-size:11px; line-height:1.6; color:#7A756A; }
+  .verif .t { font-size:11px; line-height:1.5; color:#7A756A; }
+  .sigrow .verif .t { max-width:300px; }
   .band { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; background:#0d2247; padding:16px 40px; font-size:11px; line-height:1.6; color:rgba(255,255,255,.9); }
   .band-l { font-weight:600; color:#C4990A; }
 </style>`;
@@ -110,14 +115,17 @@ const enTete = (sousTitre: string) => `
     </div>
   </div>`;
 
-/** Bloc de vérification (QR + URL). */
+/**
+ * Bloc de vérification : QR (96 px, soit 25 mm imprimés) + clause CL-VERIF.
+ * Le chemin court signé (/v/{t}/{ref}.{jeton}) est celui que le QR encode (qrDocument).
+ */
 const verif = (qr: string, host: string, chemin: string) => `
   <div class="verif">
-    <img src="${qr}" width="78" height="78" alt="QR"/>
+    <img src="${qr}" width="96" height="96" alt="QR"/>
     <div class="t">
       <div class="navy" style="font-size:12px; font-weight:600; text-transform:uppercase;">Vérification d'authenticité</div>
-      Scannez ce code, ou rendez-vous sur :<br/>
-      <span class="mono navy">${esc(host)}${esc(chemin)}</span>
+      Authenticité vérifiable en scannant ce code ou sur <span class="mono navy">${esc(host)}${esc(chemin)}</span>.
+      Ce code permet de contrôler que le document a été émis par l'Ordre et d'en connaître le statut actuel. Il ne constitue pas une signature.
     </div>
   </div>`;
 
@@ -156,8 +164,9 @@ export function recuRicheHtml(recu: RecuLike, membre: MembreLike, qr: string, ho
         <div style="text-align:center; font-size:16px; font-weight:700; text-transform:uppercase; line-height:1.375;">La Trésorière de l'Ordre des Avocats<br/>au ${esc(identite().denomination)}</div>
         <div style="margin-top:16px; text-align:center; font-size:15px; font-style:italic;">Reconnaît avoir reçu de Maître :</div>
         <div style="margin-top:24px; display:flex; flex-direction:column; gap:16px;">
-          <div class="champ"><b>Nom et Prénom(s) :</b><span>Me ${esc(membre.nom)}</span></div>
+          <div class="champ"><b>Nom et Prénom(s) :</b><span class="nom">Me ${esc(membre.nom)}</span></div>
           <div class="champ"><b>Au titre de :</b><span>${esc(recu.objet || `Cotisation ordinale ${recu.annee}`)}</span></div>
+          <div class="champ"><b>Exercice couvert :</b><span>${esc(recu.annee)}</span></div>
           <div class="champ"><b>Mode de paiement :</b><span>${esc(recu.mode || "—")}</span></div>
         </div>
         <div class="montant" style="margin-top:28px;">
@@ -168,7 +177,7 @@ export function recuRicheHtml(recu: RecuLike, membre: MembreLike, qr: string, ho
         <div style="margin-top:24px; text-align:center; font-size:15px;">En foi de quoi, le présent reçu lui est délivré pour servir et valoir ce que de droit.</div>
       </div>
       <div class="sigrow" style="margin-top:40px;">
-        ${verif(qr, host, `/verifier/recu/${recu.numero}`)}
+        ${verif(qr, host, cheminVerif("r", recu.numero))}
         ${cachetImg(cachetTresoriere)}
         <div class="sig">
           <div style="font-size:13px; font-weight:600;">La Trésorière de l'Ordre</div>
@@ -181,8 +190,12 @@ export function recuRicheHtml(recu: RecuLike, membre: MembreLike, qr: string, ho
   return page(corps);
 }
 
-/** Quitus de cotisation — reproduction de QuitusDocument. */
-export function quitusRicheHtml(quitus: { numero: string; annee: number; dateEmission: Date | string }, membre: MembreLike, qr: string, host: string): string {
+/**
+ * Quitus de cotisation — reproduction de QuitusDocument. `validiteMois` vient de
+ * la règle regles.quitus.validiteMois (reglesActuelles) ; la date de fin est calculée.
+ */
+export function quitusRicheHtml(quitus: { numero: string; annee: number; dateEmission: Date | string }, membre: MembreLike, qr: string, host: string, validiteMois = REGLES_DEFAUT.quitus.validiteMois): string {
+  const fin = finValiditeQuitus(new Date(quitus.dateEmission), validiteMois);
   const adresse = [membre.cabinet, membre.adresse].filter(Boolean).join(" — ");
   const inscr = membre.numInscription ?? (membre.num != null ? `${membre.num}/BPN` : "");
   const corps = `
@@ -199,8 +212,8 @@ export function quitusRicheHtml(quitus: { numero: string; annee: number; dateEmi
       <div style="margin-top:16px;">
         <div style="text-align:center; font-size:16px; font-weight:700; text-transform:uppercase; line-height:1.375;">Le Bâtonnier de l'Ordre des Avocats<br/>au ${esc(identite().denomination)}</div>
         <div style="margin-top:14px; text-align:center; font-size:15px; font-style:italic;">Atteste qu'après vérification des écritures de l'Ordre, Maître :</div>
-        <div style="margin-top:16px; display:flex; flex-direction:column; gap:13px;">
-          <div class="champ"><b>Nom et Prénom(s) :</b><span>Me ${esc(membre.nom)}</span></div>
+        <div style="margin-top:16px; display:flex; flex-direction:column; gap:8px;">
+          <div class="champ"><b>Nom et Prénom(s) :</b><span class="nom">Me ${esc(membre.nom)}</span></div>
           <div class="champ"><b>Inscrit(e) au Barreau sous le n° :</b><span>${esc(inscr)}</span></div>
           <div class="champ"><b>Date d'inscription :</b><span>${fmtDateFr(membre.dateInscription)}</span></div>
           <div class="champ multi"><b>Adresse professionnelle :</b><span>${esc(adresse || "—")}</span></div>
@@ -215,7 +228,7 @@ export function quitusRicheHtml(quitus: { numero: string; annee: number; dateEmi
         <div class="ico">${calendrier}</div>
         <div>
           <div class="navy" style="font-size:14px; font-weight:700; text-transform:uppercase;">Validité du présent quitus</div>
-          <div class="gris" style="margin-top:2px; font-size:13px;">Le présent quitus est valable pour une durée de trois (03) mois à compter de sa date de délivrance.</div>
+          <div class="gris" style="margin-top:2px; font-size:13px;">Valable jusqu'au <b class="navy">${fmtDateFr(fin)}</b> inclus, sauf changement de situation du titulaire, consultable à tout moment par le code de vérification.</div>
         </div>
       </div>
       <div class="sigrow" style="margin-top:16px;">
@@ -231,8 +244,8 @@ export function quitusRicheHtml(quitus: { numero: string; annee: number; dateEmi
           <div class="gris" style="margin-top:4px; font-size:12px;">${esc(identite().batonnier)}</div>
         </div>
       </div>
-      <div style="margin-top:14px; border-top:1px solid #E0DBD0; padding-top:12px;">
-        ${verif(qr, host, `/verifier/quitus/${quitus.numero}`)}
+      <div style="margin-top:12px; border-top:1px solid #E0DBD0; padding-top:10px;">
+        ${verif(qr, host, cheminVerif("q", quitus.numero))}
       </div>
       <div class="gris" style="margin-top:10px; text-align:center; font-size:11px; font-style:italic;">Ce document est strictement personnel et ne peut être utilisé à d'autres fins que celles pour lesquelles il est délivré.</div>
     </div>`;

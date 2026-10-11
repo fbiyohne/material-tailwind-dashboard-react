@@ -141,6 +141,13 @@ Ordre et délais (cause 35-4° et chaque étape) : l'étape *k* exige l'étape *
 ### Chromium pour le PDF
 `trouverChromium` (`src/lib/pdf.ts`) cherche dans l'ordre : `PUPPETEER_EXECUTABLE_PATH`, le cache Puppeteer, Playwright, les binaires Linux (`/usr/bin/chromium`, `google-chrome`…), puis sous Windows `C:/Program Files/Google/Chrome/Application/chrome.exe` et `C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe`. Sans binaire, les routes PDF répondent en erreur et les tests PDF s'ignorent.
 
+## Documents à QR : quitus, reçus, timbres (T9, M-20261011, point 6)
+
+- Chaque réponse JSON porte `verif`, le chemin court signé que le QR encode (`cheminVerif`, `src/lib/signature.ts`) : `/v/q/{numero}.{jeton}` (quitus), `/v/r/{numero}.{jeton}` (reçu), `/v/t/{code}.{jeton}` (timbre). Routes : `GET /api/quitus`, `POST /api/quitus`, `GET /api/recus`, `GET|POST /api/timbres`, `GET /api/timbres/:id`, `GET /api/espace/documents`, `GET|POST /api/espace/timbres`.
+- Quitus : `finValidite` = date de délivrance + `regles.quitus.validiteMois` (défaut 3, `finValiditeQuitus`). Règle relue à chaque appel : la changer modifie aussi la date de fin affichée pour les quitus déjà émis (aucune durée stockée par quitus).
+- PDF (`/api/quitus|recus/:id/pdf`, `/api/espace/quitus|recus/:id/pdf`) : QR par `qrDocument` (correction M, 96 px soit 25 mm), clause CL-VERIF sous le QR, validité « Valable jusqu'au {date} inclus… » calculée, identité en 12 pt et nom en 14 pt ; reçu : ligne « Exercice couvert » issue de `Recu.annee`.
+- Les anciennes URL `/verifier/{type}/{numero}` restent servies ; la page courte `/v/...` relève de T10.
+
 ## Paramètres sensibles et secrets (T13, M-20261011)
 
 `src/lib/secrets.ts` chiffre au repos (AES-256-GCM, format `enc:v1:iv:tag:ct`) les secrets de `Parametres.data`, liste fermée `CHEMINS_SECRETS` : `smtp.pass`, `notifications.sms.cleApi`, `passerelles.mtn.abonnementCle|cleSecrete`, `passerelles.airtel.cleSecrete`, `passerelles.agregateur.cleApi|cleWebhook`. Clé : `PARAMS_CLE` (32 octets base64, env, jamais dans Git) ; sans elle, un PUT de secret répond 400. Un `smtp.pass` historique en clair reste lisible (`dechiffrer` le renvoie tel quel) ; l'assistant d'installation le chiffre dès que la clé existe.

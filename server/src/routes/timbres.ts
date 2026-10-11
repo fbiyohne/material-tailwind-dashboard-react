@@ -6,6 +6,7 @@ import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole, requirePermission, type AuthRequest } from "../middleware/auth.js";
 import { CANAUX } from "../lib/paiement.js";
 import { emettreTimbre } from "../lib/timbres.js";
+import { cheminVerif } from "../lib/signature.js";
 import { notifier, userDeMembre } from "../lib/centreNotifications.js";
 
 /**
@@ -13,6 +14,7 @@ import { notifier, userDeMembre } from "../lib/centreNotifications.js";
  * Secrétariat / la Trésorière (l'avocat peut émettre les siens depuis l'espace) :
  * chaque timbre porte un n° séquentiel, un identifiant unique et une preuve
  * vérifiable via QR (page publique /verifier/timbre/:code). Données financières (RG-15).
+ * Chaque réponse porte `verif` : chemin court signé /v/t/{code}.{jeton} encodé par le QR.
  */
 export const timbresRouter = Router();
 timbresRouter.use(requireAuth, requirePermission("finances"));
@@ -38,7 +40,7 @@ timbresRouter.post(
     void userDeMembre(membre.id)
       .then((uid) => (uid ? notifier([uid], { type: "TIMBRE", titre: "Timbre disponible", message: `Votre timbre N° ${timbre.numero} (${data.affaire}) est disponible.`, lien: "/timbres" }) : 0))
       .catch(() => {});
-    res.status(201).json({ ...timbre, membre: { nom: membre.nom, num: membre.num } });
+    res.status(201).json({ ...timbre, verif: cheminVerif("t", timbre.code), membre: { nom: membre.nom, num: membre.num } });
   })
 );
 
@@ -95,7 +97,7 @@ timbresRouter.get(
       orderBy: { id: "desc" },
       include: { membre: { select: { nom: true, num: true } } },
     });
-    res.json(timbres);
+    res.json(timbres.map((t) => ({ ...t, verif: cheminVerif("t", t.code) })));
   })
 );
 
@@ -108,7 +110,7 @@ timbresRouter.get(
       include: { membre: { select: { nom: true, num: true } } },
     });
     if (!timbre) throw new HttpError(404, "Timbre introuvable");
-    res.json(timbre);
+    res.json({ ...timbre, verif: cheminVerif("t", timbre.code) });
   })
 );
 

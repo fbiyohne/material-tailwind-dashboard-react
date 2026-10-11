@@ -6,10 +6,11 @@ import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireAvocat, type AuthRequest } from "../middleware/auth.js";
 import { enregistrerFichier, lireFichier, supprimerFichier, typeReel } from "../lib/storage.js";
-import { cotisationDue, droitDue, statutCotisation, tarifsActuels, prochainNumeroAttestation, archiver, STATUTS_SORTIS, STATUTS_ANNUAIRE, peutAttesterInscription } from "../lib/business.js";
+import { cotisationDue, droitDue, statutCotisation, tarifsActuels, prochainNumeroAttestation, archiver, STATUTS_SORTIS, STATUTS_ANNUAIRE, peutAttesterInscription, finValiditeQuitus } from "../lib/business.js";
 import { finaliserPaiement } from "../lib/encaissement.js";
 import { CANAUX, modeSandbox, nouvelleReference, initierPaiement } from "../lib/paiement.js";
-import QRCode from "qrcode";
+import { cheminVerif, qrDocument } from "../lib/signature.js";
+import { reglesActuelles } from "../lib/regles.js";
 import { envoyerPdf, envoyerDocumentPdf } from "../lib/pdf.js";
 import { convocationAgHtml, pvAssembleeHtml, decisionDisciplineHtml, attestationHtml, attestationNonRedevanceHtml } from "../lib/templates.js";
 import { recuRicheHtml, quitusRicheHtml } from "../lib/documentsRiches.js";
@@ -166,7 +167,7 @@ espaceRouter.get(
   "/timbres",
   asyncH(async (req: AuthRequest, res) => {
     const timbres = await prisma.timbre.findMany({ where: { membreId: monMembreId(req) }, orderBy: { id: "desc" } });
-    res.json({ montant: MONTANT_TIMBRE, timbres });
+    res.json({ montant: MONTANT_TIMBRE, timbres: timbres.map((t) => ({ ...t, verif: cheminVerif("t", t.code) })) });
   })
 );
 
@@ -186,7 +187,7 @@ espaceRouter.post(
     if (!membre) throw new HttpError(404, "Fiche introuvable");
     // Montant fixé par l'Ordre (non modifiable côté client).
     const timbre = await emettreTimbre({ membre, affaire: data.affaire, reference: data.reference, juridiction: data.juridiction, montant: MONTANT_TIMBRE, canal: data.canal });
-    res.status(201).json(timbre);
+    res.status(201).json({ ...timbre, verif: cheminVerif("t", timbre.code) });
   })
 );
 
@@ -230,9 +231,13 @@ espaceRouter.get(
       prisma.recu.findMany({ where: { membreId }, orderBy: { date: "desc" } }),
       prisma.quitus.findMany({ where: { membreId }, orderBy: { dateEmission: "desc" } }),
     ]);
+    const { validiteMois } = (await reglesActuelles()).quitus;
     res.json({
-      recus: recus.map((r) => ({ id: r.id, numero: r.numero, montant: r.montant, annee: r.annee, date: dateCourte(r.date), objet: r.objet })),
-      quitus: quitus.map((q) => ({ id: q.id, numero: q.numero, annee: q.annee, date: dateCourte(q.dateEmission) })),
+      recus: recus.map((r) => ({ id: r.id, numero: r.numero, montant: r.montant, annee: r.annee, date: dateCourte(r.date), objet: r.objet, verif: cheminVerif("r", r.numero) })),
+      quitus: quitus.map((q) => ({
+        id: q.id, numero: q.numero, annee: q.annee, date: dateCourte(q.dateEmission),
+        verif: cheminVerif("q", q.numero), finValidite: dateCourte(finValiditeQuitus(q.dateEmission, validiteMois)),
+      })),
     });
   })
 );
@@ -311,10 +316,8 @@ espaceRouter.get(
   asyncH(async (req: AuthRequest, res) => {
     const recu = await prisma.recu.findUnique({ where: { id: Number(req.params.id) }, include: { membre: true } });
     if (!recu || recu.membreId !== monMembreId(req)) throw new HttpError(404, "Reçu introuvable");
-    const host = req.get("host") ?? "";
-    const proto = req.get("x-forwarded-proto") ?? req.protocol;
-    const qr = await QRCode.toDataURL(`${proto}://${host}/verifier/recu/${recu.numero}`, { margin: 1, width: 234, color: { dark: "#1A3A6B", light: "#ffffff" } });
-    await envoyerDocumentPdf(res, recuRicheHtml(recu, recu.membre, qr, host), `Recu-${recu.numero}.pdf`);
+    const qr = await qrDocument(req, "r", recu.numero);
+    await envoyerDocumentPdf(res, recuRicheHtml(recu, recu.membre, qr, req.get("host") ?? ""), `Recu-${recu.numero}.pdf`);
   })
 );
 
@@ -324,10 +327,8 @@ espaceRouter.get(
   asyncH(async (req: AuthRequest, res) => {
     const quitus = await prisma.quitus.findUnique({ where: { id: Number(req.params.id) }, include: { membre: true } });
     if (!quitus || quitus.membreId !== monMembreId(req)) throw new HttpError(404, "Quitus introuvable");
-    const host = req.get("host") ?? "";
-    const proto = req.get("x-forwarded-proto") ?? req.protocol;
-    const qr = await QRCode.toDataURL(`${proto}://${host}/verifier/quitus/${quitus.numero}`, { margin: 1, width: 234, color: { dark: "#1A3A6B", light: "#ffffff" } });
-    await envoyerDocumentPdf(res, quitusRicheHtml(quitus, quitus.membre, qr, host), `Quitus-${quitus.numero}.pdf`);
+    const qr = await qrDocument(req, "q", quitus.numero);
+    await envoyerDocumentPdf(res, quitusRicheHtml(quitus, quitus.membre, qr, req.get("host") ?? "", (await reglesActuelles()).quitus.validiteMois), `Quitus-${quitus.numero}.pdf`);
   })
 );
 

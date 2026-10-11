@@ -5,11 +5,11 @@ import { prisma } from "../prisma.js";
 import { anneeDeRequete } from "../lib/requete.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole, requirePermission } from "../middleware/auth.js";
-import QRCode from "qrcode";
-import { eligibleQuitus, prochainNumeroQuitus } from "../lib/business.js";
+import { eligibleQuitus, prochainNumeroQuitus, finValiditeQuitus } from "../lib/business.js";
+import { reglesActuelles } from "../lib/regles.js";
 import { envoyerDocumentPdf } from "../lib/pdf.js";
 import { quitusRicheHtml } from "../lib/documentsRiches.js";
-import { signerDocument, quitusPayload } from "../lib/signature.js";
+import { signerDocument, quitusPayload, cheminVerif, qrDocument } from "../lib/signature.js";
 import { notifier, userDeMembre } from "../lib/centreNotifications.js";
 
 /** Alerte in-app de l'avocat qu'un quitus est disponible (best-effort). */
@@ -18,6 +18,13 @@ function notifierQuitus(membreId: number, annee: number): void {
     .then((uid) => (uid ? notifier([uid], { type: "QUITUS", titre: "Quitus disponible", message: `Votre quitus de cotisation ${annee} a été délivré.`, lien: "/documents" }) : 0))
     .catch(() => {});
 }
+
+/**
+ * Champs de vérification d'un quitus (point 6) : `verif`, chemin court signé
+ * encodé par le QR, et `finValidite`, calculée depuis regles.quitus.validiteMois.
+ */
+const avecVerif = <Q extends { numero: string; dateEmission: Date }>(q: Q, validiteMois: number) =>
+  ({ ...q, verif: cheminVerif("q", q.numero), finValidite: finValiditeQuitus(q.dateEmission, validiteMois) });
 
 export const quitusRouter = Router();
 // Données financières restreintes (RG-15) : SG, Trésorière, Admin.
@@ -29,10 +36,9 @@ quitusRouter.get(
   asyncH(async (req, res) => {
     const quitus = await prisma.quitus.findUnique({ where: { id: Number(req.params.id) }, include: { membre: true } });
     if (!quitus) throw new HttpError(404, "Quitus introuvable");
-    const host = req.get("host") ?? "";
-    const proto = req.get("x-forwarded-proto") ?? req.protocol;
-    const qr = await QRCode.toDataURL(`${proto}://${host}/verifier/quitus/${quitus.numero}`, { margin: 1, width: 234, color: { dark: "#1A3A6B", light: "#ffffff" } });
-    await envoyerDocumentPdf(res, quitusRicheHtml(quitus, quitus.membre, qr, host), `Quitus-${quitus.numero}.pdf`);
+    const qr = await qrDocument(req, "q", quitus.numero);
+    const { validiteMois } = (await reglesActuelles()).quitus;
+    await envoyerDocumentPdf(res, quitusRicheHtml(quitus, quitus.membre, qr, req.get("host") ?? "", validiteMois), `Quitus-${quitus.numero}.pdf`);
   })
 );
 
@@ -68,7 +74,8 @@ quitusRouter.get(
       orderBy: { id: "desc" },
       include: { membre: { select: { nom: true } } },
     });
-    res.json(quitus);
+    const { validiteMois } = (await reglesActuelles()).quitus;
+    res.json(quitus.map((q) => avecVerif(q, validiteMois)));
   })
 );
 
@@ -119,7 +126,7 @@ quitusRouter.post(
     const { membreId, annee } = genSchema.parse(req.body);
     const quitus = await genererQuitus(membreId, annee);
     notifierQuitus(membreId, annee);
-    res.status(201).json(quitus);
+    res.status(201).json(avecVerif(quitus!, (await reglesActuelles()).quitus.validiteMois));
   })
 );
 

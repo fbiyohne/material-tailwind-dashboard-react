@@ -2,7 +2,7 @@ import { Router } from "express";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole, requirePermission } from "../middleware/auth.js";
-import QRCode from "qrcode";
+import { cheminVerif, qrDocument } from "../lib/signature.js";
 import { envoyerDocumentPdf } from "../lib/pdf.js";
 import { recuRicheHtml } from "../lib/documentsRiches.js";
 import { estRecuDroit } from "../lib/business.js";
@@ -17,10 +17,8 @@ recusRouter.get(
   asyncH(async (req, res) => {
     const recu = await prisma.recu.findUnique({ where: { id: Number(req.params.id) }, include: { membre: true } });
     if (!recu) throw new HttpError(404, "Reçu introuvable");
-    const host = req.get("host") ?? "";
-    const proto = req.get("x-forwarded-proto") ?? req.protocol;
-    const qr = await QRCode.toDataURL(`${proto}://${host}/verifier/recu/${recu.numero}`, { margin: 1, width: 234, color: { dark: "#1A3A6B", light: "#ffffff" } });
-    await envoyerDocumentPdf(res, recuRicheHtml(recu, recu.membre, qr, host), `Recu-${recu.numero}.pdf`);
+    const qr = await qrDocument(req, "r", recu.numero);
+    await envoyerDocumentPdf(res, recuRicheHtml(recu, recu.membre, qr, req.get("host") ?? ""), `Recu-${recu.numero}.pdf`);
   })
 );
 
@@ -34,7 +32,7 @@ recusRouter.get(
       orderBy: { id: "desc" },
       include: { membre: { select: { nom: true, num: true } } },
     });
-    res.json(recus);
+    res.json(recus.map((r) => ({ ...r, verif: cheminVerif("r", r.numero) })));
   })
 );
 
