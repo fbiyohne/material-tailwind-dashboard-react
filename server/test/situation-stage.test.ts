@@ -139,7 +139,7 @@ describe("F-03 — admission directe (POST /membres/admission-directe)", () => {
 describe("D5 — PATCH, /radier et /deces écrivent un EvenementSituation", () => {
   it("/radier : événement RADIATION daté de la décision, avec sa référence", async () => {
     const m = await creer(`AVOC T8 radier ${Date.now()}`);
-    const r = await request(app).post(`/api/membres/${m.id}/radier`).set(...bearer(sg)).send({ dateRadiation: "2026-05-02", motifRadiation: "Décision n° 12" });
+    const r = await request(app).post(`/api/membres/${m.id}/radier`).set(...bearer(bat)).send({ dateRadiation: "2026-05-02", motifRadiation: "Décision n° 12" });
     expect(r.status).toBe(200);
     expect(r.body.statut).toBe("RADIE");
     const evts = await evenements(m.id);

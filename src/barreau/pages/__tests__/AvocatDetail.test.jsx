@@ -40,13 +40,21 @@ const rendre = () =>
 beforeEach(() => vi.clearAllMocks());
 
 describe("AvocatDetail — actions selon rôle et statut", () => {
-  it("SG, membre inscrit : Radier et Déclarer le décès ; Radier ouvre la modale", async () => {
-    useAuth.mockReturnValue({ user: { role: "SECRETAIRE_GENERAL" } });
+  it("SG, membre inscrit : Déclarer le décès, pas de Radier (R1-7 : discipline_decider)", async () => {
+    useAuth.mockReturnValue({ user: { role: "SECRETAIRE_GENERAL", permissions: ["membres", "discipline", "discipline_saisir"] } });
+    getMembre.mockResolvedValue(base);
+    rendre();
+    expect(await screen.findByRole("button", { name: /Déclarer le décès/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Radier/ })).not.toBeInTheDocument();
+  });
+
+  it("BATONNIER avec discipline_decider : Radier ouvre la modale, sans Modifier ni décès", async () => {
+    useAuth.mockReturnValue({ user: { role: "BATONNIER", permissions: ["membres", "discipline", "discipline_decider"] } });
     getMembre.mockResolvedValue(base);
     rendre();
     await userEvent.click(await screen.findByRole("button", { name: /Radier/ }));
     expect(screen.getByRole("dialog", { name: "Radier Me BAKALA Jean" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Déclarer le décès/ })).toBeInTheDocument();
+    for (const nom of [/Déclarer le décès/, /Modifier/]) expect(screen.queryByRole("button", { name: nom })).not.toBeInTheDocument();
   });
 
   it("SG, membre décédé : badge, ligne « Décédé le », actions masquées", async () => {
@@ -83,7 +91,7 @@ describe("AvocatDetail — actions selon rôle et statut", () => {
     expect(screen.getByRole("button", { name: /Déclarer le décès/ })).toBeInTheDocument();
   });
 
-  it("BATONNIER : aucun bouton Radier / Déclarer le décès / Supprimer", async () => {
+  it("BATONNIER sans discipline_decider : aucun bouton Radier / Déclarer le décès / Supprimer", async () => {
     useAuth.mockReturnValue({ user: { role: "BATONNIER" } });
     getMembre.mockResolvedValue(base);
     rendre();

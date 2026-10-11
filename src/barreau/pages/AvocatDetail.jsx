@@ -39,10 +39,12 @@ export function AvocatDetail() {
   const peutVoirFinances = FINANCES.includes(user?.role);
   const estAdmin = user?.role === "ADMIN";
   const peutGererAcces = ["SECRETAIRE_GENERAL", "ADMIN"].includes(user?.role);
-  // Modification, attestation et radiation sont réservées au SG côté serveur
-  // (PATCH /membres/:id, /attestation, /radier) : on ne les propose pas au
-  // Bâtonnier, qui peut consulter la fiche mais pas la muter.
+  // Modification et attestation sont réservées au SG côté serveur (PATCH
+  // /membres/:id, /attestation) : on ne les propose pas au Bâtonnier.
   const peutGererFiche = peutGererAcces;
+  // La radiation enregistre une décision du conseil de discipline : action
+  // discipline_decider (bâtonnier par défaut), pas le SG (R1-7, /radier → 403).
+  const peutRadier = !!user?.permissions?.includes("discipline_decider");
   const [membre, setMembre] = useState(null);
   const [droit, setDroit] = useState(null); // ligne de droits réelle (rôles finances)
   const [attestation, setAttestation] = useState(null);
@@ -161,7 +163,7 @@ export function AvocatDetail() {
         {peutGererFiche && membre.qualite !== "stagiaire" && auTableau && (
           <button className={`${btn} bpn-btn-primary`} onClick={() => setAttestation(membre)}><DocumentPlusIcon className="h-4 w-4" /> Attestation</button>
         )}
-        {peutGererFiche && auTableau && (
+        {peutRadier && auTableau && (
           <button className={btnRouge} onClick={() => setActe("radiation")}>
             <NoSymbolIcon className="h-4 w-4" /> Radier
           </button>
