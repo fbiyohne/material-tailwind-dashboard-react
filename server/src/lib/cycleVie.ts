@@ -71,14 +71,20 @@ export interface ChangementSituation {
 /**
  * Point d'écriture unique d'un changement de situation : machine à états, mise à
  * jour de la fiche et EvenementSituation (statut avant/après, acteur, pièce) dans
- * une seule transaction — tout ou rien. Ensuite seulement : cohérence de l'accès à
- * l'espace avocat et signal temps réel « tableau ».
+ * une seule transaction — tout ou rien.
+ * Concurrence (R1-11) : la fiche est verrouillée (SELECT … FOR UPDATE) avant lecture ;
+ * deux transitions d'un même membre s'exécutent donc l'une après l'autre et le
+ * statutAvant de la seconde est le statutApres de la première. L'accès à l'espace
+ * avocat est recalé dans la même transaction, d'après le statut final : il ne peut
+ * pas contredire la fiche, et tout passage ici répare un écart antérieur
+ * (réconciliation). Seul le signal temps réel « tableau » part après validation.
  * `avantEffet` (facultatif) s'exécute en tête de la même transaction : une écriture
  * liée (ex. réservation du dossier disciplinaire) réussit ou échoue avec l'effet.
  */
 export async function changerSituation(c: ChangementSituation, avantEffet?: (tx: Prisma.TransactionClient) => Promise<unknown>) {
-  const { membre, evenement, avant } = await prisma.$transaction(async (tx) => {
+  const { membre, evenement } = await prisma.$transaction(async (tx) => {
     if (avantEffet) await avantEffet(tx);
+    await tx.$queryRaw`SELECT id FROM "Membre" WHERE id = ${c.membreId} FOR UPDATE`;
     const actuel = await tx.membre.findUnique({ where: { id: c.membreId } });
     if (!actuel) throw new HttpError(404, "Avocat introuvable");
     const etat = appliquerCycleVie(actuel, c.demande ?? {});
@@ -100,9 +106,9 @@ export async function changerSituation(c: ChangementSituation, avantEffet?: (tx:
         acteurNom: c.acteur?.nom ?? null,
       },
     });
-    return { membre, evenement, avant: actuel.statut };
+    await synchroniserAccesAuStatut(membre.id, membre.statut, tx);
+    return { membre, evenement };
   });
-  if (membre.statut !== avant) await synchroniserAccesAuStatut(membre.id, membre.statut);
   realtimeTous({ type: "tableau" });
   return { membre, evenement };
 }

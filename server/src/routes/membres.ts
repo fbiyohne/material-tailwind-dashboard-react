@@ -413,7 +413,7 @@ membresRouter.post(
         // R1-1 : ni suspension ni levée de suspension par import (décision disciplinaire enregistrée),
         // et un stagiaire existant ne passe pas au tableau par import (valider-stage, action stage_valider).
         if (existant && r.statut?.trim() && existant.statut !== statut && (statut === "SUSPENDU" || existant.statut === "SUSPENDU")) {
-          erreurs.push({ ligne: i + 1, message: "Suspension ou levée de suspension interdite à l'import : utilisez la fiche de l'avocat." });
+          erreurs.push({ ligne: i + 1, message: "Suspension ou levée de suspension interdite à l'import : la suspension s'enregistre par la décision du dossier disciplinaire, sa levée par la fiche de l'avocat (reprise)." });
           continue;
         }
         if (existant?.qualite === "STAGIAIRE" && (qualite !== "STAGIAIRE" || (r.statut?.trim() && statut === "INSCRIT" && existant.statut !== "INSCRIT"))) {

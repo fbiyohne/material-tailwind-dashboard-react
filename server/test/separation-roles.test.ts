@@ -8,6 +8,8 @@ import { prisma } from "../src/prisma.js";
  * séparation bâtonnier / SG :
  *  - PATCH /membres/:id : SUSPENDU → tableau pendant une interdiction ferme en cours, 403
  *    sans discipline_decider (ADMIN l'a) ; permis après sanctionFin ;
+ *  - PATCH /membres/:id : INSCRIT → SUSPENDU ou RADIE, 403 sans discipline_decider (la
+ *    suspension et la radiation s'enregistrent par la décision du dossier disciplinaire) ;
  *  - import : aucun changement de statut d'un membre existant vers ou depuis SUSPENDU,
  *    aucun stagiaire existant passé au tableau.
  * (OMIS par PATCH ou import, stagiaire par PATCH et REPRISE : r1-5-contournement et omission.test.)
@@ -70,6 +72,27 @@ describe("R1-1 — PATCH /membres/:id, interdiction temporaire en cours", () => 
     const b = await membre("sursis", { statut: "SUSPENDU" });
     await interdiction(b.id, futur(), true);
     expect((await patch(sg, b.id, { statut: "INSCRIT" })).status).toBe(200);
+  });
+});
+
+describe("R1-1 (reprise QA) — PATCH /membres/:id n'impose ni suspension ni radiation sans discipline_decider", () => {
+  it("SG INSCRIT → SUSPENDU : 403, statut inchangé, aucun événement ; ADMIN : 200", async () => {
+    const m = await membre("imposer-susp");
+    const r = await patch(sg, m.id, { statut: "SUSPENDU" });
+    expect(r.status).toBe(403);
+    expect(r.body.erreur).toMatch(/discipline_decider/);
+    expect((await lire(m.id)).statut).toBe("INSCRIT");
+    expect(await prisma.evenementSituation.count({ where: { membreId: m.id } })).toBe(0);
+    expect((await patch(admin, m.id, { statut: "SUSPENDU" })).status).toBe(200);
+    expect((await lire(m.id)).statut).toBe("SUSPENDU");
+  });
+
+  it("SG INSCRIT → RADIE : 403, statut inchangé, aucun événement", async () => {
+    const m = await membre("imposer-radie");
+    const r = await patch(sg, m.id, { statut: "RADIE", dateRadiation: "2026-10-01", motifRadiation: "Décision R11" });
+    expect(r.status).toBe(403);
+    expect((await lire(m.id)).statut).toBe("INSCRIT");
+    expect(await prisma.evenementSituation.count({ where: { membreId: m.id } })).toBe(0);
   });
 });
 

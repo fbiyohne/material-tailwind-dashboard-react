@@ -57,3 +57,24 @@ describe("EditMembreModal — radiation réservée à discipline_decider (R1-7)"
     expect(screen.getByText(/conseil de discipline/)).toBeInTheDocument();
   });
 });
+
+// R1-1 : imposer une suspension relève de discipline_decider (PATCH → 403 sinon) : elle
+// s'enregistre par la décision du dossier disciplinaire.
+describe("EditMembreModal — suspension réservée à discipline_decider (R1-1)", () => {
+  it("SG (sans permission) : « Suspendu » n'est pas proposé pour un inscrit, renvoi vers le dossier disciplinaire", () => {
+    rendre({ qualite: "titulaire", statut: "inscrit" });
+    expect(screen.queryByRole("option", { name: "Suspendu" })).not.toBeInTheDocument();
+    expect(screen.getByText(/dossier disciplinaire/)).toBeInTheDocument();
+  });
+
+  it("titulaire de discipline_decider : « Suspendu » proposé", () => {
+    rendre({ qualite: "titulaire", statut: "inscrit" }, { peutRadier: true });
+    expect(screen.getByRole("option", { name: "Suspendu" })).toBeInTheDocument();
+  });
+
+  it("suspendu, SG : statut courant affiché, retour au tableau proposé", () => {
+    rendre({ qualite: "titulaire", statut: "suspendu" });
+    expect(screen.getByLabelText(/^Statut/)).toHaveValue("suspendu");
+    expect(screen.getByRole("option", { name: "Inscrit" })).toBeInTheDocument();
+  });
+});

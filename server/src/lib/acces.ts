@@ -16,18 +16,22 @@ const STATUTS_BLOQUANTS = ["SUSPENDU", "RADIE", "OMIS", "DECEDE", "DEMISSIONNAIR
  * retrouve automatiquement au retour à un statut régulier. Un compte en attente
  * d'activation voit son lien invalidé si le statut est bloquant.
  */
-export async function synchroniserAccesAuStatut(membreId: number, statut: string): Promise<void> {
-  const user = await prisma.user.findUnique({ where: { membreId }, select: { id: true, actif: true, activationToken: true } });
+export async function synchroniserAccesAuStatut(
+  membreId: number,
+  statut: string,
+  db: Pick<typeof prisma, "user" | "refreshToken"> = prisma // client de transaction : accès écrit avec la transition (R1-11)
+): Promise<void> {
+  const user = await db.user.findUnique({ where: { membreId }, select: { id: true, actif: true, activationToken: true } });
   if (!user) return;
   const doitEtreActif = !STATUTS_BLOQUANTS.includes(statut);
   // Compte en attente d'activation : un statut bloquant invalide le lien (sinon /auth/activer le contournerait).
   if (user.activationToken) {
-    if (!doitEtreActif) await prisma.user.update({ where: { id: user.id }, data: { activationToken: null, activationExpire: null, actif: false } });
+    if (!doitEtreActif) await db.user.update({ where: { id: user.id }, data: { activationToken: null, activationExpire: null, actif: false } });
     return;
   }
   if (user.actif === doitEtreActif) return;
-  await prisma.user.update({ where: { id: user.id }, data: { actif: doitEtreActif } });
-  if (!doitEtreActif) await revoquerTousLesJetons(user.id);
+  await db.user.update({ where: { id: user.id }, data: { actif: doitEtreActif } });
+  if (!doitEtreActif) await revoquerTousLesJetons(user.id, db);
 }
 
 export interface AccesProvisionne {

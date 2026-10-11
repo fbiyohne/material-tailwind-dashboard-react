@@ -14,17 +14,21 @@ const login = async (email: string) =>
   (await request(app).post("/api/auth/login").send({ email, password: "barreau" })).body.token as string;
 const PREFIXE = "E2E R17";
 let sg = "", bat = "", admin = "";
-let num = 0, n = 0;
+let n = 0;
 
 beforeAll(async () => {
   [sg, bat, admin] = await Promise.all(["sg@barreau-pn.cg", "batonnier@barreau-pn.cg", "admin@barreau-pn.cg"].map(login));
-  num = ((await prisma.membre.aggregate({ _max: { num: true } }))._max.num ?? 0) + 10;
 });
 afterAll(async () => {
   await prisma.membre.deleteMany({ where: { nom: { startsWith: PREFIXE } } });
 });
 
-const creer = () => prisma.membre.create({ data: { num: num + ++n, nom: `${PREFIXE} ${n}`, qualite: "AVOCAT", statut: "INSCRIT" } as never });
+// num lu à chaque création (et non une fois en beforeAll) : pas de collision avec les membres
+// créés entre-temps par l'application (import, admission) ou par une autre suite sur la même base.
+const creer = async () => {
+  const num = ((await prisma.membre.aggregate({ _max: { num: true } }))._max.num ?? 0) + 1;
+  return prisma.membre.create({ data: { num, nom: `${PREFIXE} ${++n}`, qualite: "AVOCAT", statut: "INSCRIT" } as never });
+};
 const radier = (id: number, jeton: string) =>
   request(app).post(`/api/membres/${id}/radier`).set(...bearer(jeton)).send({ dateRadiation: "2026-10-01", motifRadiation: "Décision du Conseil n° 17" });
 

@@ -56,9 +56,9 @@ describe("R1-5 — PATCH ne contourne ni l'omission ni la validation du stage", 
     expect(await prisma.membre.findUnique({ where: { id: m.id } })).toMatchObject({ qualite: "STAGIAIRE", statut: "STAGIAIRE" });
   });
 
-  it("restent permis : SUSPENDU par PATCH, et la fiche d'un omis ou d'un stagiaire sans changement de situation", async () => {
+  it("restent permis : SUSPENDU par PATCH avec discipline_decider (R1-1 : ADMIN), et la fiche d'un omis ou d'un stagiaire sans changement de situation", async () => {
     const a = await creer({});
-    expect((await patch(a.id, { statut: "SUSPENDU" })).status).toBe(200);
+    expect((await request(app).patch(`/api/membres/${a.id}`).set(...bearer(admin)).send({ statut: "SUSPENDU" })).status).toBe(200);
     const o = await creer({ statut: "OMIS" });
     expect((await patch(o.id, { statut: "OMIS", cabinet: "Cab R15" })).status).toBe(200);
     const s = await creer({ qualite: "STAGIAIRE", statut: "STAGIAIRE" });

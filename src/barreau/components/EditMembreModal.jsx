@@ -13,7 +13,8 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const champ = (error) => `bpn-input ${error ? "is-invalid" : ""}`;
 
 /** Édition de la fiche d'un membre (FR-AV-01 : modifier).
- *  peutRadier : l'utilisateur détient l'action discipline_decider (R1-7). */
+ *  peutRadier : l'utilisateur détient l'action discipline_decider : radier (R1-7) et
+ *  suspendre (R1-1), décisions enregistrées depuis le dossier disciplinaire sinon. */
 export function EditMembreModal({ membre, open, onClose, onSaved, peutRadier = false }) {
   const toast = useToast();
   const confirm = useConfirm();
@@ -43,6 +44,8 @@ export function EditMembreModal({ membre, open, onClose, onSaved, peutRadier = f
   // R1-7 : sans discipline_decider, ni radiation ni levée de radiation (le serveur répond 403) ;
   // un radié garde sa date et sa référence corrigeables, et le décès reste déclarable.
   const radieVerrouille = membre.statut === "radie" && !peutRadier;
+  // R1-1 : sans discipline_decider, « Suspendu » n'est proposé que s'il est le statut courant.
+  const suspensionPossible = peutRadier || membre.statut === "suspendu";
   const set = (k) => (e) => {
     setForm((f) => ({ ...f, [k]: e.target.value }));
     setModifie(true);
@@ -119,10 +122,10 @@ export function EditMembreModal({ membre, open, onClose, onSaved, peutRadier = f
           </FormField>
           {/* R1-5 : omission, réinscription et passage au tableau ont leur circuit (onglets
               Situation et Stage) ; le serveur refuse ces transitions ici (409). */}
-          <FormField label="Statut" hint={estOmis ? "réinscription : onglet Situation" : radieVerrouille ? "levée de radiation : décision du conseil de discipline" : estStagiaire ? "passage au tableau : onglet Stage" : undefined}>
+          <FormField label="Statut" hint={estOmis ? "réinscription : onglet Situation" : radieVerrouille ? "levée de radiation : décision du conseil de discipline" : estStagiaire ? "passage au tableau : onglet Stage" : !peutRadier ? "suspension, radiation : dossier disciplinaire" : undefined}>
             <select value={form.statut ?? "inscrit"} onChange={set("statut")} className="bpn-input" disabled={estOmis}>
               {!radieVerrouille && (estStagiaire ? <option value="stagiaire">Stagiaire</option> : <option value="inscrit">Inscrit</option>)}
-              {!radieVerrouille && <option value="suspendu">Suspendu</option>}
+              {!radieVerrouille && suspensionPossible && <option value="suspendu">Suspendu</option>}
               {estOmis && <option value="omis">Omis</option>}
               {!estStagiaire && !radieVerrouille && <option value="honoraire">Honoraire</option>}
               {(peutRadier || membre.statut === "radie") && <option value="radie">Radié</option>}

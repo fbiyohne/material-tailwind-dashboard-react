@@ -149,7 +149,7 @@ describe("Autres causes, sorties volontaires et reprise", () => {
   it("REPRISE : SUSPENDU vers INSCRIT, SG seul ; refusée si le membre n'est pas suspendu (409)", async () => {
     const m = await creer("reprise");
     expect((await evt(sg, m.id, { type: "REPRISE" })).status).toBe(409);
-    expect((await request(app).patch(`/api/membres/${m.id}`).set(...bearer(sg)).send({ statut: "SUSPENDU" })).status).toBe(200);
+    await prisma.membre.update({ where: { id: m.id }, data: { statut: "SUSPENDU" } }); // R1-1 : PATCH SUSPENDU réservé à discipline_decider
     expect((await evt(bat, m.id, { type: "REPRISE" })).status).toBe(403);
     const r = await evt(sg, m.id, { type: "REPRISE", reference: "Fin d'interdiction" });
     expect(r.status).toBe(201);
@@ -158,7 +158,7 @@ describe("Autres causes, sorties volontaires et reprise", () => {
 
   it("R1-8 REPRISE : refusée (409) tant qu'une interdiction ferme court, permise après sanctionFin ou avec sursis", async () => {
     const m = await creer("reprise-ferme");
-    expect((await request(app).patch(`/api/membres/${m.id}`).set(...bearer(sg)).send({ statut: "SUSPENDU" })).status).toBe(200);
+    await prisma.membre.update({ where: { id: m.id }, data: { statut: "SUSPENDU" } }); // R1-1 : PATCH SUSPENDU réservé à discipline_decider
     const d = await prisma.dossierDisciplinaire.create({ data: { membreId: m.id, avocatNom: "R1-8", dateSaisine: new Date("2026-01-01"), reference: `R18-${Date.now()}`, objet: "R1-8", sanctionCode: "INTERDICTION_TEMPORAIRE", sursis: false, sanctionFin: new Date("2026-06-01") } as never });
     try {
       expect((await evt(sg, m.id, { type: "REPRISE", dateEffet: "2026-05-01" })).status).toBe(409);

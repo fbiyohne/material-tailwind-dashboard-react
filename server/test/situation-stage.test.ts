@@ -161,7 +161,8 @@ describe("D5 — PATCH, /radier et /deces écrivent un EvenementSituation", () =
     const m = await creer(`AVOC T8 patch ${Date.now()}`);
     expect((await request(app).patch(`/api/membres/${m.id}`).set(...bearer(sg)).send({ cabinet: "Cabinet T8" })).status).toBe(200);
     expect(await evenements(m.id)).toHaveLength(0);
-    const r = await request(app).patch(`/api/membres/${m.id}`).set(...bearer(sg)).send({ statut: "SUSPENDU", cabinet: "Cabinet T8 bis" });
+    // R1-1 : imposer une suspension par PATCH exige discipline_decider (ADMIN).
+    const r = await request(app).patch(`/api/membres/${m.id}`).set(...bearer(admin)).send({ statut: "SUSPENDU", cabinet: "Cabinet T8 bis" });
     expect(r.status).toBe(200);
     expect(r.body).toMatchObject({ statut: "SUSPENDU", cabinet: "Cabinet T8 bis" });
     const evts = await evenements(m.id);

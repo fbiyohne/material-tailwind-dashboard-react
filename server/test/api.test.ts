@@ -986,7 +986,8 @@ describe("Sécurité — accès espace lié au statut du membre", () => {
   it("suspension coupe l'accès ; retour à INSCRIT le rétablit automatiquement", async () => {
     const av = await creerAvocatEspace("statut");
     expect((await request(app).post("/api/auth/login").send({ email: av.email, password: "avocatpass8" })).status).toBe(200);
-    await request(app).patch(`/api/membres/${av.membreId}`).set(...bearer(sg)).send({ statut: "SUSPENDU" });
+    // R1-1 : imposer une suspension par PATCH exige discipline_decider (SG 403) : l'ADMIN l'a.
+    await request(app).patch(`/api/membres/${av.membreId}`).set(...bearer(admin)).send({ statut: "SUSPENDU" });
     expect((await request(app).post("/api/auth/login").send({ email: av.email, password: "avocatpass8" })).status).toBe(401);
     await request(app).patch(`/api/membres/${av.membreId}`).set(...bearer(sg)).send({ statut: "INSCRIT" });
     expect((await request(app).post("/api/auth/login").send({ email: av.email, password: "avocatpass8" })).status).toBe(200);
