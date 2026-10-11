@@ -28,7 +28,12 @@ const STATUT_PAR_QUALITE = { avocat: "inscrit", stagiaire: "stagiaire", honorair
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const champ = (error) => `bpn-input ${error ? "is-invalid" : ""}`;
 
-/** Formulaire d'inscription d'un avocat au tableau (FR-AV-01). Réservé SG/Admin. */
+const peutInscrireOrdinaire = (user) => ["SECRETAIRE_GENERAL", "ADMIN"].includes(user?.role);
+const peutAdmettreDirect = (user) => user?.role === "ADMIN" || !!user?.permissions?.includes("admission_directe");
+/** Bouton « + Avocat » : inscription ordinaire (SG/Admin) ou admission directe (action admission_directe, ex. bâtonnier). */
+export const peutOuvrirInscription = (user) => peutInscrireOrdinaire(user) || peutAdmettreDirect(user);
+
+/** Formulaire d'inscription d'un avocat au tableau (FR-AV-01). Inscription ordinaire : SG/Admin ; admission directe : action admission_directe. */
 export function InscriptionModal({ open, onClose }) {
   const navigate = useNavigate();
   const toast = useToast();
@@ -39,8 +44,10 @@ export function InscriptionModal({ open, onClose }) {
   const [modifie, setModifie] = useState(false); // saisie modifiée (garde anti perte)
   const { user } = useAuth();
   // Admission directe : action admission_directe (matrice d'accès, /auth/me).
-  const peutAdmettre = user?.role === "ADMIN" || !!user?.permissions?.includes("admission_directe");
-  const [direct, setDirect] = useState(false);
+  const peutAdmettre = peutAdmettreDirect(user);
+  const ordinaire = peutInscrireOrdinaire(user); // sinon (bâtonnier) : admission directe seule
+  const [directChoisi, setDirect] = useState(false);
+  const direct = directChoisi || !ordinaire;
   const [cas, setCas] = useState([]); // cas d'admission lus en Paramètres, jamais écrits en dur
   const estStagiaire = !direct && form.qualite === "stagiaire";
 
@@ -154,7 +161,7 @@ export function InscriptionModal({ open, onClose }) {
         Le numéro d'inscription <span className="font-mono font-medium text-navy">PN-AAAA-NNN</span> et le statut sont attribués automatiquement à l'enregistrement.
       </Notice>
 
-      {peutAdmettre && (
+      {peutAdmettre && ordinaire && (
         <div role="group" aria-label="Mode d'inscription" className="mb-5 inline-flex rounded-md border border-grisM p-0.5 text-sm">
           {[[false, "Inscription ordinaire"], [true, "Admission directe"]].map(([v, label]) => (
             <button key={label} type="button" aria-pressed={direct === v} onClick={() => setDirect(v)}

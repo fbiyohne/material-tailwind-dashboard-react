@@ -14,7 +14,7 @@ export { QRCode } from "./QRCode";
 export { StatutBadge } from "./StatutBadge";
 export { AttestationModal } from "./AttestationModal";
 export { DocumentModal } from "./DocumentModal";
-export { InscriptionModal } from "./InscriptionModal";
+export { InscriptionModal, peutOuvrirInscription } from "./InscriptionModal";
 export { Button } from "./Button";
 export { EmptyState } from "./EmptyState";
 export { ErrorBoundary } from "./ErrorBoundary";

@@ -4,7 +4,7 @@ import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 import { allModules, detailRoutes, aAcces } from "../routes";
 import NotFound from "../pages/NotFound";
-import { InscriptionModal } from "../components";
+import { InscriptionModal, peutOuvrirInscription } from "../components";
 import { useAuth } from "../auth/AuthContext";
 import { useFocusAuChangementDeRoute } from "../hooks/useFocusAuChangementDeRoute";
 
@@ -18,8 +18,8 @@ export function BarreauLayout() {
   const location = useLocation();
   const mainRef = useFocusAuChangementDeRoute();
   const { user } = useAuth();
-  // Action d'écriture (POST /membres) : reste restreinte au SG/Admin côté serveur.
-  const peutInscrire = aAcces({ roles: ["SECRETAIRE_GENERAL", "ADMIN"] }, user);
+  // Inscription ordinaire (POST /membres) : SG/Admin ; admission directe : action admission_directe (bâtonnier).
+  const peutInscrire = peutOuvrirInscription(user);
 
   // Titre de la barre : module exact, sinon module parent d'une page de détail.
   const moduleCourant = allModules.find((m) => m.path === location.pathname);
