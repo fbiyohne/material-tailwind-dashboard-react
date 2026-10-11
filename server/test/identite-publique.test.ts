@@ -1,0 +1,27 @@
+import { describe, it, expect } from "vitest";
+import request from "supertest";
+import { creerApp } from "../src/app.js";
+
+/**
+ * T29 (recette interface) — l'écran de connexion et l'espace avocat (dont le jeton est confiné
+ * à /api/espace et /api/auth) affichaient toujours « Barreau de Pointe-Noire », sans la mention C-13,
+ * même sous l'identité de démonstration : ils ne pouvaient pas lire /api/parametres.
+ * GET /api/auth/identite expose l'identité institutionnelle publique, et elle seule.
+ */
+const app = creerApp();
+
+describe("GET /api/auth/identite (identité publique)", () => {
+  it("répond sans authentification avec la dénomination, la ville, le logo et le mode démonstration", async () => {
+    const r = await request(app).get("/api/auth/identite");
+    expect(r.status).toBe(200);
+    expect(typeof r.body.identite.denomination).toBe("string");
+    expect(r.body.identite.denomination.length).toBeGreaterThan(0);
+    expect(typeof r.body.identite.ville).toBe("string");
+    expect(typeof r.body.identite.modeDemonstration).toBe("boolean");
+  });
+
+  it("n'expose ni signataires ni coordonnées (minimisation)", async () => {
+    const { body } = await request(app).get("/api/auth/identite");
+    expect(Object.keys(body.identite).sort()).toEqual(["denomination", "logo", "modeDemonstration", "ordre", "ville"]);
+  });
+});

@@ -13,20 +13,28 @@ import { formatDate, formatDateTime } from "../utils/format";
 import { listerMembres, listerDossiers, ouvrirDossier as apiOuvrirDossier, supprimerDossier, journalDiscipline as apiJournal } from "../api/resources";
 
 const VIDE_DOSSIER = { membreId: "", objet: "", dateSaisine: new Date().toISOString().slice(0, 10), plaignant: "", rapporteur: "" };
-function OuvrirDossierModal({ open, onClose, onCreated }) {
+export function OuvrirDossierModal({ open, onClose, onCreated }) {
   const toast = useToast();
   const [avocats, setAvocats] = useState([]);
   const [form, setForm] = useState(VIDE_DOSSIER);
+  const [recherche, setRecherche] = useState("");
   const [creation, setCreation] = useState(false);
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
+  // Le serveur renvoie 200 membres au plus par page : la recherche (côté serveur) rend
+  // accessible tout avocat du tableau, quel que soit son rang.
   useEffect(() => {
-    if (open) listerMembres().then((d) => {
+    if (!open) return undefined;
+    let actif = true; // ignore une réponse dépassée par une frappe plus récente
+    const q = recherche.trim();
+    listerMembres(q ? { q } : {}).then((d) => {
+      if (!actif) return;
       const a = d.items.filter((m) => m.qualite !== "stagiaire");
       setAvocats(a);
-      setForm((f) => ({ ...f, membreId: f.membreId || (a[0]?.id ?? "") }));
+      setForm((f) => ({ ...f, membreId: a.some((m) => String(m.id) === String(f.membreId)) ? f.membreId : (a[0]?.id ?? "") }));
     }).catch(() => {});
-  }, [open]);
+    return () => { actif = false; };
+  }, [open, recherche]);
 
   const valider = async () => {
     // Garde anti double-clic : une référence AAAA-NN est consommée par ouverture
@@ -63,6 +71,9 @@ function OuvrirDossierModal({ open, onClose, onCreated }) {
         Référence unique attribuée automatiquement (format <span className="font-mono font-medium text-navy">AAAA-NN</span>, non réutilisable).
       </Notice>
       <div className="space-y-3">
+        <FormField label="Rechercher l'avocat" hint="nom, cabinet ou n°">
+          <input type="search" value={recherche} onChange={(e) => setRecherche(e.target.value)} className="bpn-input" placeholder="Ex. : SOLANDRE" />
+        </FormField>
         <FormField label="Avocat mis en cause">
           <select value={form.membreId} onChange={set("membreId")} className="bpn-input">
             {avocats.map((m) => <option key={m.id} value={m.id}>Me {m.nom}</option>)}

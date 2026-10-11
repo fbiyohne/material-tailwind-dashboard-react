@@ -21,6 +21,13 @@ const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHe
 
 const loginSchema = z.object({ email: z.string().email(), password: z.string().min(1) });
 
+/** GET /auth/identite — public : identité institutionnelle de l'écran de connexion et de l'espace avocat
+ *  (jeton confiné à /espace et /auth). Ni signataires ni coordonnées. */
+authRouter.get("/identite", (_req, res) => {
+  const { denomination, ordre, ville, logo, modeDemonstration } = identite();
+  res.json({ identite: { denomination, ordre, ville, logo, modeDemonstration } });
+});
+
 authRouter.post(
   "/login",
   loginLimiter,

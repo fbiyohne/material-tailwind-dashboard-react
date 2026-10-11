@@ -1,0 +1,466 @@
+{
+  "mode": "parcours",
+  "debut": "2026-10-11T13:09:19.919Z",
+  "url": "http://localhost:4100",
+  "captures": [
+    {
+      "fichier": "parcours-00-connexion",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-00-accueil-sg",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-01-import-apercu",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-01-import-annule",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-06-sg-stage-reserve",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-04-rappel-modale",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-04-circuit-etapes",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-05-saisine-sg",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-06-sg-dossier-sans-decision",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-06-matrice-actions",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-02-fin-de-stage-modale",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-02-fiche-inscrite",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-02-liste-tri-inscription",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-03-admission-directe",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-03-fiche-historique",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-04-omission-modale",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-04-omission-fiche",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-04-reinscription-historique",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-05-decision-sursis",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-05-decision-confirmation",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-05-fiche-sursis",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-07-tableau-avant",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-05-fiche-radiee",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-07-tableau-apres",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-08-annuaire",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-08-nouveau-message",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-08-fil-envoye",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-08-demande-attestation",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-08-attestation-delivree",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-08-statut-lu-accuse",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-09-piece-deposee",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-09-rejet-motif",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-09-avocat-rejet-visible",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-09-piece-validee",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-10-corps-31-janvier",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-10-corps-aujourdhui",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-11-recu-apercu",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-11-quitus",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-T-timbres",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-T-timbres-statistiques",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-T-elections",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-12-journal-filtre-action",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-12-journal-filtre-utilisateur",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "parcours-12-journal-recherche-secret",
+      "scrollWidth360": 360,
+      "ok": true
+    }
+  ],
+  "controles": [
+    {
+      "parcours": "0",
+      "controle": "écran de connexion à l'identité paramétrée",
+      "ok": true
+    },
+    {
+      "parcours": "0",
+      "controle": "mention de démonstration visible après connexion",
+      "ok": true
+    },
+    {
+      "parcours": "1",
+      "controle": "aperçu simulé affiché avant toute écriture",
+      "ok": true,
+      "detail": "Simulation : rien n'est encore enregistré 1 à créer, 2 à mettre à jour, 1 erreur(s), 1 doublon(s) possible(s). Ligne 4 : Statut inconnu : statut-inconnu LIGNE DOUBLON NOM AVEC 2 Numéro RECETTEIMPORT L"
+    },
+    {
+      "parcours": "1",
+      "controle": "annulation : rien n'est écrit (num 790001 et 790002 absents)",
+      "ok": true
+    },
+    {
+      "parcours": "6",
+      "controle": "SG : fin de stage réservée (mention affichée, pas de bouton)",
+      "ok": true
+    },
+    {
+      "parcours": "6",
+      "controle": "SG : POST valider-stage refusé (403)",
+      "ok": true
+    },
+    {
+      "parcours": "4",
+      "controle": "trois étapes horodatées enregistrées par le SG",
+      "ok": true
+    },
+    {
+      "parcours": "6",
+      "controle": "SG : formulaire de décision absent, enregistrement réservé au bâtonnier",
+      "ok": true
+    },
+    {
+      "parcours": "6",
+      "controle": "SG : POST /discipline/:id/decision refusé (403)",
+      "ok": true
+    },
+    {
+      "parcours": "2",
+      "controle": "stagiaire passé au tableau, date d'inscription = date de décision",
+      "ok": true
+    },
+    {
+      "parcours": "3",
+      "controle": "admission directe : membre créé INSCRIT avec événement ADMISSION_DIRECTE",
+      "ok": true
+    },
+    {
+      "parcours": "4",
+      "controle": "omission enregistrée : statut OMIS",
+      "ok": true
+    },
+    {
+      "parcours": "4",
+      "controle": "infobulle du statut Omis : mesure temporaire (distincte de la radiation)",
+      "ok": true,
+      "detail": "Mesure administrative temporaire : n'exerce plus jusqu'à sa réinscription."
+    },
+    {
+      "parcours": "4",
+      "controle": "réinscription : statut INSCRIT, historique complet",
+      "ok": true
+    },
+    {
+      "parcours": "5",
+      "controle": "sursis : décision enregistrée sur le dossier",
+      "ok": true
+    },
+    {
+      "parcours": "5",
+      "controle": "sursis : avocat toujours INSCRIT",
+      "ok": true
+    },
+    {
+      "parcours": "5",
+      "controle": "sursis : mention affichée sur la fiche",
+      "ok": true
+    },
+    {
+      "parcours": "5",
+      "controle": "radiation : fiche en RADIE sans saisie manuelle",
+      "ok": true
+    },
+    {
+      "parcours": "7",
+      "controle": "tableau mis à jour sans rechargement (un inscrit de moins)",
+      "ok": true,
+      "detail": "5457 → 5456"
+    },
+    {
+      "parcours": "7",
+      "controle": "date de dernière mise à jour affichée",
+      "ok": true
+    },
+    {
+      "parcours": "7",
+      "controle": "PDF du tableau généré",
+      "ok": true
+    },
+    {
+      "parcours": "8",
+      "controle": "annuaire : radiée BALIVOR absente",
+      "ok": true
+    },
+    {
+      "parcours": "8",
+      "controle": "espace avocat : identité de démonstration et mention C-13",
+      "ok": true
+    },
+    {
+      "parcours": "8",
+      "controle": "message envoyé avec pièce jointe et empreinte",
+      "ok": true
+    },
+    {
+      "parcours": "8",
+      "controle": "attestation délivrée et numérotée",
+      "ok": true,
+      "detail": "ATT-2026-179"
+    },
+    {
+      "parcours": "8",
+      "controle": "accusé de lecture PDF généré",
+      "ok": true
+    },
+    {
+      "parcours": "9",
+      "controle": "pièce rejetée avec motif",
+      "ok": true
+    },
+    {
+      "parcours": "9",
+      "controle": "avocat : motif du rejet visible",
+      "ok": true
+    },
+    {
+      "parcours": "9",
+      "controle": "nouvelle soumission vérifiée (validée)",
+      "ok": true,
+      "detail": "VERIFIEE"
+    },
+    {
+      "parcours": "10",
+      "controle": "deux dates, deux listes différentes",
+      "ok": true,
+      "detail": "ÉLECTEURS QUALIFIÉS 1 aptes à voter EXCLUS — COTISATIONS 253 non à jour EXCLUS — STATUT 5300 suspendu, radié, omis, décédé, sorti EXCLUS — HONORAIRES / AUTRE 2 non électeurs | ÉLECTEURS QUALIFIÉS 1211 aptes à voter EXCLUS — COTISATIONS 3979 non à jour EXCLUS — STATUT 364 suspendu, radié, omis, décédé, sorti EXCLUS — HONORAIRES / AUTRE 2 non électeurs"
+    },
+    {
+      "parcours": "11",
+      "controle": "aperçu du reçu à l'identité paramétrée, sans « Pointe-Noire »",
+      "ok": true
+    },
+    {
+      "parcours": "11",
+      "controle": "PDF du reçu généré",
+      "ok": true
+    },
+    {
+      "parcours": "T",
+      "controle": "timbres : bandeau Expérimental",
+      "ok": true
+    },
+    {
+      "parcours": "T",
+      "controle": "élections : bandeau Expérimental",
+      "ok": true
+    },
+    {
+      "parcours": "12",
+      "controle": "journal filtré par action : envoi de message tracé",
+      "ok": true
+    },
+    {
+      "parcours": "12",
+      "controle": "aucune ligne ne contient le corps du message",
+      "ok": true
+    },
+    {
+      "parcours": "12",
+      "controle": "base : corps du message absent de JournalAudit",
+      "ok": true
+    }
+  ],
+  "pdf": [
+    {
+      "url": "/api/tableau/pdf",
+      "statut": 200,
+      "type": "application/pdf",
+      "taille": 0
+    },
+    {
+      "url": "/api/espace/messagerie/messages/2222/accuse/pdf",
+      "statut": 200,
+      "type": "application/pdf",
+      "taille": 0
+    },
+    {
+      "url": "/api/recus/2076/pdf",
+      "statut": 200,
+      "type": "application/pdf",
+      "taille": 0
+    }
+  ],
+  "erreursConsole": [
+    "sg: Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "sg: Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "avocat: Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "avocat: Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "avocat: Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "avocat: Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "avocat: Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "avocat: Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "tresoriere: Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  ],
+  "reponses5xx": [],
+  "reponses4xx": [
+    "sg: 403 POST /api/membres/22619/valider-stage",
+    "sg: 403 POST /api/discipline/2370/decision",
+    "avocat: 403 GET /api/parametres",
+    "avocat: 403 GET /api/parametres",
+    "avocat: 403 GET /api/parametres",
+    "avocat: 403 GET /api/parametres",
+    "avocat: 403 GET /api/parametres",
+    "avocat: 403 GET /api/parametres",
+    "tresoriere: 403 GET /api/membres/2"
+  ],
+  "fin": "2026-10-11T13:12:34.935Z",
+  "echecs": 0,
+  "interrompu": false
+}

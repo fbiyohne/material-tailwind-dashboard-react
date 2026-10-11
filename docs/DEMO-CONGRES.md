@@ -141,5 +141,5 @@ Ne jamais dire, écrire ni laisser afficher :
 
 - Relecture de ce scénario par la sécurité et par le juriste avant le congrès : à consigner dans le rapport de mission.
 - Points ouverts à valider avec Me Kalina MENGA : `docs/audit/POINTS-OUVERTS.md`.
-- Rejeu technique des 12 parcours : `cd server && npx vitest run test/parcours.test.ts`.
+- Rejeu technique des 12 parcours : `cd server && npx vitest run test/parcours.test.ts` (API) et `npx tsx scripts/recette-ui.ts parcours` (interface, captures de repli dans `docs/captures`, remise en état automatique) ; procédure dans `docs/captures/README.md`.
 - Après la démonstration : `npm run demo -- --identite=pointe-noire` puis `npm test` (certains tests de PDF attendent l'identité de base).

@@ -14,8 +14,7 @@ import {
 import { listerMembres, getAgenda, getMesNotifications, marquerNotifLue, marquerToutesNotifsLues } from "../api/resources";
 import { useAuth } from "../auth/AuthContext";
 import { aAcces } from "../routes";
-import { ClocheNotifications } from "../components";
-import { identite, onConfigChange, MENTION_DEMONSTRATION } from "../data/config";
+import { ClocheNotifications, BandeauDemonstration } from "../components";
 
 // API du centre de notifications back-office, transmise à la cloche partagée.
 const API_NOTIFS = { charger: getMesNotifications, marquerLu: marquerNotifLue, marquerTout: marquerToutesNotifsLues };
@@ -39,8 +38,6 @@ export function Topbar({ title, onOpenMenu, onAddAvocat }) {
   const [menu, setMenu] = useState(null); // "docs" | null
   const [membres, setMembres] = useState([]);
   const [echeances, setEcheances] = useState([]);
-  const [demo, setDemo] = useState(() => !!identite().modeDemonstration);
-  useEffect(() => onConfigChange(() => setDemo(!!identite().modeDemonstration)), []);
   const docs = DOCS.filter((d) => aAcces(d, user)); // RBAC : raccourcis filtrés.
 
   useEffect(() => {
@@ -161,11 +158,7 @@ export function Topbar({ title, onOpenMenu, onAddAvocat }) {
       {/* Voile de fermeture des menus */}
       {menu && <div className="fixed inset-0 z-40" onClick={() => setMenu(null)} aria-hidden="true" />}
     </header>
-    {demo && (
-      <div role="note" className="border-b border-or bg-or-L px-4 py-1.5 text-center text-xs text-encre md:px-6">
-        {MENTION_DEMONSTRATION}
-      </div>
-    )}
+    <BandeauDemonstration />
     </>
   );
 }

@@ -3,7 +3,7 @@ import { Sceau } from "./Sceau";
 import { QRCode } from "./QRCode";
 import { formatFCFA } from "../utils/format";
 import { montantEnLettresFCFA } from "../utils/nombreEnLettres";
-import { identite } from "../data/config";
+import { identite, coordonnees } from "../data/config";
 import cachetTresoriere from "../assets/cachets/tresoriere.png";
 
 const fmtDateFr = (d) =>
@@ -71,13 +71,13 @@ export function RecuDocument({ numero, membre, montant, exercice, mode, objet, d
         {/* N° + date */}
         <div className="mt-8 flex justify-between font-mono text-[14px] text-navy">
           <span>N° {numero}</span>
-          <span>Pointe-Noire, le {fmtDateFr(date)}</span>
+          <span>{identite().ville}, le {fmtDateFr(date)}</span>
         </div>
 
         {/* Corps */}
         <div className="mt-9">
           <h5 className="text-center text-[16px] font-bold uppercase leading-snug text-encre">
-            La Trésorière de l'Ordre des Avocats<br />au Barreau de Pointe-Noire
+            La Trésorière de l'Ordre des Avocats<br />au {identite().denomination}
           </h5>
           <p className="mt-4 text-center text-[15px] italic text-encre">Reconnaît avoir reçu de Maître :</p>
 
@@ -134,11 +134,11 @@ export function RecuDocument({ numero, membre, montant, exercice, mode, objet, d
         </div>
         <div className="text-center">
           <span className="font-semibold text-or">En ligne</span><br />
-          contact@barreau-pointe-noire.cg<br />www.barreau-pointe-noire.cg
+          {coordonnees().enLigne.map((l, i) => <span key={l}>{i > 0 && <br />}{l}</span>)}
         </div>
         <div className="text-right">
           <span className="font-semibold text-or">Téléphone</span><br />
-          +242 05 000 00 00<br />+242 06 000 00 00
+          {coordonnees().telephones.map((t, i) => <span key={t}>{i > 0 && <br />}{t}</span>)}
         </div>
       </div>
     </div>

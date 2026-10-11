@@ -1,0 +1,35 @@
+{
+  "mode": "apres",
+  "debut": "2026-10-11T13:07:52.400Z",
+  "url": "http://localhost:4100",
+  "captures": [
+    {
+      "fichier": "apres-avocats",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "apres-avocat-detail",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "apres-tableau",
+      "scrollWidth360": 360,
+      "ok": true
+    },
+    {
+      "fichier": "apres-messagerie",
+      "scrollWidth360": 360,
+      "ok": true
+    }
+  ],
+  "controles": [],
+  "pdf": [],
+  "erreursConsole": [],
+  "reponses5xx": [],
+  "reponses4xx": [],
+  "fin": "2026-10-11T13:08:10.965Z",
+  "echecs": 0,
+  "interrompu": false
+}

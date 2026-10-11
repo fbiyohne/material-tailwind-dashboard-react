@@ -2,7 +2,7 @@ import PropTypes from "prop-types";
 import { CalendarDaysIcon } from "@heroicons/react/24/outline";
 import { Sceau } from "./Sceau";
 import { QRCode } from "./QRCode";
-import { identite } from "../data/config";
+import { identite, coordonnees } from "../data/config";
 import cachetBatonnier from "../assets/cachets/batonnier.png";
 
 const fmtDateFr = (d) =>
@@ -60,7 +60,7 @@ export function QuitusDocument({ numero, membre, exercice, date }) {
           <div className="flex-1 text-center">
             <h1 className="font-display text-[26px] font-bold leading-tight text-navy">{identite().denomination.toUpperCase()}</h1>
             <FiletOr className="w-60" />
-            <h2 className="text-[12px] font-semibold uppercase tracking-wide text-encre">Ordre des Avocats au Barreau de Pointe-Noire</h2>
+            <h2 className="text-[12px] font-semibold uppercase tracking-wide text-encre">Ordre des Avocats au {identite().denomination}</h2>
             <p className="mt-1 text-[12px] italic text-gris">Défendre • Conseiller • Servir la Justice</p>
           </div>
         </div>
@@ -75,13 +75,13 @@ export function QuitusDocument({ numero, membre, exercice, date }) {
         {/* N° + lieu/date */}
         <div className="mt-6 flex justify-between text-[14px] font-mono text-navy">
           <span>N° {numero}</span>
-          <span>Pointe-Noire, le {fmtDateFr(date)}</span>
+          <span>{identite().ville}, le {fmtDateFr(date)}</span>
         </div>
 
         {/* Corps */}
         <div className="mt-6">
           <h5 className="text-center text-[16px] font-bold uppercase leading-snug text-encre">
-            Le Bâtonnier de l'Ordre des Avocats<br />au Barreau de Pointe-Noire
+            Le Bâtonnier de l'Ordre des Avocats<br />au {identite().denomination}
           </h5>
           <p className="mt-4 text-center text-[15px] italic text-encre">
             Atteste qu'après vérification des écritures de l'Ordre, Maître :
@@ -96,7 +96,7 @@ export function QuitusDocument({ numero, membre, exercice, date }) {
 
           <div className="mt-5 text-center leading-7">
             <p className="text-[17px] font-bold text-encre">est à jour de toutes ses cotisations, contributions et redevances</p>
-            <p className="text-[15px] text-encre">envers l'Ordre des Avocats au Barreau de Pointe-Noire, au titre de l'exercice {exercice}.</p>
+            <p className="text-[15px] text-encre">envers l'Ordre des Avocats au {identite().denomination}, au titre de l'exercice {exercice}.</p>
           </div>
 
           <p className="mt-5 text-center text-[15px] text-encre">
@@ -154,11 +154,11 @@ export function QuitusDocument({ numero, membre, exercice, date }) {
         </div>
         <div className="text-center">
           <span className="font-semibold text-or">En ligne</span><br />
-          contact@barreau-pointe-noire.cg<br />www.barreau-pointe-noire.cg
+          {coordonnees().enLigne.map((l, i) => <span key={l}>{i > 0 && <br />}{l}</span>)}
         </div>
         <div className="text-right">
           <span className="font-semibold text-or">Téléphone</span><br />
-          +242 05 000 00 00<br />+242 06 000 00 00
+          {coordonnees().telephones.map((t, i) => <span key={t}>{i > 0 && <br />}{t}</span>)}
         </div>
       </div>
     </div>

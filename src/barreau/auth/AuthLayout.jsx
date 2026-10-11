@@ -46,7 +46,8 @@ export function AuthLayout({ devise, deviseAuteur, eyebrow, titre, sousTitre, ch
             <Sceau size={92} />
           </div>
           <h1 className="auth-reveal font-display text-[2.6rem] font-semibold leading-[1.05] xl:text-[3rem]" style={delay(180)}>
-            Barreau de<br />Pointe-Noire
+            {/* Dénomination paramétrée, coupée après « de » comme le libellé d'origine (« Barreau de / Pointe-Noire »). */}
+            {identite().denomination.replace(/^(.*?\sde)\s/, "$1\n").split("\n").map((l, i) => <span key={i}>{i > 0 && <br />}{l}</span>)}
           </h1>
           <div className="auth-reveal mt-6 h-px w-16 bg-or" style={delay(240)} />
           <blockquote className="auth-reveal mt-6 max-w-sm font-display text-[1.15rem] italic leading-relaxed text-white/70" style={delay(300)}>

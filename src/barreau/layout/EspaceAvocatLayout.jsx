@@ -5,7 +5,7 @@ import {
   BuildingLibraryIcon, MegaphoneIcon, ArchiveBoxIcon, ScaleIcon, ChatBubbleLeftRightIcon, HandRaisedIcon,
   Bars3Icon, XMarkIcon, UserCircleIcon, TicketIcon,
 } from "@heroicons/react/24/outline";
-import { Sceau, ClocheNotifications } from "../components";
+import { Sceau, ClocheNotifications, BandeauDemonstration } from "../components";
 import { identite } from "../data/config";
 import { useAuth } from "../auth/AuthContext";
 import { useFocusAuChangementDeRoute } from "../hooks/useFocusAuChangementDeRoute";
@@ -169,6 +169,7 @@ export function EspaceAvocatLayout() {
           </nav>
         )}
       </header>
+      <BandeauDemonstration />
 
       <main ref={mainRef} id="contenu-principal" tabIndex={-1} className="mx-auto max-w-container px-4 py-6 outline-none md:px-8 md:py-8">
         {/* Suspense : pages de l'espace chargées à la demande (code-splitting). */}

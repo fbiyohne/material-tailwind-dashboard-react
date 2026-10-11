@@ -102,6 +102,15 @@ export function exercices() {
 }
 /** Identité institutionnelle configurée (dénomination, ordre, signataires, adresse, logo). */
 export const identite = () => config.identite ?? PARAMETRES_DEFAUT.identite;
+/** Coordonnées des reçus et quitus, comme côté serveur (identiteDocuments.ts) : celles par défaut
+ *  n'appartiennent qu'au barreau de base ; un barreau d'une autre ville ne les hérite pas. */
+const COORDONNEES_BASE = { courriel: "contact@barreau-pointe-noire.cg", site: "www.barreau-pointe-noire.cg", telephones: "+242 05 000 00 00 / +242 06 000 00 00" };
+export const coordonnees = () => {
+  const i = identite();
+  const base = (i.ville?.trim() || PARAMETRES_DEFAUT.identite.ville) === PARAMETRES_DEFAUT.identite.ville;
+  const v = (k) => i[k]?.trim() || (base ? COORDONNEES_BASE[k] : "");
+  return { enLigne: [v("courriel"), v("site")].filter(Boolean), telephones: v("telephones").split("/").map((t) => t.trim()).filter(Boolean) };
+};
 /** Clause C-13 (docs/juridique/clauses-congres.md), mot pour mot. */
 export const MENTION_DEMONSTRATION =
   "Données entièrement fictives — toute ressemblance avec une personne réelle serait fortuite. Barreau de démonstration.";

@@ -5,6 +5,7 @@ import { Modal } from "./Modal";
 import { Notice } from "./Notice";
 import { DocumentChrome } from "./DocumentChrome";
 import { useToast } from "./Toast";
+import { identite } from "../data/config";
 import { telechargerAttestationPdf } from "../api/resources";
 
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
@@ -50,12 +51,12 @@ export function AttestationModal({ membre, onClose }) {
         title="Attestation d'inscription"
         reference="N° attribué à la génération"
         date={aujourdhui()}
-        signataires={[{ role: "Le Bâtonnier", nom: "Me BIKINDOU Audrey Séverin" }]}
+        signataires={[{ role: "Le Bâtonnier", nom: identite().batonnier }]}
       >
         <p className="text-xs leading-7 text-encre">
-          Le Bâtonnier de l'Ordre des Avocats du Barreau de Pointe-Noire atteste que{" "}
+          Le Bâtonnier de l'Ordre des Avocats du {identite().denomination} atteste que{" "}
           <strong>Me {membre.nom}</strong> est inscrit(e) au Tableau de l'Ordre des Avocats du
-          Barreau de Pointe-Noire sous le numéro <strong>{membre.num}</strong>
+          {" "}{identite().denomination} sous le numéro <strong>{membre.num}</strong>
           {membre.dateInscription ? (
             <>
               , depuis le{" "}

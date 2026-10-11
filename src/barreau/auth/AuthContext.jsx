@@ -15,6 +15,11 @@ async function chargerReglages() {
   try { appliquerConfig(await api("/parametres")); } catch { /* défauts conservés */ }
 }
 
+/** Identité publique (GET /auth/identite) : écran de connexion et espace avocat, qui n'ont pas accès à /parametres. */
+async function chargerIdentite() {
+  try { appliquerConfig(await api("/auth/identite", { auth: false })); } catch { /* défauts conservés */ }
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -22,6 +27,7 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     setUnauthorizedHandler(() => { deconnecterRealtime(); setUser(null); });
     (async () => {
+      await chargerIdentite();
       if (getToken()) {
         try {
           let moi;

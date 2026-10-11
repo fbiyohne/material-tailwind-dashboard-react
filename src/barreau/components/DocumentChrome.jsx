@@ -52,7 +52,7 @@ export function DocumentChrome({
           <div className="flex items-end gap-3">
             <Sceau size={80} />
             <div className="pb-1 text-xs leading-snug text-gris">
-              Fait à Pointe-Noire,
+              Fait à {identite().ville},
               <br />
               le {fmtDate(date)}
             </div>
