@@ -246,7 +246,7 @@ parametresRouter.post(
       if (!s.host) return res.json({ canal, simulation: false, ok: false, manquants: ["host"], message: "Champs manquants : host." });
       let ok = true, message = "Connexion SMTP établie (aucun message envoyé).";
       try {
-        await creerTransport({ host: s.host, port: Number(s.port) || 587, secure: !!s.secure, user: s.user || undefined, pass: s.pass ? dechiffrer(s.pass) : undefined }).verify();
+        await creerTransport({ host: s.host, port: Number(s.port) || 587, secure: !!s.secure, user: s.user || undefined, pass: s.pass ? dechiffrer(s.pass) : undefined }, 10_000).verify();
       } catch (e) {
         // Code d'erreur seul (ECONNREFUSED, EAUTH…) : ni secret ni bannière du serveur distant.
         const code = (e as { code?: unknown }).code;

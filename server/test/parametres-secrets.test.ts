@@ -7,6 +7,9 @@ import { prisma } from "../src/prisma.js";
 import { chiffrer, dechiffrer, masquer } from "../src/lib/secrets.js";
 
 /** T13 — secrets des paramètres chiffrés au repos, jamais renvoyés en clair, sections sensibles cloisonnées. */
+// Ordre significatif : les cas s'exécutent en séquence sur la ligne Parametres id=1
+// (ex. « agregateur incomplet » part de l'état laissé par les PUT précédents).
+// afterAll restaure la ligne d'origine ; ne pas lancer ce fichier avec --sequence.shuffle.
 const app = creerApp();
 const bearer = (t: string) => ["Authorization", `Bearer ${t}`] as const;
 const login = async (email: string) =>

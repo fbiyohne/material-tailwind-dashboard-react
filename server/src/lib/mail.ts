@@ -6,8 +6,10 @@ import { dechiffrer } from "./secrets.js";
 export interface SmtpConfig { host: string; port: number; secure: boolean; user?: string; pass?: string; from: string; }
 
 /** Construit un transport nodemailer à partir d'une config SMTP (auth optionnelle). */
-export function creerTransport(cfg: Pick<SmtpConfig, "host" | "port" | "secure" | "user" | "pass">) {
+export function creerTransport(cfg: Pick<SmtpConfig, "host" | "port" | "secure" | "user" | "pass">, delaiMs?: number) {
   return nodemailer.createTransport({
+    // delaiMs : borne connexion et accueil (test de connexion) ; défaut nodemailer sinon (2 min).
+    ...(delaiMs ? { connectionTimeout: delaiMs, greetingTimeout: delaiMs } : {}),
     host: cfg.host,
     port: cfg.port,
     secure: cfg.secure,
