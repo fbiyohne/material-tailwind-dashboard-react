@@ -17,11 +17,12 @@ function FiletOr({ className = "w-64" }) {
   );
 }
 
-function Champ({ label, valeur, multiline = false }) {
+// Identité lisible : 12 pt (16 px), nom à 14 pt (19 px).
+function Champ({ label, valeur, multiline = false, nom = false }) {
   return (
-    <div className={`flex gap-2 border-b border-dotted border-gris/50 pb-1.5 ${multiline ? "min-h-[2.6rem] items-start" : "items-baseline"}`}>
+    <div className={`flex gap-2 border-b border-dotted border-gris/50 pb-1.5 text-[16px] ${multiline ? "min-h-[2.6rem] items-start" : "items-baseline"}`}>
       <span className="shrink-0 font-semibold text-encre">{label} :</span>
-      <span className="flex-1 text-encre">{valeur || "—"}</span>
+      <span className={`flex-1 text-encre ${nom ? "text-[19px] font-bold text-navy" : ""}`}>{valeur || "—"}</span>
     </div>
   );
 }
@@ -32,11 +33,12 @@ function Champ({ label, valeur, multiline = false }) {
  * cachet de la Trésorerie, QR de vérification et bandeau de contact).
  * Zone imprimable / exportable (.bpn-print-zone).
  */
-export function RecuDocument({ numero, membre, montant, exercice, mode, objet, date }) {
+export function RecuDocument({ numero, membre, montant, exercice, mode, objet, date, verif }) {
   const m = Number(montant) || 0;
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const hasNum = numero && numero !== "automatique";
-  const verifUrl = `${origin}/verifier/recu/${encodeURIComponent(numero)}`;
+  const verifChemin = verif || `/verifier/recu/${encodeURIComponent(numero)}`;
+  const verifUrl = `${origin}${verifChemin}`;
   const verifHost = origin.replace(/^https?:\/\//, "");
 
   return (
@@ -82,7 +84,8 @@ export function RecuDocument({ numero, membre, montant, exercice, mode, objet, d
           <p className="mt-4 text-center text-[15px] italic text-encre">Reconnaît avoir reçu de Maître :</p>
 
           <div className="mt-6 space-y-4">
-            <Champ label="Nom et Prénom(s)" valeur={`Me ${membre?.nom ?? ""}`} />
+            <Champ label="Nom et Prénom(s)" valeur={`Me ${membre?.nom ?? ""}`} nom />
+            <Champ label="Exercice couvert" valeur={exercice} />
             <Champ label="Au titre de" valeur={objet || `Cotisation ordinale ${exercice}`} />
             <Champ label="Mode de paiement" valeur={mode} />
           </div>
@@ -106,8 +109,9 @@ export function RecuDocument({ numero, membre, montant, exercice, mode, objet, d
               <QRCode value={verifUrl} size={78} />
               <div className="text-[11px] leading-relaxed text-gris">
                 <div className="text-[12px] font-semibold uppercase tracking-wide text-navy">Vérification</div>
-                Scannez ce code, ou :<br />
-                <span className="font-mono text-navy">{verifHost}/verifier/recu/{numero}</span>
+                Authenticité vérifiable en scannant ce code ou sur :<br />
+                <span className="font-mono text-navy">{verifHost}{verifChemin}</span><br />
+                Il ne constitue pas une signature électronique.
               </div>
             </div>
           ) : (
@@ -153,6 +157,7 @@ RecuDocument.propTypes = {
   mode: PropTypes.string,
   objet: PropTypes.string,
   date: PropTypes.string,
+  verif: PropTypes.string,
 };
 
 export default RecuDocument;

@@ -18,11 +18,12 @@ function FiletOr({ className = "w-64" }) {
 }
 
 /** Champ rempli avec ligne pointillée (gabarit officiel). */
-function Champ({ label, valeur, multiline = false }) {
+// Identité lisible : 12 pt (16 px), nom à 14 pt (19 px).
+function Champ({ label, valeur, multiline = false, nom = false }) {
   return (
-    <div className={`flex gap-2 border-b border-dotted border-gris/50 pb-1.5 ${multiline ? "min-h-[2.6rem] items-start" : "items-baseline"}`}>
+    <div className={`flex gap-2 border-b border-dotted border-gris/50 pb-1.5 text-[16px] ${multiline ? "min-h-[2.6rem] items-start" : "items-baseline"}`}>
       <span className="shrink-0 font-semibold text-encre">{label} :</span>
-      <span className="flex-1 text-encre">{valeur || "—"}</span>
+      <span className={`flex-1 text-encre ${nom ? "text-[19px] font-bold text-navy" : ""}`}>{valeur || "—"}</span>
     </div>
   );
 }
@@ -34,9 +35,11 @@ function Champ({ label, valeur, multiline = false }) {
  * signatures (Trésorier + Bâtonnier) avec cachet, et bandeau de contact.
  * C'est la zone imprimable / exportable (.bpn-print-zone).
  */
-export function QuitusDocument({ numero, membre, exercice, date }) {
+export function QuitusDocument({ numero, membre, exercice, date, verif, finValidite }) {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const verifUrl = `${origin}/verifier/quitus/${encodeURIComponent(numero)}`;
+  // Chemin signé fourni par le serveur ; repli sur l'ancien chemin pour les documents déjà émis.
+  const verifChemin = verif || `/verifier/quitus/${encodeURIComponent(numero)}`;
+  const verifUrl = `${origin}${verifChemin}`;
   const verifHost = origin.replace(/^https?:\/\//, "");
   return (
     <div className="bpn-print-zone relative mx-auto flex w-[820px] min-h-[1160px] flex-col overflow-hidden border-2 border-or bg-white font-serif text-[13px] text-encre">
@@ -88,7 +91,7 @@ export function QuitusDocument({ numero, membre, exercice, date }) {
           </p>
 
           <div className="mt-6 space-y-4">
-            <Champ label="Nom et Prénom(s)" valeur={`Me ${membre?.nom ?? ""}`} />
+            <Champ label="Nom et Prénom(s)" valeur={`Me ${membre?.nom ?? ""}`} nom />
             <Champ label="Inscrit(e) au Barreau sous le n°" valeur={membre?.numInscription ?? (membre?.num != null ? `${membre.num}/BPN` : "")} />
             <Champ label="Date d'inscription" valeur={fmtDateFr(membre?.dateInscription)} />
             <Champ label="Adresse professionnelle" valeur={[membre?.cabinet, membre?.adresse].filter(Boolean).join(" — ")} multiline />
@@ -111,7 +114,9 @@ export function QuitusDocument({ numero, membre, exercice, date }) {
           </div>
           <div>
             <h6 className="text-[14px] font-bold uppercase tracking-wide text-navy">Validité du présent quitus</h6>
-            <p className="mt-0.5 text-[13px] text-gris">Le présent quitus est valable pour une durée de trois (03) mois à compter de sa date de délivrance.</p>
+            <p className="mt-0.5 text-[13px] text-gris">{finValidite
+                ? `Valable jusqu'au ${fmtDateFr(finValidite)} inclus, sauf changement de situation du titulaire, consultable à tout moment par le code de vérification.`
+                : "La date de fin de validité est calculée et inscrite à la délivrance du quitus."}</p>
           </div>
         </div>
 
@@ -135,8 +140,9 @@ export function QuitusDocument({ numero, membre, exercice, date }) {
           <QRCode value={verifUrl} size={78} />
           <div className="text-[11px] leading-relaxed text-gris">
             <div className="text-[12px] font-semibold uppercase tracking-wide text-navy">Vérification d'authenticité</div>
-            Scannez ce code, ou rendez-vous sur :<br />
-            <span className="font-mono text-navy">{verifHost}/verifier/quitus/{numero}</span>
+            Authenticité vérifiable en scannant ce code ou sur :<br />
+            <span className="font-mono text-navy">{verifHost}{verifChemin}</span><br />
+            Ce code permet de contrôler que le document a été émis par l'Ordre et d'en connaître le statut actuel. Il ne constitue pas une signature électronique.
           </div>
         </div>
 
@@ -170,6 +176,8 @@ QuitusDocument.propTypes = {
   membre: PropTypes.object,
   exercice: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
   date: PropTypes.string,
+  verif: PropTypes.string,
+  finValidite: PropTypes.string,
 };
 
 export default QuitusDocument;

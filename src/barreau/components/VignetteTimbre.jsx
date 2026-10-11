@@ -33,7 +33,8 @@ export function VignetteTimbre({ timbre, idAttr = "vignette-timbre" }) {
   const nom = timbre.membre?.nom ?? timbre.membreNom ?? "";
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const code = timbre.code || "—";
-  const verifUrl = `${origin}/verifier/timbre/${encodeURIComponent(code)}`;
+  const verifChemin = timbre.verif || `/verifier/timbre/${encodeURIComponent(code)}`;
+  const verifUrl = `${origin}${verifChemin}`;
   const verifHost = origin.replace(/^https?:\/\//, "");
   const annule = timbre.statut === "ANNULE";
   const uid = String(timbre.numero ?? "x").replace(/\W/g, "");
@@ -83,7 +84,7 @@ export function VignetteTimbre({ timbre, idAttr = "vignette-timbre" }) {
 
             <div className="mt-3 font-display text-[13px] font-bold uppercase tracking-wide">{denomination}</div>
             {timbre.cabinet && <div className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-[#4A5568]">Cabinet : {timbre.cabinet}</div>}
-            {nom && <div className="mt-0.5 text-[11px] text-[#4A5568]">Me {nom}</div>}
+            {nom && <div className="mt-0.5 text-[16px] font-semibold text-[#1A3A6B]">Me {nom}</div>}
 
             {/* Identifiant scellé */}
             <div className="mt-3 flex items-center overflow-hidden rounded-[3px] border border-[#0E2144] bg-[#0E2144] text-left">
@@ -102,8 +103,9 @@ export function VignetteTimbre({ timbre, idAttr = "vignette-timbre" }) {
               <div className="shrink-0 rounded-[2px] border border-[#1A3A6B]/15 bg-white p-1"><QRCode value={verifUrl} size={78} /></div>
               <div className="min-w-0">
                 <div className="text-[9px] font-bold uppercase tracking-wider text-[#1A3A6B]">Vérifier l'authenticité</div>
-                <div className="mt-0.5 text-[10px] leading-snug text-[#4A5568]">Scannez le code ou rendez-vous sur :</div>
-                <div className="mt-0.5 break-all font-mono text-[9.5px] text-[#8A6D08]">{verifHost}/verifier/timbre/{code}</div>
+                <div className="mt-0.5 text-[10px] leading-snug text-[#4A5568]">Authenticité vérifiable en scannant ce code ou sur :</div>
+                <div className="mt-0.5 break-all font-mono text-[9.5px] text-[#8A6D08]">{verifHost}{verifChemin}</div>
+                <div className="mt-0.5 text-[9px] leading-snug text-[#4A5568]">Ne constitue pas une signature électronique.</div>
               </div>
             </div>
 

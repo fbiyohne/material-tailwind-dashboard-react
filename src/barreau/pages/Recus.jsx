@@ -195,7 +195,7 @@ export function Recus() {
           {/* Aperçu à gabarit fixe (820px, pour l'impression/PDF) : défilement
               horizontal sur petit écran plutôt que de déborder toute la page. */}
           <div className="overflow-x-auto">
-            <RecuDocument numero={numeroAffiche} membre={membre} montant={Number(montant) || 0} exercice={exercice} mode={mode} date={date} />
+            <RecuDocument numero={numeroAffiche} membre={membre} montant={Number(montant) || 0} exercice={exercice} mode={mode} date={date} verif={succes?.verif} />
           </div>
 
           <div className="bpn-no-print bpn-card">
