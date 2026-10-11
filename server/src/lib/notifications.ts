@@ -53,9 +53,10 @@ async function envoyerSmsReel(to: string, message: string): Promise<void> {
 }
 
 /** Envoie un SMS (via passerelle réelle ou simulation) et journalise l'envoi. */
-export async function envoyerSms(opts: { to: string; message: string; evenement: string }): Promise<{ statut: "ENVOYE" | "ECHEC"; simulation: boolean }> {
+export async function envoyerSms(opts: { to: string; message: string; evenement: string; simulation?: boolean }): Promise<{ statut: "ENVOYE" | "ECHEC"; simulation: boolean }> {
   let statut: "ENVOYE" | "ECHEC" = "ENVOYE";
-  if (smsConfigure) {
+  const simule = opts.simulation === true || !smsConfigure; // simulation forcée : jamais d'appel réel
+  if (!simule) {
     try {
       await envoyerSmsReel(opts.to, opts.message);
     } catch (err) {
@@ -65,6 +66,6 @@ export async function envoyerSms(opts: { to: string; message: string; evenement:
   } else {
     logger.info({ to: opts.to }, `[sms:simulation] ${opts.message.slice(0, 80)}`);
   }
-  await journaliser("SMS", opts.to, opts.message, opts.evenement, statut, modeSimulationSms);
-  return { statut, simulation: modeSimulationSms };
+  await journaliser("SMS", opts.to, opts.message, opts.evenement, statut, simule);
+  return { statut, simulation: simule };
 }

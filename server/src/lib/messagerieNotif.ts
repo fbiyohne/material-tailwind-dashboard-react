@@ -1,5 +1,6 @@
 import { prisma } from "../prisma.js";
-import { envoyerEmail } from "./notifications.js";
+import { envoyerEmail, envoyerSms } from "./notifications.js";
+import { configMessagerie } from "./messagerie.js";
 
 /**
  * Notifications de messagerie interne. Mutualise la résolution des
@@ -25,34 +26,34 @@ export async function emailsMembres(membreIds: number[]): Promise<string[]> {
   return membres.map((m) => m.email).filter((e): e is string => Boolean(e));
 }
 
-interface OptionsNotif {
-  titre: string;
-  intro: string;
-  cta: string;
-  auteurNom: string;
-  sujet: string;
-  corps: string;
+/** Clause CL-NOTIF-EXTERNE : seul texte relayé hors de l'espace (secret professionnel, loi 026-92 art. 52). */
+export const CL_NOTIF_EXTERNE = "Ordre des avocats : vous avez un nouveau message ou document sur votre espace. Connectez-vous pour le consulter.";
+
+/** Téléphones (renseignés) des membres donnés. */
+export async function telephonesMembres(membreIds: number[]): Promise<string[]> {
+  if (membreIds.length === 0) return [];
+  const membres = await prisma.membre.findMany({ where: { id: { in: membreIds }, NOT: { tel: null } }, select: { tel: true } });
+  return membres.map((m) => m.tel).filter((t): t is string => Boolean(t));
 }
 
 /**
- * Envoie une notification e-mail pour un nouveau message. Best-effort et
- * NON bloquant : la résolution des destinataires et l'envoi SMTP s'exécutent en
- * tâche de fond (`void`), sans retarder la réponse HTTP. Toute erreur est avalée
- * (l'échec d'une notification ne doit jamais faire échouer l'envoi du message).
+ * Relais externe d'un nouveau message. Contenu NEUTRE : uniquement la clause
+ * CL-NOTIF-EXTERNE, jamais l'auteur, l'objet, le corps ni une pièce. E-mail et
+ * SMS sont activables dans Paramètres > Messagerie (relaisEmail, relaisSms) ;
+ * le SMS reste en simulation (aucun envoi réel). Best-effort : l'appelant ne
+ * l'attend pas (pas de await), et toute erreur est avalée.
  */
-export function notifierNouveauMessage(resoudreDestinataires: () => Promise<string[]>, opts: OptionsNotif): void {
-  void (async () => {
-    try {
-      const to = (await resoudreDestinataires()).join(", ");
-      if (!to) return;
-      await envoyerEmail({
-        to,
-        subject: `Messagerie — ${opts.titre}`,
-        text: `${opts.intro}\n\nObjet : ${opts.sujet}\n\n« ${opts.corps} »\n\n${opts.cta}`,
-        evenement: "MESSAGE",
-      });
-    } catch {
-      /* notification best-effort */
+export async function notifierNouveauMessage(resoudreEmails: () => Promise<string[]>, resoudreTels?: () => Promise<string[]>): Promise<void> {
+  try {
+    const cfg = await configMessagerie();
+    if (cfg.relaisEmail) {
+      const to = (await resoudreEmails()).join(", ");
+      if (to) await envoyerEmail({ to, subject: "Messagerie — nouveau message", text: CL_NOTIF_EXTERNE, evenement: "MESSAGE" });
     }
-  })();
+    if (cfg.relaisSms && resoudreTels) {
+      for (const to of await resoudreTels()) await envoyerSms({ to, message: CL_NOTIF_EXTERNE, evenement: "MESSAGE", simulation: true });
+    }
+  } catch {
+    /* notification best-effort */
+  }
 }

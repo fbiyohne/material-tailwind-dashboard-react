@@ -14,7 +14,7 @@ import { reglesActuelles } from "../lib/regles.js";
 import { envoyerPdf, envoyerDocumentPdf } from "../lib/pdf.js";
 import { convocationAgHtml, pvAssembleeHtml, decisionDisciplineHtml, attestationHtml, attestationNonRedevanceHtml } from "../lib/templates.js";
 import { recuRicheHtml, quitusRicheHtml } from "../lib/documentsRiches.js";
-import { notifierNouveauMessage, emailsAdministration, emailsMembres } from "../lib/messagerieNotif.js";
+import { notifierNouveauMessage, emailsAdministration, emailsMembres, telephonesMembres } from "../lib/messagerieNotif.js";
 import { messageNonDeMoi, compterNonLusParFil, totalNonLus, jamaisLu, pieceSchema, envoyerMessage, accuser, messageAvecFil, pieceDto, envoyerPiece, htmlAccuse } from "../lib/messagerie.js";
 import { realtimeMembres, realtimeAdministration } from "../lib/realtime.js";
 import { dateReferenceScrutin, electeursADate } from "../lib/cycleVie.js";
@@ -597,22 +597,12 @@ async function monNom(req: AuthRequest) {
 
 /** Notifie l'administration (non bloquant) d'un nouveau message d'avocat. */
 function notifierAdministration(sujet: string, auteurNom: string, corps: string) {
-  notifierNouveauMessage(emailsAdministration, {
-    titre: `nouveau message de ${auteurNom}`,
-    intro: `${auteurNom} a adressé un message à l'administration du Barreau.`,
-    cta: "Connectez-vous à l'espace d'administration (module « Messagerie ») pour y répondre.",
-    auteurNom, sujet, corps,
-  });
+  void notifierNouveauMessage(emailsAdministration); // contenu neutre (CL-NOTIF-EXTERNE)
 }
 
 /** Notifie le(s) confrère(s) destinataire(s) (non bloquant) d'un message entre avocats. */
 function notifierConfreres(membreIds: number[], sujet: string, auteurNom: string, corps: string) {
-  notifierNouveauMessage(() => emailsMembres(membreIds), {
-    titre: `nouveau message de ${auteurNom}`,
-    intro: `${auteurNom} vous a adressé un message via la messagerie du Barreau.`,
-    cta: "Connectez-vous à votre espace avocat (module « Messagerie ») pour y répondre.",
-    auteurNom, sujet, corps,
-  });
+  void notifierNouveauMessage(() => emailsMembres(membreIds), () => telephonesMembres(membreIds));
 }
 
 /** GET /espace/messagerie — fils de discussion de l'avocat (synthèse + non-lus). */

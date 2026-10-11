@@ -67,6 +67,21 @@ export async function totalNonLus(expediteur: Prisma.MessageWhereInput, seuils: 
 
 /** Une pièce par message, 5 Mo au plus (la limite JSON globale de 8 Mo reste suffisante en base64). */
 export const PIECE_MAX = 5 * 1024 * 1024;
+
+/** Réglages de la messagerie (Parametres.data.messagerie), relus en base à chaque appel, sans cache. */
+export async function configMessagerie() {
+  const row = await prisma.parametres.findUnique({ where: { id: 1 } });
+  const m = ((row?.data as { messagerie?: Record<string, unknown> } | null)?.messagerie ?? {});
+  const mo = Number(m.pieceMaxMo);
+  return {
+    interneActive: m.interneActive !== false,
+    piecesJointes: m.piecesJointes !== false,
+    relaisEmail: m.relaisEmail !== false,
+    relaisSms: m.relaisSms === true, // SMS : désactivé par défaut
+    // Plafond configurable, jamais au-dessus de PIECE_MAX.
+    pieceMaxOctets: Number.isFinite(mo) && mo >= 1 ? Math.min(Math.floor(mo) * 1024 * 1024, PIECE_MAX) : PIECE_MAX,
+  };
+}
 /** Pièce jointe telle que reçue du client : nom + base64 sans préfixe data:. Le type n'est jamais déclaré, il est lu dans les octets. */
 export const pieceSchema = z.object({ nomFichier: z.string().trim().min(1).max(200), donnees: z.string().min(1) }).optional();
 type PieceEntree = z.infer<typeof pieceSchema>;
@@ -96,10 +111,11 @@ export interface DonneesMessage {
  * .pdf est refusé). Le nom est assaini (pas de guillemet, de retour à la ligne
  * ni de séparateur de chemin). Renvoie le tampon, sans rien enregistrer.
  */
-function decoderPiece(piece: NonNullable<PieceEntree>): { buffer: Buffer; nom: string; mime: TypePiece } {
-  if (Math.floor((piece.donnees.length * 3) / 4) > PIECE_MAX) throw new HttpError(413, "Pièce trop volumineuse (5 Mo au plus).");
+function decoderPiece(piece: NonNullable<PieceEntree>, max: number): { buffer: Buffer; nom: string; mime: TypePiece } {
+  const msgTaille = `Pièce trop volumineuse (${Math.floor(max / 1024 / 1024)} Mo au plus).`;
+  if (Math.floor((piece.donnees.length * 3) / 4) > max) throw new HttpError(413, msgTaille);
   const buffer = Buffer.from(piece.donnees, "base64");
-  if (buffer.length === 0 || buffer.length > PIECE_MAX) throw new HttpError(413, "Pièce trop volumineuse (5 Mo au plus).");
+  if (buffer.length === 0 || buffer.length > max) throw new HttpError(413, msgTaille);
   const mime = typeReel(buffer);
   if (!mime) throw new HttpError(400, "Format de pièce refusé : PDF, DOCX, JPG ou PNG uniquement (contenu vérifié).");
   const nom = piece.nomFichier.replace(/[\x00-\x1f"\\/]/g, "").trim() || `piece${EXTENSION[mime]}`;
@@ -120,8 +136,11 @@ export function empreinteMessage(corps: string, piece?: Buffer): string {
  * pour les quatre routes d'envoi (espace et administration).
  */
 export async function envoyerMessage<T>(corps: string, piece: PieceEntree, creer: (data: DonneesMessage) => Promise<T>): Promise<T> {
+  const cfg = await configMessagerie();
+  if (!cfg.interneActive) throw new HttpError(403, "La messagerie interne est désactivée.");
   if (!piece) return creer({ corps, empreinte: empreinteMessage(corps) });
-  const { buffer, nom, mime } = decoderPiece(piece);
+  if (!cfg.piecesJointes) throw new HttpError(403, "Les pièces jointes sont désactivées.");
+  const { buffer, nom, mime } = decoderPiece(piece, cfg.pieceMaxOctets);
   const { chemin, taille } = enregistrerFichier("messagerie", piece.donnees, EXTENSION[mime]);
   try {
     return await creer({ corps, empreinte: empreinteMessage(corps, buffer), pieceNom: nom, pieceFichier: chemin, pieceMime: mime, pieceTaille: taille });

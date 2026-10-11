@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, type AuthRequest, requirePermission } from "../middleware/auth.js";
-import { notifierNouveauMessage, emailsMembres } from "../lib/messagerieNotif.js";
+import { notifierNouveauMessage, emailsMembres, telephonesMembres } from "../lib/messagerieNotif.js";
 import { MESSAGE_DE_AVOCAT, compterNonLusParFil, totalNonLus, jamaisLu, pieceSchema, envoyerMessage, accuser, messageAvecFil, pieceDto, envoyerPiece, htmlAccuse } from "../lib/messagerie.js";
 import { realtimeMembres } from "../lib/realtime.js";
 import { envoyerPdf, htmlVersPdf } from "../lib/pdf.js";
@@ -27,12 +27,7 @@ async function monNomAdmin(req: AuthRequest) {
 
 /** Prévient l'avocat (e-mail best-effort + temps réel) d'un message de l'administration. */
 function notifierAvocat(membreIds: number[], conversationId: number, auteurNom: string, sujet: string, corps: string, titre: string, intro: string) {
-  notifierNouveauMessage(() => emailsMembres(membreIds), {
-    titre,
-    intro,
-    cta: "Connectez-vous à votre espace avocat (module « Messagerie ») pour le consulter.",
-    auteurNom, sujet, corps,
-  });
+  void notifierNouveauMessage(() => emailsMembres(membreIds), () => telephonesMembres(membreIds)); // contenu neutre (CL-NOTIF-EXTERNE)
   realtimeMembres(membreIds, { type: "messagerie", conversationId });
 }
 
