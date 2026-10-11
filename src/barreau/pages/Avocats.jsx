@@ -11,13 +11,12 @@ import { versDelimite, telechargerTexte } from "../utils/exportCsv";
 import { exporterExcel, exporterPdf } from "../utils/exports";
 import { listerMembres, getCotisations, supprimerMembre, telechargerAvocatsPdf, journaliserExport } from "../api/resources";
 
+// Les avocats sortis (radié, décédé, démission, retraite, cessation) sont dans « Anciens membres ».
 const FILTRES = [
   { value: "tous", label: "Tous les statuts" },
   { value: "inscrit", label: "Inscrit" },
   { value: "suspendu", label: "Suspendu" },
   { value: "omis", label: "Omis" },
-  { value: "radie", label: "Radié" },
-  { value: "decede", label: "Décédé" },
   { value: "honoraire", label: "Honoraire" },
 ];
 
@@ -49,13 +48,13 @@ const FORMATS = [
 ];
 
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
-const jjmmaaaa = (iso) => iso.split("-").reverse().join("/");
+export const jjmmaaaa = (iso) => iso.split("-").reverse().join("/");
 // Mention de confidentialité : première ligne de chaque export (spec § 4.2, texte mot pour mot).
 export const mention = () =>
   `${identite().denomination} — Document interne confidentiel — Liste arrêtée au ${jjmmaaaa(aujourdhui())} — Diffusion interdite hors des organes de l'Ordre.`;
 
 /** Menu « Exporter » natif (<details>) : 4 formats, état d'attente par entrée. */
-function MenuExport({ libelle, petit = false, onExport }) {
+export function MenuExport({ libelle, petit = false, onExport }) {
   const [ouvert, setOuvert] = useState(false);
   const [occupe, setOccupe] = useState(null);
   const resume = useRef(null);

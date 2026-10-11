@@ -103,8 +103,8 @@ describe("Avocats — exports", () => {
     expect(telechargerTexte).not.toHaveBeenCalled();
   });
 
-  it("filtre Décédé proposé", async () => {
+  it("filtre Décédé non proposé (registre Anciens membres)", async () => {
     await rendre();
-    expect(screen.getByRole("option", { name: "Décédé" })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "Décédé" })).toBeNull();
   });
 });

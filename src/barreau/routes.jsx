@@ -1,6 +1,7 @@
 import {
   Squares2X2Icon,
   UsersIcon,
+  ArchiveBoxXMarkIcon,
   AcademicCapIcon,
   CheckBadgeIcon,
   BanknotesIcon,
@@ -31,6 +32,7 @@ const Recus = lazy(() => import("./pages/Recus"));
 const Quitus = lazy(() => import("./pages/Quitus"));
 const Timbres = lazy(() => import("./pages/Timbres"));
 const Avocats = lazy(() => import("./pages/Avocats"));
+const AnciensMembres = lazy(() => import("./pages/AnciensMembres"));
 const Stagiaires = lazy(() => import("./pages/Stagiaires"));
 const Cabinets = lazy(() => import("./pages/Cabinets"));
 const Pieces = lazy(() => import("./pages/Pieces"));
@@ -78,6 +80,7 @@ export const navSections = [
     label: "Membres",
     items: [
       { name: "Avocats inscrits", path: "/avocats", icon: UsersIcon, perm: "membres", element: <Avocats /> },
+      { name: "Anciens membres", path: "/anciens-membres", icon: ArchiveBoxXMarkIcon, perm: "membres", element: <AnciensMembres /> },
       { name: "Avocats stagiaires", path: "/stagiaires", icon: AcademicCapIcon, perm: "membres", element: <Stagiaires /> },
       { name: "Personnes morales", path: "/cabinets", icon: BuildingOffice2Icon, perm: "membres", element: <Cabinets /> },
       { name: "Tableau de l'Ordre", path: "/tableau", icon: ClipboardDocumentListIcon, perm: "membres", element: <TableauOrdre /> },
