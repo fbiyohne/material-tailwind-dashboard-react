@@ -96,7 +96,7 @@ const liste = (items: string[]) =>
   `<ol style="margin:6px 0 0 18px">${items.map((p) => `<li style="margin:2px 0">${escapeHtml(p)}</li>`).join("")}</ol>`;
 
 const QUALITE_TABLEAU: Record<string, string> = { AVOCAT: "Avocats", STAGIAIRE: "Avocats stagiaires", HONORAIRE: "Avocats honoraires" };
-const MENTION_STATUT: Record<string, string> = { SUSPENDU: "Suspendu", OMIS: "Omis" };
+const MENTION_STATUT: Record<string, string> = { SUSPENDU: "Suspendu" }; // les omis ne figurent plus au tableau (art. 35)
 
 /** Composition du Conseil de l'Ordre présentée à un instant donné (en-tête du tableau). */
 export interface ConseilPdf {

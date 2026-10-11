@@ -270,10 +270,16 @@ Toutes les entrées ont pour interlocutrice Me Kalina MENGA, qui valide ou trans
 - **Valeur provisoire retenue** : reprise enregistrée à la main par le SG, avec sa date et sa référence.
 - **Interlocutrice** : Me Kalina MENGA.
 
-### PO-34 — Radiation par `/radier` ouverte au SG (clos le 2026-10-11)
+### PO-34 — Radiation par `/radier` ou « Modifier » ouverte au SG (clos le 2026-10-11)
 
 - **Texte** : art. 18-10° et 36 de la loi 026-92 (la radiation relève du Conseil du barreau en conseil de discipline) ; matrice R-42.
-- **Constat** (R1-7) : `POST /membres/:id/radier` était ouvert au SG (`requireRole`), sans `discipline_decider`.
-- **Décision** : corrigé. La route exige l'action `discipline_decider` (bâtonnier par défaut, ADMIN) ; le SG reçoit 403 (`radier-permission.test.ts`). La référence de la décision reste facultative, comme avant.
+- **Constat** (R1-7) : `POST /membres/:id/radier` et `PATCH /membres/:id` (statut RADIE) étaient ouverts au SG (`requireRole`), sans `discipline_decider`.
+- **Décision** : corrigé. La route exige l'action `discipline_decider` (bâtonnier par défaut, ADMIN) ; le SG reçoit 403 (`radier-permission.test.ts`). `PATCH /membres/:id` applique la même règle au passage en RADIE et à la levée d'une radiation ; le SG garde la correction de la date et de la référence d'un radié, et la déclaration de décès. La référence de la décision reste facultative, comme avant.
 - **Reste à confirmer** : si Me Kalina MENGA veut que le SG enregistre aussi les radiations, il faut changer ses actions par défaut (R-42, `lib/rbac.ts`), car les actions du SG ne s'éditent pas dans la matrice. À valider par Fabrice et Me MENGA.
 - **Interlocutrice** : Me Kalina MENGA.
+
+### PO-35 — Tableau public : omis exclus, suspendus conservés
+- **Texte** : art. 35 de la loi 026-92 (l'omission retire du tableau) ; PO-21 (le tableau et son PDF ne montrent que des membres en exercice, sans motif de sortie).
+- **Constat** (R1-9) : `GET /tableau` et son PDF ne filtraient que `STATUTS_SORTIS`, donc les OMIS figuraient avec la mention « (Omis) ».
+- **Décision** : corrigé. Les OMIS sont exclus (`routes/tableau.ts`, test `tableau-dashboard.test.ts`). Les SUSPENDU restent au tableau avec la mention « (Suspendu) » : valeur **provisoire**, car l'interdiction temporaire n'est pas un retrait du tableau en l'état des textes lus.
+- **Reste à confirmer** : si l'avocat suspendu doit être masqué du tableau public. À valider par Me Kalina MENGA.

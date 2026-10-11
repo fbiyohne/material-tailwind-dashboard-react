@@ -19,7 +19,7 @@ const ORDRE_QUALITES = ["AVOCAT", "STAGIAIRE", "HONORAIRE"] as const;
 /** Compose le tableau : membres non sortis (radiés, décédés, sorties volontaires), triés par ancienneté, en sections. */
 async function composer() {
   const membres = await prisma.membre.findMany({
-    where: { statut: { notIn: [...STATUTS_SORTIS] } },
+    where: { statut: { notIn: [...STATUTS_SORTIS, "OMIS"] } }, // l'omission retire du tableau (art. 35) ; SUSPENDU reste, avec mention
     orderBy: [{ dateInscription: "asc" }, { num: "asc" }],
     select: { id: true, num: true, numInscription: true, nom: true, qualite: true, statut: true, cabinet: true, dateInscription: true, updatedAt: true },
   });

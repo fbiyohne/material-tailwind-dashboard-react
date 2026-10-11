@@ -58,3 +58,19 @@ describe("Dashboard par qualité", () => {
     expect(d.membres.parQualite.avocats.enRetard + d.membres.parQualite.stagiaires.enRetard).toBe(d.membres.enRetard);
   });
 });
+
+// R1-9 — l'omission retire du tableau (art. 35) ; la suspension y laisse l'avocat (décision de Me MENGA à confirmer).
+describe("Tableau : omis exclus, suspendus conservés", () => {
+  const ids: number[] = [];
+  afterAll(async () => { await prisma.membre.deleteMany({ where: { id: { in: ids } } }); });
+  it("un OMIS n'est ni dans le tableau ni dans son PDF ; un SUSPENDU y reste", async () => {
+    const base = ((await prisma.membre.aggregate({ _max: { num: true } }))._max.num ?? 960000) + 1;
+    const omis = await prisma.membre.create({ data: { num: base, nom: `R19 OMIS ${base}`, qualite: "AVOCAT", statut: "OMIS" } as never });
+    const susp = await prisma.membre.create({ data: { num: base + 1, nom: `R19 SUSP ${base}`, qualite: "AVOCAT", statut: "SUSPENDU" } as never });
+    ids.push(omis.id, susp.id);
+    const r = await request(app).get("/api/tableau").set(...bearer(sg));
+    const presents = new Set(r.body.sections.flatMap((s: { membres: { id: number }[] }) => s.membres.map((x) => x.id)));
+    expect(presents.has(omis.id)).toBe(false);
+    expect(presents.has(susp.id)).toBe(true);
+  });
+});
