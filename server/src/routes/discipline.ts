@@ -7,7 +7,7 @@ import { requireAuth, requireRole, type AuthRequest, requirePermission } from ".
 import { aLaPermission } from "../lib/rbac.js";
 import { reglesActuelles } from "../lib/regles.js";
 import { changerSituation } from "../lib/cycleVie.js";
-import { prochaineReferenceDossier, archiver, avecRejeuUnicite } from "../lib/business.js";
+import { prochaineReferenceDossier, archiver, avecRejeuUnicite, STATUTS_SORTIS } from "../lib/business.js";
 import { envoyerPdf } from "../lib/pdf.js";
 import { convocationDisciplineHtml, decisionDisciplineHtml } from "../lib/templates.js";
 
@@ -226,8 +226,10 @@ disciplineRouter.post(
     // un décès concurrent donne 409 au lieu d'être écrasé ; une interdiction ferme ne lève jamais une radiation.
     const statutAttendu = (await prisma.membre.findUniqueOrThrow({ where: { id: d.membreId }, select: { statut: true } })).statut;
     if (effet === "SUSPENSION" && ferme) {
-      if (statutAttendu === "RADIE" || statutAttendu === "DECEDE")
-        throw new HttpError(409, "Interdiction temporaire impossible : l'avocat est radié ou décédé.");
+      // R2-3 : un avocat omis ou sorti (radié, décédé, démissionnaire, retraité, cessation) n'est pas au
+      // tableau ; le passer SUSPENDU l'y ferait revenir et lèverait l'omission hors du circuit (PO-36).
+      if (statutAttendu === "OMIS" || (STATUTS_SORTIS as readonly string[]).includes(statutAttendu))
+        throw new HttpError(409, "Interdiction temporaire impossible : l'avocat n'est pas au tableau (omis ou sorti).");
       await changerSituation({ ...commun, statutAttendu, type: "SUSPENSION", demande: { statut: "SUSPENDU" } }, ecrireDossier);
     } else if (effet === "RADIATION")
       await changerSituation({ ...commun, statutAttendu, type: "RADIATION", demande: { statut: "RADIE", dateRadiation: dateDecision, motifRadiation: `${libelle} — ${reference}` } }, ecrireDossier);

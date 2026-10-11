@@ -205,3 +205,20 @@ describe("CA10 — la lecture d'un dossier disciplinaire est tracée dans Journa
     expect(e!.action).not.toContain("Manquement");
   });
 });
+
+describe("R2-3 — interdiction ferme refusée pour un avocat omis ou sorti", () => {
+  it.each(["OMIS", "DEMISSIONNAIRE"] as const)("%s : 409, fiche inchangée, aucun événement, dossier libre, absent du tableau", async (statut) => {
+    const membreId = await creerMembre(`Hors tableau ${statut}`);
+    const id = await ouvrir(membreId);
+    await prisma.membre.update({ where: { id: membreId }, data: { statut } });
+    const avant = await prisma.membre.findUniqueOrThrow({ where: { id: membreId } });
+    const r = await decider(id, bat, { sanctionCode: "INTERDICTION_TEMPORAIRE", dureeMois: 3 });
+    expect(r.status).toBe(409);
+    const apres = await prisma.membre.findUniqueOrThrow({ where: { id: membreId } });
+    expect(apres.statut).toBe(statut);
+    expect(apres.updatedAt.getTime()).toBe(avant.updatedAt.getTime());
+    expect(await prisma.evenementSituation.count({ where: { membreId, dossierId: id } })).toBe(0);
+    expect((await prisma.dossierDisciplinaire.findUniqueOrThrow({ where: { id } })).sanctionCode).toBeNull();
+    expect(await auTableau(membreId)).toBe(false);
+  });
+});
