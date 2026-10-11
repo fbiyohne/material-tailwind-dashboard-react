@@ -375,7 +375,7 @@ export function AvocatDetail() {
       />
 
       <AttestationModal membre={attestation} onClose={() => setAttestation(null)} />
-      <EditMembreModal membre={edition ? membre : null} open={edition} onClose={() => setEdition(false)} onSaved={charger} />
+      <EditMembreModal membre={edition ? membre : null} open={edition} onClose={() => setEdition(false)} onSaved={charger} peutRadier={peutRadier} />
       {peutContacter && <ContacterModal membre={membre} open={contact} onClose={() => setContact(false)} />}
       {acte && <ActeStatutModal mode={acte} membre={membre} open onClose={() => setActe(null)} onDone={apresSituation} />}
 

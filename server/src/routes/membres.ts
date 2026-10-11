@@ -465,7 +465,7 @@ const editSchema = inscriptionSchema.partial().extend({
 /** undefined → champ non touché ; null → effacé ; chaîne → Date. */
 const versDate = (v: string | null | undefined) => (v == null ? v : new Date(v));
 
-/** PATCH /membres/:id — modification de la fiche (FR-AV-01). SG/Admin. */
+/** PATCH /membres/:id — modification de la fiche (FR-AV-01). SG/Admin ; suspension, radiation et levée de radiation : discipline_decider (R1-1, R1-7). */
 membresRouter.patch(
   "/:id",
   requireRole("SECRETAIRE_GENERAL"),
@@ -491,6 +491,12 @@ membresRouter.patch(
     if (statut && statut !== actuel.statut && actuel.statut === "SUSPENDU" && !(STATUTS_SORTIS as readonly string[]).includes(statut) && !aLaPermission(req.user!.role, "discipline_decider") &&
       (await prisma.dossierDisciplinaire.findFirst({ where: { membreId: id, sanctionCode: { not: null }, sursis: false, sanctionFin: { gt: new Date() } }, select: { id: true } })))
       throw new HttpError(403, "Interdiction temporaire en cours : seule une décision enregistrée par le titulaire de l'action discipline_decider (bâtonnier par défaut) peut la lever avant son terme.");
+    // R1-1 / R1-7 : imposer une suspension ou une radiation, ou lever une radiation (retour au
+    // tableau), relève de discipline_decider : la sanction s'enregistre par la décision du dossier
+    // disciplinaire (POST /discipline/:id/decision), la radiation aussi par /radier. Le SG corrige
+    // la date ou la référence d'un radié (sans changer le statut) et déclare un décès.
+    if (change && (statut === "SUSPENDU" || statut === "RADIE" || (actuel.statut === "RADIE" && statut !== "DECEDE")) && !aLaPermission(req.user!.role, "discipline_decider"))
+      throw new HttpError(403, "Accès refusé pour votre profil : enregistrer une suspension ou une radiation, ou lever une radiation, relève de l'action discipline_decider (décision du conseil de discipline enregistrée depuis le dossier disciplinaire, bâtonnier par défaut).");
     const donnees = {
       ...fiche,
       dateNaissance: fiche.dateNaissance ? new Date(fiche.dateNaissance) : undefined,

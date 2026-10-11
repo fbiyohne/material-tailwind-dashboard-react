@@ -48,3 +48,47 @@ describe("R1-7 — /radier réservé à discipline_decider", () => {
     expect((await radier(m.id, admin)).status).toBe(200);
   });
 });
+
+/**
+ * R1-7 (reprise QA) — aucune autre voie : PATCH /membres/:id (« Modifier ») et l'import ne
+ * permettent pas au SG d'enregistrer une radiation, ni de lever une radiation enregistrée.
+ */
+describe("R1-7 — PATCH et import ne contournent pas discipline_decider", () => {
+  const patch = (id: number, jeton: string, b: object) => request(app).patch(`/api/membres/${id}`).set(...bearer(jeton)).send(b);
+  const radiations = (membreId: number) => prisma.evenementSituation.count({ where: { membreId, type: "RADIATION" } });
+
+  it("SG PATCH statut=RADIE : 403, statut inchangé, aucun événement RADIATION", async () => {
+    const m = await creer();
+    const r = await patch(m.id, sg, { statut: "RADIE", dateRadiation: "2026-10-01", motifRadiation: "Décision n° 18" });
+    expect(r.status).toBe(403);
+    expect(r.body.erreur).toMatch(/discipline_decider/);
+    expect((await prisma.membre.findUnique({ where: { id: m.id } }))?.statut).toBe("INSCRIT");
+    expect(await radiations(m.id)).toBe(0);
+  });
+
+  it("SG PATCH d'un radié vers le tableau : 403 ; correction de la date ou de la référence seule : 200", async () => {
+    const m = await creer();
+    expect((await radier(m.id, bat)).status).toBe(200);
+    expect((await patch(m.id, sg, { statut: "INSCRIT" })).status).toBe(403);
+    expect((await prisma.membre.findUnique({ where: { id: m.id } }))?.statut).toBe("RADIE");
+    const r = await patch(m.id, sg, { motifRadiation: "Décision du Conseil n° 17 (rectifiée)" });
+    expect(r.status).toBe(200);
+    expect(r.body).toMatchObject({ statut: "RADIE", motifRadiation: "Décision du Conseil n° 17 (rectifiée)" });
+  });
+
+  it("ADMIN PATCH statut=RADIE : 200 et événement RADIATION", async () => {
+    const m = await creer();
+    expect((await patch(m.id, admin, { statut: "RADIE", dateRadiation: "2026-10-01", motifRadiation: "Décision n° 19" })).status).toBe(200);
+    expect(await radiations(m.id)).toBe(1);
+  });
+
+  it("SG import d'une ligne « radié » sur un inscrit : ligne en erreur, statut inchangé", async () => {
+    const m = await creer();
+    const r = await request(app).post("/api/membres/import").set(...bearer(sg)).send({ membres: [{ num: m.num, nom: m.nom, statut: "radié" }] });
+    expect(r.status).toBe(200);
+    expect(r.body.maj).toBe(0);
+    expect(r.body.erreurs[0].message).toMatch(/statut de sortie/);
+    expect((await prisma.membre.findUnique({ where: { id: m.id } }))?.statut).toBe("INSCRIT");
+    expect(await radiations(m.id)).toBe(0);
+  });
+});

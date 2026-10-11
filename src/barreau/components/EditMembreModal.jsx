@@ -12,8 +12,9 @@ import { dateLocaleISO } from "../utils/format";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const champ = (error) => `bpn-input ${error ? "is-invalid" : ""}`;
 
-/** Édition de la fiche d'un membre (FR-AV-01 : modifier). */
-export function EditMembreModal({ membre, open, onClose, onSaved }) {
+/** Édition de la fiche d'un membre (FR-AV-01 : modifier).
+ *  peutRadier : l'utilisateur détient l'action discipline_decider (R1-7). */
+export function EditMembreModal({ membre, open, onClose, onSaved, peutRadier = false }) {
   const toast = useToast();
   const confirm = useConfirm();
   const [form, setForm] = useState(membre ?? {});
@@ -39,6 +40,9 @@ export function EditMembreModal({ membre, open, onClose, onSaved }) {
   if (!membre) return null;
   const estStagiaire = membre.qualite === "stagiaire";
   const estOmis = membre.statut === "omis";
+  // R1-7 : sans discipline_decider, ni radiation ni levée de radiation (le serveur répond 403) ;
+  // un radié garde sa date et sa référence corrigeables, et le décès reste déclarable.
+  const radieVerrouille = membre.statut === "radie" && !peutRadier;
   const set = (k) => (e) => {
     setForm((f) => ({ ...f, [k]: e.target.value }));
     setModifie(true);
@@ -115,13 +119,13 @@ export function EditMembreModal({ membre, open, onClose, onSaved }) {
           </FormField>
           {/* R1-5 : omission, réinscription et passage au tableau ont leur circuit (onglets
               Situation et Stage) ; le serveur refuse ces transitions ici (409). */}
-          <FormField label="Statut" hint={estOmis ? "réinscription : onglet Situation" : estStagiaire ? "passage au tableau : onglet Stage" : undefined}>
+          <FormField label="Statut" hint={estOmis ? "réinscription : onglet Situation" : radieVerrouille ? "levée de radiation : décision du conseil de discipline" : estStagiaire ? "passage au tableau : onglet Stage" : undefined}>
             <select value={form.statut ?? "inscrit"} onChange={set("statut")} className="bpn-input" disabled={estOmis}>
-              {estStagiaire ? <option value="stagiaire">Stagiaire</option> : <option value="inscrit">Inscrit</option>}
-              <option value="suspendu">Suspendu</option>
+              {!radieVerrouille && (estStagiaire ? <option value="stagiaire">Stagiaire</option> : <option value="inscrit">Inscrit</option>)}
+              {!radieVerrouille && <option value="suspendu">Suspendu</option>}
               {estOmis && <option value="omis">Omis</option>}
-              {!estStagiaire && <option value="honoraire">Honoraire</option>}
-              <option value="radie">Radié</option>
+              {!estStagiaire && !radieVerrouille && <option value="honoraire">Honoraire</option>}
+              {(peutRadier || membre.statut === "radie") && <option value="radie">Radié</option>}
               <option value="decede">Décédé</option>
             </select>
           </FormField>
@@ -211,6 +215,7 @@ EditMembreModal.propTypes = {
   open: PropTypes.bool,
   onClose: PropTypes.func,
   onSaved: PropTypes.func,
+  peutRadier: PropTypes.bool,
 };
 
 export default EditMembreModal;

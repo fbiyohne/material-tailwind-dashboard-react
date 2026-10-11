@@ -1430,7 +1430,9 @@ describe("Cycle de vie — radiation motivée, décès, garde-fou DELETE, RBAC (
     expect(r.status).toBe(200);
     expect(r.body.statut).toBe("INSCRIT");
     expect(r.body.dateDeces).toBeNull();
-    const r2 = await request(app).patch(`/api/membres/${id}`).set(...bearer(sg)).send({ statut: "RADIE", dateRadiation: "2026-10-03", motifRadiation: "Décision n° 8" });
+    // R1-7 : passer en RADIE par PATCH exige discipline_decider (SG 403, ADMIN 200).
+    expect((await request(app).patch(`/api/membres/${id}`).set(...bearer(sg)).send({ statut: "RADIE", dateRadiation: "2026-10-03", motifRadiation: "Décision n° 8" })).status).toBe(403);
+    const r2 = await request(app).patch(`/api/membres/${id}`).set(...bearer(admin)).send({ statut: "RADIE", dateRadiation: "2026-10-03", motifRadiation: "Décision n° 8" });
     expect(r2.status).toBe(200);
     expect(r2.body.dateRadiation).toMatch(/^2026-10-03/);
     expect(r2.body.motifRadiation).toBe("Décision n° 8");
@@ -1455,9 +1457,12 @@ describe("Cycle de vie — radiation motivée, décès, garde-fou DELETE, RBAC (
     const radier = (b: object = {}) => request(app).post(`/api/membres/${id}/radier`).set(...bearer(bat)).send(b);
     const deces = (d = "2026-09-15") => request(app).post(`/api/membres/${id}/deces`).set(...bearer(sg)).send({ dateDeces: d });
     const lire = () => prisma.membre.findUniqueOrThrow({ where: { id } });
+    // R1-7 : PATCH vers RADIE exige discipline_decider (SG 403) ; invariants vérifiés avec l'ADMIN.
+    const patchAdmin = (b: object) => request(app).patch(`/api/membres/${id}`).set(...bearer(admin)).send(b);
+    expect((await patch({ statut: "RADIE", dateRadiation: "2026-10-01" })).status).toBe(403);
     // PATCH RADIE sans date → 400 ; avec date → 200.
-    expect((await patch({ statut: "RADIE" })).status).toBe(400);
-    expect((await patch({ statut: "RADIE", dateRadiation: "2026-10-01", motifRadiation: "Déc. 1", dateDeces: "2026-09-01" })).status).toBe(200);
+    expect((await patchAdmin({ statut: "RADIE" })).status).toBe(400);
+    expect((await patchAdmin({ statut: "RADIE", dateRadiation: "2026-10-01", motifRadiation: "Déc. 1", dateDeces: "2026-09-01" })).status).toBe(200);
     let m = await lire();
     expect(m.dateDeces).toBeNull(); // date de décès parasite écartée
     expect(m.motifRadiation).toBe("Déc. 1");
@@ -1473,7 +1478,7 @@ describe("Cycle de vie — radiation motivée, décès, garde-fou DELETE, RBAC (
     expect(m.dateDeces?.toISOString().slice(0, 10)).toBe("2026-09-15");
     // Décédé : ni /radier, ni PATCH RADIE, ni second /deces (409) ; rien ne change.
     expect((await radier()).status).toBe(409);
-    expect((await patch({ statut: "RADIE", dateRadiation: "2026-10-01" })).status).toBe(409);
+    expect((await patchAdmin({ statut: "RADIE", dateRadiation: "2026-10-01" })).status).toBe(409);
     expect((await deces()).status).toBe(409);
     expect((await lire()).statut).toBe("DECEDE");
     // Rétablissement : toutes les données d'acte sont effacées.
