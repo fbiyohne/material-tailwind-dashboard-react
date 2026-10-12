@@ -129,6 +129,17 @@ describe("Anciens membres (O1)", () => {
     expect(await prisma.journalAudit.findFirst({ where: { id: { gt: apres }, chemin: "/api/membres", methode: "GET" } })).toBeNull();
   });
 
+  it("R1-5 : un appel direct à page=2 du registre est journalisé aussi (aucune lecture sans trace)", async () => {
+    for (const page of [1, 2]) {
+      const avant = (await prisma.journalAudit.aggregate({ _max: { id: true } }))._max.id ?? 0;
+      const r = await request(app).get(`/api/membres?q=${encodeURIComponent(marque)}&sortis=1&pageSize=1&page=${page}`).set(...bearer(sg));
+      expect(r.status).toBe(200);
+      expect(r.body.items).toHaveLength(1);
+      const ligne = await prisma.journalAudit.findFirst({ where: { id: { gt: avant }, chemin: "/api/membres", methode: "GET" } });
+      expect(ligne?.action).toMatch(/anciens membres/i);
+    }
+  });
+
   it("export PDF du registre : sortis seuls, motif masqué sans discipline, export journalisé", async () => {
     const avant = (await prisma.journalAudit.aggregate({ _max: { id: true } }))._max.id ?? 0;
     const r = await request(app).get(`/api/membres/export/pdf?sortis=1&q=${encodeURIComponent(marque)}`).set(...bearer(consult));

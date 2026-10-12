@@ -130,8 +130,7 @@ membresRouter.get(
         prisma.membre.findMany({ where, orderBy, skip: (page - 1) * pageSize, take: pageSize, select: { ...selectAnnuaire, ...derniereSortie } }),
         prisma.membre.count({ where }),
       ]);
-      // Une consultation = une ligne : les pages suivantes du même chargement ne sont pas retracées.
-      if (page === 1) await tracerExport(req as AuthRequest, "GET", "/api/membres", `${filtreRegistre(req.query)}; lignes=${total}`, "Consultation des anciens membres");
+      await tracerExport(req as AuthRequest, "GET", "/api/membres", `${filtreRegistre(req.query)}; lignes=${total}`, "Consultation des anciens membres");
       return res.json({ items: lignes.map((m) => ligneSortie(m, voit)), total, page, pageSize, totalPages: totalPages(total) });
     }
     const [items, total] = await Promise.all([
