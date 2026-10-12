@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeftIcon, DocumentPlusIcon, PencilSquareIcon, NoSymbolIcon, HeartIcon, TrashIcon, IdentificationIcon, BanknotesIcon, FolderIcon, KeyIcon, AcademicCapIcon, ArrowDownTrayIcon, ShieldCheckIcon, EnvelopeIcon, ClockIcon } from "@heroicons/react/24/outline";
+import { ArrowLeftIcon, DocumentPlusIcon, PencilSquareIcon, HeartIcon, TrashIcon, IdentificationIcon, BanknotesIcon, FolderIcon, KeyIcon, AcademicCapIcon, ArrowDownTrayIcon, ShieldCheckIcon, EnvelopeIcon, ClockIcon } from "@heroicons/react/24/outline";
 import { ScaleIcon } from "@heroicons/react/24/outline";
 import { Badge, StatutBadge, AttestationModal, EditMembreModal, ActeStatutModal, PiecesDossier, AccesActivationModal, StagePanel, CasierDiscipline, SituationPanel, ContacterModal, MentionJuridique, useConfirm, useToast, PageHeader, Tabs, TableSkeleton, ErrorState, DataTable } from "../components";
-import { sursisEnCours } from "../components/SituationPanel";
+import { sursisEnCours, actionsParcours, EvenementModal } from "../components/SituationPanel";
+import { MenuActions } from "../components/MenuActions";
 import { QUALITE_LABEL, STATUT_META, infoStage } from "../data/derivations";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { formatFCFA, formatDate, formatDateCourte } from "../utils/format";
@@ -11,6 +12,11 @@ import { getMembre, supprimerMembre, getDroits, provisionnerAccesAvocat, telecha
 import { useAuth } from "../auth/AuthContext";
 
 const FINANCES = ["SECRETAIRE_GENERAL", "TRESORIERE", "ADMIN"];
+/** Statuts de sortie du tableau (anciens membres, STATUTS_SORTIS côté serveur). */
+const SORTIS = ["radie", "decede", "demissionnaire", "retraite", "cessation"];
+const LIB_ATTESTATION = "Générer une attestation d'inscription";
+/** Clause CL-SUPPRESSION (avis juridique M-20261011) : texte de la confirmation. */
+export const CL_SUPPRESSION = "La suppression est réservée à une fiche créée par erreur, sans historique. Pour un avocat qui quitte l'Ordre, enregistrez sa sortie. Cette action est tracée et irréversible.";
 const statutLigne = (du, paye) => (du === 0 ? "exonere" : paye <= 0 ? "retard" : paye >= du ? "ajour" : "partiel");
 
 function Carte({ titre, children }) {
@@ -41,10 +47,9 @@ export function AvocatDetail() {
   const peutGererAcces = ["SECRETAIRE_GENERAL", "ADMIN"].includes(user?.role);
   // Modification et attestation sont réservées au SG côté serveur (PATCH
   // /membres/:id, /attestation) : on ne les propose pas au Bâtonnier.
+  // La radiation ne se décide pas ici : elle s'enregistre depuis le dossier
+  // disciplinaire (module Discipline) et se répercute sur la fiche (O2).
   const peutGererFiche = peutGererAcces;
-  // La radiation enregistre une décision du conseil de discipline : action
-  // discipline_decider (bâtonnier par défaut), pas le SG (R1-7, /radier → 403).
-  const peutRadier = !!user?.permissions?.includes("discipline_decider");
   const [membre, setMembre] = useState(null);
   const [droit, setDroit] = useState(null); // ligne de droits réelle (rôles finances)
   const [attestation, setAttestation] = useState(null);
@@ -53,7 +58,8 @@ export function AvocatDetail() {
   const [contact, setContact] = useState(false);
   const [evenements, setEvenements] = useState(null);
   const [erreurEvenements, setErreurEvenements] = useState(null);
-  const [acte, setActe] = useState(null); // "radiation" | "deces" : modale d'acte ouverte
+  const [acte, setActe] = useState(null); // "deces" : modale d'acte ouverte
+  const [evenement, setEvenement] = useState(null); // type d'événement de parcours en saisie
 
   const charger = useCallback(() => {
     getMembre(Number(id)).then(setMembre).catch(() => setMembre(false));
@@ -128,15 +134,46 @@ export function AvocatDetail() {
   const telechargerDoc = (d) =>
     (d.kind === "quitus" ? telechargerQuitusPdf(d.id, d.ref) : telechargerRecuPdf(d.id, d.ref)).catch((e) => toast.error(e.message));
 
-  // Un radié ou un décédé n'a plus d'accès espace, d'attestation ni de radiation
-  // possible ; un radié peut encore décéder (H-09, spec T2 § 3.1).
+  // Un ancien membre (sorti du tableau) n'a plus d'accès espace, de messagerie ni
+  // d'attestation d'inscription (le serveur répond 409) ; un radié peut encore
+  // décéder (H-09, spec T2 § 3.1).
   const decede = membre.statut === "decede";
+  const sorti = SORTIS.includes(membre.statut);
   const auTableau = !decede && membre.statut !== "radie";
-  // Le serveur refuse « Contacter » pour un sorti : pas d'accès à l'espace avocat.
-  const peutContacter = !["radie", "decede", "demissionnaire", "retraite", "cessation"].includes(membre.statut) && !!user?.permissions?.includes("messagerie");
-  // Cibles tactiles ≥ 44 px sous `sm`, hauteur `bpn-btn` native sur bureau.
-  const btn = "bpn-btn min-h-[44px] sm:min-h-0";
-  const btnRouge = `${btn} bpn-btn-ghost text-rouge hover:!bg-rougeL hover:!text-rouge`;
+  const MOTIF_SORTI = "Avocat sorti du tableau : l'accès à l'espace avocat ne peut plus être ouvert.";
+
+  const supprimer = async () => {
+    const ref = membre.numInscription ?? String(membre.num);
+    const ok = await confirm({
+      title: "Supprimer la fiche",
+      message: CL_SUPPRESSION,
+      confirmLabel: "Supprimer",
+      danger: true,
+      motif: { label: `Pour confirmer, saisissez le n° d'inscription ${ref}`, attendu: ref },
+    });
+    if (!ok) return;
+    try { await supprimerMembre(membre.id); toast.success(`Me ${membre.nom} supprimé(e).`); navigate(membre.qualite === "stagiaire" ? "/stagiaires" : "/avocats"); }
+    catch (e) { toast.error(e.message); } // refus 409 (fiche avec historique) affiché tel quel
+  };
+
+  // Menu Actions : Contacter, Modifier, Accès espace, Attestation | parcours | décès, suppression.
+  const peutAttester = peutGererFiche && membre.qualite !== "stagiaire";
+  const entrees = [
+    user?.permissions?.includes("messagerie") && { id: "contacter", libelle: "Contacter", Icon: EnvelopeIcon, onSelect: () => setContact(true),
+      disabled: sorti, motif: "Avocat sorti du tableau : il n'a plus accès à l'espace avocat." },
+    peutGererFiche && { id: "modifier", libelle: "Modifier", Icon: PencilSquareIcon, onSelect: () => setEdition(true) },
+    peutGererAcces && { id: "acces", libelle: "Accès espace", Icon: KeyIcon, onSelect: creerAcces, disabled: sorti, motif: MOTIF_SORTI },
+    peutAttester && { id: "attestation", libelle: "Attestation", Icon: DocumentPlusIcon, onSelect: () => setAttestation(membre),
+      disabled: sorti || membre.statut === "omis", motif: "Attestation d'inscription impossible : avocat non inscrit au tableau (sorti ou omis)." },
+    ...(peutVoirHistorique ? actionsParcours(membre, user) : []).map((a, i) => ({ id: a.type, libelle: a.titre, Icon: a.icone, separe: i === 0, onSelect: () => setEvenement(a.type) })),
+    peutGererFiche && !decede && { id: "deces", libelle: "Déclarer le décès", Icon: HeartIcon, danger: true, onSelect: () => setActe("deces") },
+    estAdmin && { id: "supprimer", libelle: "Supprimer", Icon: TrashIcon, danger: true, onSelect: supprimer },
+  ].filter(Boolean);
+  const premierDanger = entrees.find((e) => e.danger);
+  if (premierDanger) premierDanger.separe = true;
+  const actif = (id) => entrees.some((e) => e.id === id && !e.disabled);
+  // Bouton-icône carré : cible ≥ 44 px sous `sm`, hauteur `bpn-btn` native sur bureau.
+  const btnIcone = "bpn-btn h-11 w-11 justify-center !p-0 sm:h-[38px] sm:w-[38px]";
 
   return (
     <div className="space-y-5">
@@ -151,49 +188,22 @@ export function AvocatDetail() {
           </span>
         }
       >
-        {peutContacter && (
-          <button className={`${btn} bpn-btn-ghost`} onClick={() => setContact(true)}><EnvelopeIcon className="h-4 w-4" /> Contacter</button>
-        )}
-        {peutGererFiche && (
-          <button className={`${btn} bpn-btn-ghost`} onClick={() => setEdition(true)}><PencilSquareIcon className="h-4 w-4" /> Modifier</button>
-        )}
-        {peutGererAcces && auTableau && (
-          <button className={`${btn} bpn-btn-ghost`} onClick={creerAcces} title="Ouvrir l'accès à l'espace avocat"><KeyIcon className="h-4 w-4" /> Accès espace</button>
-        )}
-        {peutGererFiche && membre.qualite !== "stagiaire" && auTableau && (
-          <button className={`${btn} bpn-btn-primary`} onClick={() => setAttestation(membre)}><DocumentPlusIcon className="h-4 w-4" /> Attestation</button>
-        )}
-        {peutRadier && auTableau && (
-          <button className={btnRouge} onClick={() => setActe("radiation")}>
-            <NoSymbolIcon className="h-4 w-4" /> Radier
+        {actif("modifier") && (
+          <button type="button" className={`${btnIcone} bpn-btn-ghost`} onClick={() => setEdition(true)} aria-label="Modifier la fiche" title="Modifier la fiche">
+            <PencilSquareIcon className="h-4 w-4" aria-hidden="true" />
           </button>
         )}
-        {peutGererFiche && !decede && (
-          <button className={btnRouge} onClick={() => setActe("deces")}>
-            <HeartIcon className="h-4 w-4" /> Déclarer le décès
+        {actif("attestation") && (
+          <button type="button" className={`${btnIcone} bpn-btn-primary`} onClick={() => setAttestation(membre)} aria-label={LIB_ATTESTATION} title={LIB_ATTESTATION}>
+            <DocumentPlusIcon className="h-4 w-4" aria-hidden="true" />
           </button>
         )}
-        {estAdmin && (
-          <button className={btnRouge} onClick={async () => {
-            const ok = await confirm({
-              title: "Supprimer définitivement",
-              message: `Me ${membre.nom} sera définitivement supprimé(e), ainsi que tout son historique financier (cotisations, droits, reçus, quitus, paiements). Cette action est irréversible.`,
-              confirmLabel: "Supprimer",
-              danger: true,
-            });
-            if (ok) {
-              try { await supprimerMembre(membre.id); toast.success(`Me ${membre.nom} supprimé(e).`); navigate(membre.qualite === "stagiaire" ? "/stagiaires" : "/avocats"); }
-              catch (e) { toast.error(e.message); }
-            }
-          }}>
-            <TrashIcon className="h-4 w-4" /> Supprimer
-          </button>
-        )}
+        {entrees.length > 0 && <MenuActions entrees={entrees} pleineLargeurMobile />}
       </PageHeader>
 
       {sursisEnCours(evenements) && (
         <MentionJuridique type="sursis">
-          Sanction avec sursis enregistrée : l'avocat reste inscrit au tableau. Le sursis n'est pas prévu par la loi n°{" "}026-92 ; ne l'appliquer que si le règlement intérieur le prévoit (voir l'onglet Situation).
+          Sanction avec sursis enregistrée : l'avocat reste inscrit au tableau. Le sursis n'est pas prévu par la loi n°{" "}026-92 ; ne l'appliquer que si le règlement intérieur le prévoit (voir l'onglet Parcours).
         </MentionJuridique>
       )}
 
@@ -353,8 +363,8 @@ export function AvocatDetail() {
             ),
           },
           ...(peutVoirHistorique
-            ? [{ id: "situation", label: "Situation", icon: ClockIcon,
-                content: <SituationPanel membre={membre} evenements={evenements} erreur={erreurEvenements} user={user} onChange={apresSituation} /> }]
+            ? [{ id: "parcours", label: "Parcours", icon: ClockIcon,
+                content: <SituationPanel evenements={evenements} erreur={erreurEvenements} /> }]
             : []),
           {
             id: "discipline",
@@ -375,8 +385,9 @@ export function AvocatDetail() {
       />
 
       <AttestationModal membre={attestation} onClose={() => setAttestation(null)} />
-      <EditMembreModal membre={edition ? membre : null} open={edition} onClose={() => setEdition(false)} onSaved={charger} peutRadier={peutRadier} />
-      {peutContacter && <ContacterModal membre={membre} open={contact} onClose={() => setContact(false)} />}
+      <EditMembreModal membre={edition ? membre : null} open={edition} onClose={() => setEdition(false)} onSaved={charger} />
+      <ContacterModal membre={membre} open={contact} onClose={() => setContact(false)} />
+      <EvenementModal membre={membre} type={evenement} evenements={evenements} onClose={() => setEvenement(null)} onDone={apresSituation} />
       {acte && <ActeStatutModal mode={acte} membre={membre} open onClose={() => setActe(null)} onDone={apresSituation} />}
 
       {/* Lien d'activation de l'espace avocat (après provisionnement) */}

@@ -26,10 +26,9 @@ describe("EditMembreModal — statut Décédé et champs de dates", () => {
     expect(screen.queryByLabelText(/Date de la décision/)).not.toBeInTheDocument();
   });
 
-  it("bascule les champs selon le statut (radié → date + référence)", async () => {
-    // R1-7 : « Radié » n'est proposé qu'au titulaire de discipline_decider.
-    render(<ToastProvider><ConfirmProvider><EditMembreModal membre={membre} open onClose={() => {}} peutRadier /></ConfirmProvider></ToastProvider>);
-    await userEvent.selectOptions(screen.getByLabelText(/^Statut/), "radie");
+  it("radié : date et référence de la décision affichées, pas de date de décès", async () => {
+    // O2 : « Radié » n'est jamais un choix ; seul un membre déjà radié l'affiche (correction).
+    rendre({ ...membre, statut: "radie", dateDeces: null, dateRadiation: "2026-10-01", motifRadiation: "Décision n° 3" });
     expect(screen.queryByLabelText(/Date du décès/)).not.toBeInTheDocument();
     expect(screen.getByLabelText(/Date de la décision/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Référence et motif/)).toBeInTheDocument();

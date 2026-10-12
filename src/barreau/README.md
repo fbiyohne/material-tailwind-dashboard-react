@@ -16,7 +16,14 @@ Application React/Vite du Secrétariat Général du Barreau de Pointe-Noire.
 - Décès : date obligatoire (acte de décès), bouton « danger » désactivé tant que la date est vide ; pièce justificative obligatoire (T6 : acte ou certificat de décès et sa référence, aucune cause), envoyée par `declarerDeces(id, date, piece)`. `EditMembreModal` ne propose « Décédé » que pour corriger la date d'un décès déjà déclaré.
 - Erreur serveur affichée sous le champ, saisie conservée ; fermeture bloquée pendant l'appel.
 - `DossierDetail` propose aussi « Enregistrer une réformation » (voie, référence, date, motif ; confirmation ; `reformerDecisionDossier`, POST /discipline/:id/reformation) tant que la décision de radiation n'est pas réformée.
-- Utilisée sur la fiche `AvocatDetail`. Pour un membre décédé, les actions Radier, Déclarer le décès, Attestation et Accès espace sont masquées.
+- Utilisée sur la fiche `AvocatDetail` en mode `deces` seulement (menu Actions) ; les modes `radiation` et `execution` ne servent plus que le module Discipline (`DossierDetail`).
+
+## Fiche avocat : menu Actions et onglet Parcours (T20, M-20261011)
+- En-tête : deux boutons-icônes (`aria-label` et `title`) « Modifier la fiche » et « Générer une attestation d'inscription », affichés seulement s'ils sont permis et possibles, puis `MenuActions` : Contacter, Modifier, Accès espace, Attestation | actions de parcours (`actionsParcours(membre, user)` de `SituationPanel.jsx` : rappel, mise en demeure, transmission, omission, réinscription, reprise, sorties volontaires, selon les droits) | Déclarer le décès, Supprimer (rouge, séparateur rouge). Sans aucune entrée permise, pas de bouton Actions.
+- Aucune radiation sur la fiche ni dans `EditMembreModal` (prop `peutRadier` supprimée ; « Radié » et « Suspendu » n'y sont affichés que comme statut courant) : la radiation se décide dans le dossier disciplinaire et se répercute sur le Parcours.
+- Ancien membre (radié, décédé, démissionnaire, retraité, cessation) : Contacter, Accès espace et Attestation restent visibles mais grisés avec leur motif en info-bulle, car le serveur les refuse (409) ; Modifier (correction des dates d'acte), Déclarer le décès (si non décédé) et Supprimer (ADMIN) restent permis. Attestation est aussi grisée pour un omis.
+- Supprimer : confirmation avec la clause CL-SUPPRESSION et saisie exacte du n° d'inscription (`useConfirm({ motif: { attendu } })`) ; le refus 409 du serveur (fiche avec historique) s'affiche tel quel.
+- Onglet « Parcours » (ex-« Situation ») : phrase d'explication, frise du plus récent au plus ancien ; chaque étape donne l'organe (« Décidé par »), le motif, la référence, la pièce et l'opérateur ; une omission 35-1° n'affiche que le code d'article. Aucun bouton dans l'onglet : la saisie passe par `EvenementModal`, ouverte depuis le menu Actions.
 
 ## Export de la liste des avocats (page Avocats)
 Menu « Exporter » (liste filtrée) et « Exporter la sélection » : 4 formats.

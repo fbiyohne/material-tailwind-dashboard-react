@@ -1,0 +1,14 @@
+{
+  "tache": "T20 — fiche avocat : boutons-icônes, menu Actions, onglet Parcours",
+  "instance": "Vite 5191 (code courant) adossé à l'API de test http://localhost:4100, compte admin@barreau-pn.cg",
+  "mesures": {
+    "fiche-360 (avocat 1, menu ouvert)": { "scrollWidth": 352, "clientWidth": 352, "menu": { "gauche": 16, "droite": 336 }, "entreesHautes44px": true },
+    "fiche-1280 (avocat 1, menu ouvert)": { "scrollWidth": 1280, "clientWidth": 1280, "menu": { "gauche": 960, "droite": 1248 } },
+    "parcours-360 (avocat 11, omis, historique simulé côté navigateur)": { "scrollWidth": 352, "clientWidth": 352, "boutonsDansOnglet": 0, "etapes": 4 },
+    "menu-radie-360 (avocat 7853)": {
+      "scrollWidth": 352, "clientWidth": 352,
+      "entrees": ["Contacter (grisé)", "Modifier", "Accès espace (grisé)", "Attestation (grisé)", "Déclarer le décès", "Supprimer"]
+    }
+  },
+  "note": "Les fiches de la base de test n'ont aucun événement de parcours ; la capture du Parcours utilise une réponse simulée de GET /membres/11/evenements dans le navigateur (aucune écriture en base). Le menu-1280 a été capturé avant le passage de sm:w-72 à sm:w-80 (suppression du retour à la ligne de « Enregistrer une mise en demeure »)."
+}

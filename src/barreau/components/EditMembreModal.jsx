@@ -13,9 +13,9 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const champ = (error) => `bpn-input ${error ? "is-invalid" : ""}`;
 
 /** Édition de la fiche d'un membre (FR-AV-01 : modifier).
- *  peutRadier : l'utilisateur détient l'action discipline_decider : radier (R1-7) et
- *  suspendre (R1-1), décisions enregistrées depuis le dossier disciplinaire sinon. */
-export function EditMembreModal({ membre, open, onClose, onSaved, peutRadier = false }) {
+ *  Radiation et suspension ne se décident jamais ici : elles s'enregistrent depuis le
+ *  dossier disciplinaire (R1-1, R1-7, O2) ; le statut courant reste affiché. */
+export function EditMembreModal({ membre, open, onClose, onSaved }) {
   const toast = useToast();
   const confirm = useConfirm();
   const [form, setForm] = useState(membre ?? {});
@@ -41,11 +41,11 @@ export function EditMembreModal({ membre, open, onClose, onSaved, peutRadier = f
   if (!membre) return null;
   const estStagiaire = membre.qualite === "stagiaire";
   const estOmis = membre.statut === "omis";
-  // R1-7 : sans discipline_decider, ni radiation ni levée de radiation (le serveur répond 403) ;
+  // R1-7 : ni radiation ni levée de radiation par « Modifier » (circuit disciplinaire) ;
   // un radié garde sa date et sa référence corrigeables, et le décès reste déclarable.
-  const radieVerrouille = membre.statut === "radie" && !peutRadier;
-  // R1-1 : sans discipline_decider, « Suspendu » n'est proposé que s'il est le statut courant.
-  const suspensionPossible = peutRadier || membre.statut === "suspendu";
+  const radieVerrouille = membre.statut === "radie";
+  // R1-1 : « Suspendu » n'est proposé que s'il est le statut courant.
+  const suspensionPossible = membre.statut === "suspendu";
   const set = (k) => (e) => {
     setForm((f) => ({ ...f, [k]: e.target.value }));
     setModifie(true);
@@ -120,15 +120,15 @@ export function EditMembreModal({ membre, open, onClose, onSaved, peutRadier = f
           <FormField label="Nom et prénom" required full error={erreurs.nom}>
             <input value={form.nom ?? ""} onChange={set("nom")} className={champ(erreurs.nom)} />
           </FormField>
-          {/* R1-5 : omission, réinscription et passage au tableau ont leur circuit (onglets
-              Situation et Stage) ; le serveur refuse ces transitions ici (409). */}
-          <FormField label="Statut" hint={estOmis ? "réinscription : onglet Situation" : radieVerrouille ? "levée de radiation : décision du conseil de discipline" : estStagiaire ? "passage au tableau : onglet Stage" : !peutRadier ? "suspension, radiation : dossier disciplinaire" : undefined}>
+          {/* R1-5 : omission, réinscription et passage au tableau ont leur circuit (menu Actions
+              et onglet Stage) ; le serveur refuse ces transitions ici (409). */}
+          <FormField label="Statut" hint={estOmis ? "réinscription : menu Actions de la fiche" : radieVerrouille ? "levée de radiation : décision du conseil de discipline" : estStagiaire ? "passage au tableau : onglet Stage" : "suspension, radiation : dossier disciplinaire"}>
             <select value={form.statut ?? "inscrit"} onChange={set("statut")} className="bpn-input" disabled={estOmis}>
               {!radieVerrouille && (estStagiaire ? <option value="stagiaire">Stagiaire</option> : <option value="inscrit">Inscrit</option>)}
               {!radieVerrouille && suspensionPossible && <option value="suspendu">Suspendu</option>}
               {estOmis && <option value="omis">Omis</option>}
               {!estStagiaire && !radieVerrouille && <option value="honoraire">Honoraire</option>}
-              {(peutRadier || membre.statut === "radie") && <option value="radie">Radié</option>}
+              {radieVerrouille && <option value="radie">Radié</option>}
               {/* T6 : le décès se déclare par l'action « Déclarer le décès » (pièce obligatoire) ; ici, correction de sa date seulement. */}
               {membre.statut === "decede" && <option value="decede">Décédé</option>}
             </select>
@@ -219,7 +219,6 @@ EditMembreModal.propTypes = {
   open: PropTypes.bool,
   onClose: PropTypes.func,
   onSaved: PropTypes.func,
-  peutRadier: PropTypes.bool,
 };
 
 export default EditMembreModal;

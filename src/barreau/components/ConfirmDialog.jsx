@@ -19,7 +19,8 @@ export function ConfirmProvider({ children }) {
   );
 
   const [motif, setMotif] = useState("");
-  const motifOk = !state?.motif || motif.trim().length >= (state.motif.min ?? 3);
+  // `motif.attendu` : confirmation par saisie exacte (ex. numéro d'inscription avant une suppression).
+  const motifOk = !state?.motif || (state.motif.attendu ? motif.trim() === state.motif.attendu : motif.trim().length >= (state.motif.min ?? 3));
 
   // Avec l'option `motif`, la promesse résout le texte saisi (ou false si annulé).
   const close = (value) => {
@@ -61,7 +62,9 @@ export function ConfirmProvider({ children }) {
         {state?.motif && (
           <label className="mt-4 block">
             <span className="bpn-label">{state.motif.label ?? "Motif"} <span className="text-rouge">*</span></span>
-            <textarea className="bpn-input mt-1" rows={3} maxLength={state.motif.max ?? 500} value={motif} onChange={(e) => setMotif(e.target.value)} />
+            {state.motif.attendu
+              ? <input className="bpn-input mt-1 font-mono" autoComplete="off" spellCheck={false} value={motif} onChange={(e) => setMotif(e.target.value)} />
+              : <textarea className="bpn-input mt-1" rows={3} maxLength={state.motif.max ?? 500} value={motif} onChange={(e) => setMotif(e.target.value)} />}
           </label>
         )}
       </Modal>

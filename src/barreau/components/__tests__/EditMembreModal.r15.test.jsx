@@ -21,11 +21,11 @@ describe("EditMembreModal — transitions réservées à leur circuit (R1-5)", (
     expect(screen.getByLabelText(/^Statut/)).toBeEnabled();
   });
 
-  it("omis : statut verrouillé, renvoi vers l'onglet Situation", () => {
+  it("omis : statut verrouillé, renvoi vers le menu Actions (réinscription)", () => {
     rendre({ qualite: "titulaire", statut: "omis" });
     expect(screen.getByLabelText(/^Statut/)).toBeDisabled();
     expect(screen.getByLabelText(/^Statut/)).toHaveValue("omis");
-    expect(screen.getByText(/onglet Situation/)).toBeInTheDocument();
+    expect(screen.getByText(/réinscription : menu Actions/)).toBeInTheDocument();
   });
 
   it("stagiaire : ni « Inscrit » ni « Honoraire », renvoi vers l'onglet Stage", () => {
@@ -37,18 +37,18 @@ describe("EditMembreModal — transitions réservées à leur circuit (R1-5)", (
   });
 });
 
-// R1-7 : enregistrer ou lever une radiation relève de discipline_decider (PATCH → 403 sinon).
-describe("EditMembreModal — radiation réservée à discipline_decider (R1-7)", () => {
-  it("SG (sans permission) : « Radié » n'est pas proposé pour un inscrit", () => {
+// R1-7 et O2 : la radiation s'enregistre depuis le dossier disciplinaire, jamais par « Modifier ».
+describe("EditMembreModal — radiation hors de la fiche (R1-7, O2)", () => {
+  it("« Radié » n'est pas proposé pour un inscrit", () => {
     rendre({ qualite: "titulaire", statut: "inscrit" });
     expect(screen.queryByRole("option", { name: "Radié" })).not.toBeInTheDocument();
     // T6 : le décès se déclare par l'action dédiée (pièce justificative), pas par la fiche.
     expect(screen.queryByRole("option", { name: "Décédé" })).not.toBeInTheDocument();
   });
 
-  it("titulaire de discipline_decider : « Radié » proposé", () => {
+  it("la prop peutRadier n'existe plus : même un titulaire de discipline_decider ne voit pas « Radié »", () => {
     rendre({ qualite: "titulaire", statut: "inscrit" }, { peutRadier: true });
-    expect(screen.getByRole("option", { name: "Radié" })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "Radié" })).not.toBeInTheDocument();
   });
 
   it("radié, SG : seul « Radié », date et référence corrigeables (décès : action dédiée, T6)", () => {
@@ -68,9 +68,9 @@ describe("EditMembreModal — suspension réservée à discipline_decider (R1-1)
     expect(screen.getByText(/dossier disciplinaire/)).toBeInTheDocument();
   });
 
-  it("titulaire de discipline_decider : « Suspendu » proposé", () => {
+  it("suspension : jamais proposée pour un inscrit, quelle que soit la permission", () => {
     rendre({ qualite: "titulaire", statut: "inscrit" }, { peutRadier: true });
-    expect(screen.getByRole("option", { name: "Suspendu" })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "Suspendu" })).not.toBeInTheDocument();
   });
 
   it("suspendu, SG : statut courant affiché, retour au tableau proposé", () => {

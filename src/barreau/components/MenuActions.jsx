@@ -5,8 +5,10 @@ import { ChevronDownIcon } from "@heroicons/react/24/outline";
  * Menu déroulant « Actions » (role=menu). Entrées :
  * { id, libelle, Icon?, onSelect, disabled?, motif? (info-bulle si désactivée), danger?, separe? }.
  * Classes reprises du menu d'export de pages/Avocats.jsx (REFERENCE-UI).
+ * pleineLargeurMobile : sous `sm`, panneau sur toute la largeur de l’écran (marges de 16 px) sous le
+ * bouton, quelle que soit sa position dans la ligne ; au-delà, ancré à droite du bouton.
  */
-export function MenuActions({ entrees, libelle = "Actions", petit = false }) {
+export function MenuActions({ entrees, libelle = "Actions", petit = false, pleineLargeurMobile = false }) {
   const [ouvert, setOuvert] = useState(false);
   const racine = useRef(null);
   const bouton = useRef(null);
@@ -37,7 +39,7 @@ export function MenuActions({ entrees, libelle = "Actions", petit = false }) {
   };
 
   return (
-    <div ref={racine} className="relative inline-block" onKeyDown={ouvert ? clavier : undefined}>
+    <div ref={racine} className={pleineLargeurMobile ? "inline-block sm:relative" : "relative inline-block"} onKeyDown={ouvert ? clavier : undefined}>
       <button ref={bouton} type="button" aria-haspopup="menu" aria-expanded={ouvert}
         onClick={() => setOuvert((o) => !o)}
         onKeyDown={(e) => { if (e.key === "ArrowDown" && !ouvert) { e.preventDefault(); setOuvert(true); } }}
@@ -46,9 +48,9 @@ export function MenuActions({ entrees, libelle = "Actions", petit = false }) {
       </button>
       {ouvert && (
         <div role="menu" aria-label={libelle}
-          className="absolute right-0 z-20 mt-1 w-56 max-w-[calc(100vw-2rem)] rounded border border-grisM bg-white p-1 text-left shadow-card">
+          className={`absolute ${pleineLargeurMobile ? "left-4 right-4 sm:left-auto sm:right-0 sm:w-80" : "right-0 w-72"} z-20 mt-1 max-h-[70vh] max-w-[calc(100vw-2rem)] overflow-y-auto rounded border border-grisM bg-white p-1 text-left shadow-card`}>
           {entrees.map((en, n) => (
-            <div key={en.id} role="none" className={en.separe && n > 0 ? "mt-1 border-t border-grisM pt-1" : undefined}>
+            <div key={en.id} role="none" className={en.separe && n > 0 ? `mt-1 border-t pt-1 ${en.danger ? "border-rouge/30" : "border-grisM"}` : undefined}>
               <button type="button" role="menuitem" tabIndex={-1} ref={(el) => { items.current[n] = el; }}
                 aria-disabled={en.disabled ? "true" : undefined}
                 title={en.disabled ? en.motif : undefined}

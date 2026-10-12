@@ -39,35 +39,43 @@ const rendre = () =>
 
 beforeEach(() => vi.clearAllMocks());
 
+// Les actions passent par le menu « Actions » (O2) ; la radiation n'est plus proposée
+// sur la fiche : elle s'enregistre depuis le dossier disciplinaire.
+const ouvrirMenu = async () => {
+  await userEvent.click(await screen.findByRole("button", { name: /^Actions/ }));
+  return screen.getByRole("menu", { name: "Actions" });
+};
+
 describe("AvocatDetail — actions selon rôle et statut", () => {
-  it("SG, membre inscrit : Déclarer le décès, pas de Radier (R1-7 : discipline_decider)", async () => {
+  it("SG, membre inscrit : Déclarer le décès au menu, aucun Radier", async () => {
     useAuth.mockReturnValue({ user: { role: "SECRETAIRE_GENERAL", permissions: ["membres", "discipline", "discipline_saisir"] } });
     getMembre.mockResolvedValue(base);
     rendre();
-    expect(await screen.findByRole("button", { name: /Déclarer le décès/ })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Radier/ })).not.toBeInTheDocument();
+    const menu = await ouvrirMenu();
+    expect(within(menu).getByRole("menuitem", { name: "Déclarer le décès" })).toBeInTheDocument();
+    expect(within(menu).queryByRole("menuitem", { name: /Radi/ })).not.toBeInTheDocument();
   });
 
-  it("BATONNIER avec discipline_decider : Radier ouvre la modale, sans Modifier ni décès", async () => {
+  it("BATONNIER avec discipline_decider : ni Radier, ni Modifier, ni décès sur la fiche", async () => {
     useAuth.mockReturnValue({ user: { role: "BATONNIER", permissions: ["membres", "discipline", "discipline_decider"] } });
     getMembre.mockResolvedValue(base);
     rendre();
-    await userEvent.click(await screen.findByRole("button", { name: /Radier/ }));
-    expect(screen.getByRole("dialog", { name: "Radier Me BAKALA Jean" })).toBeInTheDocument();
-    for (const nom of [/Déclarer le décès/, /Modifier/]) expect(screen.queryByRole("button", { name: nom })).not.toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Me BAKALA Jean" })).toBeInTheDocument();
+    for (const nom of [/Radier/, /Actions/, /Modifier/]) expect(screen.queryByRole("button", { name: nom })).not.toBeInTheDocument();
   });
 
-  it("SG, membre décédé : badge, ligne « Décédé le », actions masquées", async () => {
+  it("SG, membre décédé : badge, ligne « Décédé le », actions masquées ou grisées", async () => {
     useAuth.mockReturnValue({ user: { role: "SECRETAIRE_GENERAL" } });
     getMembre.mockResolvedValue({ ...base, statut: "decede", dateDeces: "2026-09-15" });
     rendre();
     expect(await screen.findByText("Décédé")).toBeInTheDocument();
     expect(screen.getByText("Décédé le")).toBeInTheDocument();
     expect(screen.getByText("15/09/2026")).toBeInTheDocument();
-    for (const nom of [/Radier/, /Déclarer le décès/, /Attestation/, /Accès espace/]) {
-      expect(screen.queryByRole("button", { name: nom })).not.toBeInTheDocument();
-    }
-    expect(screen.getByRole("button", { name: /Modifier/ })).toBeInTheDocument();
+    const menu = await ouvrirMenu();
+    expect(within(menu).queryByRole("menuitem", { name: "Déclarer le décès" })).not.toBeInTheDocument();
+    for (const nom of ["Attestation", "Accès espace"]) expect(within(menu).getByRole("menuitem", { name: nom })).toHaveAttribute("aria-disabled", "true");
+    // Correction de la date du décès (T6) : Modifier reste disponible.
+    expect(within(menu).getByRole("menuitem", { name: "Modifier" })).not.toHaveAttribute("aria-disabled");
   });
 
   it("décédé : aucune créance de plaidoirie affichée, même si le serveur renvoie une ligne", async () => {
@@ -79,24 +87,25 @@ describe("AvocatDetail — actions selon rôle et statut", () => {
     expect(screen.queryByText(/60\s?000/)).not.toBeInTheDocument();
   });
 
-  it("SG, membre radié : ligne « Radié le — motif », Accès espace et Attestation masqués, décès possible", async () => {
+
+  it("SG, membre radié : ligne « Radié le — motif », Accès espace et Attestation grisés, décès possible", async () => {
     useAuth.mockReturnValue({ user: { role: "SECRETAIRE_GENERAL" } });
     getMembre.mockResolvedValue({ ...base, statut: "radie", dateRadiation: "2026-10-01", motifRadiation: "Décision n° 12" });
     rendre();
     expect(await screen.findByText("Radié le")).toBeInTheDocument();
     expect(screen.getByText("01/10/2026 — Décision n° 12")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Radier/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Attestation/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Accès espace/ })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Déclarer le décès/ })).toBeInTheDocument();
+    const menu = await ouvrirMenu();
+    expect(within(menu).queryByRole("menuitem", { name: /Radi/ })).not.toBeInTheDocument();
+    for (const nom of ["Attestation", "Accès espace"]) expect(within(menu).getByRole("menuitem", { name: nom })).toHaveAttribute("aria-disabled", "true");
+    expect(within(menu).getByRole("menuitem", { name: "Déclarer le décès" })).not.toHaveAttribute("aria-disabled");
   });
 
-  it("BATONNIER sans discipline_decider : aucun bouton Radier / Déclarer le décès / Supprimer", async () => {
+  it("BATONNIER sans permission : aucun menu Actions (ni Radier, ni décès, ni Supprimer, ni Modifier)", async () => {
     useAuth.mockReturnValue({ user: { role: "BATONNIER" } });
     getMembre.mockResolvedValue(base);
     rendre();
     expect(await screen.findByRole("heading", { name: "Me BAKALA Jean" })).toBeInTheDocument();
-    for (const nom of [/Radier/, /Déclarer le décès/, /Supprimer/, /Modifier/]) {
+    for (const nom of [/Radier/, /Actions/, /Supprimer/, /Modifier/]) {
       expect(screen.queryByRole("button", { name: nom })).not.toBeInTheDocument();
     }
   });
@@ -107,8 +116,10 @@ describe("AvocatDetail — actions selon rôle et statut", () => {
     const msg = "Suppression impossible : pièces comptables à conserver 10 ans (OHADA) ; utilisez radiation ou décès";
     supprimerMembre.mockRejectedValue(new Error(msg));
     rendre();
-    await userEvent.click(await screen.findByRole("button", { name: /Supprimer/ }));
-    await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Supprimer" }));
+    await userEvent.click(within(await ouvrirMenu()).getByRole("menuitem", { name: "Supprimer" }));
+    const dlg = screen.getByRole("dialog");
+    await userEvent.type(within(dlg).getByRole("textbox"), "PN-2010-012");
+    await userEvent.click(within(dlg).getByRole("button", { name: "Supprimer" }));
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent(msg));
     expect(screen.getByRole("heading", { name: "Me BAKALA Jean" })).toBeInTheDocument();
   });
