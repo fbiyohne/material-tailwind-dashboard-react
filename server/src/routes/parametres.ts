@@ -206,6 +206,15 @@ parametresRouter.put(
       ecrireChemin(data, c, chiffrer(v));
       secretsMaj.push(c);
     }
+    // T27 : le mot de passe SMTP ne suit pas un changement de serveur (hôte, port, chiffrement) : sans
+    // ressaisie, il est effacé. Sinon un opérateur qui ne peut pas le lire l'enverrait (AUTH) au serveur
+    // de son choix, par /tester/smtp ou le prochain envoi.
+    const smtpAvant = (base.smtp ?? {}) as Record<string, unknown>;
+    const serveurSmtpChange = (["host", "port", "secure"] as const).some((k) => patch.smtp?.[k] !== undefined && String(patch.smtp[k]) !== String(smtpAvant[k]));
+    if (serveurSmtpChange && !secretsMaj.includes("smtp.pass") && smtpAvant.pass !== undefined) {
+      ecrireChemin(data, "smtp.pass", undefined);
+      journal.push("mot de passe SMTP effacé (serveur modifié)");
+    }
     // Journal : noms de sections et de champs seulement, jamais de valeur.
     if (sensibles.length) journal.push("sections : " + sensibles.join(", "));
     if (secretsMaj.length) journal.push("secrets remplacés : " + secretsMaj.join(", "));

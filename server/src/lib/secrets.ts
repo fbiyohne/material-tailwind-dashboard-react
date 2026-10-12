@@ -44,7 +44,7 @@ export function dechiffrer(valeur: string): string {
   if (!valeur.startsWith(PREFIXE)) return valeur;
   const [iv, tag, ct] = valeur.slice(PREFIXE.length).split(":").map((p) => Buffer.from(p, "base64"));
   if (!iv || !tag || !ct || iv.length !== 12 || tag.length !== 16) throw new Error("Secret chiffré mal formé.");
-  const d = createDecipheriv("aes-256-gcm", cle(), iv);
+  const d = createDecipheriv("aes-256-gcm", cle(), iv, { authTagLength: 16 }); // tag de 128 bits imposé (Semgrep gcm-no-tag-length)
   d.setAuthTag(tag);
   return Buffer.concat([d.update(ct), d.final()]).toString("utf8");
 }

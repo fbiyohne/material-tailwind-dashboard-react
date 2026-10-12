@@ -1746,18 +1746,24 @@ describe("Revue sécurité T10 — données disciplinaires, extraction en masse,
   });
 
   it("CONSULTATION ne reçoit jamais motifRadiation : ni dans GET /membres, ni dans le HTML de l'export PDF", async () => {
-    // O1 (M-20261011) : les radiés sont exclus de la liste par défaut ; on les interroge par statut explicite.
-    const liste = await request(app).get(`/api/membres?statut=RADIE&q=${encodeURIComponent(`T10 Radie ${suffixe}`)}`).set(...bearer(consultJwt));
+    // O1 (M-20261011) : les radiés sont exclus de la liste par défaut. T27 (R-62) : sans permission
+    // discipline, le filtre explicite statut=RADIE est refusé ; le registre (sortis=1) masque la radiation.
+    const nomQ = encodeURIComponent(`T10 Radie ${suffixe}`);
+    expect((await request(app).get(`/api/membres?statut=RADIE&q=${nomQ}`).set(...bearer(consultJwt))).status).toBe(403);
+    const liste = await request(app).get(`/api/membres?sortis=1&q=${nomQ}`).set(...bearer(consultJwt));
     expect(liste.status).toBe(200);
     expect(liste.body.items).toHaveLength(1);
     expect(JSON.stringify(liste.body)).not.toContain("MOTIF-SECRET-T10");
     expect("motifRadiation" in liste.body.items[0]).toBe(false);
+    expect(liste.body.items[0].motifSortie).toBe("Sortie du tableau");
     vi.mocked(htmlVersPdf).mockResolvedValueOnce(Buffer.from("%PDF-test"));
     const r = await request(app).get(`/api/membres/export/pdf?ids=${radieId}`).set(...bearer(consultJwt));
     expect(r.status).toBe(200);
     const html = vi.mocked(htmlVersPdf).mock.calls.at(-1)![0];
     expect(html).toContain(`T10 Radie ${suffixe}`);
     expect(html).not.toContain("MOTIF-SECRET-T10");
+    expect(html).not.toContain("Radié"); // T27 : sélection par ids, radiation masquée sans discipline
+    expect(html).toContain("Sortie du tableau");
   });
 
   it("R1-11 : le titre du PDF porte le libellé français du statut, pas la valeur brute de l'enum", async () => {

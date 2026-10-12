@@ -69,12 +69,16 @@ const jourQuery = (v: unknown, fin = false) =>
 /** Dernier événement de sortie, joint à la projection du registre. */
 const derniereSortie = { evenements: { where: { statutApres: { in: SORTIS as any } }, orderBy: [{ dateEffet: "desc" }, { id: "desc" }], take: 1, select: { dateEffet: true } } } satisfies Prisma.MembreSelect;
 
-/** Registre : permission « membres » exigée ; filtre par motif disciplinaire refusé sans permission discipline (R-62). Renvoie ce dernier droit. */
-function droitDiscipline(req: AuthRequest, query: Record<string, unknown>): boolean {
+/** R-62 : lister les radiés (statut ou motif RADIE) exige la permission discipline — liste, registre et export (T27). */
+function gardeRadies(req: AuthRequest, query: Record<string, unknown>): void {
+  if ((query.statut === "RADIE" || query.motif === "RADIE") && !aLaPermission(req.user!.role, "discipline"))
+    throw new HttpError(403, "Le motif disciplinaire est réservé aux personnes habilitées");
+}
+
+/** Registre : permission « membres » exigée. Renvoie le droit « discipline » (masquage R-62 des lignes). */
+function droitDiscipline(req: AuthRequest): boolean {
   if (!aLaPermission(req.user!.role, "membres")) throw new HttpError(403, "Accès refusé pour votre profil");
-  const voit = aLaPermission(req.user!.role, "discipline");
-  if (!voit && query.motif === "RADIE") throw new HttpError(403, "Le motif disciplinaire est réservé aux personnes habilitées");
-  return voit;
+  return aLaPermission(req.user!.role, "discipline");
 }
 
 /** Ligne du registre : motif et date de sortie ; radiation masquée sans permission discipline. */
@@ -93,6 +97,7 @@ const filtreRegistre = (query: Record<string, unknown>) =>
 membresRouter.get(
   "/",
   asyncH(async (req, res) => {
+    gardeRadies(req as AuthRequest, req.query);
     const where = whereMembres({ ...req.query, ids: undefined }); // « ids » ne vaut que pour l'export
     const page = Math.max(1, Number(req.query.page ?? 1));
     const pageSize = Math.min(200, Math.max(1, Number(req.query.pageSize ?? 20)));
@@ -120,7 +125,7 @@ membresRouter.get(
     const totalPages = (total: number) => Math.max(1, Math.ceil(total / pageSize));
     if (estRegistre(req.query)) {
       // Registre des anciens membres (O1) : motif et date de sortie, consultation tracée (avant envoi, C-04).
-      const voit = droitDiscipline(req as AuthRequest, req.query);
+      const voit = droitDiscipline(req as AuthRequest);
       const [lignes, total] = await Promise.all([
         prisma.membre.findMany({ where, orderBy, skip: (page - 1) * pageSize, take: pageSize, select: { ...selectAnnuaire, ...derniereSortie } }),
         prisma.membre.count({ where }),
@@ -173,17 +178,20 @@ membresRouter.get(
   asyncH(async (req: AuthRequest, res) => {
     const p = exportPdfQuery.safeParse(req.query);
     if (!p.success) throw new HttpError(400, "Paramètres d'export invalides");
+    gardeRadies(req, p.data);
     const ids = p.data.ids?.split(",").map(Number);
     const where: Prisma.MembreWhereInput = { ...whereMembres(p.data), ...(ids ? { id: { in: ids } } : {}) };
     const registre = estRegistre(p.data);
-    const voit = registre && droitDiscipline(req, p.data);
+    const voit = registre && droitDiscipline(req);
     const lignes = await prisma.membre.findMany({
       where, orderBy: { num: "asc" },
       select: { num: true, numInscription: true, nom: true, qualite: true, statut: true, cabinet: true, tel: true, email: true, dateInscription: true, dateRadiation: true, dateDeces: true, ...derniereSortie },
     });
     // Registre : la colonne « statut » porte le motif de sortie (masqué selon R-62).
+    // T27 (R-62) : hors registre, une sélection par ids ne révèle pas non plus la radiation.
+    const voitHorsRegistre = registre || aLaPermission(req.user!.role, "discipline");
     const membres = lignes.map(({ evenements, ...m }) => {
-      if (!registre) return m;
+      if (!registre) return m.statut === "RADIE" && !voitHorsRegistre ? { ...m, statut: "Sortie du tableau", dateRadiation: null } : m;
       const l = ligneSortie({ ...m, evenements }, voit);
       return { ...l, statut: l.motifSortie };
     });
