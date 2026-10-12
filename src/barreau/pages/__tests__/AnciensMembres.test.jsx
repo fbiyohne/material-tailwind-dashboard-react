@@ -53,6 +53,18 @@ describe("Anciens membres", () => {
     expect(noms).toEqual(["Me NGOMA Paul", "Me MBEMBA Luc", "Me SANS Date"]);
   });
 
+  it("anti-rebond : 5 frappes rapides donnent un seul appel de recherche", async () => {
+    listerMembres.mockResolvedValue({ items: sortis });
+    rendre(<AnciensMembres />);
+    await screen.findByText("Me NGOMA Paul");
+    listerMembres.mockClear();
+    await userEvent.type(screen.getByLabelText("Rechercher un ancien membre"), "Dupon");
+    await vi.waitFor(() => expect(listerMembres).toHaveBeenCalledTimes(1));
+    expect(listerMembres.mock.calls[0][0]).toMatchObject({ q: "Dupon" });
+    await new Promise((r) => setTimeout(r, 400));
+    expect(listerMembres).toHaveBeenCalledTimes(1);
+  });
+
   it("état vide quand aucun ancien membre", async () => {
     listerMembres.mockResolvedValue({ items: [] });
     rendre(<AnciensMembres />);

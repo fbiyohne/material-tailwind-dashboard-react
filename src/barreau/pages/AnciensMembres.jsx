@@ -57,20 +57,32 @@ export function AnciensMembres() {
 
   const filtres = { sortis: "1", ...(recherche ? { q: recherche } : {}), ...(motif ? { motif } : {}), ...(du ? { du } : {}), ...(au ? { au } : {}) };
 
-  const charger = useCallback(() => {
+  // Anti-rebond : la saisie locale n'atteint l'URL (donc l'API, qui trace chaque consultation) qu'après 300 ms.
+  const [saisie, setSaisie] = useState(recherche);
+  useEffect(() => {
+    if (saisie === recherche) return undefined;
+    const t = setTimeout(() => setParam("q", saisie), 300);
+    return () => clearTimeout(t);
+  }, [saisie]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Relance manuelle (bouton « Réessayer »).
+  const [essai, setEssai] = useState(0);
+  const charger = useCallback(() => setEssai((n) => n + 1), []);
+  useEffect(() => {
+    let actif = true; // une réponse tardive d'une requête périmée n'écrase pas la liste à jour
     setChargement(true);
     setErreur(false);
     const p = { sortis: "1", ...(recherche ? { q: recherche } : {}), ...(motif ? { motif } : {}), ...(du ? { du } : {}), ...(au ? { au } : {}), pageSize: 200 };
     (async () => {
       const d = await listerMembres(p);
       const items = [...(d.items ?? [])];
-      for (let page = 2; page <= (d.totalPages ?? 1); page++) items.push(...((await listerMembres({ ...p, page })).items ?? []));
-      setMembres(items);
+      for (let page = 2; actif && page <= (d.totalPages ?? 1); page++) items.push(...((await listerMembres({ ...p, page })).items ?? []));
+      if (actif) setMembres(items);
     })()
-      .catch(() => setErreur(true))
-      .finally(() => setChargement(false));
-  }, [recherche, motif, du, au]);
-  useEffect(() => { charger(); }, [charger]);
+      .catch(() => actif && setErreur(true))
+      .finally(() => actif && setChargement(false));
+    return () => { actif = false; };
+  }, [recherche, motif, du, au, essai]);
 
   // Journal serveur écrit AVANT de produire le fichier : pas de trace, pas d'export.
   const exporter = async (format) => {
@@ -116,7 +128,7 @@ export function AnciensMembres() {
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
         <div className="relative min-w-0 flex-1 sm:min-w-[14rem]">
           <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gris" aria-hidden="true" />
-          <input type="text" value={recherche} onChange={(e) => setParam("q", e.target.value)} placeholder="Rechercher par nom ou cabinet…" aria-label="Rechercher un ancien membre" className="bpn-input pl-9" />
+          <input type="text" value={saisie} onChange={(e) => setSaisie(e.target.value)} placeholder="Rechercher par nom ou cabinet…" aria-label="Rechercher un ancien membre" className="bpn-input pl-9" />
         </div>
         <select value={motif} onChange={(e) => setParam("motif", e.target.value)} aria-label="Filtrer par motif de sortie" className="bpn-input sm:w-56">
           <option value="">Tous les motifs</option>
