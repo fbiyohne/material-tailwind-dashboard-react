@@ -20,7 +20,7 @@ vi.mock("../src/lib/pdf.js", async (importOriginal) => ({ ...(await importOrigin
 const app = creerApp();
 const bearer = (t: string) => ["Authorization", `Bearer ${t}`] as const;
 const marque = `T27SEC-${Date.now()}`;
-let sg = "", consult = "", radie = 0;
+let sg = "", consult = "", radie = 0, demis = 0;
 let sauvegarde: unknown = null;
 
 beforeAll(async () => {
@@ -29,14 +29,15 @@ beforeAll(async () => {
   await request(app).post("/api/users").set(...bearer(sg)).send({ nom: `${marque} Consultation`, email, role: "CONSULTATION", password: "consultpass8" });
   consult = (await request(app).post("/api/auth/login").send({ email, password: "consultpass8" })).body.token;
   expect(consult).toBeTruthy();
-  const max = (await prisma.membre.aggregate({ _max: { num: true } }))._max.num ?? 0;
+  const max = ((await prisma.membre.aggregate({ _max: { num: true } }))._max.num ?? 0) + Math.floor(Math.random() * 900000);
   radie = (await prisma.membre.create({ data: { num: max + 1000, nom: `${marque} RADIE`, qualite: "AVOCAT", statut: "RADIE", dateRadiation: new Date("2026-03-10") } })).id;
+  demis = (await prisma.membre.create({ data: { num: max + 1001, nom: `${marque} DEMIS`, qualite: "AVOCAT", statut: "DEMISSIONNAIRE" } })).id;
   sauvegarde = (await prisma.parametres.findUnique({ where: { id: 1 } }))?.data ?? null;
 });
 
 afterAll(async () => {
   if (sauvegarde) await prisma.parametres.update({ where: { id: 1 }, data: { data: sauvegarde as object } });
-  await prisma.membre.deleteMany({ where: { id: radie } });
+  await prisma.membre.deleteMany({ where: { id: { in: [radie, demis] } } });
   await prisma.user.deleteMany({ where: { nom: { startsWith: marque } } });
   await prisma.$disconnect();
 });
@@ -64,7 +65,7 @@ describe("S1 — R-62 : filtre statut=RADIE réservé à la permission disciplin
     expect(masque).not.toContain("Radié");
     expect(await html(sg)).toContain("Radié");
   });
-  it("les autres statuts restent filtrables sans discipline", async () => {
+  it("le décès reste filtrable sans discipline (libellé « Décès », sans cause)", async () => {
     expect((await request(app).get(`/api/membres?q=${encodeURIComponent(marque)}&statut=DECEDE`).set(...bearer(consult))).status).toBe(200);
   });
 });
@@ -99,5 +100,24 @@ describe("S3 — tag GCM de longueur imposée", () => {
     const [p, v, iv, tag, ct] = chiffrer("valeur").split(":");
     const court = Buffer.from(tag, "base64").subarray(0, 4).toString("base64");
     expect(() => dechiffrer([p, v, iv, court, ct].join(":"))).toThrow();
+  });
+});
+
+describe("R1-4 — R-62 : aucun radié distinguable par élimination sans discipline", () => {
+  const qm = encodeURIComponent(marque);
+  it("filtres statut/motif RADIE, DEMISSIONNAIRE, RETRAITE, CESSATION : 403", async () => {
+    for (const v of ["RADIE", "DEMISSIONNAIRE", "RETRAITE", "CESSATION"])
+      for (const url of [`/api/membres?q=${qm}&statut=${v}`, `/api/membres?q=${qm}&sortis=1&motif=${v}`, `/api/membres/export/pdf?q=${qm}&sortis=1&motif=${v}`])
+        expect((await request(app).get(url).set(...bearer(consult))).status, url).toBe(403);
+  });
+  it("registre : radié et démissionnaire portent le même libellé neutre", async () => {
+    const r = await request(app).get(`/api/membres?q=${qm}&sortis=1`).set(...bearer(consult));
+    expect(r.status).toBe(200);
+    expect(r.body.items.map((m: any) => m.motifSortie)).toEqual(["Sortie du tableau", "Sortie du tableau"]);
+    for (const m of r.body.items) expect(m.statut).toBeNull();
+  });
+  it("avec discipline, les motifs propres restent visibles", async () => {
+    const r = await request(app).get(`/api/membres?q=${qm}&sortis=1`).set(...bearer(sg));
+    expect(r.body.items.map((m: any) => m.motifSortie).sort()).toEqual(["Démission", "Radiation"]);
   });
 });

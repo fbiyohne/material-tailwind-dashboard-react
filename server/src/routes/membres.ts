@@ -69,9 +69,11 @@ const jourQuery = (v: unknown, fin = false) =>
 /** Dernier événement de sortie, joint à la projection du registre. */
 const derniereSortie = { evenements: { where: { statutApres: { in: SORTIS as any } }, orderBy: [{ dateEffet: "desc" }, { id: "desc" }], take: 1, select: { dateEffet: true } } } satisfies Prisma.MembreSelect;
 
-/** R-62 : lister les radiés (statut ou motif RADIE) exige la permission discipline — liste, registre et export (T27). */
+/** Sorties masquées sans discipline (tout sauf le décès, PO-21) : filtrer sur l'une d'elles permettrait de déduire les radiés par élimination. */
+const SORTIES_MASQUEES = ["RADIE", "DEMISSIONNAIRE", "RETRAITE", "CESSATION"];
+/** R-62 : lister ces sorties (statut ou motif) exige la permission discipline — liste, registre et export (T27, R1-4). */
 function gardeRadies(req: AuthRequest, query: Record<string, unknown>): void {
-  if ((query.statut === "RADIE" || query.motif === "RADIE") && !aLaPermission(req.user!.role, "discipline"))
+  if ((SORTIES_MASQUEES.includes(String(query.statut)) || SORTIES_MASQUEES.includes(String(query.motif))) && !aLaPermission(req.user!.role, "discipline"))
     throw new HttpError(403, "Le motif disciplinaire est réservé aux personnes habilitées");
 }
 
@@ -85,7 +87,8 @@ function droitDiscipline(req: AuthRequest): boolean {
 function ligneSortie<T extends { statut: string; dateRadiation: Date | null; dateDeces: Date | null; evenements: { dateEffet: Date }[] }>(m: T, voitDiscipline: boolean) {
   const { evenements, ...reste } = m;
   const dateSortie = evenements[0]?.dateEffet ?? m.dateRadiation ?? m.dateDeces ?? null;
-  if (m.statut === "RADIE" && !voitDiscipline) return { ...reste, statut: null, dateRadiation: null, motifSortie: "Sortie du tableau", dateSortie };
+  // Radié, démissionnaire, retraité et cessation partagent le même libellé : la radiation ne se déduit pas par élimination (R-62). Le décès reste « Décès », sans cause.
+  if (SORTIES_MASQUEES.includes(m.statut) && !voitDiscipline) return { ...reste, statut: null, dateRadiation: null, motifSortie: "Sortie du tableau", dateSortie };
   return { ...reste, motifSortie: MOTIF_SORTIE[m.statut], dateSortie };
 }
 
@@ -191,7 +194,7 @@ membresRouter.get(
     // T27 (R-62) : hors registre, une sélection par ids ne révèle pas non plus la radiation.
     const voitHorsRegistre = registre || aLaPermission(req.user!.role, "discipline");
     const membres = lignes.map(({ evenements, ...m }) => {
-      if (!registre) return m.statut === "RADIE" && !voitHorsRegistre ? { ...m, statut: "Sortie du tableau", dateRadiation: null } : m;
+      if (!registre) return SORTIES_MASQUEES.includes(m.statut) && !voitHorsRegistre ? { ...m, statut: "Sortie du tableau", dateRadiation: null } : m;
       const l = ligneSortie({ ...m, evenements }, voit);
       return { ...l, statut: l.motifSortie };
     });

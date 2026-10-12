@@ -111,10 +111,17 @@ describe("Anciens membres (O1)", () => {
     expect(json).not.toContain(`"Radiation"`); // valeur, pas la clé « dateRadiation »
     expect(json).not.toContain(`"RADIE"`);
     expect(json).not.toContain("MOTIF-SECRET-T4");
-    // Décès sans cause : seul le libellé neutre.
-    expect(r.body.items.find((m: any) => m.id === ids.DECEDE).motifSortie).toBe("Décès");
-    // Le filtre par motif disciplinaire lui est refusé.
-    expect((await liste("&sortis=1&motif=RADIE", consult)).status).toBe(403);
+    // Radié, démissionnaire, retraité et cessation sont indistinguables ; le décès reste « Décès », sans cause (PO-21).
+    for (const m of r.body.items) {
+      expect(["Décès", "Sortie du tableau"]).toContain(m.motifSortie);
+      if (m.motifSortie !== "Décès") expect(m.statut).toBeNull();
+    }
+    // Filtrer par une sortie masquée lui est refusé ; le décès reste filtrable.
+    for (const st of Object.keys(MOTIFS).filter((x) => x !== "DECEDE")) {
+      expect((await liste(`&sortis=1&motif=${st}`, consult)).status).toBe(403);
+      expect((await liste(`&statut=${st}`, consult)).status).toBe(403);
+    }
+    expect((await liste("&sortis=1&motif=DECEDE", consult)).status).toBe(200);
   });
 
   it("chaque consultation du registre est journalisée, sans le motif", async () => {
