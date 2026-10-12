@@ -490,6 +490,20 @@ $env:DATABASE_URL = "postgresql://barreau:…@127.0.0.1:5432/barreau_pn_test?sch
 - **Relances email** : `POST /cotisations/relances?annee=` (SMTP réel ou simulation)
 - **Signature électronique** (HMAC) : `GET /quitus/:id/signature`, `POST /signatures/verifier`
 
+## Jeton QR signé et validation du chemin court (T7, T9, T10, point 6 et 10 M-20261011)
+
+Chaque quitus, reçu et timbre porte un jeton de 10 caractères (base32 Crockford) : HMAC-SHA256 tronquée de « type|ref », dérivée de la clé de signature RSA existante. Le chemin court `/v/{q|r|t}/{ref}.{jeton}` remplace le numéro séquentiel dans les QR émis après `VERIF_BASCULE`. Les anciennes URL `/verifier/{type}/{numero}` restent valides **jusqu'à** cette date (défaut : 2026-10-12) — tout document créé avant demeure vérifiable, tout document créé après doit porter le jeton.
+
+**À FIXER EN PRODUCTION** : changez `VERIF_BASCULE` à la date réelle de mise en service de `/v`, sinon :
+- Les documents émis entre le défaut et votre déploiement portent l'ancien QR sans jeton → vérification échouera après la date limite
+- Relire le paragraphe « Page publique courte » ci-dessus
+
+**Rotation de la clé de signature RSA** : conservez l'ancienne clé dans `SIGNATURE_ANCIENNE_PRIVATE_KEY` (variable d'environnement) pour que les QR signés avec elle restent vérifiables. Seule la clé actuelle (`SIGNATURE_PRIVATE_KEY`) est utilisée pour signer les nouveaux jetons ; la validation accepte les deux. Absence d'une ancienne clé : aucune régression, pas de panique.
+
+## Variables d'environnement complémentaires
+
+Voir également le paragraphe « Variables d'environnement complémentaires » à la fin du README.
+
 ## Tests
 ```bash
 # Base de test (une fois)
@@ -556,6 +570,51 @@ tous verts (deux exécutions successives, la seconde sur la base déjà utilisé
 Si cette base accumule à son tour des restes, la remettre à zéro par
 `npm run seed` (après validation de Fabrice : le seed supprime les données de la base visée).
 
-## Variables d'environnement complémentaires
-`ACCESS_TTL`, `REFRESH_TTL_DAYS`, `PUPPETEER_EXECUTABLE_PATH`, `SMTP_*`,
-`MAIL_FROM`, `SIGNATURE_SECRET` (voir `.env.example`).
+## Variables d'environnement (complet)
+
+**Voir `.env.example` pour les valeurs par défaut et les exemples.** Les variables optionnelles sont indiquées.
+
+### Authentication & JWT
+- `JWT_SECRET` (requis) : secret de signature des jetons d'accès ; défaut `change-me` (développement seulement)
+- `ACCESS_TTL` (optionnel) : durée de vie du jeton d'accès en secondes ; défaut 900 (15 min)
+- `REFRESH_TTL_DAYS` (optionnel) : durée de vie du jeton de rafraîchissement en jours ; défaut 7
+
+### Base de données & Tests
+- `DATABASE_URL` (requis) : URL PostgreSQL (production, développement, recette)
+- `TEST_DATABASE_URL` (optionnel) : URL de la base de test, distincte de `DATABASE_URL` (suite vitest) ; défaut 127.0.0.1:5432/barreau_pn_test
+
+### Signature électronique & Jetons QR
+- `SIGNATURE_PRIVATE_KEY` (optionnel) : clé RSA privée (PEM) pour signer les documents et les jetons QR ; générée en développement, requise en production
+- `SIGNATURE_PUBLIC_KEY` (optionnel) : clé publique correspondante
+- `SIGNATURE_KEY_DIR` (optionnel) : répertoire contenant les clés générées (`secrets/` par défaut)
+- `SIGNATURE_ANCIENNE_PRIVATE_KEY` (optionnel) : ancienne clé RSA, conservée uniquement pour vérifier les jetons QR antérieurs à la rotation de clé. La rotation n'invalide aucun QR imprimé.
+- `VERIF_BASCULE` (requis) : date ISO (`AAAA-MM-JJ`) à partir de laquelle le chemin court `/v/{type}/{ref}.{jeton}` remplace le numéro séquentiel dans les nouveaux QR. Les documents antérieurs restent vérifiables par `/api/verifier/{type}/{numero}`. **À FIXER à la date réelle de mise en service en production.**
+
+### Secrets chiffrés (Paramètres)
+- `PARAMS_CLE` (requis) : clé AES-256-GCM (32 octets base64) pour chiffrer au repos les secrets saisis dans Paramètres (mot de passe SMTP, clés des passerelles de paiement et du fournisseur SMS). Générée par `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`. **À fixer en production.** Sans cette variable, aucun secret n'est enregistrable et l'API répond 400.
+
+### Email SMTP (simulation ou réel)
+- `SMTP_HOST` (optionnel) : nom d'hôte du serveur SMTP ; vide → mode simulation (envois journalisés)
+- `SMTP_PORT` (optionnel) : port SMTP ; défaut 587
+- `SMTP_USER` (optionnel) : identifiant SMTP
+- `SMTP_PASS` (optionnel) : mot de passe SMTP ; chiffré au repos et masqué dans les réponses API
+- `MAIL_FROM` (optionnel) : adresse « De » ; défaut `secretariat@barreau-pn.cg`
+
+### PDF & Chromium
+- `PUPPETEER_EXECUTABLE_PATH` (optionnel) : chemin du binaire Chromium ; cherche dans l'ordre : cache Puppeteer, Playwright, binaires Linux, Edge/Chrome Windows. Routes PDF répondent en erreur si absent.
+
+### Intégration IA (Lettre du Bâtonnier)
+- `ANTHROPIC_API_KEY` (optionnel) : clé API Claude ; vide → repli automatique sur gabarit local
+
+### Serveur & CORS
+- `PORT` (optionnel) : port d'écoute de l'API ; défaut 4000
+- `CLIENT_ORIGIN` (optionnel) : origine CORS autorisée (front) ; défaut `http://localhost:5173`
+- `TRUST_PROXY` (optionnel) : nombre de relais de confiance pour lire `X-Forwarded-For` (IP dans JournalAudit) ; défaut 1 (un mandataire). Passer 0 en exposition directe.
+- `HOST` (optionnel) : adresse d'écoute ; défaut `0.0.0.0` (tout réseau). Test & démo : `127.0.0.1`.
+
+### Journalisation
+- `LOG_LEVEL` (optionnel) : niveau de log (pino) ; défaut `info`
+- `LOG_JSON` (optionnel) : force la sortie JSON même en développement ; vide → pretty-print
+
+### Node.js & Environnement
+- `NODE_ENV` : défini à `test` par la suite vitest (`.env` du test), `production` en déploiement, `development` sinon.

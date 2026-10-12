@@ -150,5 +150,15 @@ Page `/anciens-membres` (permission `membres`, entrée de menu sous « Avocats i
 
 Le QR des quitus, reçus et timbres mène à la page courte `/v/{q|r|t}/{ref}.{jeton}`, rendue par le serveur (HTML sans JS, voir `server/README.md`) ; en développement, Vite la relaie au backend (proxy `/v/`). Les liens « Vérifier » de `Quitus`, `Recus`, `Timbres` et `MesTimbres` suivent le champ `verif` renvoyé par l'API, avec repli sur l'ancienne page SPA `/verifier/{type}/{numero}` (`VerificationPublique`), qui ne vaut plus que pour les documents antérieurs à `VERIF_BASCULE`. `VerificationPublique` porte la clause CL-VERIF (aucune mention « RSA » ni « signature électronique » comme qualification).
 
+## Copier mon timbre (T12, espace avocat, point 9 M-20261011)
+
+Depuis l'espace avocat, **Mes timbres** : bouton « Copier mon timbre » place une image PNG d'au moins 1 200 px de large dans le presse-papiers (via `navigator.clipboard.write` et `ClipboardItem`), avec un QR signé et la clause CL-TIMBRE. En cas d'indisponibilité (HTTP non sécurisé, navigateur ancien), repli sur le téléchargement avec un message explicite. Deux autres boutons : « Télécharger PNG » (même image, fichier local) et « Télécharger SVG » (vectoriel, QR niveau M, aucune dépendance ajoutée).
+
+Fichier : `src/barreau/utils/timbreImage.js`.
+
+## Vérification publique des documents (T10, point 10 M-20261011)
+
+Page `/v/:t/:ref` (où `t` ∈ q|r|t pour quitus, reçu, timbre) rendue côté serveur (HTML sans JS, voir `server/README.md`), affichant l'authenticité et le statut du document. En développement, Vite la relaie au backend (proxy `/v/`). L'ancienne page SPA `/verifier/{type}/{numero}` (VerificationPublique.jsx) reste valide pour les documents antérieurs à `VERIF_BASCULE`, puis n'affiche plus qu'une erreur 404 (pas de lien de vérification sur les nouveaux documents).
+
 ## Tests
 `npm test` à la racine (vitest) : sérialisation CSV/TXT (`utils/__tests__/exportCsv.test.js`), `normaliserMembre` et `StatutBadge` (`api/__tests__/resources.test.jsx`), modales et fiche avocat (`components/__tests__`, `pages/__tests__`).
