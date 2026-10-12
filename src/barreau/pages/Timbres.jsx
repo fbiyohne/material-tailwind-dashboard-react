@@ -134,7 +134,7 @@ export function Timbres() {
               </button>
             </div>
             {succes && (
-              <a href={`/verifier/timbre/${encodeURIComponent(succes.code)}`} target="_blank" rel="noreferrer" className="block text-center text-xs text-white/60 underline hover:text-white">
+              <a href={succes.verif || `/verifier/timbre/${encodeURIComponent(succes.code)}`} target="_blank" rel="noreferrer" className="block text-center text-xs text-white/60 underline hover:text-white">
                 Page de vérification publique
               </a>
             )}
@@ -163,7 +163,7 @@ export function Timbres() {
               key: "actions", label: "", align: "right",
               cell: (t) => (
                 <div className="flex items-center justify-end gap-3">
-                  <a href={`/verifier/timbre/${encodeURIComponent(t.code)}`} target="_blank" rel="noreferrer" title="Vérifier" className="inline-flex items-center gap-1 text-xs font-medium text-navy transition hover:text-or-fonce">
+                  <a href={t.verif || `/verifier/timbre/${encodeURIComponent(t.code)}`} target="_blank" rel="noreferrer" title="Vérifier" className="inline-flex items-center gap-1 text-xs font-medium text-navy transition hover:text-or-fonce">
                     <ShieldCheckIcon className="h-4 w-4" /> Vérifier
                   </a>
                   {estAdmin && t.statut !== "ANNULE" && (

@@ -155,7 +155,14 @@ Ordre et délais (cause 35-4° et chaque étape) : l'étape *k* exige l'étape *
 - Chaque réponse JSON porte `verif`, le chemin court signé que le QR encode (`cheminVerif`, `src/lib/signature.ts`) : `/v/q/{numero}.{jeton}` (quitus), `/v/r/{numero}.{jeton}` (reçu), `/v/t/{code}.{jeton}` (timbre). Routes : `GET /api/quitus`, `POST /api/quitus`, `GET /api/recus`, `GET|POST /api/timbres`, `GET /api/timbres/:id`, `GET /api/espace/documents`, `GET|POST /api/espace/timbres`.
 - Quitus : `finValidite` = date de délivrance + `regles.quitus.validiteMois` (défaut 3, `finValiditeQuitus`). Règle relue à chaque appel : la changer modifie aussi la date de fin affichée pour les quitus déjà émis (aucune durée stockée par quitus).
 - PDF (`/api/quitus|recus/:id/pdf`, `/api/espace/quitus|recus/:id/pdf`) : QR par `qrDocument` (correction M, 96 px soit 25 mm), clause CL-VERIF sous le QR, validité « Valable jusqu'au {date} inclus… » calculée, identité en 12 pt et nom en 14 pt ; reçu : ligne « Exercice couvert » issue de `Recu.annee`.
-- Les anciennes URL `/verifier/{type}/{numero}` restent servies ; la page courte `/v/...` relève de T10.
+- Les anciennes URL `/verifier/{type}/{numero}` restent servies, mais `/api/verifier/*` n'authentifie plus que les documents créés (`createdAt`) **avant** `VERIF_BASCULE` (ISO, défaut `2026-10-12`) ; après, 404 `{ valide: false }` sans aucune donnée. Valeur illisible : ancienne voie fermée. **À fixer en production à la date de mise en service**, sinon des documents émis entre ce défaut et le déploiement, porteurs de l'ancien QR, ne seraient plus vérifiables.
+
+### Page publique courte `GET /v/{q|r|t}/{ref}.{jeton}` (T10)
+
+- `pageVerificationCourte` (`src/routes/verification.ts`), montée dans `app.ts` avant le front statique. HTML rendu côté serveur, CSS en ligne, sans JS ni cookie, < 10 Ko ; en-têtes `Cache-Control: no-store`, `X-Robots-Tag: noindex`, CSP `default-src 'none'` ; meta robots noindex. Toutes les valeurs passent par `esc()`.
+- Validation : `t` ∈ q|r|t, référence `[A-Z0-9-]{1,40}`, jeton `[0-9A-Z]{10}` vérifié par `jetonValide`. Sinon 404 « Non reconnu », sans aucune donnée ni écho de la saisie.
+- Contenu (avis juridique, point 10) : quitus = n°, délivrance, fin de validité, statut courant (valide, expiré, ou caduc si le titulaire est omis, suspendu ou sorti), nom et n° d'inscription ; titulaire sorti : clause CL-STATUT-SORTI et ni nom ni n°. Reçu = n°, date, exercice (ni montant, ni coordonnées, ni nom). Timbre = n°, date, statut (valide, annulé), jamais le nom (R-64). Clauses CL-VERIF et CL-PAGE-PUBLIQUE en bas de page.
+- Limiteur : `verifLimiter` (60 / 15 min par IP), une seule instance pour `/v` et `/api/verifier` ; au-delà, 429 (page HTML sur `/v`, JSON sur l'API). `creerApp({ verification: n })` l'active en test.
 
 ## Paramètres sensibles et secrets (T13, M-20261011)
 

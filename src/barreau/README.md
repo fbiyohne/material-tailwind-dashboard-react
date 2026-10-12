@@ -139,5 +139,9 @@ Corrections appliquées pendant l'audit :
 
 Page `/anciens-membres` (permission `membres`, entrée de menu sous « Avocats inscrits »), en lecture seule. Elle appelle `listerMembres({ sortis: "1", q, motif, du, au })` ; le serveur renvoie `motifSortie` et `dateSortie`, déjà masqués selon R-62 (« Sortie du tableau » pour un radié sans permission discipline). Le motif « Radiation » n'est proposé dans le filtre qu'aux profils discipline. Bandeau : constante `CL_ANCIENS_MEMBRES`, texte mot pour mot de la clause (docs/juridique/clauses-congres.md). Export CSV, TXT, XLSX via `MenuExport` d'Avocats, journalisé par `journaliserExport` avant tout fichier ; PDF tracé par le serveur. Tri initial par date de sortie décroissante, fiches sans date en dernier ; colonne Cabinet masquée sous `sm`. La liste « Avocats inscrits » ne propose plus les statuts de sortie. Captures et mesures : docs/captures/m20261011/anciens-membres/.
 
+## Vérification des documents (T10, M-20261011)
+
+Le QR des quitus, reçus et timbres mène à la page courte `/v/{q|r|t}/{ref}.{jeton}`, rendue par le serveur (HTML sans JS, voir `server/README.md`) ; en développement, Vite la relaie au backend (proxy `/v/`). Les liens « Vérifier » de `Quitus`, `Recus`, `Timbres` et `MesTimbres` suivent le champ `verif` renvoyé par l'API, avec repli sur l'ancienne page SPA `/verifier/{type}/{numero}` (`VerificationPublique`), qui ne vaut plus que pour les documents antérieurs à `VERIF_BASCULE`. `VerificationPublique` porte la clause CL-VERIF (aucune mention « RSA » ni « signature électronique » comme qualification).
+
 ## Tests
 `npm test` à la racine (vitest) : sérialisation CSV/TXT (`utils/__tests__/exportCsv.test.js`), `normaliserMembre` et `StatutBadge` (`api/__tests__/resources.test.jsx`), modales et fiche avocat (`components/__tests__`, `pages/__tests__`).

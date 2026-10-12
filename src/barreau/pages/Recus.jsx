@@ -285,7 +285,7 @@ export function Recus() {
                         <ArrowDownTrayIcon className="h-4 w-4" /> PDF
                       </button>
                       <a
-                        href={`/verifier/recu/${encodeURIComponent(r.numero)}`}
+                        href={r.verif || `/verifier/recu/${encodeURIComponent(r.numero)}`}
                         target="_blank"
                         rel="noreferrer"
                         title="Ouvrir la page de vérification publique"

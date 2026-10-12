@@ -107,7 +107,7 @@ export function MesTimbres() {
                   <button type="button" onClick={telecharger} className="bpn-btn bpn-btn-ghost justify-center"><ArrowDownTrayIcon className="h-4 w-4" /> Télécharger PNG</button>
                   <button type="button" onClick={telechargerEnSvg} className="bpn-btn bpn-btn-ghost justify-center"><ArrowDownTrayIcon className="h-4 w-4" /> Télécharger SVG</button>
                 </div>
-                <a href={`/verifier/timbre/${encodeURIComponent(succes.code)}`} target="_blank" rel="noreferrer" className="block text-center text-xs text-gris underline hover:text-navy">Page de vérification</a>
+                <a href={succes.verif || `/verifier/timbre/${encodeURIComponent(succes.code)}`} target="_blank" rel="noreferrer" className="block text-center text-xs text-gris underline hover:text-navy">Page de vérification</a>
               </>
             )}
             {!succes && <Notice ton="or">Le montant est fixé par l'Ordre. Après paiement, votre timbre est généré avec un QR de vérification à apposer sur l'acte.</Notice>}
@@ -138,7 +138,7 @@ export function MesTimbres() {
                 <span className="flex shrink-0 items-center gap-3">
                   <span className="text-xs text-gris">{formatDate(t.createdAt)}</span>
                   <button type="button" onClick={() => reprendre(t)} className="text-xs font-medium text-navy hover:text-or-fonce">Copier / télécharger</button>
-                  <a href={`/verifier/timbre/${encodeURIComponent(t.code)}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-medium text-navy hover:text-or-fonce"><ShieldCheckIcon className="h-4 w-4" /> Vérifier</a>
+                  <a href={t.verif || `/verifier/timbre/${encodeURIComponent(t.code)}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-medium text-navy hover:text-or-fonce"><ShieldCheckIcon className="h-4 w-4" /> Vérifier</a>
                 </span>
               </li>
             ))}

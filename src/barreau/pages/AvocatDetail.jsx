@@ -112,8 +112,8 @@ export function AvocatDetail() {
   const cotMeta = cotConnu ? STATUT_META[statutLigne(du, paye)] : META_NON_GENEREE;
 
   const documents = [
-    ...(membre.quitus ?? []).map((q) => ({ kind: "quitus", type: "Quitus", ton: "bleu", id: q.id, ref: q.numero, annee: q.annee, date: q.date })),
-    ...(membre.recus ?? []).map((r) => ({ kind: "recu", type: "Reçu", ton: "or", id: r.id, ref: r.numero, annee: r.annee, date: r.date })),
+    ...(membre.quitus ?? []).map((q) => ({ kind: "quitus", type: "Quitus", ton: "bleu", id: q.id, ref: q.numero, verif: q.verif, annee: q.annee, date: q.date })),
+    ...(membre.recus ?? []).map((r) => ({ kind: "recu", type: "Reçu", ton: "or", id: r.id, ref: r.numero, verif: r.verif, annee: r.annee, date: r.date })),
   ].sort((a, b) => (a.date < b.date ? 1 : -1));
 
   // Historique des cotisations (une ligne par exercice ; « Non générée » si absente).
@@ -332,7 +332,7 @@ export function AvocatDetail() {
                                 <ArrowDownTrayIcon className="h-4 w-4" /> PDF
                               </button>
                             )}
-                            <a href={`/verifier/${d.kind}/${encodeURIComponent(d.ref)}`} target="_blank" rel="noreferrer"
+                            <a href={d.verif || `/verifier/${d.kind}/${encodeURIComponent(d.ref)}`} target="_blank" rel="noreferrer"
                               title="Ouvrir la page de vérification publique"
                               className="inline-flex items-center gap-1 text-xs font-medium text-navy transition hover:text-or-fonce">
                               <ShieldCheckIcon className="h-4 w-4" /> Vérifier

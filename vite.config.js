@@ -7,6 +7,8 @@ const proxy = {
   "/api": { target: "http://localhost:4000", changeOrigin: true },
   // Messagerie temps réel : proxy WebSocket vers le backend.
   "/ws": { target: "ws://localhost:4000", ws: true, changeOrigin: true },
+  // Page publique courte des QR signés (HTML rendu par le backend, sans JS).
+  "/v/": { target: "http://localhost:4000", changeOrigin: true },
 };
 
 export default defineConfig({

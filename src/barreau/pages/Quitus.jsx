@@ -22,7 +22,7 @@ const COLONNES_REGISTRE = [
     cell: (q) => formatDate(q.dateEmission) },
   { key: "verif", label: "Authenticité", align: "right",
     cell: (q) => (
-      <a href={`/verifier/quitus/${encodeURIComponent(q.numero)}`} target="_blank" rel="noreferrer"
+      <a href={q.verif || `/verifier/quitus/${encodeURIComponent(q.numero)}`} target="_blank" rel="noreferrer"
         title="Ouvrir la page de vérification publique"
         className="inline-flex items-center gap-1 text-xs font-medium text-navy transition hover:text-or-fonce">
         <ShieldCheckIcon className="h-4 w-4" /> Vérifier

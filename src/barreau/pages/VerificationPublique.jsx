@@ -62,10 +62,13 @@ export function VerificationPublique({ type, numero }) {
               {d.objet && <Ligne label="Objet" valeur={d.objet} />}
               {d.exercice && <Ligne label="Exercice" valeur={d.exercice} />}
               <Ligne label="Date de délivrance" valeur={formatDate(d.date)} />
-              {d.empreinteCle && <Ligne label="Empreinte du signataire" valeur={d.empreinteCle} mono />}
+              {d.empreinteCle && <Ligne label="Empreinte de la clé de l'Ordre" valeur={d.empreinteCle} mono />}
             </dl>
             <p className="border-t border-grisL px-6 py-3 text-center text-xs text-gris">
-              Signature électronique RSA-2048 / SHA-256 de l'Ordre des Avocats au {identite().denomination}.
+              {/* Clause CL-VERIF (avis juridique, point 6) : un code de vérification, pas une signature. */}
+              Authenticité vérifiable en scannant ce code ou sur {window.location.host}{window.location.pathname}.
+              Ce code permet de contrôler que le document a été émis par l'Ordre et d'en connaître le statut actuel.
+              Il ne constitue pas une signature électronique.
             </p>
           </>
         )}

@@ -41,7 +41,7 @@ import { signaturesRouter } from "./routes/signatures.js";
 import { conseilRouter } from "./routes/conseil.js";
 import { cabinetsRouter } from "./routes/cabinets.js";
 import { calendrierEditorialRouter } from "./routes/calendrierEditorial.js";
-import { verificationRouter } from "./routes/verification.js";
+import { verificationRouter, pageVerificationCourte, verifLimiter, creerVerifLimiter } from "./routes/verification.js";
 import { espaceRouter } from "./routes/espace.js";
 import { messagerieRouter } from "./routes/messagerie.js";
 import { installationRouter } from "./routes/installation.js";
@@ -61,9 +61,11 @@ function utilisateurDuJeton(req: express.Request): string | null {
   }
 }
 
-/** Limites par 15 min : anonyme / jeton valide (surchargeables, utile aux tests). */
-export function creerApp(limites: { anonyme?: number; authentifie?: number } = {}) {
+/** Limites par 15 min : anonyme / jeton valide / vérifications publiques (surchargeables, utile aux tests). */
+export function creerApp(limites: { anonyme?: number; authentifie?: number; verification?: number } = {}) {
   const { anonyme = 600, authentifie = 3000 } = limites;
+  // Un seul compteur pour les deux guichets publics de vérification (/api/verifier et /v).
+  const limiteVerif = limites.verification === undefined ? verifLimiter : creerVerifLimiter(limites.verification);
   const app = express();
   // Nombre de proxys de confiance pour dériver req.ip (rate-limiting par IP).
   // Doit correspondre à la topologie réelle : une valeur trop permissive laisse
@@ -165,7 +167,9 @@ export function creerApp(limites: { anonyme?: number; authentifie?: number } = {
   app.use("/api/calendrier-editorial", calendrierEditorialRouter);
   app.use("/api/espace", espaceRouter); // espace avocat (rôle AVOCAT, cloisonné)
   app.use("/api/messagerie", messagerieRouter); // messagerie — côté administration
-  app.use("/api/verifier", verificationRouter); // public — vérification d'authenticité (QR)
+  app.use("/api/verifier", limiteVerif, verificationRouter); // public — vérification d'authenticité (anciens QR)
+  // Public — page courte du QR signé /v/{q|r|t}/{ref}.{jeton} (HTML serveur, sans JS), avant le front statique.
+  app.get("/v/:t/:ref", limiteVerif, pageVerificationCourte);
 
   // Déploiement mono-service : sert le front compilé (dist) sur la même origine
   // que l'API (pas de CORS). Les routes /api inconnues retombent sur le 404 JSON.
