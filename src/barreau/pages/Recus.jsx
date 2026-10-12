@@ -6,7 +6,7 @@ import { formatFCFA, formatDate } from "../utils/format";
 import { telechargerCsv } from "../utils/exportCsv";
 import { montantEnLettresFCFA } from "../utils/nombreEnLettres";
 import { telechargerDocumentPdf } from "../utils/exports";
-import { Badge, RecuDocument, Notice, useToast, useConfirm, PageHeader, DataTable } from "../components";
+import { Badge, RecuDocument, ApercuAjuste, Notice, useToast, useConfirm, PageHeader, DataTable } from "../components";
 import { listerMembres, listerRecus, enregistrerPaiement, annulerRecu, telechargerRecuPdf } from "../api/resources";
 
 const COLONNES_CSV = [
@@ -194,9 +194,9 @@ export function Recus() {
         <div className="space-y-5">
           {/* Aperçu à gabarit fixe (820px, pour l'impression/PDF) : défilement
               horizontal sur petit écran plutôt que de déborder toute la page. */}
-          <div className="overflow-x-auto">
+          <ApercuAjuste>
             <RecuDocument numero={numeroAffiche} membre={membre} montant={Number(montant) || 0} exercice={exercice} mode={mode} date={date} verif={succes?.verif} />
-          </div>
+          </ApercuAjuste>
 
           <div className="bpn-no-print bpn-card">
             <div className="bpn-card-header flex-wrap gap-2">
@@ -233,7 +233,7 @@ export function Recus() {
                   label: "N°",
                   sortable: true,
                   sortValue: (r) => r.numero,
-                  cell: (r) => <span className="font-mono text-xs text-or-fonce">{r.numero}</span>,
+                  cell: (r) => <span className="whitespace-nowrap font-mono text-xs text-or-fonce">{r.numero}</span>,
                 },
                 {
                   key: "nom",
@@ -268,7 +268,7 @@ export function Recus() {
                 {
                   key: "date",
                   label: "Date",
-                  cell: (r) => formatDate(r.date),
+                  cell: (r) => <span className="whitespace-nowrap">{formatDate(r.date)}</span>,
                 },
                 {
                   key: "actions",

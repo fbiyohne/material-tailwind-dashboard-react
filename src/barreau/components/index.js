@@ -9,6 +9,7 @@ export { PageHeader } from "./PageHeader";
 export { Tabs } from "./Tabs";
 export { SelecteurExercice } from "./SelecteurExercice";
 export { QuitusDocument } from "./QuitusDocument";
+export { ApercuAjuste } from "./ApercuAjuste";
 export { RecuDocument } from "./RecuDocument";
 export { QRCode } from "./QRCode";
 export { StatutBadge } from "./StatutBadge";

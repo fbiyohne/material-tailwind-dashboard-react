@@ -1,0 +1,82 @@
+{
+  "avocats-1280": {
+    "sw": 1280,
+    "iw": 1280,
+    "hors": []
+  },
+  "avocats-360": {
+    "sw": 360,
+    "iw": 360,
+    "hors": []
+  },
+  "anciens-membres-1280": {
+    "sw": 1280,
+    "iw": 1280,
+    "hors": []
+  },
+  "anciens-membres-360": {
+    "sw": 360,
+    "iw": 360,
+    "hors": []
+  },
+  "fiche-1280": {
+    "sw": 1280,
+    "iw": 1280,
+    "hors": []
+  },
+  "fiche-360": {
+    "sw": 360,
+    "iw": 360,
+    "hors": []
+  },
+  "quitus-1280": {
+    "sw": 1280,
+    "iw": 1280,
+    "hors": []
+  },
+  "quitus-360": {
+    "sw": 360,
+    "iw": 360,
+    "hors": []
+  },
+  "recus-1280": {
+    "sw": 1280,
+    "iw": 1280,
+    "hors": []
+  },
+  "recus-360": {
+    "sw": 360,
+    "iw": 360,
+    "hors": []
+  },
+  "timbres-1280": {
+    "sw": 1280,
+    "iw": 1280,
+    "hors": []
+  },
+  "timbres-360": {
+    "sw": 360,
+    "iw": 360,
+    "hors": []
+  },
+  "parametres-1280": {
+    "sw": 1280,
+    "iw": 1280,
+    "hors": []
+  },
+  "parametres-360": {
+    "sw": 360,
+    "iw": 360,
+    "hors": []
+  },
+  "espace-timbres-1280": {
+    "sw": 1280,
+    "iw": 1280,
+    "hors": []
+  },
+  "espace-timbres-360": {
+    "sw": 360,
+    "iw": 360,
+    "hors": []
+  }
+}

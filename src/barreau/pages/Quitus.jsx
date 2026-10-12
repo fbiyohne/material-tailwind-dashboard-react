@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DocumentCheckIcon, CheckCircleIcon, LockClosedIcon, ArrowDownTrayIcon, ShieldCheckIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
-import { QuitusDocument, Notice, useToast, useConfirm, PageHeader, DataTable } from "../components";
+import { QuitusDocument, ApercuAjuste, Notice, useToast, useConfirm, PageHeader, DataTable } from "../components";
 import { useAuth } from "../auth/AuthContext";
 import { formatDate } from "../utils/format";
 import { telechargerCsv } from "../utils/exportCsv";
@@ -13,13 +13,13 @@ const pad3 = (n) => String(n).padStart(3, "0");
 
 const COLONNES_REGISTRE = [
   { key: "numero", label: "N°", sortable: true, sortValue: (q) => q.numero,
-    cell: (q) => <span className="font-mono text-xs text-or-fonce">{q.numero}</span> },
+    cell: (q) => <span className="whitespace-nowrap font-mono text-xs text-or-fonce">{q.numero}</span> },
   { key: "nom", label: "Avocat", sortable: true, sortValue: (q) => q.membre?.nom,
     cell: (q) => <span className="font-medium">Me {q.membre?.nom}</span> },
-  { key: "annee", label: "Exercice", sortable: true, sortValue: (q) => q.annee,
+  { key: "annee", label: "Exercice", className: "hidden sm:table-cell", sortable: true, sortValue: (q) => q.annee,
     cell: (q) => <span className="font-mono text-xs text-gris">{q.annee}</span> },
   { key: "date", label: "Date", sortable: true, sortValue: (q) => q.dateEmission,
-    cell: (q) => formatDate(q.dateEmission) },
+    cell: (q) => <span className="whitespace-nowrap">{formatDate(q.dateEmission)}</span> },
   { key: "verif", label: "Authenticité", align: "right",
     cell: (q) => (
       <a href={q.verif || `/verifier/quitus/${encodeURIComponent(q.numero)}`} target="_blank" rel="noreferrer"
@@ -243,9 +243,9 @@ export function Quitus() {
           {membreActif ? (
             // Gabarit fixe (820px) : défilement horizontal sur mobile plutôt que
             // de déborder toute la page.
-            <div className="overflow-x-auto">
+            <ApercuAjuste>
               <QuitusDocument numero={numero} membre={(details && details.id === membreActif.id) ? details : membreActif} exercice={exercice} date={aujourdhui()} verif={succes?.verif} finValidite={succes?.finValidite} />
-            </div>
+            </ApercuAjuste>
           ) : (
             <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-grisM bg-white px-6 py-16 text-center">
               <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-rougeL text-rouge"><LockClosedIcon className="h-6 w-6" /></div>

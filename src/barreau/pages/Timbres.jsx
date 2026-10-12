@@ -152,13 +152,13 @@ export function Timbres() {
         <div className="bpn-card-header"><span className="bpn-card-heading">Timbres émis</span><span className="font-mono text-xs text-gris">{registre.length}</span></div>
         <DataTable
           columns={[
-            { key: "numero", label: "N°", sortable: true, sortValue: (t) => t.numero, cell: (t) => <span className="font-mono text-xs text-or-fonce">{t.numero}</span> },
+            { key: "numero", label: "N°", sortable: true, sortValue: (t) => t.numero, cell: (t) => <span className="whitespace-nowrap font-mono text-xs text-or-fonce">{t.numero}</span> },
             { key: "avocat", label: "Avocat", sortable: true, sortValue: (t) => t.membre?.nom, cell: (t) => <span className="font-medium">Me {t.membre?.nom}</span> },
             { key: "affaire", label: "Affaire", sortable: true, sortValue: (t) => t.affaire, cell: (t) => <span>{t.affaire}</span> },
-            { key: "juridiction", label: "Juridiction", cell: (t) => <span className="text-gris">{t.juridiction || "—"}</span> },
+            { key: "juridiction", label: "Juridiction", className: "hidden sm:table-cell", cell: (t) => <span className="text-gris">{t.juridiction || "—"}</span> },
             { key: "montant", label: "Montant", align: "right", sortable: true, sortValue: (t) => t.montant, cell: (t) => formatFCFA(t.montant) },
             { key: "statut", label: "Statut", cell: (t) => <Badge ton={t.statut === "ANNULE" ? "rouge" : "vert"} dot={false}>{t.statut === "ANNULE" ? "Annulé" : "Valide"}</Badge> },
-            { key: "date", label: "Date", cell: (t) => <span className="text-xs text-gris">{formatDate(t.createdAt)}</span> },
+            { key: "date", label: "Date", className: "hidden sm:table-cell", cell: (t) => <span className="whitespace-nowrap text-xs text-gris">{formatDate(t.createdAt)}</span> },
             {
               key: "actions", label: "", align: "right",
               cell: (t) => (
