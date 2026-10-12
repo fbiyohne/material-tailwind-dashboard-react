@@ -9,7 +9,7 @@ import { eligibleQuitus, prochainNumeroQuitus, finValiditeQuitus } from "../lib/
 import { reglesActuelles } from "../lib/regles.js";
 import { envoyerDocumentPdf } from "../lib/pdf.js";
 import { quitusRicheHtml } from "../lib/documentsRiches.js";
-import { signerDocument, quitusPayload, cheminVerif, qrDocument } from "../lib/signature.js";
+import { signerDocument, quitusPayload, cheminVerif, hotePublic, qrDocument } from "../lib/signature.js";
 import { notifier, userDeMembre } from "../lib/centreNotifications.js";
 
 /** Alerte in-app de l'avocat qu'un quitus est disponible (best-effort). */
@@ -36,9 +36,9 @@ quitusRouter.get(
   asyncH(async (req, res) => {
     const quitus = await prisma.quitus.findUnique({ where: { id: Number(req.params.id) }, include: { membre: true } });
     if (!quitus) throw new HttpError(404, "Quitus introuvable");
-    const qr = await qrDocument(req, "q", quitus.numero);
+    const qr = await qrDocument("q", quitus.numero);
     const { validiteMois } = (await reglesActuelles()).quitus;
-    await envoyerDocumentPdf(res, quitusRicheHtml(quitus, quitus.membre, qr, req.get("host") ?? "", validiteMois), `Quitus-${quitus.numero}.pdf`);
+    await envoyerDocumentPdf(res, quitusRicheHtml(quitus, quitus.membre, qr, hotePublic(), validiteMois), `Quitus-${quitus.numero}.pdf`);
   })
 );
 

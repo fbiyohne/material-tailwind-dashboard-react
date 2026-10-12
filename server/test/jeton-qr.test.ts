@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
 import QRCode from "qrcode";
-import { cheminVerif, jetonQr, jetonValide, qrDocument } from "../src/lib/signature.js";
+import { cheminVerif, jetonQr, jetonValide, originePublique, qrDocument } from "../src/lib/signature.js";
 
 /** Jeton QR des documents : chemin court signé, unicité, altération, rotation, taille du QR. */
 const altere = (j: string) => (j[0] === "A" ? "B" : "A") + j.slice(1);
@@ -59,14 +59,29 @@ describe("jeton QR des documents", () => {
     }
   });
 
-  it("qrDocument encode l'URL signée (PNG data URL) et ne retient que http/https", async () => {
-    const req = { protocol: "http", get: (h: string) => ({ host: "exemple.cg", "x-forwarded-proto": "javascript" } as Record<string, string>)[h.toLowerCase()] };
-    const qr = await qrDocument(req, "q", "Q-2026-0001");
-    expect(qr).toMatch(/^data:image\/png;base64,/);
-    // Même rendu que les QR actuels (marge 1, 234 px, bleu nuit), niveau M, schéma http forcé.
-    const attendu = await QRCode.toDataURL("http://exemple.cg" + cheminVerif("q", "Q-2026-0001"),
-      { errorCorrectionLevel: "M", margin: 1, width: 234, color: { dark: "#1A3A6B", light: "#ffffff" } });
-    expect(qr).toBe(attendu);
-    expect(await qrDocument(req, "q", "Q-2026-0002")).not.toBe(qr);
+  it("qrDocument encode l'URL signée sous l'origine publique configurée, jamais l'en-tête Host", async () => {
+    const avant = { p: process.env.PUBLIC_ORIGIN, c: process.env.CLIENT_ORIGIN };
+    try {
+      process.env.PUBLIC_ORIGIN = "https://barreau.exemple.cg/un/chemin";
+      expect(originePublique()).toBe("https://barreau.exemple.cg");
+      const qr = await qrDocument("q", "Q-2026-0001");
+      expect(qr).toMatch(/^data:image\/png;base64,/);
+      // Même rendu que les QR actuels (marge 1, 234 px, bleu nuit), niveau M.
+      const attendu = await QRCode.toDataURL("https://barreau.exemple.cg" + cheminVerif("q", "Q-2026-0001"),
+        { errorCorrectionLevel: "M", margin: 1, width: 234, color: { dark: "#1A3A6B", light: "#ffffff" } });
+      expect(qr).toBe(attendu);
+      expect(await qrDocument("q", "Q-2026-0002")).not.toBe(qr);
+      // Sans PUBLIC_ORIGIN : repli sur CLIENT_ORIGIN (origine du front).
+      delete process.env.PUBLIC_ORIGIN;
+      process.env.CLIENT_ORIGIN = "http://localhost:5173";
+      expect(originePublique()).toBe("http://localhost:5173");
+      // Schéma autre que http/https : refusé (aucun QR javascript:, data:, etc.).
+      process.env.PUBLIC_ORIGIN = "javascript:alert(1)";
+      expect(() => originePublique()).toThrow(/PUBLIC_ORIGIN/);
+    } finally {
+      for (const [k, v] of [["PUBLIC_ORIGIN", avant.p], ["CLIENT_ORIGIN", avant.c]] as const) {
+        if (v === undefined) delete process.env[k]; else process.env[k] = v;
+      }
+    }
   });
 });

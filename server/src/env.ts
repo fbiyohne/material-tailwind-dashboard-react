@@ -63,6 +63,9 @@ export function verifierConfigProduction(avertir: (msg: string) => void): void {
   if (!process.env.SMTP_HOST && !process.env.SMTP_URL) {
     avertir("SMTP non configuré : les notifications email resteront en simulation.");
   }
+  if (!process.env.PUBLIC_ORIGIN) {
+    avertir("PUBLIC_ORIGIN absente : les QR des documents utiliseront CLIENT_ORIGIN comme origine publique de vérification (R1-6).");
+  }
   if (!process.env.PARAMS_CLE) {
     avertir("PARAMS_CLE absente : aucun secret (SMTP, passerelles, SMS) ne peut être enregistré chiffré depuis les Paramètres.");
   }

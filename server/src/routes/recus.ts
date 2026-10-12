@@ -2,7 +2,7 @@ import { Router } from "express";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole, requirePermission } from "../middleware/auth.js";
-import { cheminVerif, qrDocument } from "../lib/signature.js";
+import { cheminVerif, hotePublic, qrDocument } from "../lib/signature.js";
 import { envoyerDocumentPdf } from "../lib/pdf.js";
 import { recuRicheHtml } from "../lib/documentsRiches.js";
 import { estRecuDroit } from "../lib/business.js";
@@ -17,8 +17,8 @@ recusRouter.get(
   asyncH(async (req, res) => {
     const recu = await prisma.recu.findUnique({ where: { id: Number(req.params.id) }, include: { membre: true } });
     if (!recu) throw new HttpError(404, "Reçu introuvable");
-    const qr = await qrDocument(req, "r", recu.numero);
-    await envoyerDocumentPdf(res, recuRicheHtml(recu, recu.membre, qr, req.get("host") ?? ""), `Recu-${recu.numero}.pdf`);
+    const qr = await qrDocument("r", recu.numero);
+    await envoyerDocumentPdf(res, recuRicheHtml(recu, recu.membre, qr, hotePublic()), `Recu-${recu.numero}.pdf`);
   })
 );
 

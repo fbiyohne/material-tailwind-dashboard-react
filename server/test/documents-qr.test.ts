@@ -43,13 +43,12 @@ const ecrireValidite = async (validiteMois: number | undefined) => {
   await prisma.parametres.upsert({ where: { id: 1 }, update: { data: { ...data, regles } as never }, create: { id: 1, data: { regles } as never } });
 };
 
-/** QR attendu pour l'hôte imprimé dans le HTML capturé (même calcul que la route). */
-const qrAttendu = (h: string, type: "q" | "r", ref: string) => {
-  const hote = h.match(/<span class="mono navy">([^<]+)\/v\//)![1];
-  return qrDocument({ protocol: "http", get: (n) => (n === "host" ? hote : undefined) }, type, ref);
-};
+/** Origine publique configurée pour la suite : seule source de l'URL du QR (jamais l'en-tête Host). */
+const ORIGINE = "https://barreau.exemple.cg";
+const ancienneOrigine = process.env.PUBLIC_ORIGIN;
 
 beforeAll(async () => {
+  process.env.PUBLIC_ORIGIN = ORIGINE;
   const regles = ((await prisma.parametres.findUnique({ where: { id: 1 } }))?.data as { regles?: { quitus?: { validiteMois?: number } } } | null)?.regles;
   validiteAvant = regles?.quitus?.validiteMois;
   sg = (await request(app).post("/api/auth/login").send({ email: "sg@barreau-pn.cg", password: "barreau" })).body.token;
@@ -70,6 +69,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  if (ancienneOrigine === undefined) delete process.env.PUBLIC_ORIGIN; else process.env.PUBLIC_ORIGIN = ancienneOrigine;
   await ecrireValidite(validiteAvant);
   await prisma.timbre.deleteMany({ where: { id: { in: timbreIds } } });
   await prisma.recu.deleteMany({ where: { id: { in: recuIds } } });
@@ -140,7 +140,7 @@ describe("PDF : le QR encode le chemin signé du document", () => {
     for (const [url, tok] of [[`/api/quitus/${quitusIds[1]}/pdf`, sg], [`/api/espace/quitus/${quitusIds[1]}/pdf`, avocat]] as const) {
       expect((await request(app).get(url).set(...bearer(tok))).status).toBe(200);
       expect(html.dernier).toContain(cheminVerif("q", `QT-${num}-1`));
-      expect(html.dernier).toContain(await qrAttendu(html.dernier, "q", `QT-${num}-1`));
+      expect(html.dernier).toContain(await qrDocument("q", `QT-${num}-1`));
     }
   });
 
@@ -148,7 +148,26 @@ describe("PDF : le QR encode le chemin signé du document", () => {
     for (const [url, tok] of [[`/api/recus/${recuIds[0]}/pdf`, sg], [`/api/espace/recus/${recuIds[0]}/pdf`, avocat]] as const) {
       expect((await request(app).get(url).set(...bearer(tok))).status).toBe(200);
       expect(html.dernier).toContain(cheminVerif("r", `RT-${num}-0`));
-      expect(html.dernier).toContain(await qrAttendu(html.dernier, "r", `RT-${num}-0`));
+      expect(html.dernier).toContain(await qrDocument("r", `RT-${num}-0`));
+    }
+  });
+});
+
+describe("PDF : un en-tête Host falsifié ne détourne pas le QR (R1-6)", () => {
+  it("quitus, reçu (back-office et espace) : URL imprimée et QR sous l'origine configurée", async () => {
+    const cas = [
+      [`/api/quitus/${quitusIds[0]}/pdf`, sg, "q", `QT-${num}-0`],
+      [`/api/espace/quitus/${quitusIds[0]}/pdf`, avocat, "q", `QT-${num}-0`],
+      [`/api/recus/${recuIds[1]}/pdf`, sg, "r", `RT-${num}-1`],
+      [`/api/espace/recus/${recuIds[1]}/pdf`, avocat, "r", `RT-${num}-1`],
+    ] as const;
+    for (const [url, tok, type, ref] of cas) {
+      const r = await request(app).get(url).set(...bearer(tok))
+        .set("Host", "piege.example").set("X-Forwarded-Host", "piege.example").set("X-Forwarded-Proto", "https");
+      expect(r.status).toBe(200);
+      expect(html.dernier).not.toContain("piege.example");
+      expect(html.dernier).toContain(`barreau.exemple.cg${cheminVerif(type, ref)}`);
+      expect(html.dernier).toContain(await qrDocument(type, ref));
     }
   });
 });

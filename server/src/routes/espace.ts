@@ -9,7 +9,7 @@ import { enregistrerFichier, lireFichier, supprimerFichier, typeReel } from "../
 import { cotisationDue, droitDue, statutCotisation, tarifsActuels, prochainNumeroAttestation, archiver, STATUTS_SORTIS, STATUTS_ANNUAIRE, peutAttesterInscription, finValiditeQuitus } from "../lib/business.js";
 import { finaliserPaiement } from "../lib/encaissement.js";
 import { CANAUX, modeSandbox, nouvelleReference, initierPaiement } from "../lib/paiement.js";
-import { cheminVerif, qrDocument } from "../lib/signature.js";
+import { cheminVerif, hotePublic, qrDocument } from "../lib/signature.js";
 import { reglesActuelles } from "../lib/regles.js";
 import { envoyerPdf, envoyerDocumentPdf } from "../lib/pdf.js";
 import { convocationAgHtml, pvAssembleeHtml, decisionDisciplineHtml, attestationHtml, attestationNonRedevanceHtml } from "../lib/templates.js";
@@ -332,8 +332,8 @@ espaceRouter.get(
   asyncH(async (req: AuthRequest, res) => {
     const recu = await prisma.recu.findUnique({ where: { id: Number(req.params.id) }, include: { membre: true } });
     if (!recu || recu.membreId !== monMembreId(req)) throw new HttpError(404, "Reçu introuvable");
-    const qr = await qrDocument(req, "r", recu.numero);
-    await envoyerDocumentPdf(res, recuRicheHtml(recu, recu.membre, qr, req.get("host") ?? ""), `Recu-${recu.numero}.pdf`);
+    const qr = await qrDocument("r", recu.numero);
+    await envoyerDocumentPdf(res, recuRicheHtml(recu, recu.membre, qr, hotePublic()), `Recu-${recu.numero}.pdf`);
   })
 );
 
@@ -343,8 +343,8 @@ espaceRouter.get(
   asyncH(async (req: AuthRequest, res) => {
     const quitus = await prisma.quitus.findUnique({ where: { id: Number(req.params.id) }, include: { membre: true } });
     if (!quitus || quitus.membreId !== monMembreId(req)) throw new HttpError(404, "Quitus introuvable");
-    const qr = await qrDocument(req, "q", quitus.numero);
-    await envoyerDocumentPdf(res, quitusRicheHtml(quitus, quitus.membre, qr, req.get("host") ?? "", (await reglesActuelles()).quitus.validiteMois), `Quitus-${quitus.numero}.pdf`);
+    const qr = await qrDocument("q", quitus.numero);
+    await envoyerDocumentPdf(res, quitusRicheHtml(quitus, quitus.membre, qr, hotePublic(), (await reglesActuelles()).quitus.validiteMois), `Quitus-${quitus.numero}.pdf`);
   })
 );
 

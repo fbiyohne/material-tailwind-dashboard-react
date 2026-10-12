@@ -120,11 +120,25 @@ export function jetonValide(type: TypeDocQr, ref: string, jeton: string): boolea
 }
 
 /**
- * QR (PNG data URL) du document : même rendu que les QR existants, correction M.
- * Origine tirée de la requête (hôte servi) ; schéma limité à http/https.
+ * Origine publique canonique des URL de vérification (R1-6) : PUBLIC_ORIGIN, à défaut
+ * CLIENT_ORIGIN (origine du front). Jamais l'en-tête Host ni X-Forwarded-* de la requête :
+ * un Host falsifié produirait sinon un document officiel, au jeton valide, pointant vers
+ * un domaine hostile. Relue à chaque appel ; schéma limité à http/https, sinon erreur.
  */
-export function qrDocument(req: { protocol: string; get(nom: string): string | undefined }, type: TypeDocQr, ref: string): Promise<string> {
-  const proto = req.protocol === "https" || req.get("x-forwarded-proto") === "https" ? "https" : "http";
-  const url = `${proto}://${req.get("host") ?? ""}${cheminVerif(type, ref)}`;
-  return QRCode.toDataURL(url, { errorCorrectionLevel: "M", margin: 1, width: 234, color: { dark: "#1A3A6B", light: "#ffffff" } });
+export function originePublique(): string {
+  const brut = process.env.PUBLIC_ORIGIN || process.env.CLIENT_ORIGIN || "http://localhost:5173";
+  let u: URL | null = null;
+  try { u = new URL(brut); } catch { /* traité ci-dessous */ }
+  if (!u || (u.protocol !== "http:" && u.protocol !== "https:")) {
+    throw new Error("PUBLIC_ORIGIN (ou CLIENT_ORIGIN) invalide : URL http(s) attendue.");
+  }
+  return u.origin;
+}
+
+/** Hôte public imprimé sous le QR des gabarits (ex. « barreau-pn.onrender.com »). */
+export const hotePublic = () => new URL(originePublique()).host;
+
+/** QR (PNG data URL) du document : même rendu que les QR existants, correction M, origine canonique. */
+export function qrDocument(type: TypeDocQr, ref: string): Promise<string> {
+  return QRCode.toDataURL(originePublique() + cheminVerif(type, ref), { errorCorrectionLevel: "M", margin: 1, width: 234, color: { dark: "#1A3A6B", light: "#ffffff" } });
 }
