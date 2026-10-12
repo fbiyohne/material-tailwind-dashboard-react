@@ -134,13 +134,15 @@ export function AvocatDetail() {
   const telechargerDoc = (d) =>
     (d.kind === "quitus" ? telechargerQuitusPdf(d.id, d.ref) : telechargerRecuPdf(d.id, d.ref)).catch((e) => toast.error(e.message));
 
-  // Un ancien membre (sorti du tableau) n'a plus d'accès espace, de messagerie ni
-  // d'attestation d'inscription (le serveur répond 409) ; un radié peut encore
-  // décéder (H-09, spec T2 § 3.1).
+  // Ancien membre (sorti du tableau, H2) : fiche en lecture seule. Seuls restent
+  // Contacter (e-mail direct : l'espace avocat et la messagerie sont fermés) et
+  // l'attestation de sortie du tableau ; tout le reste est grisé avec son motif.
   const decede = membre.statut === "decede";
   const sorti = SORTIS.includes(membre.statut);
   const auTableau = !decede && membre.statut !== "radie";
-  const MOTIF_SORTI = "Avocat sorti du tableau : l'accès à l'espace avocat ne peut plus être ouvert.";
+  const LECTURE_SEULE = "Ancien membre : fiche en lecture seule. Une réinscription passe par le Conseil de l'Ordre.";
+  const libAttestation = sorti ? "Générer une attestation de sortie du tableau" : LIB_ATTESTATION;
+  const contacter = sorti ? () => window.open(`mailto:${membre.email}`, "_self") : () => setContact(true);
 
   const supprimer = async () => {
     const ref = membre.numInscription ?? String(membre.num);
@@ -159,15 +161,17 @@ export function AvocatDetail() {
   // Menu Actions : Contacter, Modifier, Accès espace, Attestation | parcours | décès, suppression.
   const peutAttester = peutGererFiche && membre.qualite !== "stagiaire";
   const entrees = [
-    user?.permissions?.includes("messagerie") && { id: "contacter", libelle: "Contacter", Icon: EnvelopeIcon, onSelect: () => setContact(true),
-      disabled: sorti, motif: "Avocat sorti du tableau : il n'a plus accès à l'espace avocat." },
-    peutGererFiche && { id: "modifier", libelle: "Modifier", Icon: PencilSquareIcon, onSelect: () => setEdition(true) },
-    peutGererAcces && { id: "acces", libelle: "Accès espace", Icon: KeyIcon, onSelect: creerAcces, disabled: sorti, motif: MOTIF_SORTI },
+    user?.permissions?.includes("messagerie") && { id: "contacter", libelle: "Contacter", Icon: EnvelopeIcon, onSelect: contacter,
+      disabled: sorti && !membre.email, motif: "Ancien membre sans adresse e-mail : l'espace avocat est fermé." },
+    peutGererFiche && { id: "modifier", libelle: "Modifier", Icon: PencilSquareIcon, onSelect: () => setEdition(true),
+      // Exception : la date d'un décès déjà déclaré reste corrigeable (T6).
+      disabled: sorti && !decede, motif: LECTURE_SEULE },
+    peutGererAcces && { id: "acces", libelle: "Accès espace", Icon: KeyIcon, onSelect: creerAcces, disabled: sorti, motif: "Ancien membre : l'accès à l'espace avocat ne peut plus être ouvert." },
     peutAttester && { id: "attestation", libelle: "Attestation", Icon: DocumentPlusIcon, onSelect: () => setAttestation(membre),
-      disabled: sorti || membre.statut === "omis", motif: "Attestation d'inscription impossible : avocat non inscrit au tableau (sorti ou omis)." },
+      disabled: membre.statut === "omis", motif: "Attestation d'inscription impossible : avocat omis du tableau." },
     ...(peutVoirHistorique ? actionsParcours(membre, user) : []).map((a, i) => ({ id: a.type, libelle: a.titre, Icon: a.icone, separe: i === 0, onSelect: () => setEvenement(a.type) })),
-    peutGererFiche && !decede && { id: "deces", libelle: "Déclarer le décès", Icon: HeartIcon, danger: true, onSelect: () => setActe("deces") },
-    estAdmin && { id: "supprimer", libelle: "Supprimer", Icon: TrashIcon, danger: true, onSelect: supprimer },
+    peutGererFiche && !decede && { id: "deces", libelle: "Déclarer le décès", Icon: HeartIcon, danger: true, onSelect: () => setActe("deces"), disabled: sorti, motif: LECTURE_SEULE },
+    estAdmin && { id: "supprimer", libelle: "Supprimer", Icon: TrashIcon, danger: true, onSelect: supprimer, disabled: sorti, motif: "Ancien membre : la fiche est une archive de l'Ordre et ne peut pas être supprimée." },
   ].filter(Boolean);
   const premierDanger = entrees.find((e) => e.danger);
   if (premierDanger) premierDanger.separe = true;
@@ -194,7 +198,7 @@ export function AvocatDetail() {
           </button>
         )}
         {actif("attestation") && (
-          <button type="button" className={`${btnIcone} bpn-btn-primary`} onClick={() => setAttestation(membre)} aria-label={LIB_ATTESTATION} title={LIB_ATTESTATION}>
+          <button type="button" className={`${btnIcone} bpn-btn-primary`} onClick={() => setAttestation(membre)} aria-label={libAttestation} title={libAttestation}>
             <DocumentPlusIcon className="h-4 w-4" aria-hidden="true" />
           </button>
         )}

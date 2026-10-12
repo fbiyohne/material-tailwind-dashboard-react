@@ -5,13 +5,13 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { ToastProvider } from "../../components/Toast";
 import { ConfirmProvider } from "../../components/ConfirmDialog";
 import { AvocatDetail } from "../AvocatDetail";
-import { getMembre, listerEvenements, declarerDeces, supprimerMembre } from "../../api/resources";
+import { getMembre, listerEvenements, declarerDeces, supprimerMembre, telechargerAttestationPdf, telechargerAttestationSortiePdf } from "../../api/resources";
 import { useAuth } from "../../auth/AuthContext";
 
 vi.mock("../../api/resources", () => ({
   getMembre: vi.fn(), getDroits: vi.fn().mockResolvedValue({ lignes: [] }),
   radierMembre: vi.fn(), declarerDeces: vi.fn(), supprimerMembre: vi.fn(), provisionnerAccesAvocat: vi.fn(),
-  telechargerQuitusPdf: vi.fn(), telechargerRecuPdf: vi.fn(), telechargerAttestationPdf: vi.fn(),
+  telechargerQuitusPdf: vi.fn(), telechargerRecuPdf: vi.fn(), telechargerAttestationPdf: vi.fn(), telechargerAttestationSortiePdf: vi.fn(),
   modifierMembre: vi.fn(), genererAttestation: vi.fn(),
   casierDiscipline: vi.fn().mockResolvedValue([]), listerPieces: vi.fn().mockResolvedValue([]),
   listerRapportsStage: vi.fn().mockResolvedValue([]),
@@ -84,18 +84,49 @@ describe("AvocatDetail — en-tête en boutons-icônes et menu Actions (O2)", ()
     expect(screen.queryByRole("button", { name: /^Actions/ })).not.toBeInTheDocument();
   });
 
-  it("ancien membre (radié) : Contacter, Accès espace et Attestation grisés avec leur motif, aucune action de parcours", async () => {
+  it("ancien membre (radié) : seuls Contacter et Attestation sont actifs, tout le reste grisé avec son motif", async () => {
     useAuth.mockReturnValue({ user: { role: "ADMIN", permissions: ["messagerie"] } });
-    getMembre.mockResolvedValue({ ...base, statut: "radie", dateRadiation: "2026-10-01" });
+    getMembre.mockResolvedValue({ ...base, statut: "radie", dateRadiation: "2026-10-01", email: "bakala@exemple.cg" });
     rendre();
     const menu = await ouvrirMenu();
-    for (const nom of ["Contacter", "Accès espace", "Attestation"]) {
+    expect(libelles(menu)).toEqual(["Contacter", "Modifier", "Accès espace", "Attestation", "Déclarer le décès", "Supprimer"]);
+    for (const nom of ["Contacter", "Attestation"]) expect(entree(menu, nom)).not.toHaveAttribute("aria-disabled");
+    for (const nom of ["Modifier", "Accès espace", "Déclarer le décès", "Supprimer"]) {
       expect(entree(menu, nom)).toHaveAttribute("aria-disabled", "true");
       expect(entree(menu, nom)).toHaveAttribute("title");
     }
-    for (const nom of ["Modifier", "Déclarer le décès", "Supprimer"]) expect(entree(menu, nom)).not.toHaveAttribute("aria-disabled");
     expect(within(menu).queryByRole("menuitem", { name: /rappel|omission|Réinscrire/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Générer une attestation d'inscription" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Modifier la fiche" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Générer une attestation de sortie du tableau" })).toBeInTheDocument();
+  });
+
+  it("ancien membre : Contacter ouvre un e-mail direct (l'espace avocat est fermé), grisé sans adresse", async () => {
+    useAuth.mockReturnValue({ user: { role: "SECRETAIRE_GENERAL", permissions: ["messagerie"] } });
+    const ouvrir = vi.spyOn(window, "open").mockImplementation(() => null);
+    getMembre.mockResolvedValue({ ...base, statut: "demissionnaire", email: "bakala@exemple.cg" });
+    const { unmount } = rendre();
+    await userEvent.click(entree(await ouvrirMenu(), "Contacter"));
+    expect(ouvrir).toHaveBeenCalledWith("mailto:bakala@exemple.cg", "_self");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); // pas de fil de messagerie interne
+    unmount();
+    getMembre.mockResolvedValue({ ...base, statut: "demissionnaire", email: null });
+    rendre();
+    expect(entree(await ouvrirMenu(), "Contacter")).toHaveAttribute("aria-disabled", "true");
+    ouvrir.mockRestore();
+  });
+
+  it("ancien membre : Attestation délivre l'attestation de sortie du tableau, sans motif", async () => {
+    useAuth.mockReturnValue({ user: { role: "SECRETAIRE_GENERAL", permissions: [] } });
+    getMembre.mockResolvedValue({ ...base, statut: "radie", dateRadiation: "2026-10-01" });
+    telechargerAttestationSortiePdf.mockResolvedValue();
+    rendre();
+    await userEvent.click(entree(await ouvrirMenu(), "Attestation"));
+    const dlg = screen.getByRole("dialog", { name: "Attestation de sortie du tableau" });
+    expect(dlg).toHaveTextContent(/ne figure plus au Tableau/);
+    expect(dlg).not.toHaveTextContent(/radi/i);
+    await userEvent.click(within(dlg).getByRole("button", { name: /Générer/ }));
+    expect(telechargerAttestationSortiePdf).toHaveBeenCalledWith(7, 12);
+    expect(telechargerAttestationPdf).not.toHaveBeenCalled();
   });
 
   it("Déclarer le décès : sans pièce justificative, rien n'est envoyé", async () => {

@@ -199,6 +199,30 @@ export function attestationHtml(membre: { nom: string; num: number; dateInscript
   });
 }
 
+/**
+ * Attestation de sortie du tableau (ancien membre, T20 M-20261011). Même cadre que
+ * l'attestation d'inscription ; texte neutre : jamais le motif de sortie (R-62, PO-21).
+ */
+export function attestationSortieHtml(
+  membre: { nom: string; num: number; dateInscription?: Date | string | null },
+  numero: string,
+  date: Date | string,
+  dateSortie: Date | string | null,
+): string {
+  const depuis = membre.dateInscription ? ` à compter du <b>${fmtDate(membre.dateInscription)}</b>` : "";
+  const sortie = dateSortie ? ` depuis le <b>${fmtDate(dateSortie)}</b>` : "";
+  return documentHtml({
+    org: "Le Bâtonnier",
+    title: "Attestation de sortie du tableau",
+    reference: `N° ${numero}`,
+    bodyHtml: `
+      <p>Le Bâtonnier de l'Ordre des Avocats du ${escapeHtml(identite().denomination)} atteste que <b>Me ${escapeHtml(membre.nom)}</b> a été inscrit(e) au Tableau de l'Ordre sous le numéro <b>${membre.num}</b>${depuis}, et ne figure plus au Tableau${sortie}.</p>
+      <p style="margin-top:12px">La présente attestation est délivrée pour servir et valoir ce que de droit.</p>`,
+    signataire: { role: "Le Bâtonnier", nom: identite().batonnier },
+    date,
+  });
+}
+
 /** Attestation de non-redevance (cotisation de l'exercice intégralement réglée). */
 export function attestationNonRedevanceHtml(
   membre: { nom: string; num: number },

@@ -3,6 +3,8 @@ import { api, telechargerPdf, ouvrirFichierAuth } from "./client";
 export const telechargerRecuPdf = (id, numero) => telechargerPdf(`/recus/${id}/pdf`, `Recu-${numero}.pdf`);
 export const telechargerQuitusPdf = (id, numero) => telechargerPdf(`/quitus/${id}/pdf`, `Quitus-${numero}.pdf`);
 export const telechargerAttestationPdf = (id, num) => telechargerPdf(`/membres/${id}/attestation/pdf`, `Attestation-${num}.pdf`);
+/** Attestation de sortie du tableau (ancien membre, texte sans motif — T20). */
+export const telechargerAttestationSortiePdf = (id, num) => telechargerPdf(`/membres/${id}/attestation-sortie/pdf`, `Attestation-sortie-${num}.pdf`);
 export const telechargerConvocationReunionPdf = (id) => telechargerPdf(`/reunions/${id}/convocation/pdf`, `Convocation-reunion.pdf`);
 export const telechargerFeuillePdf = (id) => telechargerPdf(`/reunions/${id}/feuille-presence/pdf`, `Feuille-presence.pdf`);
 export const telechargerConvocationAgPdf = (id) => telechargerPdf(`/assemblees/${id}/convocation/pdf`, `Convocation-AG.pdf`);

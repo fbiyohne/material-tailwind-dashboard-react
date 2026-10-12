@@ -9,7 +9,7 @@ import { prochainNumInscription, prochainNumeroAttestation, archiver, avecRejeuU
 import { aLaPermission } from "../lib/rbac.js";
 import { enregistrerFichier } from "../lib/storage.js";
 import { envoyerPdf, htmlVersPdf } from "../lib/pdf.js";
-import { attestationHtml, listeAvocatsHtml, STATUT_FR, QUALITE_FR } from "../lib/templates.js";
+import { attestationHtml, attestationSortieHtml, listeAvocatsHtml, STATUT_FR, QUALITE_FR } from "../lib/templates.js";
 import { appliquerCycleVie, changerSituation, dossierRadiation, ficheModifiee, reconcilierAcces } from "../lib/cycleVie.js";
 import { reglesActuelles } from "../lib/regles.js";
 import { cheminVerif } from "../lib/signature.js";
@@ -1094,5 +1094,25 @@ membresRouter.get(
     const date = new Date();
     await archiver({ categorie: "Attestation d'inscription", titre: `Attestation ${numero} — Me ${membre.nom}`, reference: numero, date, membreNom: membre.nom });
     await envoyerPdf(res, attestationHtml(membre, numero, date), `Attestation-${numero}.pdf`);
+  })
+);
+
+/**
+ * GET /membres/:id/attestation-sortie/pdf — attestation de sortie du tableau, seule
+ * attestation délivrable à un ancien membre (T20, H2). Date de sortie : celle du
+ * registre des anciens membres (ligneSortie) ; aucun motif dans le texte (R-62).
+ */
+membresRouter.get(
+  "/:id/attestation-sortie/pdf",
+  requireRole("SECRETAIRE_GENERAL"),
+  asyncH(async (req, res) => {
+    const membre = await prisma.membre.findUnique({ where: { id: Number(req.params.id) }, include: derniereSortie });
+    if (!membre) throw new HttpError(404, "Avocat introuvable");
+    if (!SORTIS.includes(membre.statut)) throw new HttpError(409, "Ce membre figure au tableau : délivrez une attestation d'inscription");
+    const { dateSortie } = ligneSortie(membre, false);
+    const numero = await prochainNumeroAttestation();
+    const date = new Date();
+    await archiver({ categorie: "Attestation de sortie du tableau", titre: `Attestation ${numero} — Me ${membre.nom}`, reference: numero, date, membreNom: membre.nom });
+    await envoyerPdf(res, attestationSortieHtml(membre, numero, date, dateSortie), `Attestation-sortie-${numero}.pdf`);
   })
 );

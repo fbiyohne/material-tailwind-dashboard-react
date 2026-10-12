@@ -64,7 +64,7 @@ describe("AvocatDetail — actions selon rôle et statut", () => {
     for (const nom of [/Radier/, /Actions/, /Modifier/]) expect(screen.queryByRole("button", { name: nom })).not.toBeInTheDocument();
   });
 
-  it("SG, membre décédé : badge, ligne « Décédé le », actions masquées ou grisées", async () => {
+  it("SG, membre décédé : badge, ligne « Décédé le », Accès espace grisé, attestation de sortie et correction de date possibles", async () => {
     useAuth.mockReturnValue({ user: { role: "SECRETAIRE_GENERAL" } });
     getMembre.mockResolvedValue({ ...base, statut: "decede", dateDeces: "2026-09-15" });
     rendre();
@@ -73,7 +73,9 @@ describe("AvocatDetail — actions selon rôle et statut", () => {
     expect(screen.getByText("15/09/2026")).toBeInTheDocument();
     const menu = await ouvrirMenu();
     expect(within(menu).queryByRole("menuitem", { name: "Déclarer le décès" })).not.toBeInTheDocument();
-    for (const nom of ["Attestation", "Accès espace"]) expect(within(menu).getByRole("menuitem", { name: nom })).toHaveAttribute("aria-disabled", "true");
+    expect(within(menu).getByRole("menuitem", { name: "Accès espace" })).toHaveAttribute("aria-disabled", "true");
+    // Ancien membre (H2) : l'attestation délivrée est celle de sortie du tableau.
+    expect(within(menu).getByRole("menuitem", { name: "Attestation" })).not.toHaveAttribute("aria-disabled");
     // Correction de la date du décès (T6) : Modifier reste disponible.
     expect(within(menu).getByRole("menuitem", { name: "Modifier" })).not.toHaveAttribute("aria-disabled");
   });
@@ -88,7 +90,7 @@ describe("AvocatDetail — actions selon rôle et statut", () => {
   });
 
 
-  it("SG, membre radié : ligne « Radié le — motif », Accès espace et Attestation grisés, décès possible", async () => {
+  it("SG, membre radié : ligne « Radié le — motif », fiche en lecture seule sauf l'attestation de sortie", async () => {
     useAuth.mockReturnValue({ user: { role: "SECRETAIRE_GENERAL" } });
     getMembre.mockResolvedValue({ ...base, statut: "radie", dateRadiation: "2026-10-01", motifRadiation: "Décision n° 12" });
     rendre();
@@ -96,8 +98,8 @@ describe("AvocatDetail — actions selon rôle et statut", () => {
     expect(screen.getByText("01/10/2026 — Décision n° 12")).toBeInTheDocument();
     const menu = await ouvrirMenu();
     expect(within(menu).queryByRole("menuitem", { name: /Radi/ })).not.toBeInTheDocument();
-    for (const nom of ["Attestation", "Accès espace"]) expect(within(menu).getByRole("menuitem", { name: nom })).toHaveAttribute("aria-disabled", "true");
-    expect(within(menu).getByRole("menuitem", { name: "Déclarer le décès" })).not.toHaveAttribute("aria-disabled");
+    for (const nom of ["Modifier", "Accès espace", "Déclarer le décès"]) expect(within(menu).getByRole("menuitem", { name: nom })).toHaveAttribute("aria-disabled", "true");
+    expect(within(menu).getByRole("menuitem", { name: "Attestation" })).not.toHaveAttribute("aria-disabled");
   });
 
   it("BATONNIER sans permission : aucun menu Actions (ni Radier, ni décès, ni Supprimer, ni Modifier)", async () => {

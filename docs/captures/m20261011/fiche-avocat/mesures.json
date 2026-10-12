@@ -1,14 +1,143 @@
 {
-  "tache": "T20 — fiche avocat : boutons-icônes, menu Actions, onglet Parcours",
-  "instance": "Vite 5191 (code courant) adossé à l'API de test http://localhost:4100, compte admin@barreau-pn.cg",
-  "mesures": {
-    "fiche-360 (avocat 1, menu ouvert)": { "scrollWidth": 352, "clientWidth": 352, "menu": { "gauche": 16, "droite": 336 }, "entreesHautes44px": true },
-    "fiche-1280 (avocat 1, menu ouvert)": { "scrollWidth": 1280, "clientWidth": 1280, "menu": { "gauche": 960, "droite": 1248 } },
-    "parcours-360 (avocat 11, omis, historique simulé côté navigateur)": { "scrollWidth": 352, "clientWidth": 352, "boutonsDansOnglet": 0, "etapes": 4 },
-    "menu-radie-360 (avocat 7853)": {
-      "scrollWidth": 352, "clientWidth": 352,
-      "entrees": ["Contacter (grisé)", "Modifier", "Accès espace (grisé)", "Attestation (grisé)", "Déclarer le décès", "Supprimer"]
-    }
+  "tache": "T20 — fiche avocat : boutons-icônes, menu Actions, onglet Parcours (reprise QA)",
+  "instances": {
+    "avant": "commit 8a180fa servi par Vite (port 5293) sur l'API de test http://localhost:4100",
+    "apres": "arbre courant (menu sm:w-80, ancien membre en lecture seule) servi par Vite (port 5294) sur la même API"
   },
-  "note": "Les fiches de la base de test n'ont aucun événement de parcours ; la capture du Parcours utilise une réponse simulée de GET /membres/11/evenements dans le navigateur (aucune écriture en base). Le menu-1280 a été capturé avant le passage de sm:w-72 à sm:w-80 (suppression du retour à la ligne de « Enregistrer une mise en demeure »)."
+  "compte": "ADMIN (jeton d'accès de test signé localement : le limiteur de connexion bloquait les essais répétés)",
+  "fiches": {
+    "1": "ABIRA Armel Symphorien, inscrit",
+    "7853": "fiche de test au statut RADIE"
+  },
+  "note": "Historique de parcours simulé dans le navigateur pour la fiche 1 (réponse de GET /membres/1/evenements interceptée, aucune écriture en base). Toute entrée du menu mesure 44 px : aucun libellé ne passe à la ligne (libelleSurDeuxLignes vide). apres-fiche-360.png et apres-parcours-360.png datent de la première livraison (fiche inscrite, inchangée par la reprise).",
+  "mesures": {
+    "avant-fiche-360": {
+      "scrollWidth": 360,
+      "clientWidth": 360,
+      "menu": null,
+      "entrees": [],
+      "libelleSurDeuxLignes": []
+    },
+    "avant-situation-360": {
+      "scrollWidth": 360,
+      "clientWidth": 360,
+      "menu": null,
+      "entrees": [],
+      "libelleSurDeuxLignes": []
+    },
+    "avant-fiche-1280": {
+      "scrollWidth": 1280,
+      "clientWidth": 1280,
+      "menu": null,
+      "entrees": [],
+      "libelleSurDeuxLignes": []
+    },
+    "avant-situation-1280": {
+      "scrollWidth": 1280,
+      "clientWidth": 1280,
+      "menu": null,
+      "entrees": [],
+      "libelleSurDeuxLignes": []
+    },
+    "avant-fiche-radie-360": {
+      "scrollWidth": 360,
+      "clientWidth": 360,
+      "menu": null,
+      "entrees": [],
+      "libelleSurDeuxLignes": []
+    },
+    "apres-menu-360": {
+      "scrollWidth": 360,
+      "clientWidth": 360,
+      "menu": {
+        "gauche": 16,
+        "droite": 344,
+        "largeur": 328
+      },
+      "entrees": [
+        "Contacter — 44 px",
+        "Modifier — 44 px",
+        "Accès espace — 44 px",
+        "Attestation — 44 px",
+        "Enregistrer un rappel — 44 px",
+        "Enregistrer une mise en demeure — 44 px",
+        "Enregistrer la transmission — 44 px",
+        "Enregistrer l'omission — 44 px",
+        "Démission — 44 px",
+        "Retraite — 44 px",
+        "Cessation d'activité — 44 px",
+        "Déclarer le décès — 44 px",
+        "Supprimer — 44 px"
+      ],
+      "libelleSurDeuxLignes": []
+    },
+    "apres-menu-radie-360": {
+      "scrollWidth": 360,
+      "clientWidth": 360,
+      "menu": {
+        "gauche": 16,
+        "droite": 344,
+        "largeur": 328
+      },
+      "entrees": [
+        "Contacter — 44 px",
+        "Modifier (grisé) — 44 px",
+        "Accès espace (grisé) — 44 px",
+        "Attestation — 44 px",
+        "Déclarer le décès (grisé) — 44 px",
+        "Supprimer (grisé) — 44 px"
+      ],
+      "libelleSurDeuxLignes": []
+    },
+    "apres-menu-1280": {
+      "scrollWidth": 1280,
+      "clientWidth": 1280,
+      "menu": {
+        "gauche": 928,
+        "droite": 1248,
+        "largeur": 320
+      },
+      "entrees": [
+        "Contacter — 44 px",
+        "Modifier — 44 px",
+        "Accès espace — 44 px",
+        "Attestation — 44 px",
+        "Enregistrer un rappel — 44 px",
+        "Enregistrer une mise en demeure — 44 px",
+        "Enregistrer la transmission — 44 px",
+        "Enregistrer l'omission — 44 px",
+        "Démission — 44 px",
+        "Retraite — 44 px",
+        "Cessation d'activité — 44 px",
+        "Déclarer le décès — 44 px",
+        "Supprimer — 44 px"
+      ],
+      "libelleSurDeuxLignes": []
+    },
+    "apres-menu-radie-1280": {
+      "scrollWidth": 1280,
+      "clientWidth": 1280,
+      "menu": {
+        "gauche": 928,
+        "droite": 1248,
+        "largeur": 320
+      },
+      "entrees": [
+        "Contacter — 44 px",
+        "Modifier (grisé) — 44 px",
+        "Accès espace (grisé) — 44 px",
+        "Attestation — 44 px",
+        "Déclarer le décès (grisé) — 44 px",
+        "Supprimer (grisé) — 44 px"
+      ],
+      "libelleSurDeuxLignes": []
+    },
+    "apres-parcours-1280": {
+      "scrollWidth": 1280,
+      "clientWidth": 1280,
+      "menu": null,
+      "entrees": [],
+      "libelleSurDeuxLignes": []
+    }
+  }
 }
