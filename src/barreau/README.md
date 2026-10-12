@@ -160,5 +160,12 @@ Fichier : `src/barreau/utils/timbreImage.js`.
 
 Page `/v/:t/:ref` (où `t` ∈ q|r|t pour quitus, reçu, timbre) rendue côté serveur (HTML sans JS, voir `server/README.md`), affichant l'authenticité et le statut du document. En développement, Vite la relaie au backend (proxy `/v/`). L'ancienne page SPA `/verifier/{type}/{numero}` (VerificationPublique.jsx) reste valide pour les documents antérieurs à `VERIF_BASCULE`, puis n'affiche plus qu'une erreur 404 (pas de lien de vérification sur les nouveaux documents).
 
+## Secrets, mode TEST et gabarits PDF (T29, M-20261011)
+
+- Secrets des panneaux Paiements, Notifications et Messagerie : champs `password`, jamais relus en clair (affichés `••••1234`) ; une valeur masquée ou vide laisse l'existant. Sans `PARAMS_CLE` côté serveur, l'enregistrement d'un secret répond 400. Changer `PARAMS_CLE` impose de ressaisir tous les secrets : procédure dans `server/README.md`, « Rotation des secrets ». Mode des passerelles verrouillé sur TEST (aucun encaissement ni SMS réel).
+- Modules : `/`, `/parametres`, `/journal-audit`, `/tableau` et `/discipline` ne sont pas désactivables ; le masquage n'affecte que le menu, le RBAC reste la source des droits.
+- Radiation : aucune action « Radier » dans la fiche avocat ; elle ne se décide que dans le module Discipline (`DossierDetail`) et se répercute dans l'onglet Parcours.
+- Gabarits PDF : trois directions A4 proposées dans `docs/design/pdf/` (INVENTAIRE.md, COMPARAISON.md, aperçus). **En attente de validation de Fabrice, non appliquées** : les PDF de production restent inchangés.
+
 ## Tests
 `npm test` à la racine (vitest) : sérialisation CSV/TXT (`utils/__tests__/exportCsv.test.js`), `normaliserMembre` et `StatutBadge` (`api/__tests__/resources.test.jsx`), modales et fiche avocat (`components/__tests__`, `pages/__tests__`).

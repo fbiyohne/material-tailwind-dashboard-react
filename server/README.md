@@ -494,11 +494,35 @@ $env:DATABASE_URL = "postgresql://barreau:…@127.0.0.1:5432/barreau_pn_test?sch
 
 Chaque quitus, reçu et timbre porte un jeton de 10 caractères (base32 Crockford) : HMAC-SHA256 tronquée de « type|ref », dérivée de la clé de signature RSA existante. Le chemin court `/v/{q|r|t}/{ref}.{jeton}` remplace le numéro séquentiel dans les QR émis après `VERIF_BASCULE`. Les anciennes URL `/verifier/{type}/{numero}` restent valides **jusqu'à** cette date (défaut : 2026-10-12) — tout document créé avant demeure vérifiable, tout document créé après doit porter le jeton.
 
-**À FIXER EN PRODUCTION** : changez `VERIF_BASCULE` à la date réelle de mise en service de `/v`, sinon :
-- Les documents émis entre le défaut et votre déploiement portent l'ancien QR sans jeton → vérification échouera après la date limite
-- Relire le paragraphe « Page publique courte » ci-dessus
+**À FIXER EN PRODUCTION** : `VERIF_BASCULE` = date réelle de mise en service de `/v`. Les documents émis entre le défaut (2026-10-12) et le déploiement portent un ancien QR sans jeton ; après la date, ils ne seraient plus vérifiables. Voir « Page publique courte » ci-dessus.
 
-**Rotation de la clé de signature RSA** : conservez l'ancienne clé dans `SIGNATURE_ANCIENNE_PRIVATE_KEY` (variable d'environnement) pour que les QR signés avec elle restent vérifiables. Seule la clé actuelle (`SIGNATURE_PRIVATE_KEY`) est utilisée pour signer les nouveaux jetons ; la validation accepte les deux. Absence d'une ancienne clé : aucune régression, pas de panique.
+### Rotation des secrets
+
+Aucune de ces variables n'a de valeur dans Git. Sauvegarder chaque valeur dans un coffre hors dépôt avant toute opération.
+
+**(a) `PARAMS_CLE` (chiffrement des secrets de Paramètres) : aucune rotation transparente.** Les secrets `enc:v1:…` sont liés à la clé qui les a produits ; avec une autre clé le déchiffrement échoue (« PARAMS_CLE invalide » ou « Secret chiffré mal formé »). Procédure :
+1. Relever les secrets à ressaisir depuis leur source (fournisseur SMTP, SMS, MTN, Airtel, agrégateur) : l'API ne les renvoie jamais en clair.
+2. Générer la nouvelle clé : `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`.
+3. La fixer dans la variable `PARAMS_CLE` de l'environnement (hors Git) et redémarrer l'API.
+4. Dans Paramètres, ressaisir `smtp.pass`, la clé API SMS, les clés MTN, Airtel et de l'agrégateur, puis enregistrer (ils sont rechiffrés avec la nouvelle clé) et lancer « Tester la connexion ».
+5. Conserver la nouvelle clé hors Git. Perte de la clé = ressaisie obligatoire de tous les secrets, sans autre dégât (aucune autre donnée n'est chiffrée avec elle).
+
+Entre les étapes 3 et 4, les envois SMTP et SMS dont le secret est chiffré échouent ou retombent en simulation.
+
+**(b) `SIGNATURE_PRIVATE_KEY` (clé RSA des documents, dont dérive le jeton QR).** Le jeton de chaque QR dépend de cette clé : la changer sans précaution invalide les QR déjà imprimés. Procédure :
+1. Copier la valeur actuelle de `SIGNATURE_PRIVATE_KEY` dans `SIGNATURE_ANCIENNE_PRIVATE_KEY`.
+2. Générer la nouvelle paire RSA et la placer dans `SIGNATURE_PRIVATE_KEY` et `SIGNATURE_PUBLIC_KEY`.
+3. Redémarrer l'API.
+4. Ouvrir un ancien QR (ou son URL `/v/…`) : la page doit afficher « Authentique » ; contrôler aussi un document émis après le redémarrage.
+5. Ne retirer `SIGNATURE_ANCIENNE_PRIVATE_KEY` qu'une fois tous les documents encore en circulation réémis avec la nouvelle clé (ou jamais).
+
+**Limite : une seule ancienne clé est acceptée** (`jetonValide`). Une deuxième rotation remplace l'ancienne clé : les QR émis sous la toute première clé deviennent « Non reconnu ». Pour pivoter plusieurs fois, il faudrait étendre `jetonValide` à une liste de clés. Sans `SIGNATURE_PRIVATE_KEY` ni `SIGNATURE_KEY_DIR` persistant, une clé éphémère est créée à chaque démarrage et tous les QR émis sont invalidés (avertissement au démarrage).
+
+**(c) `VERIF_BASCULE`** : ne se pivote pas. Fixée à la mise en service, ne plus la modifier : l'avancer ferme l'ancienne voie `/api/verifier/…` pour des documents déjà imprimés ; la reculer rouvre l'énumération de noms et de montants sur des documents récents. Valeur illisible = ancienne voie fermée.
+
+**(d) `JWT_SECRET`** : le changer invalide immédiatement tous les jetons d'accès émis (401). Les refresh tokens, opaques et stockés en base, restent valables : les clients connectés se reconnectent via `/auth/refresh` sans ressaisir leur mot de passe. Prévoir une fenêtre calme ; 32 caractères minimum en production.
+
+**(e) `PAYMENT_WEBHOOK_SECRET`, `SMS_API_KEY`, `SMTP_PASS`** : secrets du fournisseur. Rotation : générer le nouveau secret chez le fournisseur, le fixer dans l'environnement, redémarrer, puis révoquer l'ancien. `PAYMENT_WEBHOOK_SECRET` doit être changé des deux côtés au même moment, sinon les webhooks sont rejetés. Les passerelles restent verrouillées en mode TEST : aucun encaissement réel.
 
 ## Variables d'environnement complémentaires
 
@@ -575,7 +599,7 @@ Si cette base accumule à son tour des restes, la remettre à zéro par
 **Voir `.env.example` pour les valeurs par défaut et les exemples.** Les variables optionnelles sont indiquées.
 
 ### Authentication & JWT
-- `JWT_SECRET` (requis) : secret de signature des jetons d'accès ; défaut `change-me` (développement seulement)
+- `JWT_SECRET` (requis en production, 32 caractères minimum) : secret de signature des jetons d'accès ; défaut `change-me` (développement seulement). Rotation : voir « Rotation des secrets »
 - `ACCESS_TTL` (optionnel) : durée de vie du jeton d'accès en secondes ; défaut 900 (15 min)
 - `REFRESH_TTL_DAYS` (optionnel) : durée de vie du jeton de rafraîchissement en jours ; défaut 7
 
@@ -587,18 +611,29 @@ Si cette base accumule à son tour des restes, la remettre à zéro par
 - `SIGNATURE_PRIVATE_KEY` (optionnel) : clé RSA privée (PEM) pour signer les documents et les jetons QR ; générée en développement, requise en production
 - `SIGNATURE_PUBLIC_KEY` (optionnel) : clé publique correspondante
 - `SIGNATURE_KEY_DIR` (optionnel) : répertoire contenant les clés générées (`secrets/` par défaut)
-- `SIGNATURE_ANCIENNE_PRIVATE_KEY` (optionnel) : ancienne clé RSA, conservée uniquement pour vérifier les jetons QR antérieurs à la rotation de clé. La rotation n'invalide aucun QR imprimé.
-- `VERIF_BASCULE` (requis) : date ISO (`AAAA-MM-JJ`) à partir de laquelle le chemin court `/v/{type}/{ref}.{jeton}` remplace le numéro séquentiel dans les nouveaux QR. Les documents antérieurs restent vérifiables par `/api/verifier/{type}/{numero}`. **À FIXER à la date réelle de mise en service en production.**
+- `SIGNATURE_ANCIENNE_PRIVATE_KEY` (optionnel) : ancienne clé RSA, conservée uniquement pour vérifier les jetons QR émis sous la clé précédente. Une seule ancienne clé est acceptée : une deuxième rotation invalide les QR de la première génération (procédure : « Rotation des secrets »).
+- `VERIF_BASCULE` (requis) : date ISO (`AAAA-MM-JJ`) à partir de laquelle le chemin court `/v/{type}/{ref}.{jeton}` remplace le numéro séquentiel dans les nouveaux QR. Les documents antérieurs restent vérifiables par `/api/verifier/{type}/{numero}`. **À FIXER à la date réelle de mise en service ; ne plus modifier ensuite.**
 
 ### Secrets chiffrés (Paramètres)
-- `PARAMS_CLE` (requis) : clé AES-256-GCM (32 octets base64) pour chiffrer au repos les secrets saisis dans Paramètres (mot de passe SMTP, clés des passerelles de paiement et du fournisseur SMS). Générée par `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`. **À fixer en production.** Sans cette variable, aucun secret n'est enregistrable et l'API répond 400.
+- `PARAMS_CLE` (requis) : clé AES-256-GCM (32 octets base64) pour chiffrer au repos les secrets saisis dans Paramètres (mot de passe SMTP, clés des passerelles de paiement et du fournisseur SMS). Générée par `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`. **À fixer en production.** Sans cette variable, aucun secret n'est enregistrable et l'API répond 400. Pas de rotation transparente : voir « Rotation des secrets ».
 
 ### Email SMTP (simulation ou réel)
 - `SMTP_HOST` (optionnel) : nom d'hôte du serveur SMTP ; vide → mode simulation (envois journalisés)
 - `SMTP_PORT` (optionnel) : port SMTP ; défaut 587
 - `SMTP_USER` (optionnel) : identifiant SMTP
 - `SMTP_PASS` (optionnel) : mot de passe SMTP ; chiffré au repos et masqué dans les réponses API
+- `SMTP_SECURE` (optionnel) : `true` pour TLS implicite (port 465). Lu seulement en repli, si Paramètres ne porte pas de config SMTP
+- `SMTP_URL` (optionnel) : lue seulement par l'avertissement de démarrage (`env.ts`), pas par l'envoi ; le SMTP effectif vient de `SMTP_HOST` ou de Paramètres
 - `MAIL_FROM` (optionnel) : adresse « De » ; défaut `secretariat@barreau-pn.cg`
+
+### Paiement, SMS et installation (adaptateurs en mode test)
+- `PAYMENT_PROVIDER` (optionnel) : nom du prestataire de paiement. Vide = bac à sable (`modeSandbox`). L'adaptateur réel n'existe pas : le définir fait lever « Adaptateur de paiement non implémenté ». Ne pas le définir tant que Fabrice et le Barreau n'ont pas validé un prestataire agréé CEMAC
+- `PAYMENT_WEBHOOK_SECRET` (secret) : clé de signature des webhooks de paiement ; requise si `PAYMENT_PROVIDER` est défini, sinon tous les webhooks sont rejetés. Rotation : « Rotation des secrets (e) »
+- `SMS_API_URL`, `SMS_API_KEY` (secret), `SMS_SENDER` (optionnel, défaut `Barreau-PN`) : passerelle SMS HTTP générique. SMS actif seulement si URL et clé sont fournies ; sinon simulation. Les relais de la messagerie restent en simulation. Les valeurs saisies dans Paramètres (chiffrées) n'alimentent pas encore cet adaptateur
+- `INSTALL_WIZARD` (optionnel) : `1` active l'assistant d'installation tant qu'aucun compte ADMIN n'existe. À retirer une fois l'installation faite
+- `STATIC_DIR` (optionnel) : dossier du front construit (`dist`) servi par l'API ; vide = front non servi
+- `STORAGE_DIR` (optionnel) : dossier de stockage des pièces et archives ; défaut `./uploads` sous le répertoire courant. À placer sur un volume persistant en production et à sauvegarder
+- `SIGNATURE_SECRET` : obsolète (plus lue par le code), retirée de `.env.example`
 
 ### PDF & Chromium
 - `PUPPETEER_EXECUTABLE_PATH` (optionnel) : chemin du binaire Chromium ; cherche dans l'ordre : cache Puppeteer, Playwright, binaires Linux, Edge/Chrome Windows. Routes PDF répondent en erreur si absent.
