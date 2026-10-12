@@ -36,11 +36,13 @@ export const verifLimiter = creerVerifLimiter();
  * Bascule (avis juridique, point 6) : les anciennes URL /verifier/{type}/{numero}, sans
  * code de vérification, ne valent que pour les documents créés AVANT cette date. Après,
  * seul le chemin court signé /v/... authentifie : les numéros séquentiels ne sont plus
- * énumérables. Lue à chaque appel (VERIF_BASCULE, ISO). Défaut : date du commit T10.
+ * énumérables. Lue à chaque appel (VERIF_BASCULE, ISO). Le défaut ne sert QUE hors
+ * production : en production, verifierConfigProduction (env.ts) refuse le démarrage
+ * si la variable est absente ou illisible.
  * Valeur illisible : l'ancienne voie est fermée (fail-closed).
  */
-const BASCULE_DEFAUT = "2026-10-12";
-const avantBascule = (creeLe: Date) => creeLe.getTime() < new Date(process.env.VERIF_BASCULE || BASCULE_DEFAUT).getTime();
+const BASCULE_DEFAUT_HORS_PROD = "2026-10-12";
+const avantBascule = (creeLe: Date) => creeLe.getTime() < new Date(process.env.VERIF_BASCULE || BASCULE_DEFAUT_HORS_PROD).getTime();
 
 const fmt = (d: Date | string) => new Date(d).toISOString().slice(0, 10);
 

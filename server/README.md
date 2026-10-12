@@ -155,7 +155,7 @@ Ordre et délais (cause 35-4° et chaque étape) : l'étape *k* exige l'étape *
 - Chaque réponse JSON porte `verif`, le chemin court signé que le QR encode (`cheminVerif`, `src/lib/signature.ts`) : `/v/q/{numero}.{jeton}` (quitus), `/v/r/{numero}.{jeton}` (reçu), `/v/t/{code}.{jeton}` (timbre). Routes : `GET /api/quitus`, `POST /api/quitus`, `GET /api/recus`, `GET|POST /api/timbres`, `GET /api/timbres/:id`, `GET /api/espace/documents`, `GET|POST /api/espace/timbres`.
 - Quitus : `finValidite` = date de délivrance + `regles.quitus.validiteMois` (défaut 3, `finValiditeQuitus`). Règle relue à chaque appel : la changer modifie aussi la date de fin affichée pour les quitus déjà émis (aucune durée stockée par quitus).
 - PDF (`/api/quitus|recus/:id/pdf`, `/api/espace/quitus|recus/:id/pdf`) : QR par `qrDocument` (correction M, 96 px soit 25 mm), clause CL-VERIF sous le QR, validité « Valable jusqu'au {date} inclus… » calculée, identité en 12 pt et nom en 14 pt ; reçu : ligne « Exercice couvert » issue de `Recu.annee`.
-- Les anciennes URL `/verifier/{type}/{numero}` restent servies, mais `/api/verifier/*` n'authentifie plus que les documents créés (`createdAt`) **avant** `VERIF_BASCULE` (ISO, défaut `2026-10-12`) ; après, 404 `{ valide: false }` sans aucune donnée. Valeur illisible : ancienne voie fermée. **À fixer en production à la date de mise en service**, sinon des documents émis entre ce défaut et le déploiement, porteurs de l'ancien QR, ne seraient plus vérifiables.
+- Les anciennes URL `/verifier/{type}/{numero}` restent servies, mais `/api/verifier/*` n'authentifie plus que les documents créés (`createdAt`) **avant** `VERIF_BASCULE` (ISO ; défaut `2026-10-12` **hors production seulement**) ; après, 404 `{ valide: false }` sans aucune donnée. Valeur illisible : ancienne voie fermée. **En production, le serveur refuse de démarrer si `VERIF_BASCULE` est absente ou illisible** (`verifierConfigProduction`) : à fixer à la date de mise en service, sinon des documents émis avec l'ancien QR avant le déploiement ne seraient plus vérifiables.
 
 ### Page publique courte `GET /v/{q|r|t}/{ref}.{jeton}` (T10)
 
@@ -492,9 +492,9 @@ $env:DATABASE_URL = "postgresql://barreau:…@127.0.0.1:5432/barreau_pn_test?sch
 
 ## Jeton QR signé et validation du chemin court (T7, T9, T10, point 6 et 10 M-20261011)
 
-Chaque quitus, reçu et timbre porte un jeton de 10 caractères (base32 Crockford) : HMAC-SHA256 tronquée de « type|ref », dérivée de la clé de signature RSA existante. Le chemin court `/v/{q|r|t}/{ref}.{jeton}` remplace le numéro séquentiel dans les QR émis après `VERIF_BASCULE`. Les anciennes URL `/verifier/{type}/{numero}` restent valides **jusqu'à** cette date (défaut : 2026-10-12) — tout document créé avant demeure vérifiable, tout document créé après doit porter le jeton.
+Chaque quitus, reçu et timbre porte un jeton de 10 caractères (base32 Crockford) : HMAC-SHA256 tronquée de « type|ref », dérivée de la clé de signature RSA existante. Le chemin court `/v/{q|r|t}/{ref}.{jeton}` remplace le numéro séquentiel dans les QR émis après `VERIF_BASCULE`. Les anciennes URL `/verifier/{type}/{numero}` restent valides **jusqu'à** cette date (défaut 2026-10-12 hors production ; obligatoire en production) — tout document créé avant demeure vérifiable, tout document créé après doit porter le jeton.
 
-**À FIXER EN PRODUCTION** : `VERIF_BASCULE` = date réelle de mise en service de `/v`. Les documents émis entre le défaut (2026-10-12) et le déploiement portent un ancien QR sans jeton ; après la date, ils ne seraient plus vérifiables. Voir « Page publique courte » ci-dessus.
+**OBLIGATOIRE EN PRODUCTION** : `VERIF_BASCULE` = date réelle de mise en service de `/v` ; sans elle (ou illisible), le démarrage est refusé. Les documents émis avant cette date portent un ancien QR sans jeton et restent vérifiables par l'ancienne voie. Voir « Page publique courte » ci-dessus.
 
 ### Rotation des secrets
 
@@ -612,7 +612,7 @@ Si cette base accumule à son tour des restes, la remettre à zéro par
 - `SIGNATURE_PUBLIC_KEY` (optionnel) : clé publique correspondante
 - `SIGNATURE_KEY_DIR` (optionnel) : répertoire contenant les clés générées (`secrets/` par défaut)
 - `SIGNATURE_ANCIENNE_PRIVATE_KEY` (optionnel) : ancienne clé RSA, conservée uniquement pour vérifier les jetons QR émis sous la clé précédente. Une seule ancienne clé est acceptée : une deuxième rotation invalide les QR de la première génération (procédure : « Rotation des secrets »).
-- `VERIF_BASCULE` (requis) : date ISO (`AAAA-MM-JJ`) à partir de laquelle le chemin court `/v/{type}/{ref}.{jeton}` remplace le numéro séquentiel dans les nouveaux QR. Les documents antérieurs restent vérifiables par `/api/verifier/{type}/{numero}`. **À FIXER à la date réelle de mise en service ; ne plus modifier ensuite.**
+- `VERIF_BASCULE` (requis en production, démarrage refusé sinon ; défaut `2026-10-12` hors production) : date ISO (`AAAA-MM-JJ`) à partir de laquelle le chemin court `/v/{type}/{ref}.{jeton}` remplace le numéro séquentiel dans les nouveaux QR. Les documents antérieurs restent vérifiables par `/api/verifier/{type}/{numero}`. **À FIXER à la date réelle de mise en service ; ne plus modifier ensuite.**
 
 ### Secrets chiffrés (Paramètres)
 - `PARAMS_CLE` (requis) : clé AES-256-GCM (32 octets base64) pour chiffrer au repos les secrets saisis dans Paramètres (mot de passe SMTP, clés des passerelles de paiement et du fournisseur SMS). Générée par `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`. **À fixer en production.** Sans cette variable, aucun secret n'est enregistrable et l'API répond 400. Pas de rotation transparente : voir « Rotation des secrets ».

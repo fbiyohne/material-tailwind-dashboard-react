@@ -47,6 +47,10 @@ services:
         sync: false
       - key: JWT_SECRET
         generateValue: true
+      # Date ISO de mise en service du chemin de vérification /v : OBLIGATOIRE,
+      # le serveur refuse de démarrer sans elle. À renseigner dans le dashboard.
+      - key: VERIF_BASCULE
+        sync: false
       # Emplacement du Chrome téléchargé au build (sous le projet → persiste au
       # runtime). Lu par le serveur (lib/pdf.ts) pour lancer Puppeteer.
       - key: PUPPETEER_CACHE_DIR

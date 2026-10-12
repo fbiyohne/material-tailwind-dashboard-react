@@ -43,9 +43,17 @@ function secretJwt(): string {
  * Avertit au démarrage des configurations qui, absentes, dégradent SILENCIEUSEMENT
  * en production (échec à l'usage plutôt qu'au boot). N'interrompt pas le démarrage —
  * un déploiement peut légitimement tourner en simulation — mais rend le défaut visible.
+ * Seule exception, bloquante : VERIF_BASCULE (voir ci-dessous).
  */
 export function verifierConfigProduction(avertir: (msg: string) => void): void {
-  if (nodeEnv !== "production") return;
+  // Relu à l'appel (et non la constante du module) pour rester testable.
+  if ((process.env.NODE_ENV ?? "development") !== "production") return;
+  // Aucun défaut en production : une date figée fermerait en silence /api/verifier
+  // pour des documents authentiques émis avec l'ancien QR avant le déploiement.
+  const bascule = process.env.VERIF_BASCULE;
+  if (!bascule || Number.isNaN(new Date(bascule).getTime())) {
+    throw new Error("VERIF_BASCULE absente ou illisible : obligatoire en production (date ISO AAAA-MM-JJ de mise en service du chemin /v).");
+  }
   if (process.env.PAYMENT_PROVIDER && !process.env.PAYMENT_WEBHOOK_SECRET) {
     avertir("PAYMENT_PROVIDER défini mais PAYMENT_WEBHOOK_SECRET absent : tous les webhooks de paiement seront rejetés.");
   }
