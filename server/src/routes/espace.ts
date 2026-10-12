@@ -6,11 +6,10 @@ import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireAvocat, type AuthRequest } from "../middleware/auth.js";
 import { enregistrerFichier, lireFichier, supprimerFichier, typeReel } from "../lib/storage.js";
-import { cotisationDue, droitDue, statutCotisation, tarifsActuels, prochainNumeroAttestation, archiver, STATUTS_SORTIS, STATUTS_ANNUAIRE, peutAttesterInscription, finValiditeQuitus } from "../lib/business.js";
+import { cotisationDue, droitDue, statutCotisation, tarifsActuels, prochainNumeroAttestation, archiver, STATUTS_SORTIS, STATUTS_ANNUAIRE, peutAttesterInscription, finQuitus } from "../lib/business.js";
 import { finaliserPaiement } from "../lib/encaissement.js";
 import { CANAUX, modeSandbox, nouvelleReference, initierPaiement } from "../lib/paiement.js";
 import { cheminVerif, hotePublic, qrDocument } from "../lib/signature.js";
-import { reglesActuelles } from "../lib/regles.js";
 import { envoyerPdf, envoyerDocumentPdf } from "../lib/pdf.js";
 import { convocationAgHtml, pvAssembleeHtml, decisionDisciplineHtml, attestationHtml, attestationNonRedevanceHtml } from "../lib/templates.js";
 import { recuRicheHtml, quitusRicheHtml } from "../lib/documentsRiches.js";
@@ -247,12 +246,11 @@ espaceRouter.get(
       prisma.recu.findMany({ where: { membreId }, orderBy: { date: "desc" } }),
       prisma.quitus.findMany({ where: { membreId }, orderBy: { dateEmission: "desc" } }),
     ]);
-    const { validiteMois } = (await reglesActuelles()).quitus;
     res.json({
       recus: recus.map((r) => ({ id: r.id, numero: r.numero, montant: r.montant, annee: r.annee, date: dateCourte(r.date), objet: r.objet, verif: cheminVerif("r", r.numero) })),
       quitus: quitus.map((q) => ({
         id: q.id, numero: q.numero, annee: q.annee, date: dateCourte(q.dateEmission),
-        verif: cheminVerif("q", q.numero), finValidite: dateCourte(finValiditeQuitus(q.dateEmission, validiteMois)),
+        verif: cheminVerif("q", q.numero), finValidite: dateCourte(finQuitus(q)),
       })),
     });
   })
@@ -344,7 +342,7 @@ espaceRouter.get(
     const quitus = await prisma.quitus.findUnique({ where: { id: Number(req.params.id) }, include: { membre: true } });
     if (!quitus || quitus.membreId !== monMembreId(req)) throw new HttpError(404, "Quitus introuvable");
     const qr = await qrDocument("q", quitus.numero);
-    await envoyerDocumentPdf(res, quitusRicheHtml(quitus, quitus.membre, qr, hotePublic(), (await reglesActuelles()).quitus.validiteMois), `Quitus-${quitus.numero}.pdf`);
+    await envoyerDocumentPdf(res, quitusRicheHtml(quitus, quitus.membre, qr, hotePublic()), `Quitus-${quitus.numero}.pdf`);
   })
 );
 

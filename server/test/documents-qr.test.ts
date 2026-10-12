@@ -119,19 +119,16 @@ describe("Documents à QR : champ verif distinct par document", () => {
     expect(t.body.timbres.map((x: { verif: string }) => x.verif).sort()).toEqual([cheminVerif("t", `TESTQR${num}X0`), cheminVerif("t", `TESTQR${num}X1`)].sort());
   });
 
-  it("modifier validiteMois change la date de fin du quitus suivant (API et gabarit)", async () => {
+  it("modifier validiteMois ne réécrit pas la fin d'un quitus déjà délivré (R1-2 ; quitus suivant : quitus-fin-figee.test.ts)", async () => {
     await ecrireValidite(6);
     const r = await request(app).get("/api/quitus").set(...bearer(sg));
     const q = r.body.find((x: { id: number }) => x.id === quitusIds[0]);
-    // 31 janvier 2026 + 6 mois = 31 juillet 2026.
-    expect(q.finValidite.slice(0, 10)).toBe("2026-07-31");
+    // Quitus antérieur à la colonne finValidite : règle d'alors, 3 mois. 31 janv. + 3 mois = 30 avril.
+    expect(q.finValidite.slice(0, 10)).toBe("2026-04-30");
     await request(app).get(`/api/quitus/${quitusIds[0]}/pdf`).set(...bearer(sg));
-    expect(html.dernier).toContain(fmtDateFr(new Date("2026-07-31T10:00:00Z")));
-    await ecrireValidite(3);
-    await request(app).get(`/api/quitus/${quitusIds[0]}/pdf`).set(...bearer(sg));
-    // 31 janvier 2026 + 3 mois = 30 avril 2026 (dernier jour du mois d'arrivée).
     expect(html.dernier).toContain(fmtDateFr(new Date("2026-04-30T10:00:00Z")));
     expect(html.dernier).not.toContain(fmtDateFr(new Date("2026-07-31T10:00:00Z")));
+    await ecrireValidite(3);
   });
 });
 
@@ -178,24 +175,29 @@ describe("Gabarits quitus et reçu (point 6)", () => {
   const recu = { numero: "R-2026-0001", montant: 50000, annee: 2025, date: new Date("2026-03-01"), objet: "Droit de plaidoirie" };
 
   it("validité du quitus calculée (clause CL-VALIDITE-QUITUS), aucune durée en dur", () => {
-    const h = quitusRicheHtml(quitus, membre, "data:,", "x.cg", 3);
+    const h = quitusRicheHtml(quitus, membre, "data:,", "x.cg");
     expect(h).not.toMatch(/trois \(03\) mois|valable pour une durée de/i);
     expect(h).toContain(`Valable jusqu'au <b class="navy">${fmtDateFr(new Date("2027-01-11T10:00:00Z"))}</b> inclus, sauf changement de situation du titulaire`);
     expect(h).toContain("consultable à tout moment par le code de vérification.");
   });
 
+  it("gabarit : la fin de validité figée (Quitus.finValidite) prime sur tout calcul (R1-2)", () => {
+    const h = quitusRicheHtml({ ...quitus, finValidite: new Date("2027-04-11T10:00:00Z") }, membre, "data:,", "x.cg");
+    expect(h).toContain(`Valable jusqu'au <b class="navy">${fmtDateFr(new Date("2027-04-11T10:00:00Z"))}</b> inclus`);
+  });
+
   it("clause CL-VERIF sous le QR, sans « signature électronique »", () => {
-    for (const h of [quitusRicheHtml(quitus, membre, "data:,", "x.cg", 3), recuRicheHtml(recu, membre, "data:,", "x.cg")]) {
+    for (const h of [quitusRicheHtml(quitus, membre, "data:,", "x.cg"), recuRicheHtml(recu, membre, "data:,", "x.cg")]) {
       expect(h).toContain("Ce code permet de contrôler que le document a été émis par l'Ordre et d'en connaître le statut actuel.");
       // Images en data URI (cachets) retirées : leur base64 contient des suites « RSA » fortuites.
       expect(h.replace(/data:[^"')]+/g, "")).not.toMatch(/signature électronique|RSA|valeur probante/i);
     }
-    expect(quitusRicheHtml(quitus, membre, "data:,", "x.cg", 3)).toContain(`x.cg${cheminVerif("q", "Q-2026-0001")}`);
+    expect(quitusRicheHtml(quitus, membre, "data:,", "x.cg")).toContain(`x.cg${cheminVerif("q", "Q-2026-0001")}`);
     expect(recuRicheHtml(recu, membre, "data:,", "x.cg")).toContain(`x.cg${cheminVerif("r", "R-2026-0001")}`);
   });
 
   it("identité en 12 pt, nom en 14 pt ; reçu : exercice couvert issu des données", () => {
-    const h = quitusRicheHtml(quitus, membre, "data:,", "x.cg", 3);
+    const h = quitusRicheHtml(quitus, membre, "data:,", "x.cg");
     expect(h).toMatch(/\.champ \{[^}]*font-size:12pt/);
     expect(h).toContain('<span class="nom">Me DUPONT Jean</span>');
     expect(h).toMatch(/\.champ \.nom \{[^}]*font-size:14pt/);

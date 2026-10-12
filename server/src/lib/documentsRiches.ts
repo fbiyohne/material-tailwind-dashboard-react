@@ -11,8 +11,7 @@ import { esc, fmtFCFA, fmtDateFr } from "./documentsCommun.js";
 import { identite, MENTION_DEMONSTRATION } from "./identiteDocuments.js";
 import { cachetBatonnier, cachetTresoriere } from "./cachets.js";
 import { cheminVerif } from "./signature.js";
-import { finValiditeQuitus } from "./business.js";
-import { REGLES_DEFAUT } from "./regles.js";
+import { finQuitus } from "./business.js";
 
 /** Cachet officiel (image) ou rien si l'asset est absent. */
 const cachetImg = (src: string, size = 128) =>
@@ -191,11 +190,11 @@ export function recuRicheHtml(recu: RecuLike, membre: MembreLike, qr: string, ho
 }
 
 /**
- * Quitus de cotisation — reproduction de QuitusDocument. `validiteMois` vient de
- * la règle regles.quitus.validiteMois (reglesActuelles) ; la date de fin est calculée.
+ * Quitus de cotisation — reproduction de QuitusDocument. La date de fin est celle
+ * figée à la délivrance (Quitus.finValidite), jamais la règle courante (finQuitus).
  */
-export function quitusRicheHtml(quitus: { numero: string; annee: number; dateEmission: Date | string }, membre: MembreLike, qr: string, host: string, validiteMois = REGLES_DEFAUT.quitus.validiteMois): string {
-  const fin = finValiditeQuitus(new Date(quitus.dateEmission), validiteMois);
+export function quitusRicheHtml(quitus: { numero: string; annee: number; dateEmission: Date | string; finValidite?: Date | null }, membre: MembreLike, qr: string, host: string): string {
+  const fin = finQuitus({ dateEmission: new Date(quitus.dateEmission), finValidite: quitus.finValidite });
   const adresse = [membre.cabinet, membre.adresse].filter(Boolean).join(" — ");
   const inscr = membre.numInscription ?? (membre.num != null ? `${membre.num}/BPN` : "");
   const corps = `

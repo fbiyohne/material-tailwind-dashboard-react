@@ -334,6 +334,9 @@ model Quitus {
   membreId     Int
   annee        Int
   dateEmission DateTime
+  // Fin de validité figée à la délivrance (R1-2) ; null pour les quitus antérieurs
+  // à la colonne : finQuitus() leur applique la règle d'alors (3 mois).
+  finValidite  DateTime?
   createdAt    DateTime @default(now())
 
   // Un seul quitus par avocat et par exercice — défense en profondeur (la garde

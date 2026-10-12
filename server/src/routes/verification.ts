@@ -3,8 +3,7 @@ import rateLimit from "express-rate-limit";
 import { prisma } from "../prisma.js";
 import { asyncH } from "../middleware/error.js";
 import { signerDocument, quitusPayload, recuPayload, timbrePayload, empreinteCle, jetonValide, type TypeDocQr } from "../lib/signature.js";
-import { STATUTS_SORTIS, finValiditeQuitus } from "../lib/business.js";
-import { reglesActuelles } from "../lib/regles.js";
+import { STATUTS_SORTIS, finQuitus } from "../lib/business.js";
 import { esc, fmtDateFr } from "../lib/documentsCommun.js";
 import { identite, rafraichirSiPerimee } from "../lib/identiteDocuments.js";
 
@@ -182,7 +181,7 @@ async function lignesDocument(t: TypeDocQr, ref: string): Promise<{ lignes: Lign
   if (t === "q") {
     const q = await prisma.quitus.findUnique({ where: { numero: ref }, include: { membre: { select: { nom: true, numInscription: true, num: true, statut: true } } } });
     if (!q) return null;
-    const fin = finValiditeQuitus(q.dateEmission, (await reglesActuelles()).quitus.validiteMois);
+    const fin = finQuitus(q);
     const sorti = (STATUTS_SORTIS as readonly string[]).includes(q.membre.statut);
     // Fin de validité « jusqu'au … inclus » : expiré à partir du lendemain (comparaison au jour, UTC).
     const statut = STATUTS_CADUCS.includes(q.membre.statut)

@@ -277,3 +277,15 @@ export function finValiditeQuitus(dateEmission: Date, mois: number): Date {
   d.setUTCDate(Math.min(jour, dernier));
   return d;
 }
+
+/** Durée de validité en vigueur avant l'enregistrement de Quitus.finValidite (R1-2). */
+export const VALIDITE_QUITUS_HISTORIQUE_MOIS = 3;
+
+/**
+ * Fin de validité d'un quitus délivré : la date figée à la délivrance, jamais la
+ * règle courante (sinon un changement de regles.quitus.validiteMois réécrirait la
+ * date de tous les quitus déjà imprimés). Repli pour les quitus antérieurs à la colonne.
+ */
+export function finQuitus(q: { dateEmission: Date; finValidite?: Date | null }): Date {
+  return q.finValidite ?? finValiditeQuitus(q.dateEmission, VALIDITE_QUITUS_HISTORIQUE_MOIS);
+}

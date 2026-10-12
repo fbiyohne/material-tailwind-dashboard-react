@@ -5,7 +5,7 @@ import { prisma } from "../prisma.js";
 import { anneeDeRequete } from "../lib/requete.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole, requirePermission } from "../middleware/auth.js";
-import { eligibleQuitus, prochainNumeroQuitus, finValiditeQuitus } from "../lib/business.js";
+import { eligibleQuitus, prochainNumeroQuitus, finValiditeQuitus, finQuitus } from "../lib/business.js";
 import { reglesActuelles } from "../lib/regles.js";
 import { envoyerDocumentPdf } from "../lib/pdf.js";
 import { quitusRicheHtml } from "../lib/documentsRiches.js";
@@ -21,10 +21,10 @@ function notifierQuitus(membreId: number, annee: number): void {
 
 /**
  * Champs de vérification d'un quitus (point 6) : `verif`, chemin court signé
- * encodé par le QR, et `finValidite`, calculée depuis regles.quitus.validiteMois.
+ * encodé par le QR, et `finValidite`, figée à la délivrance (finQuitus).
  */
-const avecVerif = <Q extends { numero: string; dateEmission: Date }>(q: Q, validiteMois: number) =>
-  ({ ...q, verif: cheminVerif("q", q.numero), finValidite: finValiditeQuitus(q.dateEmission, validiteMois) });
+const avecVerif = <Q extends { numero: string; dateEmission: Date; finValidite: Date | null }>(q: Q) =>
+  ({ ...q, verif: cheminVerif("q", q.numero), finValidite: finQuitus(q) });
 
 export const quitusRouter = Router();
 // Données financières restreintes (RG-15) : SG, Trésorière, Admin.
@@ -37,8 +37,7 @@ quitusRouter.get(
     const quitus = await prisma.quitus.findUnique({ where: { id: Number(req.params.id) }, include: { membre: true } });
     if (!quitus) throw new HttpError(404, "Quitus introuvable");
     const qr = await qrDocument("q", quitus.numero);
-    const { validiteMois } = (await reglesActuelles()).quitus;
-    await envoyerDocumentPdf(res, quitusRicheHtml(quitus, quitus.membre, qr, hotePublic(), validiteMois), `Quitus-${quitus.numero}.pdf`);
+    await envoyerDocumentPdf(res, quitusRicheHtml(quitus, quitus.membre, qr, hotePublic()), `Quitus-${quitus.numero}.pdf`);
   })
 );
 
@@ -74,8 +73,7 @@ quitusRouter.get(
       orderBy: { id: "desc" },
       include: { membre: { select: { nom: true } } },
     });
-    const { validiteMois } = (await reglesActuelles()).quitus;
-    res.json(quitus.map((q) => avecVerif(q, validiteMois)));
+    res.json(quitus.map((q) => avecVerif(q)));
   })
 );
 
@@ -89,6 +87,8 @@ const genSchema = z.object({ membreId: z.number().int(), annee: z.number().int()
  */
 async function genererQuitus(membreId: number, annee: number) {
   const dateEmission = new Date();
+  // Fin de validité figée à la délivrance, selon la règle en vigueur à cet instant (R1-2).
+  const finValidite = finValiditeQuitus(dateEmission, (await reglesActuelles()).quitus.validiteMois);
   const MAX_TENTATIVES = 5;
   for (let tentative = 1; ; tentative++) {
     const numero = await prochainNumeroQuitus(annee);
@@ -104,7 +104,7 @@ async function genererQuitus(membreId: number, annee: number) {
         if (!cotisation || !eligibleQuitus(cotisation)) {
           throw new HttpError(409, "Quitus bloqué : l'avocat doit être à jour ET validé par la Trésorière (BR-01)");
         }
-        const q = await tx.quitus.create({ data: { numero, membreId, annee, dateEmission } });
+        const q = await tx.quitus.create({ data: { numero, membreId, annee, dateEmission, finValidite } });
         await tx.archive.create({
           data: { categorie: "Quitus", titre: `Quitus ${numero} — Me ${cotisation.membre.nom}`, reference: numero, date: dateEmission, membreNom: cotisation.membre.nom },
         });
@@ -126,7 +126,7 @@ quitusRouter.post(
     const { membreId, annee } = genSchema.parse(req.body);
     const quitus = await genererQuitus(membreId, annee);
     notifierQuitus(membreId, annee);
-    res.status(201).json(avecVerif(quitus!, (await reglesActuelles()).quitus.validiteMois));
+    res.status(201).json(avecVerif(quitus!));
   })
 );
 
