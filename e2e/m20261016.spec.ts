@@ -12,7 +12,7 @@
  */
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
 import { execFileSync } from "node:child_process";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 
 const APRES = resolve(process.cwd(), "../docs/captures/m20261016/apres");
@@ -181,7 +181,10 @@ test("2b. Liste des avocats : export jsPDF (repli) en A4 avec pied paginé", asy
   await page.setViewportSize({ width: 1280, height: 900 });
   // Le PDF serveur est refusé pour forcer le repli navigateur (jsPDF), sans effet en base.
   await page.route("**/api/membres/export/pdf**", (r) => r.fulfill({ status: 503, contentType: "application/json", body: "{}" }));
-  await page.goto("/avocats");
+  // Liste filtrée sur un nom : quelques pages au plus (l'export complet est raster, ~260 Ko par page).
+  const liste = await (await get(request, SG, "/api/membres")).json();
+  const nom = (Array.isArray(liste) ? liste : liste.items ?? liste.data)[0].nom as string;
+  await page.goto(`/avocats?q=${encodeURIComponent(nom)}`);
   await page.waitForLoadState("networkidle");
   await page.locator("summary", { hasText: "Exporter" }).first().click();
   const [dl] = await Promise.all([
@@ -191,6 +194,8 @@ test("2b. Liste des avocats : export jsPDF (repli) en A4 avec pied paginé", asy
   const fichier = `${APRES}/avocats-jspdf.pdf`;
   await dl.saveAs(fichier);
   const pdf = analyserPdf(fichier);
+  expect(pdf.pages.length, "export filtré : quelques pages").toBeLessThanOrEqual(3);
+  expect(statSync(fichier).size, "poids de l'export filtré").toBeLessThan(2e6);
   for (const p of pdf.pages) expect(proche(p.l, 595) && proche(p.h, 842), `page ${p.l}x${p.h} pt`).toBe(true);
   const texte = pdf.pages.map((p) => p.texte).join("\n");
   expect(texte).toMatch(/Page 1\s*\/\s*\d+/);
@@ -336,10 +341,17 @@ test("4a. Trésorière : menu conforme à la matrice, message neutre sur 403", a
 });
 
 test("4b. Consultation : lecture seule, menu conforme à la matrice, message neutre sur 403", async ({ page, request }) => {
-  // Compte de test créé une fois (marque E2E) par le SG ; 409 si déjà présent.
-  const s = await connecter(request, SG);
-  const c = await request.post("/api/users", { headers: { Authorization: `Bearer ${s.token}` }, data: { nom: "E2E Consultation", email: CONSULTATION, role: "CONSULTATION", password: MDP_CONSULTATION } });
+  // Compte de test (marque E2E) créé par le SG. S'il existe déjà (409), son état est inconnu : la suite
+  // vitest serveur (demo --mots-de-passe-aleatoires) change le mot de passe de tout compte actif hors
+  // scénario. On le rétablit donc : rôle CONSULTATION, actif, mot de passe connu.
+  const h = { Authorization: `Bearer ${(await connecter(request, SG)).token}` };
+  const c = await request.post("/api/users", { headers: h, data: { nom: "E2E Consultation", email: CONSULTATION, role: "CONSULTATION", password: MDP_CONSULTATION } });
   expect([201, 409]).toContain(c.status());
+  if (c.status() === 409) {
+    const u = ((await (await request.get("/api/users", { headers: h })).json()) as { id: number; email: string }[]).find((x) => x.email === CONSULTATION)!;
+    expect((await request.patch(`/api/users/${u.id}`, { headers: h, data: { role: "CONSULTATION", actif: true } })).status()).toBe(200);
+    expect((await request.post(`/api/users/${u.id}/password`, { headers: h, data: { password: MDP_CONSULTATION } })).status()).toBe(200);
+  }
   await ouvrirSession(page, request, CONSULTATION);
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/");
