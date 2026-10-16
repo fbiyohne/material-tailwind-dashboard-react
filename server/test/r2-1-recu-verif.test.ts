@@ -3,10 +3,12 @@ import request from "supertest";
 import { creerApp } from "../src/app.js";
 import { prisma } from "../src/prisma.js";
 import { cotisationDue, droitDuAvec, tarifsActuels } from "../src/lib/business.js";
+import { originePublique } from "../src/lib/signature.js";
 
 /**
  * R2-1 — le reçu renvoyé à l'émission (POST /cotisations/paiement et /droits/paiement,
- * tous deux via encaisser) porte `verif`, le chemin court signé : le QR affiché à
+ * tous deux via encaisser) porte `verif`, l'URL absolue signée (origine publique canonique,
+ * R2-2) : le QR affiché à
  * l'écran juste après l'émission ouvre la page /v du bon reçu (« Authentique »).
  */
 const app = creerApp();
@@ -28,7 +30,7 @@ afterAll(async () => {
 });
 
 describe("R2-1 — verif dans la réponse d'encaissement", () => {
-  it("cotisation et droit : body.recu.verif est un chemin /v/r signé qui répond Authentique", async () => {
+  it("cotisation et droit : body.recu.verif est une URL absolue /v/r signée qui répond Authentique", async () => {
     const tarifs = await tarifsActuels();
     const cas = [
       { route: "cotisations", montant: cotisationDue(null, tarifs, "AVOCAT") },
@@ -37,9 +39,12 @@ describe("R2-1 — verif dans la réponse d'encaissement", () => {
     for (const { route, montant } of cas) {
       const p = await request(app).post(`/api/${route}/paiement`).set(...bearer(sg)).send({ membreId, annee: 2026, montant, mode: "Espèces" });
       expect(p.status, route).toBe(201);
-      expect(p.body.recu.verif, route).toMatch(/^\/v\/r\/R-.+\.[0-9A-Z]{10}$/);
-      expect(p.body.recu.verif, route).toContain(`/v/r/${p.body.recu.numero}.`);
-      const v = await request(app).get(p.body.recu.verif);
+      const verif: string = p.body.recu.verif;
+      expect(verif.startsWith(originePublique() + "/"), route).toBe(true);
+      const chemin = new URL(verif).pathname;
+      expect(chemin, route).toMatch(/^\/v\/r\/R-.+\.[0-9A-Z]{10}$/);
+      expect(chemin, route).toContain(`/v/r/${p.body.recu.numero}.`);
+      const v = await request(app).get(chemin);
       expect(v.status, route).toBe(200);
       expect(v.text, route).toContain("Authentique");
     }
