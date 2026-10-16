@@ -108,6 +108,7 @@ const MATRICE: Ligne[] = [
   l("POST", "/api/membres/:id/acces", [SG, ADM], "M"), // lien d'activation renvoyé à l'opérateur (ADMIN autorisé, tracé)
   l("POST", "/api/membres/:id/attestation", ECR, "C"),
   l("GET", "/api/membres/:id/attestation/pdf", ECR, "L"),
+  l("POST", "/api/membres/:id/attestation/apercu", ECR, "L"), // HTML d'aperçu, ni numéro ni archive
   l("GET", "/api/membres/:id/attestation-sortie/pdf", ECR, "L"),
 
   l("GET", "/api/users", SYS, "L"),
@@ -200,6 +201,8 @@ const MATRICE: Ligne[] = [
   l("POST", "/api/publications/lettre/generer", [SG, BAT, ADM, SA], "C"),
   l("GET", "/api/publications", M_DOC, "L"),
   l("GET", "/api/publications/:id", M_DOC, "L"),
+  l("POST", "/api/publications/apercu", M_DOC, "L"), // HTML d'aperçu, aucune écriture
+  l("GET", "/api/publications/:id/pdf", M_DOC, "L"),
   l("POST", "/api/publications", ECR, "C"),
   l("PATCH", "/api/publications/:id", ECR, "M"),
   l("POST", "/api/publications/:id/statut", [SG, BAT, ADM], "V"),
@@ -287,7 +290,7 @@ const ECARTS: Ecart[] = [
   {
     id: "E9", sens: "restrictif", statut: "à valider Fabrice", roles: [SA], routes: [
       "POST /api/membres/:id/pieces", "POST /api/membres", "POST /api/membres/import", "PATCH /api/membres/:id", "POST /api/membres/:id/deces",
-      "POST /api/membres/:id/rapports", "POST /api/membres/:id/attestation", "GET /api/membres/:id/attestation/pdf", "GET /api/membres/:id/attestation-sortie/pdf",
+      "POST /api/membres/:id/rapports", "POST /api/membres/:id/attestation", "GET /api/membres/:id/attestation/pdf", "POST /api/membres/:id/attestation/apercu", "GET /api/membres/:id/attestation-sortie/pdf",
       "POST /api/reunions/:id/convoquer", "POST /api/reunions", "PATCH /api/reunions/:id", "POST /api/assemblees/:id/convoquer", "POST /api/assemblees",
       "PATCH /api/assemblees/:id", "POST /api/publications/lettre/generer", "POST /api/publications", "PATCH /api/publications/:id", "POST /api/tableau/publier",
       "POST /api/scrutins", "PATCH /api/scrutins/:id", "POST /api/scrutins/:id/candidats", "POST /api/scrutins/:id/ouvrir", "POST /api/scrutins/:id/voix",

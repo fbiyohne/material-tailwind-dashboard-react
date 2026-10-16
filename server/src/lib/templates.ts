@@ -157,17 +157,46 @@ export function tableauOrdreHtml(
   });
 }
 
-export function attestationHtml(membre: { nom: string; num: number; dateInscription?: Date | string | null }, numero: string, date: Date | string): string {
-  const depuis = membre.dateInscription ? `, depuis le <b>${fmtDate(membre.dateInscription)}</b>` : "";
-  return documentHtml({
-    org: "Le Bâtonnier",
-    title: "Attestation d'inscription",
-    reference: `N° ${numero}`,
-    bodyHtml: `
-      <p>Le Bâtonnier de l'Ordre des Avocats du ${escapeHtml(identite().denomination)} atteste que <b>Me ${escapeHtml(membre.nom)}</b> est inscrit(e) au Tableau de l'Ordre des Avocats du ${escapeHtml(identite().denomination)} sous le numéro <b>${membre.num}</b>${depuis}.</p>
-      <p style="margin-top:12px">La présente attestation est délivrée à l'intéressé(e) pour servir et valoir ce que de droit.</p>`,
-    signataire: { role: "Le Bâtonnier", nom: identite().batonnier },
-    date,
+type MembreAttestation = { nom: string; num: number; numInscription?: string | null; dateInscription?: Date | string | null; qualite?: string | null; cabinet?: string | null };
+
+/**
+ * Attestation (inscription, sortie du tableau, non-redevance) : mise en page d'acte, pas de lettre.
+ * Titre centré, nom du titulaire mis en avant, éléments attestés dans un encart, formule consacrée,
+ * signature et cachet du Bâtonnier. Une page.
+ */
+function attestationOfficielle(o: { titre: string; numero: string; date: Date | string; membre: MembreAttestation; enonce: string; elements: [string, string][]; formule: string }): string {
+  const id = identite();
+  const elements = o.elements.filter(([, v]) => v);
+  return pageA4({
+    titreCourt: o.titre,
+    reference: `N° ${o.numero}`,
+    unePage: true,
+    contenu: `
+${entete("Attestation n°", o.numero, `${id.ville}, le ${fmtDate(o.date)}`)}
+<div class="content"><main class="certificat">
+<div class="titre-bloc"><h1 class="titre">${escapeHtml(o.titre)}</h1></div>
+<p class="cert-attestant">Le Bâtonnier de l'Ordre des Avocats du ${escapeHtml(id.denomination)}<br>atteste que</p>
+<p class="cert-nom">Me ${escapeHtml(o.membre.nom)}</p>
+<p class="cert-enonce">${o.enonce}</p>
+<dl class="cert-elements" style="--n:${elements.length}">${elements.map(([l, v]) => `<div><dt>${escapeHtml(l)}</dt><dd>${escapeHtml(v)}</dd></div>`).join("")}</dl>
+<p class="cert-formule">${escapeHtml(o.formule)}</p>
+</main></div><!--/corps-->
+<div class="cloture"><p class="fait-a">Fait à ${escapeHtml(id.ville)}, le ${fmtDate(o.date)}</p>${signatures([["Le Bâtonnier", id.batonnier, cachetPourRole("Le Bâtonnier")]])}</div>`,
+  });
+}
+
+const numeroTableau = (m: MembreAttestation) => m.numInscription || String(m.num);
+
+export function attestationHtml(membre: MembreAttestation, numero: string, date: Date | string): string {
+  return attestationOfficielle({
+    titre: "Attestation d'inscription", numero, date, membre,
+    enonce: `est inscrit(e) au Tableau de l'Ordre des Avocats du ${escapeHtml(identite().denomination)}.`,
+    elements: [
+      ["N° au Tableau", numeroTableau(membre)],
+      ["Inscrit(e) depuis le", membre.dateInscription ? fmtDate(membre.dateInscription) : ""],
+      ["Qualité", membre.qualite ? QUALITE_FR[membre.qualite] ?? membre.qualite : ""],
+    ],
+    formule: "La présente attestation est délivrée à l'intéressé(e) pour servir et valoir ce que de droit.",
   });
 }
 
@@ -175,42 +204,30 @@ export function attestationHtml(membre: { nom: string; num: number; dateInscript
  * Attestation de sortie du tableau (ancien membre, T20 M-20261011). Même cadre que
  * l'attestation d'inscription ; texte neutre : jamais le motif de sortie (R-62, PO-21).
  */
-export function attestationSortieHtml(
-  membre: { nom: string; num: number; dateInscription?: Date | string | null },
-  numero: string,
-  date: Date | string,
-  dateSortie: Date | string | null,
-): string {
-  const depuis = membre.dateInscription ? ` à compter du <b>${fmtDate(membre.dateInscription)}</b>` : "";
-  const sortie = dateSortie ? ` depuis le <b>${fmtDate(dateSortie)}</b>` : "";
-  return documentHtml({
-    org: "Le Bâtonnier",
-    title: "Attestation de sortie du tableau",
-    reference: `N° ${numero}`,
-    bodyHtml: `
-      <p>Le Bâtonnier de l'Ordre des Avocats du ${escapeHtml(identite().denomination)} atteste que <b>Me ${escapeHtml(membre.nom)}</b> a été inscrit(e) au Tableau de l'Ordre sous le numéro <b>${membre.num}</b>${depuis}, et ne figure plus au Tableau${sortie}.</p>
-      <p style="margin-top:12px">La présente attestation est délivrée pour servir et valoir ce que de droit.</p>`,
-    signataire: { role: "Le Bâtonnier", nom: identite().batonnier },
-    date,
+export function attestationSortieHtml(membre: MembreAttestation, numero: string, date: Date | string, dateSortie: Date | string | null): string {
+  return attestationOfficielle({
+    titre: "Attestation de sortie du tableau", numero, date, membre,
+    enonce: `a été inscrit(e) au Tableau de l'Ordre des Avocats du ${escapeHtml(identite().denomination)} et n'y figure plus.`,
+    elements: [
+      ["N° au Tableau", numeroTableau(membre)],
+      ["Inscrit(e) à compter du", membre.dateInscription ? fmtDate(membre.dateInscription) : ""],
+      ["Ne figure plus au Tableau depuis le", dateSortie ? fmtDate(dateSortie) : ""],
+    ],
+    formule: "La présente attestation est délivrée pour servir et valoir ce que de droit.",
   });
 }
 
 /** Attestation de non-redevance (cotisation de l'exercice intégralement réglée). */
-export function attestationNonRedevanceHtml(
-  membre: { nom: string; num: number },
-  numero: string,
-  annee: number,
-  date: Date | string,
-): string {
-  return documentHtml({
-    org: "Le Bâtonnier",
-    title: "Attestation de non-redevance",
-    reference: `N° ${numero}`,
-    bodyHtml: `
-      <p>Le Bâtonnier de l'Ordre des Avocats du ${escapeHtml(identite().denomination)} atteste que <b>Me ${escapeHtml(membre.nom)}</b>, inscrit(e) au Tableau de l'Ordre sous le numéro <b>${membre.num}</b>, est à jour de sa cotisation ordinale au titre de l'exercice <b>${annee}</b>.</p>
-      <p style="margin-top:12px">L'intéressé(e) ne demeure redevable d'aucune somme envers l'Ordre au titre de cet exercice. La présente attestation est délivrée pour servir et valoir ce que de droit.</p>`,
-    signataire: { role: "Le Bâtonnier", nom: identite().batonnier },
-    date,
+export function attestationNonRedevanceHtml(membre: MembreAttestation, numero: string, annee: number, date: Date | string): string {
+  return attestationOfficielle({
+    titre: "Attestation de non-redevance", numero, date, membre,
+    enonce: `inscrit(e) au Tableau de l'Ordre, est à jour de sa cotisation ordinale et ne demeure redevable d'aucune somme envers l'Ordre au titre de l'exercice ${escapeHtml(annee)}.`,
+    elements: [
+      ["N° au Tableau", numeroTableau(membre)],
+      ["Exercice", String(annee)],
+      ["Situation", "À jour de cotisation"],
+    ],
+    formule: "La présente attestation est délivrée pour servir et valoir ce que de droit.",
   });
 }
 
@@ -519,5 +536,27 @@ export function accuseReceptionHtml(a: {
     signataire: { role: "Édité automatiquement", nom: "Plateforme du Barreau" },
     cachet: false,
     date: new Date(),
+  });
+}
+
+/**
+ * Publication de l'Ordre (avis, communiqué) sur le gabarit officiel. Le cachet du Bâtonnier
+ * n'apparaît qu'une fois la publication validée ; avant, le document porte la mention « Projet ».
+ */
+export function publicationHtml(p: { titre: string; type: string; contenu?: string | null; statut: string; date: Date | string }): string {
+  const id = identite();
+  const valide = p.statut === "VALIDE" || p.statut === "PUBLIE";
+  const paragraphes = (p.contenu ?? "").split(/\n\s*\n/).map((t) => t.trim()).filter(Boolean)
+    .map((t) => `<p>${escapeHtml(t).replace(/\n/g, "<br>")}</p>`).join("");
+  return pageA4({
+    titreCourt: `${p.type} — ${p.titre}`,
+    reference: `${p.type} du ${fmtDate(p.date)}`,
+    unePage: false,
+    contenu: `
+${entete("Publication de l'Ordre", p.type, `${id.ville}, le ${fmtDate(p.date)}`)}
+<div class="titre-bloc"><h1 class="titre">${escapeHtml(p.type)}</h1><p class="sous-titre">${escapeHtml(p.titre)}</p></div>
+${valide ? "" : `<p class="mention-projet">Projet — en attente de validation par le Bâtonnier</p>`}
+<div class="corps">${paragraphes || "<p>—</p>"}</div>
+<div class="cloture"><p class="fait-a">Fait à ${escapeHtml(id.ville)}, le ${fmtDate(p.date)}</p>${signatures([["Le Bâtonnier", id.batonnier, valide ? cachetPourRole("Le Bâtonnier") : undefined]])}</div>`,
   });
 }

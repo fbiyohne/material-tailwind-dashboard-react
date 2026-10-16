@@ -63,7 +63,7 @@ ${champs([
   ["Exercice couvert", String(recu.annee)],
   ["Mode de paiement", recu.mode || "—"],
 ])}
-<div class="encart"><p class="encart-titre">Montant perçu</p><p class="montant-chiffres">${fmtFCFA(m)}</p><p class="montant-lettres">${esc(montantEnLettresFCFA(m).replace(/^./, (c) => c.toUpperCase()))}</p></div>
+<div class="encart encart-montant"><p class="encart-titre">Montant perçu</p><p class="montant-chiffres">${fmtFCFA(m)}</p><p class="montant-lettres">${esc(montantEnLettresFCFA(m).replace(/^./, (c) => c.toUpperCase()))}</p></div>
 <div class="corps"><p>En foi de quoi, le présent reçu lui est délivré pour servir et valoir ce que de droit.</p></div>
 </main>
 <div class="cloture">${signatures([["La Trésorière de l'Ordre", id.tresoriere, cachetTresoriere]])}

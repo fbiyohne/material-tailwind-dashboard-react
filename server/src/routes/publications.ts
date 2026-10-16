@@ -5,6 +5,8 @@ import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole, type AuthRequest, requirePermission } from "../middleware/auth.js";
 import { genererArticleLettre, iaDisponible } from "../lib/ia.js";
 import { notifier, usersAvocats } from "../lib/centreNotifications.js";
+import { publicationHtml } from "../lib/templates.js";
+import { envoyerPdf } from "../lib/pdf.js";
 
 export const publicationsRouter = Router();
 // Module institutionnel (Documents) : réservé SG/Bâtonnier comme au front (RG-15).
@@ -24,6 +26,20 @@ publicationsRouter.post(
 
 publicationsRouter.get("/", asyncH(async (_req, res) => {
   res.json(await prisma.publication.findMany({ orderBy: { id: "desc" } }));
+}));
+
+/** POST /publications/apercu — HTML de l'avis ou du communiqué en cours de rédaction (gabarit officiel). */
+const apercuSchema = z.object({ titre: z.string().max(300).default(""), type: z.string().max(40).default("Avis"), contenu: z.string().max(50000).optional(), statut: z.string().max(20).default("BROUILLON") });
+publicationsRouter.post("/apercu", asyncH(async (req, res) => {
+  const p = apercuSchema.parse(req.body ?? {});
+  res.type("html").send(publicationHtml({ ...p, titre: p.titre || "—", statut: p.statut.toUpperCase(), date: new Date() }));
+}));
+
+/** GET /publications/:id/pdf — avis ou communiqué en PDF sur le gabarit officiel. */
+publicationsRouter.get("/:id/pdf", asyncH(async (req, res) => {
+  const p = await prisma.publication.findUnique({ where: { id: Number(req.params.id) } });
+  if (!p) throw new HttpError(404, "Publication introuvable");
+  await envoyerPdf(res, publicationHtml(p), `${p.type}-${p.id}.pdf`.replace(/[^w.-]+/g, "-"));
 }));
 
 publicationsRouter.get("/:id", asyncH(async (req, res) => {

@@ -51,3 +51,16 @@ describe("POST /etats/pdf", () => {
     expect((await request(app).post("/api/etats/pdf").send(ETAT)).status).toBe(401);
   });
 });
+
+describe("POST /publications/apercu", () => {
+  it("rend l'avis sur le gabarit officiel, échappé, avec la mention Projet tant qu'il n'est pas validé", async () => {
+    const corps = { titre: "Rentrée <judiciaire>", type: "Avis", contenu: "Premier §\n\nSecond §", statut: "a_valider" };
+    const r = await request(app).post("/api/publications/apercu").set(...bearer(sg)).send(corps);
+    expect(r.status).toBe(200);
+    expect(r.text).toContain("Rentrée &lt;judiciaire&gt;");
+    expect(r.text).toContain("<p>Premier §</p><p>Second §</p>");
+    expect(r.text).toContain("Projet — en attente de validation");
+    const v = await request(app).post("/api/publications/apercu").set(...bearer(sg)).send({ ...corps, statut: "publie" });
+    expect(v.text).not.toContain("Projet — en attente");
+  });
+});

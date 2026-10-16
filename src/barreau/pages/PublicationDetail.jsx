@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { identite } from "../data/config";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeftIcon, CheckIcon } from "@heroicons/react/24/outline";
-import { Badge, useToast, FormField, PageHeader, ErrorState, TableSkeleton } from "../components";
+import { ArrowLeftIcon, CheckIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
+import { Badge, useToast, FormField, PageHeader, ErrorState, TableSkeleton, ApercuServeur } from "../components";
+import { telechargerPdf } from "../api/client";
 import { formatDate } from "../utils/format";
 import { STATUT_PUBLICATION_META } from "../data/publications";
 import { useAuth } from "../auth/AuthContext";
@@ -110,19 +110,12 @@ export function PublicationDetail() {
 
         {/* Aperçu */}
         <div className="bpn-card">
-          <div className="bpn-card-header"><span className="bpn-card-heading">Aperçu de diffusion</span></div>
-          <div className="p-6">
-            <div className="overflow-hidden rounded border border-grisM">
-              <div className="bg-navy px-5 py-3">
-                <div className="text-2xs font-semibold uppercase tracking-[0.15em] text-or">{identite().denomination}</div>
-                <div className="text-2xs text-white/60">{form.type ?? publication.type} officiel</div>
-              </div>
-              <div className="h-[3px] bg-gradient-to-r from-or via-or-2 to-or" />
-              <div className="px-6 py-5">
-                <div className="font-display text-xl text-navy">{form.titre || "—"}</div>
-                <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-encre">{form.contenu || "—"}</p>
-              </div>
-            </div>
+          <div className="bpn-card-header">
+            <span className="bpn-card-heading">Aperçu de diffusion</span>
+            <button className="bpn-btn bpn-btn-ghost bpn-btn-sm" onClick={() => telechargerPdf(`/publications/${publication.id}/pdf`, `${publication.type}-${publication.id}.pdf`).catch((e) => toast.error(e.message))}><ArrowDownTrayIcon className="h-3.5 w-3.5" /> PDF</button>
+          </div>
+          <div className="p-4">
+            <ApercuServeur titre="Aperçu de la publication" chemin="/publications/apercu" corps={{ titre: form.titre ?? "", type: form.type ?? publication.type, contenu: form.contenu ?? "", statut: publication.statut }} />
           </div>
         </div>
       </div>

@@ -123,8 +123,7 @@ describe("AvocatDetail — en-tête en boutons-icônes et menu Actions (O2)", ()
     rendre();
     await userEvent.click(entree(await ouvrirMenu(), "Attestation"));
     const dlg = screen.getByRole("dialog", { name: "Attestation de sortie du tableau" });
-    expect(dlg).toHaveTextContent(/ne figure plus au Tableau/);
-    expect(dlg).not.toHaveTextContent(/radi/i);
+    // Texte de l'attestation (sans motif) : rendu par le serveur, couvert par server/test/attestation-sortie.test.ts.
     await userEvent.click(within(dlg).getByRole("button", { name: /Générer/ }));
     expect(telechargerAttestationSortiePdf).toHaveBeenCalledWith(7, 12);
     expect(telechargerAttestationPdf).not.toHaveBeenCalled();

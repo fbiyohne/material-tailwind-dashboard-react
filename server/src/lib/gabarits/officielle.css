@@ -103,3 +103,27 @@ h2.section { font-family: var(--f-titre); font-weight: 700; font-size: 11pt; let
 /* Les coordonnées passent dans le pied officiel de chaque page */
 .coordonnees { display: none; }
 .mention-perso { font-size: 7.4pt; color: var(--gris); text-align: center; font-style: italic; margin: 2mm 0 0; }
+
+/* Reçu : montant centré dans un cadre, chiffres puis somme en lettres */
+.encart-montant { text-align: center; border: .8pt solid var(--bleu); border-radius: 1.5mm; padding: 4mm 6mm !important; margin: 5mm 18mm !important; }
+.encart-montant .encart-titre { margin: 0 0 1.5mm; }
+.encart-montant .montant-chiffres { font-size: 22pt; letter-spacing: .02em; margin: 0 0 1.5mm; }
+.encart-montant .montant-lettres { margin: 0; color: var(--gris); }
+
+/* Attestations : acte centré (titulaire mis en avant, éléments attestés en colonnes), pas une lettre */
+.certificat { text-align: center; }
+.certificat .titre-bloc { margin: 10mm 0 14mm; }
+.cert-attestant { font-style: italic; color: var(--gris); line-height: 1.6; margin: 0 0 4mm; }
+.cert-nom { font-size: 22pt; font-weight: 600; color: var(--marine); line-height: 1.25; margin: 0 0 4mm; }
+.cert-enonce { max-width: 135mm; margin: 0 auto 12mm; line-height: 1.6; }
+.cert-elements { display: grid; grid-template-columns: repeat(var(--n, 3), 1fr); margin: 0 0 12mm; padding: 4mm 0; border-top: .6pt solid var(--gris-m); border-bottom: .6pt solid var(--gris-m); }
+.cert-elements > div { padding: 0 3mm; }
+.cert-elements > div + div { border-left: .6pt solid var(--gris-m); }
+.cert-elements dt { font-family: var(--f-titre); font-size: 7.6pt; letter-spacing: .08em; text-transform: uppercase; color: var(--gris); margin: 0 0 1.5mm; }
+.cert-elements dd { margin: 0; font-size: 11.5pt; font-weight: 600; color: var(--encre); }
+.cert-formule { max-width: 135mm; margin: 0 auto; font-style: italic; }
+
+/* Publications : sous-titre = objet de l'avis ou du communiqué ; mention tant que non validée */
+.dir-officielle .titre-bloc .sous-titre { font-size: 12.5pt; color: var(--encre); }
+.mention-projet { text-align: center; font-family: var(--f-titre); font-size: 8pt; letter-spacing: .12em; text-transform: uppercase; color: var(--or-fonce); border: .6pt solid var(--or); padding: 1.5mm 0; margin: 0 0 6mm; }
+.certificat p { text-align: center; } /* l'emporte sur la prose justifiée (.content p) */

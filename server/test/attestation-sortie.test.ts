@@ -56,7 +56,7 @@ describe("GET /membres/:id/attestation-sortie/pdf", () => {
       expect(r.headers["content-type"]).toMatch(/application\/pdf/);
       expect(rendu.html).toContain("Attestation de sortie du tableau");
       expect(rendu.html).toContain("01 mars 2010");
-      expect(rendu.html).toMatch(/ne figure plus au Tableau/);
+      expect(rendu.html).toMatch(/ne figure plus au Tableau|n'y figure plus/i);
       if (statut !== "DEMISSIONNAIRE") expect(rendu.html).toContain("15 septembre 2026");
       // Texte du document seulement (la feuille de style contient « border-radius »).
       const texte = rendu.html.replace(/<style[\s\S]*?<\/style>/g, "").replace(/<[^>]+>/g, " ");

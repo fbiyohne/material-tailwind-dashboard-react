@@ -2,8 +2,6 @@ import { describe, it, expect, beforeAll, afterAll, afterEach } from "vitest";
 import { render, cleanup } from "@testing-library/react";
 import { appliquerConfig, PARAMETRES_DEFAUT } from "../../data/config";
 import { DocumentChrome } from "../DocumentChrome";
-import { AttestationModal } from "../AttestationModal";
-import { ToastProvider } from "../Toast";
 
 // Recette T29, parcours 11 : l'aperçu du reçu portait « Pointe-Noire, le … » et « au Barreau de Pointe-Noire »
 // sous l'identité de démonstration (X-05 corrigé côté PDF serveur, pas dans les aperçus de l'interface).
@@ -16,7 +14,6 @@ describe("Aperçus de documents à l'identité paramétrée", () => {
 
   it.each([
     ["document", <DocumentChrome key="d" title="Attestation" reference="A-1">corps</DocumentChrome>],
-    ["attestation", <ToastProvider key="a"><AttestationModal open onClose={() => {}} membre={membre} /></ToastProvider>],
   ])("%s : nouvelle dénomination et nouvelle ville, aucune occurrence de « Pointe-Noire »", (_n, el) => {
     render(el);
     expect(document.body.textContent).not.toMatch(/Pointe-Noire/i);

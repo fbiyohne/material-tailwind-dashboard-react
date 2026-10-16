@@ -1095,6 +1095,25 @@ membresRouter.post(
   })
 );
 
+/**
+ * POST /membres/:id/attestation/apercu — HTML de l'attestation pour l'aperçu de l'application
+ * (même assembleur que le PDF) : inscription, ou sortie du tableau pour un ancien membre.
+ * Rien n'est numéroté ni archivé : le numéro est attribué à la génération.
+ */
+membresRouter.post(
+  "/:id/attestation/apercu",
+  requireRole("SECRETAIRE_GENERAL"),
+  asyncH(async (req, res) => {
+    const membre = await prisma.membre.findUnique({ where: { id: Number(req.params.id) }, include: derniereSortie });
+    if (!membre) throw new HttpError(404, "Avocat introuvable");
+    const numero = "attribué à la génération";
+    const html = SORTIS.includes(membre.statut)
+      ? attestationSortieHtml(membre, numero, new Date(), ligneSortie(membre, false).dateSortie)
+      : attestationHtml(membre, numero, new Date());
+    res.type("html").send(html);
+  })
+);
+
 /** GET /membres/:id/attestation/pdf — génère, archive et renvoie l'attestation en PDF. */
 membresRouter.get(
   "/:id/attestation/pdf",
