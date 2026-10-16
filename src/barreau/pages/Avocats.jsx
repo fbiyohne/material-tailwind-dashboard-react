@@ -102,6 +102,7 @@ export function Avocats() {
   const toast = useToast();
   const confirm = useConfirm();
   const { user } = useAuth();
+  const peutVoirFiche = ["SECRETAIRE_GENERAL", "BATONNIER", "ADMIN"].includes(user?.role); // GET /membres/:id
   const peutImporter = user?.role === "SECRETAIRE_GENERAL" || user?.role === "ADMIN";
   const estAdmin = user?.role === "ADMIN";
   const voitFinances = peutImporter || !!user?.permissions?.includes("finances");
@@ -244,7 +245,7 @@ export function Avocats() {
     { key: "actions", label: "Actions", align: "right",
       cell: (m) => (
         <div className="flex items-center justify-end gap-1.5">
-          <button type="button" onClick={() => navigate(`/avocats/${m.id}`)} className="bpn-btn bpn-btn-ghost bpn-btn-sm">Fiche</button>
+          {peutVoirFiche && <button type="button" onClick={() => navigate(`/avocats/${m.id}`)} className="bpn-btn bpn-btn-ghost bpn-btn-sm">Fiche</button>}
           {peutImporter && m.statut !== "radie" && m.statut !== "decede" && (
             <button type="button" onClick={() => setAttestation(m)} className="bpn-btn bpn-btn-ghost bpn-btn-sm">Attestation</button>
           )}

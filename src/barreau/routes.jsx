@@ -84,7 +84,7 @@ export const navSections = [
       { name: "Avocats stagiaires", path: "/stagiaires", icon: AcademicCapIcon, perm: "membres", element: <Stagiaires /> },
       { name: "Personnes morales", path: "/cabinets", icon: BuildingOffice2Icon, perm: "membres", element: <Cabinets /> },
       { name: "Tableau de l'Ordre", path: "/tableau", icon: ClipboardDocumentListIcon, perm: "membres", element: <TableauOrdre /> },
-      { name: "Vérification des pièces", path: "/pieces", icon: ShieldCheckIcon, perm: "membres", element: <Pieces /> },
+      { name: "Vérification des pièces", path: "/pieces", icon: ShieldCheckIcon, perm: "membres", roles: ["BATONNIER"], element: <Pieces /> },
       { name: "Corps électoral", path: "/corps-electoral", icon: CheckBadgeIcon, perm: "corps_electoral", element: <CorpsElectoral /> },
     ],
   },
@@ -106,7 +106,7 @@ export const navSections = [
       { name: "Discipline", path: "/discipline", icon: ScaleIcon, perm: "discipline", element: <Discipline /> },
       { name: "Élections", path: "/elections", icon: HandRaisedIcon, perm: "elections", element: <Elections /> },
       { name: "Conseil de l'Ordre", path: "/conseil", icon: UserGroupIcon, perm: "elections", element: <Conseil /> },
-      { name: "Messagerie", path: "/messagerie", icon: ChatBubbleLeftRightIcon, perm: "messagerie", element: <Messagerie /> },
+      { name: "Messagerie", path: "/messagerie", icon: ChatBubbleLeftRightIcon, perm: "messagerie", sauf: ["ADMIN"], element: <Messagerie /> },
     ],
   },
   {
@@ -137,9 +137,10 @@ export const navSections = [
 export const aAcces = (item, user) => {
   const u = typeof user === "string" ? { role: user } : user;
   const role = u?.role;
+  if (item.sauf?.includes(role)) return false; // secret professionnel : l'ADMIN n'a pas le contenu (R-58)
   if (role === "ADMIN" || role === "SECRETAIRE_GENERAL") return true;
-  if (item.perm) return !!u?.permissions?.includes(item.perm);
-  if (item.roles) return item.roles.includes(role);
+  if (item.perm && !u?.permissions?.includes(item.perm)) return false;
+  if (item.roles) return item.roles.includes(role); // garde serveur fixée par rôle, en plus de la matrice
   return true;
 };
 
@@ -158,7 +159,8 @@ export const allModules = navSections.flatMap((s) => s.items);
  */
 export const detailRoutes = [
   { path: "/profil", element: <Profil />, parent: "/" },
-  { path: "/avocats/:id", element: <AvocatDetail />, parent: "/avocats" },
+  // Fiche : GET /membres/:id est réservé au SG et au Bâtonnier côté serveur.
+  { path: "/avocats/:id", element: <AvocatDetail />, parent: "/avocats", roles: ["BATONNIER"] },
   { path: "/discipline/:id", element: <DossierDetail />, parent: "/discipline" },
   { path: "/reunions/:id", element: <ReunionDetail />, parent: "/reunions" },
   { path: "/assemblees/:id", element: <AssembleeDetail />, parent: "/assemblees" },

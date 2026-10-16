@@ -84,6 +84,8 @@ async function avecRafraichissement(faireRequete, tenterRefresh = true) {
   return res;
 }
 
+const REFUS_403 = "Vous n'avez pas les droits nécessaires pour accéder à cette ressource.";
+
 export async function api(path, opts = {}) {
   // Pas de rafraîchissement pour les requêtes non authentifiées ni les routes d'auth, sauf /auth/me :
   // au rechargement d'une page après expiration du jeton (15 min), la session est rafraîchie au lieu d'être perdue (R2-13).
@@ -98,6 +100,8 @@ export async function api(path, opts = {}) {
   if (!res.ok) {
     // Le statut est porté par l'erreur : seul un 401 met fin à la session (jamais 429/5xx).
     if (res.status === 429) throw erreurLimite(delaiAnnonce(res, data), data?.erreur);
+    // 403 : message neutre, sans indice sur l'existence de la ressource (avis juridique, M-20261016).
+    if (res.status === 403) throw Object.assign(new Error(REFUS_403), { status: 403 });
     throw Object.assign(new Error(data?.erreur || `Erreur ${res.status}`), { status: res.status });
   }
   return data;

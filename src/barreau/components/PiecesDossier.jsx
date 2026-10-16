@@ -5,6 +5,7 @@ import { Badge } from "./Badge";
 import { useToast } from "./Toast";
 import { useConfirm } from "./ConfirmDialog";
 import { TYPE_PIECE_LABEL as TYPE_LABEL, STATUT_PIECE_META as STATUT, PIECES_REQUISES as REQUISES, PIECE_TAILLE_MAX as MAX } from "../data/pieces";
+import { useAuth } from "../auth/AuthContext";
 import { listerPieces, televerserPiece, verifierPiece, rejeterPiece, supprimerPiece, voirPiece } from "../api/resources";
 
 const lireBase64 = (file) => new Promise((resolve, reject) => {
@@ -31,6 +32,7 @@ BoutonTeleverser.propTypes = { onFile: PropTypes.func, label: PropTypes.string, 
  * consulte sans gérer.
  */
 export function PiecesDossier({ membreId, qualite, peutGerer }) {
+  const { user } = useAuth();
   const toast = useToast();
   const confirm = useConfirm();
   const [pieces, setPieces] = useState([]);
@@ -92,9 +94,11 @@ export function PiecesDossier({ membreId, qualite, peutGerer }) {
           {piece ? (
             <>
               <Badge ton={meta.ton}>{meta.label}</Badge>
-              <button className="bpn-btn bpn-btn-ghost !py-1.5 text-xs" onClick={() => voirPiece(piece.id).catch((e) => toast.error(e.message))}>
-                <EyeIcon className="h-3.5 w-3.5" /> Voir
-              </button>
+              {user?.role !== "ADMIN" && ( // contenu des pièces : secret professionnel, 403 pour l'ADMIN
+                <button className="bpn-btn bpn-btn-ghost !py-1.5 text-xs" onClick={() => voirPiece(piece.id).catch((e) => toast.error(e.message))}>
+                  <EyeIcon className="h-3.5 w-3.5" /> Voir
+                </button>
+              )}
               {peutGerer && piece.statut !== "VERIFIEE" && (
                 <button className="bpn-btn bpn-btn-or !py-1.5 text-xs" onClick={() => action(() => verifierPiece(piece.id), "Pièce vérifiée.")}>
                   <CheckIcon className="h-3.5 w-3.5" /> Vérifier

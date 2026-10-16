@@ -92,9 +92,11 @@ export function Pieces() {
     { key: "actions", label: "Action", align: "right",
       cell: (p) => (
         <div className="flex items-center justify-end gap-1.5">
-          <button className="bpn-btn bpn-btn-ghost bpn-btn-sm" onClick={() => voirPiece(p.id).catch((e) => toast.error(e.message))}>
-            <EyeIcon className="h-3.5 w-3.5" /> Voir
-          </button>
+          {user?.role !== "ADMIN" && (
+            <button className="bpn-btn bpn-btn-ghost bpn-btn-sm" onClick={() => voirPiece(p.id).catch((e) => toast.error(e.message))}>
+              <EyeIcon className="h-3.5 w-3.5" /> Voir
+            </button>
+          )}
           {peutGerer && p.statut !== "VERIFIEE" && (
             <button className="bpn-btn bpn-btn-or bpn-btn-sm" onClick={() => action(() => verifierPiece(p.id), "Pièce vérifiée.")}>
               <CheckIcon className="h-3.5 w-3.5" /> Vérifier
