@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, type AuthRequest, requirePermission } from "../middleware/auth.js";
+import { tracerLectureAdmin } from "../middleware/audit.js";
 import { notifierNouveauMessage, emailsMembres, telephonesMembres } from "../lib/messagerieNotif.js";
 import { MESSAGE_DE_AVOCAT, compterNonLusParFil, totalNonLus, jamaisLu, pieceSchema, envoyerMessage, accuser, messageAvecFil, pieceDto, envoyerPiece, htmlAccuse } from "../lib/messagerie.js";
 import { realtimeMembres } from "../lib/realtime.js";
@@ -49,7 +50,7 @@ messagerieRouter.get(
 /** GET /messagerie — fils adressés à l'administration (synthèse + non-lus). */
 messagerieRouter.get(
   "/",
-  asyncH(async (_req, res) => {
+  asyncH(async (req: AuthRequest, res) => {
     const convs = await prisma.conversation.findMany({
       where: { avecAdministration: true },
       orderBy: { updatedAt: "desc" },
@@ -77,6 +78,7 @@ messagerieRouter.get(
         nonLus: nonLusParFil.get(c.id) ?? 0,
       };
     });
+    await tracerLectureAdmin(req, res); // l'aperçu porte le début du corps
     res.json(result);
   })
 );
@@ -91,7 +93,11 @@ async function messageAdministration(req: AuthRequest) {
 /** GET /messagerie/messages/:id/piece — pièce jointe d'un message d'un fil avec l'administration. */
 messagerieRouter.get(
   "/messages/:id/piece",
-  asyncH(async (req: AuthRequest, res) => envoyerPiece(res, await messageAdministration(req)))
+  asyncH(async (req: AuthRequest, res) => {
+    const m = await messageAdministration(req);
+    if (m.pieceFichier) await tracerLectureAdmin(req, res);
+    envoyerPiece(res, m);
+  })
 );
 
 /** GET /messagerie/messages/:id/accuse/pdf — accusé de lecture (métadonnées + empreinte, sans le corps). */
@@ -117,6 +123,7 @@ messagerieRouter.get(
     if (!conv || !conv.avecAdministration) throw new HttpError(404, "Conversation introuvable");
     await prisma.conversation.update({ where: { id }, data: { adminLastReadAt: new Date() } });
     const avocat = conv.participants[0]?.membre ?? null;
+    await tracerLectureAdmin(req, res);
     res.json({
       id: conv.id,
       sujet: conv.sujet,

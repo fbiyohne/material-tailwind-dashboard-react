@@ -4,6 +4,7 @@ import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole, type AuthRequest } from "../middleware/auth.js";
 import { lireFichier, supprimerFichier } from "../lib/storage.js";
+import { tracerLectureAdmin } from "../middleware/audit.js";
 import { notifier, userDeMembre } from "../lib/centreNotifications.js";
 
 /**
@@ -56,6 +57,7 @@ piecesRouter.get(
   asyncH(async (req, res) => {
     const piece = await trouver(Number(req.params.id));
     const buffer = lireFichier(piece.fichier);
+    await tracerLectureAdmin(req, res);
     // Sécurité : ne rendre « inline » que des types sûrs et connus (PDF/images).
     // Le mimeType est saisi librement à l'upload ; servir un text/html en inline
     // (CSP désactivée en mono-service) exécuterait un script dans l'origine de l'app.

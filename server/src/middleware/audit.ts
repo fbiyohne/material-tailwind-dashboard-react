@@ -2,6 +2,7 @@ import type { Response, NextFunction } from "express";
 import { prisma } from "../prisma.js";
 import { logger } from "../lib/logger.js";
 import type { AuthRequest } from "./auth.js";
+import { HttpError } from "./error.js";
 
 /** Libellés lisibles par ressource (1er segment après /api). */
 const RESSOURCES: Record<string, string> = {
@@ -31,14 +32,6 @@ const RESSOURCES: Record<string, string> = {
  */
 const LECTURES_SENSIBLES = [/^\/api\/discipline(\/journal|\/\d+(\/(convocation|decision)\/pdf)?)?$/];
 
-/**
- * Lectures de contenu par l'ADMIN : accès autorisé (décision du 16/10/2026), tracé ici.
- * Liste des fils (aperçu du corps), fil, pièce jointe d'un message, fichier d'une pièce.
- * /messagerie/non-lus (compteur) et l'accusé PDF (sans le corps) n'en font pas partie.
- * Insensible à la casse et à la barre finale, comme le routage Express : sinon contournable.
- */
-const LECTURES_ADMIN = [/^\/api\/messagerie(\/\d+|\/messages\/\d+\/piece)?\/?$/i, /^\/api\/pieces\/\d+\/fichier\/?$/i];
-
 const VERBES: Record<string, string> = { GET: "Consultation", POST: "Création", PATCH: "Mise à jour", PUT: "Mise à jour", DELETE: "Suppression" };
 
 /** Construit un libellé d'action lisible à partir de la méthode et du chemin. */
@@ -65,6 +58,31 @@ function libelle(methode: string, chemin: string): { action: string; cible: stri
   return { action: `${VERBES[methode] ?? methode} — ${ressource}`, cible: cibleId, ressource };
 }
 
+// IP capturée à la réception (req.ip fiable via « trust proxy ») ; préfixe IPv4-mapped (::ffff:) retiré.
+const ipDe = (req: AuthRequest) => (req.ip ?? "").replace(/^::ffff:/, "") || null;
+
+/**
+ * Lecture de contenu par l'ADMIN (liste des fils, fil, pièce jointe, fichier de pièce) :
+ * accès autorisé (décision du 16/10/2026), tracé dans JournalAudit AVANT de servir le contenu.
+ * À appeler dans la route, une fois la ressource trouvée, juste avant l'envoi. Si la ligne
+ * ne peut pas être écrite, le contenu n'est pas servi (503) : pas d'accès sans trace.
+ * Sans effet pour les autres rôles. Le chemin seul est écrit, jamais le contenu.
+ */
+export async function tracerLectureAdmin(req: AuthRequest, res: Response): Promise<void> {
+  if (req.user?.role !== "ADMIN") return;
+  const chemin = req.originalUrl.split("?")[0];
+  const l = libelle("GET", chemin);
+  try {
+    await prisma.journalAudit.create({
+      data: { action: l.action, cible: l.cible, methode: "GET", chemin, ip: ipDe(req), statut: 200, userId: req.user.id, userNom: req.user.nom ?? null },
+    });
+  } catch (err) {
+    logger.error({ err, chemin }, "Lecture ADMIN refusée : journal d'audit indisponible");
+    throw new HttpError(503, "Journal d'audit indisponible : contenu non servi, réessayez plus tard.");
+  }
+  res.locals.auditFait = true; // le middleware générique n'écrit pas de doublon
+}
+
 /**
  * Journalise toute action importante (mutation réussie) dans JournalAudit (RG-16 / NFR-09),
  * ainsi que les écritures refusées en 403 (« Accès refusé — <ressource> », D18) : les GET
@@ -75,16 +93,12 @@ export function audit(req: AuthRequest, res: Response, next: NextFunction) {
   const chemin = req.originalUrl.split("?")[0];
   if (req.method === "OPTIONS" || req.method === "HEAD") return next();
   const lectureSensible = req.method !== "GET" || LECTURES_SENSIBLES.some((re) => re.test(chemin));
-  // IP capturée à la réception (req.ip fiable via « trust proxy ») ; on retire le
-  // préfixe IPv4-mapped (::ffff:) pour un affichage lisible.
-  const ip = (req.ip ?? "").replace(/^::ffff:/, "") || null;
+  const ip = ipDe(req);
   res.on("finish", () => {
     if (res.locals.auditFait) return;
     const refus = res.statusCode === 403 && req.method !== "GET";
     if (res.statusCode >= 400 && !refus) return;
-    // req.user n'est posé qu'ici (requireAuth du routeur, après ce middleware).
-    const lectureAdmin = req.method === "GET" && req.user?.role === "ADMIN" && LECTURES_ADMIN.some((re) => re.test(chemin));
-    if (!lectureSensible && !lectureAdmin && !res.locals.auditDetail) return;
+    if (!lectureSensible && !res.locals.auditDetail) return;
     const l = libelle(req.method, chemin);
     const base = refus ? `Accès refusé — ${l.ressource}` : l.action;
     const cible = l.cible;

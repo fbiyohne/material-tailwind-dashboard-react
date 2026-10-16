@@ -189,6 +189,31 @@ describe("T9 — l'ADMIN accède au contenu, chaque lecture tracée sans le cont
     expect((await ligne({ chemin, methode: "GET", userId: ids.ADM }))?.action).toBe("Consultation — Messagerie");
   });
 
+  it("traçabilité non contournable : identifiant non canonique (Number() le tolère) journalisé ou 404", async () => {
+    const enc = (n: number) => `%3${String(n)[0]}${String(n).slice(1)}`; // premier chiffre encodé (%3N)
+    for (const chemin of [`/api/messagerie/${convId}.0`, `/api/messagerie/${enc(convId)}`, `/api/messagerie/0x${convId.toString(16)}`, `/api/pieces/${pieceId}.0/fichier`, `/api/pieces/${enc(pieceId)}/fichier`]) {
+      const r = await request(app).get(chemin).set(...bearer(jeton.ADM));
+      if (r.status === 404) continue;
+      expect(r.status).toBe(200);
+      expect((await ligne({ chemin, methode: "GET", userId: ids.ADM }))?.action).toMatch(/^Consultation — (Messagerie|Pièce)$/);
+    }
+  });
+
+  it("journal indisponible : l'ADMIN reçoit 503 et aucun contenu (liste, fil, pièce) ; le SG n'est pas affecté", async () => {
+    const urls = ["/api/messagerie", `/api/messagerie/${convId}`, `/api/pieces/${pieceId}/fichier`];
+    const spy = vi.spyOn(prisma.journalAudit, "create").mockRejectedValue(new Error("panne"));
+    try {
+      for (const url of urls) {
+        const r = await request(app).get(url).set(...bearer(jeton.ADM));
+        expect(r.status, url).toBe(503);
+        expect(JSON.stringify(r.body) + (r.text ?? ""), url).not.toMatch(new RegExp(`${SECRET}|%PDF`));
+      }
+      expect((await request(app).get(`/api/pieces/${pieceId}/fichier`).set(...bearer(jeton.SG))).status).toBe(200);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it("un rôle non ADMIN (SG) et le compteur /non-lus ne sont pas journalisés en lecture", async () => {
     expect((await request(app).get(`/api/messagerie/${convId}`).set(...bearer(jeton.SG))).status).toBe(200);
     expect((await request(app).get(`/api/pieces/${pieceId}/fichier`).set(...bearer(jeton.SG))).status).toBe(200);
