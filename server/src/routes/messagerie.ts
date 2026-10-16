@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
-import { requireAuth, type AuthRequest, requirePermission, refuserAdmin } from "../middleware/auth.js";
+import { requireAuth, type AuthRequest, requirePermission } from "../middleware/auth.js";
 import { notifierNouveauMessage, emailsMembres, telephonesMembres } from "../lib/messagerieNotif.js";
 import { MESSAGE_DE_AVOCAT, compterNonLusParFil, totalNonLus, jamaisLu, pieceSchema, envoyerMessage, accuser, messageAvecFil, pieceDto, envoyerPiece, htmlAccuse } from "../lib/messagerie.js";
 import { realtimeMembres } from "../lib/realtime.js";
@@ -13,8 +13,10 @@ import { attestationHtml, attestationNonRedevanceHtml } from "../lib/templates.j
 /**
  * Messagerie — côté administration (Secrétariat). Boîte partagée des officiers
  * de l'Ordre : seuls les fils adressés à l'administration (avecAdministration)
- * sont visibles ici. Les échanges entre confrères restent privés (jamais exposés,
- * pas même à l'ADMIN : R-58), pièces jointes et accusés compris.
+ * sont visibles ici. Les échanges entre confrères restent privés (jamais exposés
+ * à l'administration), pièces jointes et accusés compris.
+ * L'ADMIN lit et écrit les fils de l'administration : accès ADMIN autorisé (décision
+ * du 16/10/2026), chaque lecture tracée dans JournalAudit (middleware/audit.ts).
  */
 export const messagerieRouter = Router();
 messagerieRouter.use(requireAuth, requirePermission("messagerie"));
@@ -47,7 +49,6 @@ messagerieRouter.get(
 /** GET /messagerie — fils adressés à l'administration (synthèse + non-lus). */
 messagerieRouter.get(
   "/",
-  refuserAdmin,
   asyncH(async (_req, res) => {
     const convs = await prisma.conversation.findMany({
       where: { avecAdministration: true },
@@ -90,7 +91,6 @@ async function messageAdministration(req: AuthRequest) {
 /** GET /messagerie/messages/:id/piece — pièce jointe d'un message d'un fil avec l'administration. */
 messagerieRouter.get(
   "/messages/:id/piece",
-  refuserAdmin,
   asyncH(async (req: AuthRequest, res) => envoyerPiece(res, await messageAdministration(req)))
 );
 
@@ -106,7 +106,6 @@ messagerieRouter.get(
 /** GET /messagerie/:id — fil détaillé ; marque comme lu côté administration. */
 messagerieRouter.get(
   "/:id",
-  refuserAdmin,
   asyncH(async (req: AuthRequest, res) => {
     const id = Number(req.params.id);
     // Ouvrir le fil vaut première lecture des messages de l'avocat (posé une seule fois) ; fil administration seulement.
@@ -150,7 +149,6 @@ const contacterSchema = z.object({
 /** POST /messagerie — « Contacter » depuis la fiche d'un avocat : l'administration ouvre un fil vers ce membre. */
 messagerieRouter.post(
   "/",
-  refuserAdmin,
   asyncH(async (req: AuthRequest, res) => {
     const { membreId, sujet, corps, piece } = contacterSchema.parse(req.body);
     const membre = await prisma.membre.findUnique({ where: { id: membreId }, select: { id: true, statut: true } });
@@ -170,7 +168,7 @@ messagerieRouter.post(
         include: { messages: { select: { id: true } } },
       })
     );
-    // Journal d'audit : identifiant seulement, jamais le corps (CA10, R-58).
+    // Journal d'audit : identifiant seulement, jamais le corps (CA10).
     res.locals.auditDetail = `message #${conv.messages[0]?.id}`;
     notifierAvocat([membreId], conv.id, auteurNom, sujet, corps, "message de l'administration", `L'administration du Barreau (${auteurNom}) vous a adressé un message.`);
     res.status(201).json({ id: conv.id });
@@ -182,7 +180,6 @@ const repondreSchema = z.object({ corps: z.string().trim().min(1).max(5000), pie
 /** POST /messagerie/:id — réponse de l'administration dans un fil. */
 messagerieRouter.post(
   "/:id",
-  refuserAdmin,
   asyncH(async (req: AuthRequest, res) => {
     const id = Number(req.params.id);
     const { corps, piece } = repondreSchema.parse(req.body);
@@ -195,7 +192,7 @@ messagerieRouter.post(
     const message = await envoyerMessage(corps, piece, (data) =>
       prisma.message.create({ data: { ...data, conversationId: id, auteurMembreId: null, auteurNom, estAdministration: true } })
     );
-    // Journal d'audit : identifiant seulement, jamais le corps (CA10, R-58).
+    // Journal d'audit : identifiant seulement, jamais le corps (CA10).
     res.locals.auditDetail = `message #${message.id}`;
     await prisma.conversation.update({ where: { id }, data: { updatedAt: new Date(), adminLastReadAt: new Date() } });
     // Symétrie des notifications : on prévient l'avocat de la réponse (non bloquant).
@@ -215,7 +212,6 @@ messagerieRouter.post(
  */
 messagerieRouter.post(
   "/:id/attestation",
-  refuserAdmin,
   asyncH(async (req: AuthRequest, res) => {
     const id = Number(req.params.id);
     const conv = await prisma.conversation.findUnique({ where: { id }, include: { participants: { select: { membreId: true } } } });

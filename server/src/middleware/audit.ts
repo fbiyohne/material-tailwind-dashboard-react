@@ -19,6 +19,7 @@ const RESSOURCES: Record<string, string> = {
   espace: "Espace avocat",
   messagerie: "Messagerie",
   scrutins: "Scrutin",
+  pieces: "Pièce",
 };
 
 /**
@@ -30,15 +31,24 @@ const RESSOURCES: Record<string, string> = {
  */
 const LECTURES_SENSIBLES = [/^\/api\/discipline(\/journal|\/\d+(\/(convocation|decision)\/pdf)?)?$/];
 
+/**
+ * Lectures de contenu par l'ADMIN : accès autorisé (décision du 16/10/2026), tracé ici.
+ * Liste des fils (aperçu du corps), fil, pièce jointe d'un message, fichier d'une pièce.
+ * /messagerie/non-lus (compteur) et l'accusé PDF (sans le corps) n'en font pas partie.
+ * Insensible à la casse et à la barre finale, comme le routage Express : sinon contournable.
+ */
+const LECTURES_ADMIN = [/^\/api\/messagerie(\/\d+|\/messages\/\d+\/piece)?\/?$/i, /^\/api\/pieces\/\d+\/fichier\/?$/i];
+
 const VERBES: Record<string, string> = { GET: "Consultation", POST: "Création", PATCH: "Mise à jour", PUT: "Mise à jour", DELETE: "Suppression" };
 
 /** Construit un libellé d'action lisible à partir de la méthode et du chemin. */
 function libelle(methode: string, chemin: string): { action: string; cible: string | null; ressource: string } {
-  const segments = chemin.replace(/^\/api\//, "").split("/").filter(Boolean);
+  const segments = chemin.toLowerCase().replace(/^\/api\//, "").split("/").filter(Boolean);
   // La messagerie est une ressource à part entière, qu'elle soit atteinte par
   // /messagerie (administration) ou /espace/messagerie (avocat).
   const ressource = segments.includes("messagerie") ? RESSOURCES.messagerie : RESSOURCES[segments[0]] ?? segments[0] ?? "Ressource";
-  const sousAction = segments.find((s) => ["paiement", "valider", "radier", "deces", "import", "export", "relances", "statut", "attestation", "convocation", "pv", "decision", "login", "logout", "messagerie"].includes(s));
+  // « messagerie » ne vaut « Envoi d'un message » qu'en écriture : un GET reste une « Consultation ».
+  const sousAction = segments.find((s) => ["paiement", "valider", "radier", "deces", "import", "export", "relances", "statut", "attestation", "convocation", "pv", "decision", "login", "logout"].includes(s) || (s === "messagerie" && methode !== "GET"));
   // Cible : le premier segment numérique (id du membre, du fil, du dossier…).
   const id = segments.find((s) => /^\d+$/.test(s));
   const cibleId = id ? `#${id}` : null;
@@ -72,7 +82,9 @@ export function audit(req: AuthRequest, res: Response, next: NextFunction) {
     if (res.locals.auditFait) return;
     const refus = res.statusCode === 403 && req.method !== "GET";
     if (res.statusCode >= 400 && !refus) return;
-    if (!lectureSensible && !res.locals.auditDetail) return;
+    // req.user n'est posé qu'ici (requireAuth du routeur, après ce middleware).
+    const lectureAdmin = req.method === "GET" && req.user?.role === "ADMIN" && LECTURES_ADMIN.some((re) => re.test(chemin));
+    if (!lectureSensible && !lectureAdmin && !res.locals.auditDetail) return;
     const l = libelle(req.method, chemin);
     const base = refus ? `Accès refusé — ${l.ressource}` : l.action;
     const cible = l.cible;

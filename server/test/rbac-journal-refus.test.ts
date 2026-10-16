@@ -7,7 +7,8 @@ import bcrypt from "bcryptjs";
  * - D18 : une écriture refusée en 403 écrit « Accès refusé — <ressource> » dans JournalAudit,
  *   sans le corps de la requête ; PUT /rbac écrit toujours sa ligne ;
  * - R-62 : la lecture d'un dossier disciplinaire (et de la liste) par le Bâtonnier est journalisée ;
- * - R-58 : l'ADMIN reçoit 403 sur le contenu d'un message et d'une pièce réels ;
+ * - accès ADMIN au contenu (décision du 16/10/2026) : 200 sur un message et une pièce réels,
+ *   chaque lecture tracée dans JournalAudit sans le contenu ;
  * - F1 : un rôle éditable doté de « utilisateurs » ne crée pas de compte SECRETAIRE_GENERAL.
  * Base barreau_pn_test ; données marquées « E2E T9 », supprimées en afterAll (JournalAudit immuable).
  */
@@ -22,6 +23,7 @@ vi.mock("../src/lib/rbac.js", async (orig) => {
 import { creerApp } from "../src/app.js";
 import { prisma } from "../src/prisma.js";
 import { REFUS } from "../src/middleware/auth.js";
+import { enregistrerFichier, supprimerFichier } from "../src/lib/storage.js";
 
 const app = creerApp({ anonyme: 100_000, authentifie: 100_000 });
 const bearer = (t: string) => ["Authorization", `Bearer ${t}`] as const;
@@ -32,6 +34,8 @@ const ids: Record<string, number> = {};
 let avant = 0;
 let membreId = 0, dossierId = 0, pieceId = 0, convId = 0;
 let rpAccueil: { role: string; permission: string }[] = [];
+const PDF = Buffer.from("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n");
+const fichierPiece = enregistrerFichier("e2e", PDF.toString("base64"), ".pdf").chemin;
 
 const login = async (email: string) => {
   const r = await request(app).post("/api/auth/login").send({ email, password: "barreau" });
@@ -68,7 +72,7 @@ beforeAll(async () => {
     data: { reference: `E2E-T9-${SUFFIXE}`, avocatNom: "E2E T9", objet: "Lecture journalisée", dateSaisine: new Date(), membreId },
   })).id;
   pieceId = (await prisma.pieceDossier.create({
-    data: { membreId, type: "AUTRE", nomFichier: "e2e-t9.pdf", fichier: "e2e/t9-inexistant.pdf", mimeType: "application/pdf", taille: 1 },
+    data: { membreId, type: "AUTRE", nomFichier: "e2e-t9.pdf", fichier: fichierPiece, mimeType: "application/pdf", taille: 1 },
   })).id;
   convId = (await prisma.conversation.create({
     data: { sujet: "E2E T9", avecAdministration: true, participants: { create: { membreId } }, messages: { create: { auteurNom: "E2E T9", corps: SECRET, auteurMembreId: membreId } } },
@@ -78,6 +82,7 @@ beforeAll(async () => {
 afterAll(async () => {
   await prisma.conversation.deleteMany({ where: { id: convId } });
   await prisma.pieceDossier.deleteMany({ where: { id: pieceId } });
+  supprimerFichier(fichierPiece);
   await prisma.dossierDisciplinaire.deleteMany({ where: { id: dossierId } });
   await prisma.membre.deleteMany({ where: { id: membreId } });
   await prisma.user.deleteMany({ where: { email: { startsWith: "e2e-t9-", endsWith: `-${SUFFIXE}@test.cg` } } });
@@ -132,24 +137,65 @@ describe("T9 — discipline : lectures du Bâtonnier journalisées (R-62)", () =
   });
 });
 
-describe("T9 — secret professionnel : l'ADMIN n'accède pas au contenu (R-58)", () => {
-  it("message réel : 403 pour l'ADMIN, corps non divulgué ; le SG lit le fil", async () => {
-    const r = await request(app).get(`/api/messagerie/${convId}`).set(...bearer(jeton.ADM));
-    expect(r.status).toBe(403);
-    expect(JSON.stringify(r.body)).not.toContain(SECRET);
+describe("T9 — l'ADMIN accède au contenu, chaque lecture tracée sans le contenu", () => {
+  // Accès ADMIN autorisé (décision du 16/10/2026), tracé dans JournalAudit.
+  const lignesGet = (chemin: string, userId: number) => prisma.journalAudit.findMany({ where: { id: { gt: avant }, chemin, methode: "GET", userId } });
+  const sansContenu = async () => {
+    for (const fragment of [SECRET, "%PDF"]) {
+      const colonnes = ["action", "cible", "chemin", "userNom"] as const;
+      expect(await prisma.journalAudit.count({ where: { id: { gt: avant }, OR: colonnes.map((c) => ({ [c]: { contains: fragment } })) } }), fragment).toBe(0);
+    }
+  };
+
+  it("messagerie : liste, fil, réponse et pièce jointe en 200 ; une ligne « Consultation — Messagerie » par lecture", async () => {
+    const liste = await request(app).get("/api/messagerie").set(...bearer(jeton.ADM));
+    expect(liste.status).toBe(200);
+    expect(liste.body.map((c: { id: number }) => c.id)).toContain(convId);
+    const fil = await request(app).get(`/api/messagerie/${convId}`).set(...bearer(jeton.ADM));
+    expect(fil.status).toBe(200);
+    expect(fil.body.messages[0].corps).toBe(SECRET);
+    const rep = await request(app).post(`/api/messagerie/${convId}`).set(...bearer(jeton.ADM))
+      .send({ corps: "Réponse de l'administrateur", piece: { nomFichier: "e2e-t9.pdf", donnees: PDF.toString("base64") } });
+    expect(rep.status).toBe(201);
+    const pj = await request(app).get(`/api/messagerie/messages/${rep.body.id}/piece`).set(...bearer(jeton.ADM));
+    expect(pj.status).toBe(200);
+
+    for (const [chemin, cible] of [["/api/messagerie", null], [`/api/messagerie/${convId}`, `#${convId}`], [`/api/messagerie/messages/${rep.body.id}/piece`, `#${rep.body.id}`]] as const) {
+      expect(await ligne({ chemin, methode: "GET", userId: ids.ADM }), chemin).not.toBeNull();
+      const l = await lignesGet(chemin, ids.ADM);
+      expect(l, chemin).toHaveLength(1);
+      expect(l[0]).toMatchObject({ action: "Consultation — Messagerie", cible, statut: 200, userNom: expect.any(String) });
+    }
+    // L'écriture garde son libellé et son identifiant, jamais le corps.
+    expect((await ligne({ chemin: `/api/messagerie/${convId}`, methode: "POST", userId: ids.ADM }))?.action).toBe(`Envoi d'un message — Messagerie (message #${rep.body.id})`);
+    await sansContenu();
+  });
+
+  it("pièce réelle : 200 pour l'ADMIN avec le fichier ; une ligne « Consultation — Pièce », cible #id", async () => {
+    const r = await request(app).get(`/api/pieces/${pieceId}/fichier`).set(...bearer(jeton.ADM));
+    expect(r.status).toBe(200);
+    expect(Buffer.from(r.body).toString()).toContain("%PDF");
+    const chemin = `/api/pieces/${pieceId}/fichier`;
+    expect(await ligne({ chemin, methode: "GET", userId: ids.ADM })).not.toBeNull();
+    const l = await lignesGet(chemin, ids.ADM);
+    expect(l).toHaveLength(1);
+    expect(l[0]).toMatchObject({ action: "Consultation — Pièce", cible: `#${pieceId}`, statut: 200 });
+    await sansContenu();
+  });
+
+  it("traçabilité non contournable : casse et barre finale (tolérées par Express) sont journalisées", async () => {
+    const chemin = `/api/Messagerie/${convId}/`;
+    expect((await request(app).get(chemin).set(...bearer(jeton.ADM))).status).toBe(200);
+    expect((await ligne({ chemin, methode: "GET", userId: ids.ADM }))?.action).toBe("Consultation — Messagerie");
+  });
+
+  it("un rôle non ADMIN (SG) et le compteur /non-lus ne sont pas journalisés en lecture", async () => {
     expect((await request(app).get(`/api/messagerie/${convId}`).set(...bearer(jeton.SG))).status).toBe(200);
-  });
-
-  it("pièce réelle : 403 pour l'ADMIN avant toute lecture du fichier ; le SG passe la garde", async () => {
-    expect((await request(app).get(`/api/pieces/${pieceId}/fichier`).set(...bearer(jeton.ADM))).status).toBe(403);
-    expect([401, 403]).not.toContain((await request(app).get(`/api/pieces/${pieceId}/fichier`).set(...bearer(jeton.SG))).status);
-    // Métadonnées (liste de vérification) : droits fonctionnels de l'ADMIN conservés.
-    expect((await request(app).get("/api/pieces").set(...bearer(jeton.ADM))).status).toBe(200);
-  });
-
-  it("écriture dans un fil : 403 pour l'ADMIN, aucun message ajouté", async () => {
-    expect((await request(app).post(`/api/messagerie/${convId}`).set(...bearer(jeton.ADM)).send({ corps: "intrusion" })).status).toBe(403);
-    expect(await prisma.message.count({ where: { conversationId: convId } })).toBe(1);
+    expect((await request(app).get(`/api/pieces/${pieceId}/fichier`).set(...bearer(jeton.SG))).status).toBe(200);
+    expect((await request(app).get("/api/messagerie/non-lus").set(...bearer(jeton.ADM))).status).toBe(200);
+    await new Promise((r) => setTimeout(r, 300));
+    expect(await prisma.journalAudit.count({ where: { id: { gt: avant }, methode: "GET", userId: ids.SG, chemin: { in: [`/api/messagerie/${convId}`, `/api/pieces/${pieceId}/fichier`] } } })).toBe(0);
+    expect(await prisma.journalAudit.count({ where: { id: { gt: avant }, chemin: "/api/messagerie/non-lus" } })).toBe(0);
   });
 });
 

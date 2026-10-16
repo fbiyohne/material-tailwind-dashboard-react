@@ -209,16 +209,20 @@ describe("Accusé de lecture PDF", () => {
 });
 
 describe("Cloisonnement de l'administration (R-58)", () => {
-  it("l'administration ne lit ni un fil entre confrères, ni sa pièce, ni son accusé (404) ; l'ADMIN n'a pas accès au contenu (403)", async () => {
+  it("l'administration ne lit ni un fil entre confrères, ni sa pièce, ni son accusé (404) ; l'ADMIN passe la garde mais reste cloisonné (404)", async () => {
     const { convId, messageId } = await filAvecPiece("secret entre confrères");
     expect((await request(app).get(`/api/messagerie/${convId}`).set(...bearer(sg))).status).toBe(404);
     expect((await request(app).get(`/api/messagerie/messages/${messageId}/piece`).set(...bearer(sg))).status).toBe(404);
     expect((await request(app).get(`/api/messagerie/messages/${messageId}/accuse/pdf`).set(...bearer(admin))).status).toBe(404);
     const liste = await request(app).get("/api/messagerie").set(...bearer(sg));
     expect(liste.body.map((c: { id: number }) => c.id)).not.toContain(convId);
-    // Secret professionnel (R-58, loi 026-92 art. 52) : l'ADMIN, sous-traitant technique, est refusé sur le contenu.
-    for (const url of [`/api/messagerie/${convId}`, `/api/messagerie/messages/${messageId}/piece`, "/api/messagerie"])
-      expect((await request(app).get(url).set(...bearer(admin))).status, url).toBe(403);
+    // Accès ADMIN autorisé (décision du 16/10/2026), tracé dans JournalAudit : il lit la boîte de
+    // l'administration (200), mais un fil entre confrères lui répond 404 comme au SG.
+    for (const url of [`/api/messagerie/${convId}`, `/api/messagerie/messages/${messageId}/piece`])
+      expect((await request(app).get(url).set(...bearer(admin))).status, url).toBe(404);
+    const boiteAdmin = await request(app).get("/api/messagerie").set(...bearer(admin));
+    expect(boiteAdmin.status).toBe(200);
+    expect(boiteAdmin.body.map((c: { id: number }) => c.id)).not.toContain(convId);
   });
 });
 

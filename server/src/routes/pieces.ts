@@ -2,13 +2,14 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
-import { requireAuth, requireRole, refuserAdmin, type AuthRequest } from "../middleware/auth.js";
+import { requireAuth, requireRole, type AuthRequest } from "../middleware/auth.js";
 import { lireFichier, supprimerFichier } from "../lib/storage.js";
 import { notifier, userDeMembre } from "../lib/centreNotifications.js";
 
 /**
  * Pièces du dossier d'inscription — actions au niveau de la pièce.
- * Consultation du fichier : SG / Bâtonnier (données personnelles, RG-15).
+ * Consultation du fichier : SG / Bâtonnier (données personnelles, RG-15) et ADMIN :
+ * accès ADMIN autorisé (décision du 16/10/2026), tracé dans JournalAudit (middleware/audit.ts).
  * Vérification / rejet / suppression : SG / Admin.
  */
 export const piecesRouter = Router();
@@ -52,7 +53,6 @@ piecesRouter.get(
 piecesRouter.get(
   "/:id/fichier",
   requireRole("SECRETAIRE_GENERAL", "BATONNIER"),
-  refuserAdmin, // contenu d'une pièce : secret professionnel (R-58)
   asyncH(async (req, res) => {
     const piece = await trouver(Number(req.params.id));
     const buffer = lireFichier(piece.fichier);
