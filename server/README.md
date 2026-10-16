@@ -408,6 +408,11 @@ date** (`situationADate`, `lib/cycleVie.ts`) selon les règles de `Parametres.da
   le jour anniversaire exact ; comptée en jours civils). Un candidat libre (sans
   fiche) n'est pas contrôlé. Changer `ancienneteMinAns` en Paramètres change l'issue
   sans redéploiement (CA8).
+- `DELETE /api/scrutins/:id` (SG/ADMIN) : suppression **définitive** d'un scrutin en
+  préparation, CLOS ou PUBLIÉ ; **409** pendant le vote (OUVERT, garde atomique dans le
+  DELETE). Candidats et émargements partent en cascade ; la composition du Conseil et
+  l'Archive du PV (`SCRUTIN-<id>`) sont conservées. JournalAudit reçoit titre, statut,
+  nombre de votants et de candidats (`test/scrutins-suppression.test.ts`).
 - Espace avocat : `GET /espace/scrutins` expose `eligible` par scrutin (et
   `dateScrutin`) ; `POST /espace/scrutins/:id/voter` apprécie l'électeur à la date
   de référence du scrutin. Le mécanisme de vote (anonymat, unicité) est inchangé.

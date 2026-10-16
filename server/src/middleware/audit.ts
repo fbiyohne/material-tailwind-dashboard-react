@@ -18,6 +18,7 @@ const RESSOURCES: Record<string, string> = {
   auth: "Session",
   espace: "Espace avocat",
   messagerie: "Messagerie",
+  scrutins: "Scrutin",
 };
 
 /**

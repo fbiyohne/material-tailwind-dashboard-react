@@ -81,18 +81,24 @@ scrutinsRouter.patch("/:id", requireRole("SECRETAIRE_GENERAL"), asyncH(async (re
   res.json(await detail(id));
 }));
 
-/** DELETE /scrutins/:id — supprime un scrutin (SG, uniquement en préparation). */
+/**
+ * DELETE /scrutins/:id — supprime définitivement un scrutin (SG) : en préparation,
+ * ou passé (CLOS/PUBLIÉ). Candidats et émargements partent en cascade ; la
+ * composition du Conseil et l'Archive du PV ne sont pas touchées.
+ */
 scrutinsRouter.delete("/:id", requireRole("SECRETAIRE_GENERAL"), asyncH(async (req, res) => {
   const id = Number(req.params.id);
-  const s = await prisma.scrutin.findUnique({ where: { id }, select: { statut: true } });
+  const s = await prisma.scrutin.findUnique({
+    where: { id },
+    select: { titre: true, statut: true, _count: { select: { emargements: true, candidats: true } } },
+  });
   if (!s) throw new HttpError(404, "Scrutin introuvable");
-  // On n'autorise la suppression qu'en préparation : un scrutin ouvert/clos/publié
-  // porte des émargements (votes exprimés) et une valeur institutionnelle à conserver.
-  if (s.statut !== "PREPARATION") throw new HttpError(409, "Suppression impossible : le scrutin a déjà été ouvert au vote.");
-  await prisma.$transaction([
-    prisma.candidat.deleteMany({ where: { scrutinId: id } }),
-    prisma.scrutin.delete({ where: { id } }),
-  ]);
+  // Pendant le vote, on protège les votes exprimés ; la garde est dans le DELETE
+  // lui-même pour refuser aussi une ouverture concurrente entre lecture et suppression.
+  const { count } = await prisma.scrutin.deleteMany({ where: { id, statut: { not: "OUVERT" } } });
+  if (count === 0) throw new HttpError(409, "Suppression impossible : un vote est en cours.");
+  // Seule trace du contenu après suppression : titre (institutionnel, saisi par le SG) et comptages.
+  res.locals.auditDetail = `scrutin #${id} « ${s.titre} » (statut ${s.statut}, ${s._count.emargements} votants, ${s._count.candidats} candidats)`;
   res.status(204).end();
 }));
 
