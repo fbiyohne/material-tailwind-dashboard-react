@@ -18,7 +18,9 @@ import { identite } from "../lib/identiteDocuments.js";
 export const etatsRouter = Router();
 etatsRouter.use(requireAuth, requireRole("SECRETAIRE_GENERAL", "SECRETAIRE_ADJOINT", "BATONNIER", "TRESORIERE", "CONSULTATION", "ACCUEIL"));
 
-const cellule = z.union([z.string().max(400), z.number()]).nullable().transform((v) => (v == null ? "" : String(v)));
+// Cellule nettoyée pour l'impression : montant et devise insécables, « Me » jamais doublé (noms saisis avec le titre).
+const cellule = z.union([z.string().max(400), z.number()]).nullable()
+  .transform((v) => (v == null ? "" : String(v)).replace(/\s+FCFA\b/g, " FCFA").replace(/\bMe\s+(?=Me\s)/g, ""));
 const Etat = z.object({
   titre: z.string().min(1).max(120),
   sousTitre: z.string().max(300).optional(),
@@ -34,7 +36,8 @@ etatsRouter.post(
   asyncH(async (req, res) => {
     const e = Etat.parse(req.body);
     const id = identite();
-    const ligne = (cells: string[], balise = "td") => `<tr>${cells.map((c) => `<${balise}>${esc(c)}</${balise}>`).join("")}</tr>`;
+    // Valeurs courtes (montants, dates, statuts) sur une seule ligne ; les noms et cabinets passent à la ligne.
+    const ligne = (cells: string[], balise = "td") => `<tr>${cells.map((c) => `<${balise}${c.length <= 24 ? ' style="white-space:nowrap"' : ""}>${esc(c)}</${balise}>`).join("")}</tr>`;
     const corps = `<table><thead>${ligne(e.entete, "th")}</thead><tbody>${e.lignes.map((l) => ligne(l)).join("")}</tbody>${e.totaux ? `<tfoot>${ligne(e.totaux)}</tfoot>` : ""}</table>`;
     const date = new Date();
     const sg = e.signataire === "sg";

@@ -64,3 +64,12 @@ describe("POST /publications/apercu", () => {
     expect(v.text).not.toContain("Projet — en attente");
   });
 });
+
+describe("POST /etats/pdf : lisibilité des cellules", () => {
+  it("garde montant et devise sur une ligne et ne double jamais « Me »", async () => {
+    await request(app).post("/api/etats/pdf").set(...bearer(sg)).send({ ...ETAT, lignes: [["Me Me CARLE Fernand", "150 000 FCFA"]] });
+    expect(rendu.html).toContain('<td style="white-space:nowrap">Me CARLE Fernand</td>');
+    expect(rendu.html).toContain("150 000\u00a0FCFA");
+    expect(rendu.html).not.toContain("Me Me");
+  });
+});
