@@ -2,8 +2,11 @@
 
 Date : 2026-10-11. Branche `feat/ameliorations-fiche-avocat`.
 
-> **Statut : proposition en attente de la validation de Fabrice. Rien n'est appliqué.**
-> Aucun document de production n'utilise ces gabarits : `server/src/lib/templates.ts` et `server/src/lib/documentsRiches.ts` ne sont pas modifiés, et aucune route n'importe `docs/design/pdf/gabarits/` ni `server/scripts/apercus-gabarits.ts`. L'application suivra le choix de Fabrice, dans une tâche séparée.
+> **Statut : direction 1 « Institutionnelle sobre » appliquée par défaut à tous les PDF (M-20261016), en attente de validation explicite de Fabrice.**
+> Les feuilles CSS ont été déplacées dans `server/src/lib/gabarits/` (socle, institutionnelle, classique, compacte) et sont assemblées par `server/src/lib/gabarit.ts`.
+> **Point unique de bascule** : la constante `DIRECTION_PDF` de `server/src/lib/gabarit.ts` (`institutionnelle`, `classique` ou `compacte`) ; aucun gabarit de document n'est à modifier.
+> **Contrôle** : `cd server && npx tsx scripts/apercus-gabarits.ts --production` (base `barreau_pn_test` ; code de sortie 1 si une page n'est pas en A4, déborde, est vide, sans « Page 1/ », ou si un QR ne se décode pas ; option `--direction classique` pour tester une autre direction). PDF déposés dans `docs/captures/m20261016/pdf/`.
+> Les textes juridiques des documents sont inchangés ; seule la mise en page change.
 
 Point de départ : l'inventaire `INVENTAIRE.md` (23 routes, deux familles de gabarits, aucune numérotation de page, en-tête absent après la page 1, réduction d'échelle et troncature silencieuse des documents d'une page).
 
