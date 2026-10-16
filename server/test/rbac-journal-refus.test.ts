@@ -201,6 +201,7 @@ describe("T9 — l'ADMIN accède au contenu, chaque lecture tracée sans le cont
 
   it("journal indisponible : l'ADMIN reçoit 503 et aucun contenu (liste, fil, pièce) ; le SG n'est pas affecté", async () => {
     const urls = ["/api/messagerie", `/api/messagerie/${convId}`, `/api/pieces/${pieceId}/fichier`];
+    const luAvant = (await prisma.conversation.findUnique({ where: { id: convId } }))?.adminLastReadAt;
     const spy = vi.spyOn(prisma.journalAudit, "create").mockRejectedValue(new Error("panne"));
     try {
       for (const url of urls) {
@@ -208,6 +209,8 @@ describe("T9 — l'ADMIN accède au contenu, chaque lecture tracée sans le cont
         expect(r.status, url).toBe(503);
         expect(JSON.stringify(r.body) + (r.text ?? ""), url).not.toMatch(new RegExp(`${SECRET}|%PDF`));
       }
+      // contenu non servi : le fil n'est pas marqué lu côté administration
+      expect((await prisma.conversation.findUnique({ where: { id: convId } }))?.adminLastReadAt).toEqual(luAvant);
       expect((await request(app).get(`/api/pieces/${pieceId}/fichier`).set(...bearer(jeton.SG))).status).toBe(200);
     } finally {
       spy.mockRestore();

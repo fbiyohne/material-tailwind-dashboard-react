@@ -114,16 +114,16 @@ messagerieRouter.get(
   "/:id",
   asyncH(async (req: AuthRequest, res) => {
     const id = Number(req.params.id);
-    // Ouvrir le fil vaut première lecture des messages de l'avocat (posé une seule fois) ; fil administration seulement.
-    await accuser("luAt", { conversationId: id, conversation: { avecAdministration: true }, ...MESSAGE_DE_AVOCAT });
     const conv = await prisma.conversation.findUnique({
       where: { id },
       include: { participants: { include: { membre: { select: { id: true, nom: true } } } }, messages: { orderBy: { createdAt: "asc" } } },
     });
     if (!conv || !conv.avecAdministration) throw new HttpError(404, "Conversation introuvable");
+    await tracerLectureAdmin(req, res); // avant tout marquage « lu » : un 503 ne marque rien
+    // Ouvrir le fil vaut première lecture des messages de l'avocat (posé une seule fois) ; fil administration seulement.
+    await accuser("luAt", { conversationId: id, conversation: { avecAdministration: true }, ...MESSAGE_DE_AVOCAT });
     await prisma.conversation.update({ where: { id }, data: { adminLastReadAt: new Date() } });
     const avocat = conv.participants[0]?.membre ?? null;
-    await tracerLectureAdmin(req, res);
     res.json({
       id: conv.id,
       sujet: conv.sujet,
