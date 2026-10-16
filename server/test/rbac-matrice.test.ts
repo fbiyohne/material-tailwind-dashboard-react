@@ -27,6 +27,7 @@ vi.mock("../src/middleware/auth.js", async (orig) => {
     ...m,
     requireRole: (...r: Parameters<typeof m.requireRole>) => Object.assign(m.requireRole(...r), { garde: { type: "role", valeurs: r as string[] } }),
     requirePermission: (p: string) => Object.assign(m.requirePermission(p), { garde: { type: "perm", valeurs: [p] } }),
+    refuserAdmin: Object.assign((...a: Parameters<typeof m.refuserAdmin>) => m.refuserAdmin(...a), { garde: { type: "sansAdmin" } }),
   };
 });
 
@@ -201,7 +202,7 @@ const MATRICE: Ligne[] = [
   l("PATCH", "/api/publications/:id", ECR, "M"),
   l("POST", "/api/publications/:id/statut", [SG, BAT, ADM], "V"),
   l("DELETE", "/api/publications/:id", SUPPR, "S"),
-  l("POST", "/api/archives", ECR, "C"),
+  l("POST", "/api/archives", [SG, ADM, SA, BAT], "C"), // BAT : archivage de la Lettre (LettreBatonnier.jsx:68, :88) — E6 reclassé
   l("GET", "/api/archives", M_DOC, "L"),
   l("DELETE", "/api/archives/:id", SUPPR, "S"),
 
@@ -276,17 +277,10 @@ const MATRICE: Ligne[] = [
 ];
 
 // ── Écarts connus (numérotation du rapport). envoyer=false : écriture non envoyée → it.todo ──
+// T9 : E1 à E5 et E7 (permissifs) corrigés côté serveur et retirés ; E6 reclassé (parcours légitime du Bâtonnier).
+// Restent les écarts restrictifs, non élargis (D17) : front T10 et décision de Fabrice.
 type Ecart = { id: string; sens: "permissif" | "restrictif"; roles: string[]; routes: string[]; statut: string; envoyer?: boolean; handler?: boolean };
 const ECARTS: Ecart[] = [
-  { id: "E1", sens: "permissif", statut: "T9", roles: [ADM], envoyer: true, routes: ["GET /api/pieces/:id/fichier", "GET /api/messagerie", "GET /api/messagerie/:id", "GET /api/messagerie/messages/:id/piece"] },
-  { id: "E2", sens: "permissif", statut: "T9", roles: [ADM], envoyer: false, routes: ["POST /api/messagerie", "POST /api/messagerie/:id", "POST /api/messagerie/:id/attestation"] },
-  { id: "E3", sens: "permissif", statut: "T9", roles: [TRES, ACC], envoyer: true, routes: ["GET /api/dashboard/journal"] },
-  // PATCH sur un dossier inexistant : 404 lu AVANT toute écriture (discipline.ts:119) → envoi sans effet de bord.
-  { id: "E4", sens: "permissif", statut: "T9", roles: [SA], envoyer: true, routes: ["PATCH /api/discipline/:id"] },
-  // Corps vide : rejet zod (400) AVANT la création (archives.ts:23, calendrierEditorial.ts:38).
-  { id: "E5", sens: "permissif", statut: "T9", roles: [CONS, ACC], envoyer: true, routes: ["POST /api/archives", "PATCH /api/calendrier-editorial/:mois"] },
-  { id: "E6", sens: "permissif", statut: "à valider Fabrice", roles: [BAT], envoyer: true, routes: ["POST /api/archives"] },
-  { id: "E7", sens: "permissif", statut: "T9 (à valider Fabrice)", roles: [BAT], envoyer: false, routes: ["POST /api/parametres/tester/:canal"] },
   { id: "E8", sens: "restrictif", statut: "front T10 + à valider Fabrice", roles: [SA, CONS, ACC], routes: ["GET /api/membres/:id", "GET /api/membres/:id/rapports"] },
   {
     id: "E9", sens: "restrictif", statut: "à valider Fabrice", roles: [SA], routes: [
@@ -305,8 +299,18 @@ const ECARTS: Ecart[] = [
   { id: "E13", sens: "restrictif", statut: "à valider Fabrice", roles: [BAT], routes: ["POST /api/scrutins/:id/publier"] },
 ];
 
+// Écarts permissifs corrigés par T9 : chaque couple route × rôle reste prouvé en 403 (non-régression).
+const CORRIGES: { id: string; roles: string[]; routes: string[] }[] = [
+  { id: "E1", roles: [ADM], routes: ["GET /api/pieces/:id/fichier", "GET /api/messagerie", "GET /api/messagerie/:id", "GET /api/messagerie/messages/:id/piece"] },
+  { id: "E2", roles: [ADM], routes: ["POST /api/messagerie", "POST /api/messagerie/:id", "POST /api/messagerie/:id/attestation"] },
+  { id: "E3", roles: [TRES, ACC], routes: ["GET /api/dashboard/journal"] },
+  { id: "E4", roles: [SA], routes: ["PATCH /api/discipline/:id"] },
+  { id: "E5", roles: [CONS, ACC], routes: ["POST /api/archives", "PATCH /api/calendrier-editorial/:mois"] },
+  { id: "E7", roles: [BAT], routes: ["POST /api/parametres/tester/:canal"] },
+];
+
 // ── Lecture de la matrice réelle depuis la pile Express ───────────────────────────────
-type Garde = { type: "auth" | "avocat" | "role" | "perm"; valeurs?: string[] };
+type Garde = { type: "auth" | "avocat" | "role" | "perm" | "sansAdmin"; valeurs?: string[] };
 type Fn = { garde?: Garde };
 const cle = (x: { m: string; c: string }) => `${x.m} ${x.c}`;
 
@@ -347,6 +351,7 @@ function reel(x: Ligne, role: string | null): "401" | "403" | "passe" {
     if (gi.type === "role" && !(r === ADM || gi.valeurs!.includes(r))) return "403";
     if (gi.type === "perm" && !aLaPermission(r, gi.valeurs![0])) return "403";
     if (gi.type === "avocat" && r !== AV) return "403";
+    if (gi.type === "sansAdmin" && r === ADM) return "403";
   }
   return "passe";
 }
@@ -514,6 +519,18 @@ describe("RBAC T8 — 401 / 403 / accès autorisé par route et par rôle", () =
   }
 });
 
+describe("RBAC T9 — écarts permissifs corrigés (403 avant le gestionnaire)", () => {
+  for (const e of CORRIGES)
+    for (const rt of e.routes)
+      for (const r of e.roles)
+        it(`${e.id} corrigé — ${r} reçoit 403 sur ${rt}`, async () => {
+          const x = MATRICE.find((y) => cle(y) === rt)!;
+          // Garde statique d'abord : la requête n'est envoyée que si le refus précède le gestionnaire.
+          expect(reel(x, r)).toBe("403");
+          expect(await envoyer(x, jetons[r])).toBe(403);
+        }, 120_000);
+});
+
 describe("RBAC T8 — cloisonnement de l'espace avocat (IDOR, objets d'un autre membre)", () => {
   const A = () => jetons[AV];
   it("reçu et quitus d'un autre membre : 404", async () => {
@@ -556,8 +573,8 @@ describe("RBAC T8 — cloisonnement de l'espace avocat (IDOR, objets d'un autre 
     expect((await appel("POST", "/api/espace/scrutins/999999999/voter", A(), { candidatIds: [1], membreId: membres.B })).status).toBe(404);
     expect(await prisma.emargement.count({ where: { membreId: membres.B } })).toBe(0);
   });
-  // E1 sur un fil réel (pas un id inexistant) : chemin d'attaque concret, à corriger par T9.
-  it.fails("E1 — l'ADMIN ne lit pas le corps d'un fil avocat ↔ administration (403 attendu)", async () => {
+  // E1 sur un fil réel (pas un id inexistant) : chemin d'attaque concret, corrigé par T9 (refuserAdmin).
+  it("E1 — l'ADMIN ne lit pas le corps d'un fil avocat ↔ administration (403)", async () => {
     const r = await appel("GET", `/api/messagerie/${fx.convA}`, jetons[ADM]);
     expect(r.status).toBe(403);
     expect(JSON.stringify(r.body)).not.toContain("confidentiel");

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { prisma } from "../prisma.js";
 import { anneeDeRequete } from "../lib/requete.js";
 import { asyncH } from "../middleware/error.js";
-import { requireAuth, type AuthRequest } from "../middleware/auth.js";
+import { requireAuth, requirePermission, type AuthRequest } from "../middleware/auth.js";
 import { cotisationDueSuivi, statutCotisation, tarifsActuels, STATUTS_SORTIS } from "../lib/business.js";
 
 export const dashboardRouter = Router();
@@ -125,6 +125,7 @@ dashboardRouter.get(
 /** GET /dashboard/journal — dernières actions effectuées (journal d'audit, FR-DB-10). */
 dashboardRouter.get(
   "/journal",
+  requirePermission("audit"), // extrait du journal d'audit : mêmes titulaires que /api/audit (R-62)
   asyncH(async (req, res) => {
     const limitBrut = Number(req.query.limit ?? 12);
     const take = Number.isFinite(limitBrut) ? Math.min(50, Math.max(1, Math.trunc(limitBrut))) : 12;

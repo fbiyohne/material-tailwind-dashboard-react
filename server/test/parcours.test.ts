@@ -503,8 +503,9 @@ describe("Parcours 12 — journal d'audit : opération tracée, conversations pr
     const colonnes = ["action", "cible", "methode", "chemin", "ip", "userNom"] as const;
     expect(await prisma.journalAudit.count({ where: { OR: colonnes.map((c) => ({ [c]: { contains: SECRET } })) } })).toBe(0);
     expect(JSON.stringify((await request(app).get("/api/audit").query({ pageSize: 200 }).set(...bearer(admin))).body)).not.toContain(SECRET);
-    expect((await request(app).get(`/api/messagerie/${fil.body.id}`).set(...bearer(admin))).status).toBe(404);
-    expect((await request(app).get("/api/messagerie").set(...bearer(admin))).body.map((c: { id: number }) => c.id)).not.toContain(fil.body.id);
+    expect((await request(app).get(`/api/messagerie/${fil.body.id}`).set(...bearer(sg))).status).toBe(404);
+    expect((await request(app).get("/api/messagerie").set(...bearer(sg))).body.map((c: { id: number }) => c.id)).not.toContain(fil.body.id);
+    expect((await request(app).get(`/api/messagerie/${fil.body.id}`).set(...bearer(admin))).status).toBe(403); // secret professionnel
 
     // Non modifiable : aucune route d'écriture, et la base refuse UPDATE / DELETE (trigger).
     expect((await request(app).delete(`/api/audit/${envoi!.id}`).set(...bearer(admin))).status).toBe(404);

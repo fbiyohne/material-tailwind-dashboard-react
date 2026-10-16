@@ -114,6 +114,7 @@ const date = (v?: string) => (v ? new Date(v) : undefined);
 
 disciplineRouter.patch(
   "/:id",
+  requirePermission("discipline_saisir"), // instruction : mêmes titulaires que la saisine
   asyncH(async (req: AuthRequest, res) => {
     const data = patchSchema.parse(req.body);
     const actuel = await prisma.dossierDisciplinaire.findUnique({ where: { id: Number(req.params.id) } });

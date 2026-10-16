@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
-import { requireAuth, type AuthRequest, requirePermission } from "../middleware/auth.js";
+import { requireAuth, type AuthRequest, requirePermission, refuserAdmin } from "../middleware/auth.js";
 import { notifierNouveauMessage, emailsMembres, telephonesMembres } from "../lib/messagerieNotif.js";
 import { MESSAGE_DE_AVOCAT, compterNonLusParFil, totalNonLus, jamaisLu, pieceSchema, envoyerMessage, accuser, messageAvecFil, pieceDto, envoyerPiece, htmlAccuse } from "../lib/messagerie.js";
 import { realtimeMembres } from "../lib/realtime.js";
@@ -47,6 +47,7 @@ messagerieRouter.get(
 /** GET /messagerie — fils adressés à l'administration (synthèse + non-lus). */
 messagerieRouter.get(
   "/",
+  refuserAdmin,
   asyncH(async (_req, res) => {
     const convs = await prisma.conversation.findMany({
       where: { avecAdministration: true },
@@ -89,6 +90,7 @@ async function messageAdministration(req: AuthRequest) {
 /** GET /messagerie/messages/:id/piece — pièce jointe d'un message d'un fil avec l'administration. */
 messagerieRouter.get(
   "/messages/:id/piece",
+  refuserAdmin,
   asyncH(async (req: AuthRequest, res) => envoyerPiece(res, await messageAdministration(req)))
 );
 
@@ -104,6 +106,7 @@ messagerieRouter.get(
 /** GET /messagerie/:id — fil détaillé ; marque comme lu côté administration. */
 messagerieRouter.get(
   "/:id",
+  refuserAdmin,
   asyncH(async (req: AuthRequest, res) => {
     const id = Number(req.params.id);
     // Ouvrir le fil vaut première lecture des messages de l'avocat (posé une seule fois) ; fil administration seulement.
@@ -147,6 +150,7 @@ const contacterSchema = z.object({
 /** POST /messagerie — « Contacter » depuis la fiche d'un avocat : l'administration ouvre un fil vers ce membre. */
 messagerieRouter.post(
   "/",
+  refuserAdmin,
   asyncH(async (req: AuthRequest, res) => {
     const { membreId, sujet, corps, piece } = contacterSchema.parse(req.body);
     const membre = await prisma.membre.findUnique({ where: { id: membreId }, select: { id: true, statut: true } });
@@ -178,6 +182,7 @@ const repondreSchema = z.object({ corps: z.string().trim().min(1).max(5000), pie
 /** POST /messagerie/:id — réponse de l'administration dans un fil. */
 messagerieRouter.post(
   "/:id",
+  refuserAdmin,
   asyncH(async (req: AuthRequest, res) => {
     const id = Number(req.params.id);
     const { corps, piece } = repondreSchema.parse(req.body);
@@ -210,6 +215,7 @@ messagerieRouter.post(
  */
 messagerieRouter.post(
   "/:id/attestation",
+  refuserAdmin,
   asyncH(async (req: AuthRequest, res) => {
     const id = Number(req.params.id);
     const conv = await prisma.conversation.findUnique({ where: { id }, include: { participants: { select: { membreId: true } } } });

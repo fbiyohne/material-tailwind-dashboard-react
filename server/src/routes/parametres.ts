@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { asyncH } from "../middleware/error.js";
-import { requireAuth, requireRole, type AuthRequest } from "../middleware/auth.js";
+import { requireAuth, requireRole, requirePermission, type AuthRequest } from "../middleware/auth.js";
 import { rafraichirIdentite } from "../lib/identiteDocuments.js";
 import { isDeepStrictEqual } from "node:util";
 import { aLaPermission } from "../lib/rbac.js";
@@ -246,7 +246,7 @@ const CHAMPS_REQUIS: Record<string, [string, string[]]> = {
  */
 parametresRouter.post(
   "/tester/:canal",
-  requireRole("SECRETAIRE_GENERAL", "BATONNIER"),
+  requirePermission("parametres"), // canaux techniques : mêmes titulaires que les sections smtp et passerelles
   asyncH(async (req, res) => {
     const canal = req.params.canal;
     const data = ((await prisma.parametres.findUnique({ where: { id: 1 } }))?.data ?? {}) as Record<string, unknown>;

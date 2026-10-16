@@ -33,6 +33,7 @@ const majSchema = z.object({
  */
 calendrierEditorialRouter.patch(
   "/:mois",
+  requireRole("SECRETAIRE_GENERAL", "SECRETAIRE_ADJOINT", "BATONNIER"), // CONSULTATION et ACCUEIL : lecture seule
   asyncH(async (req, res) => {
     const mois = req.params.mois;
     const data = majSchema.parse(req.body);

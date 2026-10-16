@@ -1,7 +1,7 @@
-# Audit RBAC : matrice réelle et matrice attendue (M-20261016, tâche T8)
+# Audit RBAC : matrice réelle et matrice attendue (M-20261016, tâches T8 et T9)
 
 Date : 16/10/2026. Branche `feat/parametres-pdf-espace-avocat-droits` (base `ada3e30`). Base de test `barreau_pn_test` uniquement.
-Aucun code de production n'est modifié par T8. Le correctif serveur revient à T9 et l'alignement du front à T10.
+T8 n'a modifié aucun code de production. T9 a corrigé côté serveur les écarts permissifs E1 à E5, E7 et F1 (section 10). L'alignement du front revient à T10.
 
 ## 1. Méthode
 
@@ -23,7 +23,8 @@ cd server && timeout 300 npx vitest run test/rbac-matrice.test.ts
 MATRICE_JSON=/chemin/matrice.json npx vitest run test/rbac-matrice.test.ts
 ```
 
-Résultat au 16/10/2026 : **229 tests réussis, 55 en échec attendu (`it.fails`, écarts répertoriés), 1 ignoré (export `MATRICE_JSON` en `runIf`), 4 `it.todo`** (écritures volontairement non envoyées). Durée : 70 s environ.
+Résultat T8 : 229 réussis, 55 en échec attendu, 1 ignoré, 4 `it.todo`.
+Résultat après T9 (16/10/2026) : **245 tests réussis, 42 en échec attendu (`it.fails`, uniquement les écarts restrictifs à valider par Fabrice), 1 ignoré (export `MATRICE_JSON` en `runIf`), 0 `it.todo`**. Les 15 couples route × rôle corrigés sont prouvés en 403 par le bloc « RBAC T9 — écarts permissifs corrigés ». S'y ajoutent les 9 tests de `server/test/rbac-journal-refus.test.ts`.
 
 ## 2. Rôles et légende
 
@@ -81,7 +82,7 @@ La matrice attendue route par route est le tableau déclaratif `MATRICE` de `ser
 | reunions | LCMS | L | — | LCMS | LCM | — | — | — | — |
 | assemblees | LCMS | L | — | LCMS | LCM | — | — | — | — |
 | publications | LCMSV | LcV | — | LCMSV | LCM | L | L | — | — |
-| archives | LCS | L | — | LCS | LC | L | L | — | — |
+| archives | LCS | LC | — | LCS | LC | L | L | — | — |
 | parametres | LM | Lm | L | LMS | L | L | L | — | — |
 | corps-electoral | L | L | — | L | L | L | — | — | — |
 | dashboard | L | L | l | L | L | L | l | — | — |
@@ -96,7 +97,7 @@ La matrice attendue route par route est le tableau déclaratif `MATRICE` de `ser
 | messagerie | LC | LC | LC | l | LC | — | — | — | — |
 | verifier | public | public | public | public | public | public | public | public | public |
 
-## 4. Matrice réelle (extraite du code, valeurs par défaut de RolePermission)
+## 4. Matrice réelle (extraite du code, valeurs par défaut de RolePermission), état après T9
 
 Les rôles éditables suivent les valeurs par défaut de RolePermission (`DEFAUTS` et `ACTIONS_DEFAUT`, lib/rbac.ts). En production, la table éditée dans « Rôles et sécurité » fait foi : il faut relancer le test sur une copie de la matrice de production pour la vérifier. Le détail par route, avec chaque garde en fichier:ligne, est en annexe (section 9).
 
@@ -108,7 +109,7 @@ Les rôles éditables suivent les valeurs par défaut de RolePermission (`DEFAUT
 | membres | LCMsv | lV | lv | LCMSV | l | l | l | — | — |
 | users | LCM | — | — | LCMS | — | — | — | — | — |
 | demandes-acces | LV | — | — | LV | — | — | — | — | — |
-| pieces | LSV | L | — | LSV | — | — | — | — | — |
+| pieces | LSV | L | — | lSV | — | — | — | — | — |
 | notifications | L | — | — | L | — | — | — | — | — |
 | mes-notifications | LM | LM | LM | LM | LM | LM | LM | — | — |
 | rbac | LM | — | — | LM | — | — | — | — | — |
@@ -118,23 +119,23 @@ Les rôles éditables suivent les valeurs par défaut de RolePermission (`DEFAUT
 | quitus | LC | — | L | LCS | — | — | — | — | — |
 | droits | LC | — | LC | LCS | — | — | — | — | — |
 | timbres | LC | — | LC | LCS | — | — | — | — | — |
-| discipline | LCM | LCMV | — | LCMSV | LM | — | — | — | — |
+| discipline | LCM | LCMV | — | LCMSV | L | — | — | — | — |
 | reunions | LCMS | L | — | LCMS | L | — | — | — | — |
 | assemblees | LCMS | L | — | LCMS | L | — | — | — | — |
 | publications | LCMSV | LcV | — | LCMSV | L | L | L | — | — |
-| archives | LCS | LC | — | LCS | LC | LC | LC | — | — |
-| parametres | LM | LM | L | LMS | L | L | L | — | — |
+| archives | LCS | LC | — | LCS | LC | L | L | — | — |
+| parametres | LM | Lm | L | LMS | L | L | L | — | — |
 | corps-electoral | L | L | — | L | L | L | — | — | — |
-| dashboard | L | L | L | L | L | L | L | — | — |
+| dashboard | L | L | l | L | L | L | l | — | — |
 | audit | L | L | — | L | L | L | — | — | — |
 | tableau | LV | L | — | LV | L | L | L | — | — |
 | scrutins | LCMSV | L | — | LCMSV | L | — | — | — | — |
 | signatures | L | L | L | L | L | L | L | — | — |
 | conseil | LCMS | L | — | LCMS | L | — | — | — | — |
 | cabinets | LCMS | L | — | LCMS | L | L | L | — | — |
-| calendrier-editorial | LM | LM | — | LM | LM | LM | LM | — | — |
+| calendrier-editorial | LM | LM | — | LM | LM | L | L | — | — |
 | espace | — | — | — | — | — | — | — | LCMSV | LCMSV |
-| messagerie | LC | LC | LC | LC | LC | — | — | — | — |
+| messagerie | LC | LC | LC | l | LC | — | — | — | — |
 | verifier | public | public | public | public | public | public | public | public | public |
 
 
@@ -145,13 +146,13 @@ Chaque écart correspond à un `it.fails` ou à un `it.todo` qui porte son numé
 
 | N° | Sens | Gravité | Route(s) | Rôle(s) | Constat et chemin d'attaque (preuve) | Correctif minimal proposé | Statut |
 |---|---|---|---|---|---|---|---|
-| E1 | permissif | **haute** | `GET /api/messagerie`, `GET /api/messagerie/:id`, `GET /api/messagerie/messages/:id/piece`, `GET /api/pieces/:id/fichier` | ADM | `requirePermission("messagerie")` (messagerie.ts:20) et `requireRole` (pieces.ts:54) admettent toujours l'ADMIN. Un jeton ADMIN lit le corps d'un fil avocat ↔ administration (test « E1 — l'ADMIN ne lit pas le corps d'un fil » : 200 avec le corps), l'aperçu de 140 caractères de la liste et les pièces jointes. Cela viole le secret professionnel (avis juridique, condition 1). Le GET de la liste pose en outre l'accusé de réception (messagerie.ts:60). | Refus explicite `if (req.user.role === "ADMIN") 403` sur ces 4 routes, ou garde `requireRole` qui n'admet pas l'ADMIN. `non-lus` et `accuse/pdf` (métadonnées) restent ouverts. Front : masquer le menu Messagerie à l'ADMIN. | à corriger T9 |
-| E2 | permissif | haute | `POST /api/messagerie`, `POST /api/messagerie/:id`, `POST /api/messagerie/:id/attestation` | ADM | Même cause : l'ADMIN écrit dans un fil confidentiel. Écriture non envoyée par le test (`it.todo`). | Même garde qu'E1. | à corriger T9 |
-| E3 | permissif | moyenne | `GET /api/dashboard/journal` | TRES, ACC | Le routeur n'a que `requireAuth` (dashboard.ts:9). Les 50 dernières lignes du journal d'audit (action, cible, acteur, date) sont lisibles sans la permission `audit`. Une ligne « Radiation » ou « Consultation du casier » révèle une donnée disciplinaire à l'ACCUEIL (R-62). Preuve : 200 pour TRES et ACC. | `requirePermission("audit")` sur la route (dashboard.ts:126). Front : ne pas appeler `getJournalAudit` sans `audit` (Dashboard.jsx:110 ; l'appel retombe déjà sur `[]` en cas d'erreur). | à corriger T9 (+ T10) |
-| E4 | permissif | moyenne | `PATCH /api/discipline/:id` | SA | La route n'a que la garde de routeur `perm discipline` (discipline.ts:16). SA, qui a le module discipline par défaut mais pas `discipline_saisir`, modifie l'instruction d'un dossier (statut, plaignant, rapporteur, dates, conclusions), alors qu'il ne peut pas le saisir. Preuve : 404 sur un dossier inexistant, au lieu de 403 : le gestionnaire est atteint. | `requirePermission("discipline_saisir")` sur la route (discipline.ts:115). | à corriger T9 |
-| E5 | permissif | moyenne | `POST /api/archives`, `PATCH /api/calendrier-editorial/:mois` | CONS, ACC | Seule la permission `documents` est exigée (archives.ts:9, calendrierEditorial.ts:12) : les rôles en lecture seule créent des archives et modifient le calendrier de la Lettre. Preuve : 400 (validation) au lieu de 403. | `requireRole("SECRETAIRE_GENERAL", "SECRETAIRE_ADJOINT")` sur POST /archives (archives.ts:20) ; `requireRole("SECRETAIRE_GENERAL", "SECRETAIRE_ADJOINT", "BATONNIER")` sur PATCH /calendrier-editorial (l.34). Front : LettreBatonnier ne propose pas l'édition sans ces rôles. | à corriger T9 (+ T10) |
-| E6 | permissif | faible | `POST /api/archives` | BAT | Le Bâtonnier crée des archives ; H7 lui donne la lecture et les validations seulement. | Couvert par le correctif d'E5 si Fabrice confirme. | à valider Fabrice |
-| E7 | permissif | faible | `POST /api/parametres/tester/:canal` | BAT | `requireRole(SG, BAT)` (parametres.ts:249) : le Bâtonnier déclenche la vérification SMTP avec le mot de passe déchiffré, alors que les sections smtp et passerelles relèvent de la permission `parametres` qu'il n'a pas. Aucun message n'est envoyé, aucun secret n'est renvoyé. Envoi non testé (route d'envoi, `it.todo`). | `requirePermission("parametres")` à la place de `requireRole(SG, BAT)`. | T9, à valider Fabrice |
+| E1 | permissif | **haute** | `GET /api/messagerie`, `GET /api/messagerie/:id`, `GET /api/messagerie/messages/:id/piece`, `GET /api/pieces/:id/fichier` | ADM | `requirePermission("messagerie")` (messagerie.ts:20) et `requireRole` (pieces.ts:54) admettent toujours l'ADMIN. Un jeton ADMIN lit le corps d'un fil avocat ↔ administration (test « E1 — l'ADMIN ne lit pas le corps d'un fil » : 200 avec le corps), l'aperçu de 140 caractères de la liste et les pièces jointes. Cela viole le secret professionnel (avis juridique, condition 1). Le GET de la liste pose en outre l'accusé de réception (messagerie.ts:60). | Refus explicite `if (req.user.role === "ADMIN") 403` sur ces 4 routes, ou garde `requireRole` qui n'admet pas l'ADMIN. `non-lus` et `accuse/pdf` (métadonnées) restent ouverts. Front : masquer le menu Messagerie à l'ADMIN. | **corrigé T9** : garde `refuserAdmin` (auth.ts:88) sur messagerie.ts:50, :93, :109 et pieces.ts:55 ; 403 prouvé sur un fil et une pièce réels |
+| E2 | permissif | haute | `POST /api/messagerie`, `POST /api/messagerie/:id`, `POST /api/messagerie/:id/attestation` | ADM | Même cause : l'ADMIN écrit dans un fil confidentiel. Écriture non envoyée par le test (`it.todo`). | Même garde qu'E1. | **corrigé T9** : `refuserAdmin` sur messagerie.ts:153, :185, :218 ; 403 envoyé (refus avant le gestionnaire), aucun message ajouté |
+| E3 | permissif | moyenne | `GET /api/dashboard/journal` | TRES, ACC | Le routeur n'a que `requireAuth` (dashboard.ts:9). Les 50 dernières lignes du journal d'audit (action, cible, acteur, date) sont lisibles sans la permission `audit`. Une ligne « Radiation » ou « Consultation du casier » révèle une donnée disciplinaire à l'ACCUEIL (R-62). Preuve : 200 pour TRES et ACC. | `requirePermission("audit")` sur la route (dashboard.ts:126). Front : ne pas appeler `getJournalAudit` sans `audit` (Dashboard.jsx:110 ; l'appel retombe déjà sur `[]` en cas d'erreur). | **corrigé T9** (dashboard.ts:128) ; front T10 |
+| E4 | permissif | moyenne | `PATCH /api/discipline/:id` | SA | La route n'a que la garde de routeur `perm discipline` (discipline.ts:16). SA, qui a le module discipline par défaut mais pas `discipline_saisir`, modifie l'instruction d'un dossier (statut, plaignant, rapporteur, dates, conclusions), alors qu'il ne peut pas le saisir. Preuve : 404 sur un dossier inexistant, au lieu de 403 : le gestionnaire est atteint. | `requirePermission("discipline_saisir")` sur la route (discipline.ts:115). | **corrigé T9** (discipline.ts:117) |
+| E5 | permissif | moyenne | `POST /api/archives`, `PATCH /api/calendrier-editorial/:mois` | CONS, ACC | Seule la permission `documents` est exigée (archives.ts:9, calendrierEditorial.ts:12) : les rôles en lecture seule créent des archives et modifient le calendrier de la Lettre. Preuve : 400 (validation) au lieu de 403. | `requireRole("SECRETAIRE_GENERAL", "SECRETAIRE_ADJOINT")` sur POST /archives (archives.ts:20) ; `requireRole("SECRETAIRE_GENERAL", "SECRETAIRE_ADJOINT", "BATONNIER")` sur PATCH /calendrier-editorial (l.34). Front : LettreBatonnier ne propose pas l'édition sans ces rôles. | **corrigé T9** : archives.ts:23 et calendrierEditorial.ts:36 en `requireRole(SG, SA, BAT)` ; front T10 |
+| E6 | permissif | faible | `POST /api/archives` | BAT | Le Bâtonnier crée des archives ; H7 lui donne la lecture et les validations seulement. | Couvert par le correctif d'E5 si Fabrice confirme. | **reclassé T9 (non-écart)** : le Bâtonnier archive sa Lettre (LettreBatonnier.jsx:68, :88) et les convocations disciplinaires (DossierDetail.jsx:473). Le refuser casserait ce parcours (R4). La matrice attendue est corrigée : BAT admis sur `POST /api/archives`. À valider par Fabrice |
+| E7 | permissif | faible | `POST /api/parametres/tester/:canal` | BAT | `requireRole(SG, BAT)` (parametres.ts:249) : le Bâtonnier déclenche la vérification SMTP avec le mot de passe déchiffré, alors que les sections smtp et passerelles relèvent de la permission `parametres` qu'il n'a pas. Aucun message n'est envoyé, aucun secret n'est renvoyé. Envoi non testé (route d'envoi, `it.todo`). | `requirePermission("parametres")` à la place de `requireRole(SG, BAT)`. | **corrigé T9** (parametres.ts:249) ; restriction nouvelle pour le Bâtonnier, à valider par Fabrice |
 | E8 | restrictif | — | `GET /api/membres/:id`, `GET /api/membres/:id/rapports` | SA, CONS, ACC | `requireRole(SG, BAT)` (membres.ts:246, :934) alors que la matrice éditable leur donne `membres`. Le menu « Avocats inscrits » est visible, mais l'ouverture d'une fiche renvoie 403. | Ne pas élargir (RG-15 : la fiche porte adresse, naissance, RCCM, CNSS). Front : ne pas rendre la ligne cliquable sans SG, BAT ou ADM. | front T10 + à valider Fabrice |
 | E9 | restrictif | — | 31 écritures de gestion réservées par `requireRole("SECRETAIRE_GENERAL")` (membres, réunions, assemblées, publications, tableau, scrutins, conseil, cabinets ; liste exacte dans `ECARTS.E9`), plus les deux GET d'attestation | SA | Le code réserve ces actes au SG ; H7 les donne aussi au SA. Preuve : 403 pour SA, avant le gestionnaire. | Aucun élargissement sans décision. Si Fabrice confirme : remplacer `requireRole("SECRETAIRE_GENERAL")` par `requireRole("SECRETAIRE_GENERAL", "SECRETAIRE_ADJOINT")` sur ces routes. | à valider Fabrice |
 | E10 | restrictif | — | `POST /api/membres/:id/evenements` (sorties volontaires, reprise) | SA | Garde dans le gestionnaire : `role === "SECRETAIRE_GENERAL"` (membres.ts:800). | Comme E9. | à valider Fabrice |
@@ -165,11 +166,11 @@ Aucun écart ne touche une écriture anonyme : toutes les routes non publiques r
 
 | N° | Gravité | Constat | Proposition | Statut |
 |---|---|---|---|---|
-| F1 | moyenne (conditionnelle) | **Escalade par la gestion des comptes.** `interdireEscaladeAdmin` (users.ts:25) ne protège que ADMIN et BATONNIER. Un rôle éditable qui recevrait la permission `utilisateurs` (par exemple SA, à qui le SG ou l'ADMIN l'aurait accordée dans « Rôles et sécurité ») peut créer ou promouvoir un compte SECRETAIRE_GENERAL, qui a tous les modules sans pouvoir être restreint. Le chemin d'attaque suppose que l'ADMIN ou le SG ait d'abord accordé `utilisateurs` ; il est inexploitable avec les valeurs par défaut. | Ajouter `SECRETAIRE_GENERAL` à `PROTEGES` pour tout acteur non SG ni ADMIN, ou exiger que l'acteur soit dans `ROLES_COMPLET` pour attribuer un rôle de `ROLES_COMPLET`. Test 403 associé. | à corriger T9 |
+| F1 | moyenne (conditionnelle) | **Escalade par la gestion des comptes.** `interdireEscaladeAdmin` (users.ts:25) ne protège que ADMIN et BATONNIER. Un rôle éditable qui recevrait la permission `utilisateurs` (par exemple SA, à qui le SG ou l'ADMIN l'aurait accordée dans « Rôles et sécurité ») peut créer ou promouvoir un compte SECRETAIRE_GENERAL, qui a tous les modules sans pouvoir être restreint. Le chemin d'attaque suppose que l'ADMIN ou le SG ait d'abord accordé `utilisateurs` ; il est inexploitable avec les valeurs par défaut. | Ajouter `SECRETAIRE_GENERAL` à `PROTEGES` pour tout acteur non SG ni ADMIN, ou exiger que l'acteur soit dans `ROLES_COMPLET` pour attribuer un rôle de `ROLES_COMPLET`. Test 403 associé. | **corrigé T9** (users.ts:31) : seuls l'ADMIN et le SG créent, promeuvent ou reprennent un compte SG ; test « F1 » |
 | F2 | moyenne | **Détail disciplinaire servi en entier dans l'espace avocat.** `GET /api/espace/discipline` et `/discipline/:id` (espace.ts:447, :462) renvoient l'objet complet : rapporteur, `conclusionRapport`, `orientation`, plaignant, dates de rapport, y compris avant `dateNotification`. L'avis juridique (condition 4, HJ-M6) exclut les pièces d'instruction non notifiées. Le cloisonnement par membreId est correct : seul l'avocat concerné voit son dossier. | Projection minimale (référence, objet, statut, dates de convocation, d'audience et de notification, décision et sanction une fois notifiées). | T9/T10, à valider Fabrice (HJ-M6) |
 | F3 | faible | `GET /api/espace/archives` rattache les documents nominatifs par `membreNom` (espace.ts:574). Deux confrères homonymes verraient chacun les archives de l'autre. | Rattacher par identifiant (champ `membreId` sur Archive) lors d'une évolution du modèle. Migration additive, hors périmètre T8. | à valider Fabrice |
 | F4 | info | `confinementAvocat` refuse aussi à un jeton AVOCAT les routes publiques hors `/api/espace` et `/api/auth` (`/api/health`, `/api/verifier/*`, `/api/installation/etat`). C'est un refus par défaut, sans risque ; la page `/v/...` n'est pas concernée. | Aucune. | — |
-| F5 | info | Lectures disciplinaires journalisées : `GET /api/discipline/:id` et ses PDF (audit.ts:31), la consultation du casier (discipline.ts:29). La liste complète `GET /api/discipline` et `GET /discipline/journal` ne le sont pas. | Ajouter ces deux chemins à `LECTURES_SENSIBLES` si l'obligation « toute lecture d'un dossier disciplinaire » doit couvrir la liste. | T9, à valider Fabrice |
+| F5 | info | Lectures disciplinaires journalisées : `GET /api/discipline/:id` et ses PDF (audit.ts:31), la consultation du casier (discipline.ts:29). La liste complète `GET /api/discipline` et `GET /discipline/journal` ne le sont pas. | Ajouter ces deux chemins à `LECTURES_SENSIBLES` si l'obligation « toute lecture d'un dossier disciplinaire » doit couvrir la liste. | **corrigé T9** (audit.ts:31) : la liste et le journal disciplinaires sont désormais journalisés |
 | F6 | à valider | SA a le module `discipline` par défaut (`DEFAUTS`, rbac.ts) ; l'avis juridique ne nomme que le Bâtonnier et le SG. L'ADMIN (sous-traitant technique) lit aussi les dossiers disciplinaires. La matrice attendue suit RolePermission pour SA et le code pour l'ADMIN ; seul le contenu des messages et des pièces est retiré à l'ADMIN (E1). | Décision de Fabrice : retirer `discipline` des défauts du SA et/ou refuser la lecture disciplinaire à l'ADMIN. | à valider Fabrice |
 | F7 | info | `DELETE /api/recus/:id` est une **annulation** motivée (statut ANNULE, recus.ts:60), ouverte à TRES, SG et ADMIN. Le numéro et les données du reçu restent intacts (AUDCIF). Ce n'est pas un écart. | Aucune. | — |
 | F8 | info | `GET /api/messagerie` pose un accusé de réception (messagerie.ts:60) : un GET avec effet de bord. Ce n'est pas exploitable en CSRF (jeton Bearer, pas de cookie). | Aucune. | — |
@@ -260,7 +261,7 @@ La colonne « Gardes » liste la garde de routeur (`router.use`) puis celle de l
 | `POST /api/demandes-acces/:id/approuver-espace` | V | auth, perm(utilisateurs) (demandesAcces.ts:20) ; déclarée demandesAcces.ts:59 ; confinementAvocat (app.ts:134) | SG, ADM | A | - | - | A | - | - | - | - | - |
 | `POST /api/demandes-acces/:id/refuser` | V | auth, perm(utilisateurs) (demandesAcces.ts:20) ; déclarée demandesAcces.ts:103 ; confinementAvocat (app.ts:134) | SG, ADM | A | - | - | A | - | - | - | - | - |
 | `GET /api/pieces` | L | auth (pieces.ts:15) ; role SG, BAT (pieces.ts:36) ; confinementAvocat (app.ts:134) | SG, BAT, ADM | A | A | - | A | - | - | - | - | - |
-| `GET /api/pieces/:id/fichier` | L | auth (pieces.ts:15) ; role SG, BAT (pieces.ts:54) ; confinementAvocat (app.ts:134) | SG, BAT | A | A | - | **A!E1** | - | - | - | - | - |
+| `GET /api/pieces/:id/fichier` | L | auth (pieces.ts:15) ; role SG, BAT (pieces.ts:54) ; sansAdmin (pieces.ts:55) ; confinementAvocat (app.ts:134) | SG, BAT | A | A | - | - | - | - | - | - | - |
 | `POST /api/pieces/:id/verifier` | V | auth (pieces.ts:15) ; role SG (pieces.ts:85) ; confinementAvocat (app.ts:134) | SG, ADM | A | - | - | A | - | - | - | - | - |
 | `POST /api/pieces/:id/rejeter` | V | auth (pieces.ts:15) ; role SG (pieces.ts:100) ; confinementAvocat (app.ts:134) | SG, ADM | A | - | - | A | - | - | - | - | - |
 | `DELETE /api/pieces/:id` | S | auth (pieces.ts:15) ; role SG (pieces.ts:116) ; confinementAvocat (app.ts:134) | SG, ADM | A | - | - | A | - | - | - | - | - |
@@ -304,7 +305,7 @@ La colonne « Gardes » liste la garde de routeur (`router.use`) puis celle de l
 | `GET /api/discipline/journal` | L | auth, perm(discipline) (discipline.ts:16) ; déclarée discipline.ts:40 ; confinementAvocat (app.ts:134) | SG, ADM, BAT, SA | A | A | - | A | A | - | - | - | - |
 | `GET /api/discipline/:id` | L | auth, perm(discipline) (discipline.ts:16) ; déclarée discipline.ts:47 ; confinementAvocat (app.ts:134) | SG, ADM, BAT, SA | A | A | - | A | A | - | - | - | - |
 | `POST /api/discipline` | C | auth, perm(discipline) (discipline.ts:16) ; perm discipline_saisir (discipline.ts:69) ; confinementAvocat (app.ts:134) | SG, BAT, ADM | A | A | - | A | - | - | - | - | - |
-| `PATCH /api/discipline/:id` | M | auth, perm(discipline) (discipline.ts:16) ; déclarée discipline.ts:115 ; confinementAvocat (app.ts:134) | SG, BAT, ADM | A | A | - | A | **A!E4** | - | - | - | - |
+| `PATCH /api/discipline/:id` | M | auth, perm(discipline) (discipline.ts:16) ; perm discipline_saisir (discipline.ts:117) ; confinementAvocat (app.ts:134) | SG, BAT, ADM | A | A | - | A | - | - | - | - | - |
 | `POST /api/discipline/:id/decision` | V | auth, perm(discipline) (discipline.ts:16) ; perm discipline_decider (discipline.ts:180) ; confinementAvocat (app.ts:134) | BAT, ADM | - | A | - | A | - | - | - | - | - |
 | `POST /api/discipline/:id/reformation` | V | auth, perm(discipline) (discipline.ts:16) ; perm discipline_decider (discipline.ts:264) ; confinementAvocat (app.ts:134) | BAT, ADM | - | A | - | A | - | - | - | - | - |
 | `DELETE /api/discipline/:id` | S | auth, perm(discipline) (discipline.ts:16) ; role ADMIN (discipline.ts:307) ; confinementAvocat (app.ts:134) | ADM | - | - | - | A | - | - | - | - | - |
@@ -334,17 +335,17 @@ La colonne « Gardes » liste la garde de routeur (`router.use`) puis celle de l
 | `PATCH /api/publications/:id` | M | auth, perm(documents) (publications.ts:11) ; role SG (publications.ts:43) ; confinementAvocat (app.ts:134) | SG, ADM, SA | A | - | - | A | **-!E9** | - | - | - | - |
 | `POST /api/publications/:id/statut` | V | auth, perm(documents) (publications.ts:11) ; role SG, BAT (publications.ts:52) ; confinementAvocat (app.ts:134) | SG, BAT, ADM | A | A | - | A | - | - | - | - | - |
 | `DELETE /api/publications/:id` | S | auth, perm(documents) (publications.ts:11) ; role SG (publications.ts:70) ; confinementAvocat (app.ts:134) | SG, ADM | A | - | - | A | - | - | - | - | - |
-| `POST /api/archives` | C | auth, perm(documents) (archives.ts:9) ; déclarée archives.ts:20 ; confinementAvocat (app.ts:134) | SG, ADM, SA | A | **A!E6** | - | A | A | **A!E5** | **A!E5** | - | - |
+| `POST /api/archives` | C | auth, perm(documents) (archives.ts:9) ; role SG, SA, BAT (archives.ts:23) ; confinementAvocat (app.ts:134) | SG, ADM, SA, BAT | A | A | - | A | A | - | - | - | - |
 | `GET /api/archives` | L | auth, perm(documents) (archives.ts:9) ; déclarée archives.ts:32 ; confinementAvocat (app.ts:134) | SG, ADM, BAT, SA, CONS, ACC | A | A | - | A | A | A | A | - | - |
 | `DELETE /api/archives/:id` | S | auth, perm(documents) (archives.ts:9) ; role SG (archives.ts:56) ; confinementAvocat (app.ts:134) | SG, ADM | A | - | - | A | - | - | - | - | - |
 | `GET /api/parametres` | L | auth (parametres.ts:19) ; déclarée parametres.ts:83 ; confinementAvocat (app.ts:134) | SG, BAT, TRES, ADM, SA, CONS, ACC | A | A | A | A | A | A | A | - | - |
 | `PUT /api/parametres` | M | auth (parametres.ts:19) ; role SG, BAT (parametres.ts:173) ; confinementAvocat (app.ts:134) | SG, BAT, ADM | A | A | - | A | - | - | - | - | - |
-| `POST /api/parametres/tester/:canal` | M | auth (parametres.ts:19) ; role SG, BAT (parametres.ts:249) ; confinementAvocat (app.ts:134) | SG, ADM | A | **A!E7** | - | A | - | - | - | - | - |
+| `POST /api/parametres/tester/:canal` | M | auth (parametres.ts:19) ; perm parametres (parametres.ts:249) ; confinementAvocat (app.ts:134) | SG, ADM | A | - | - | A | - | - | - | - | - |
 | `POST /api/parametres/reinitialiser-donnees` | S | auth (parametres.ts:19) ; role ADMIN (parametres.ts:291) ; confinementAvocat (app.ts:134) | ADM | - | - | - | A | - | - | - | - | - |
 | `GET /api/corps-electoral` | L | auth, perm(corps_electoral) (corpsElectoral.ts:11) ; déclarée corpsElectoral.ts:19 ; confinementAvocat (app.ts:134) | SG, ADM, BAT, SA, CONS | A | A | - | A | A | A | - | - | - |
 | `GET /api/dashboard` | L | auth (dashboard.ts:9) ; déclarée dashboard.ts:12 ; confinementAvocat (app.ts:134) | SG, BAT, TRES, ADM, SA, CONS, ACC | A | A | A | A | A | A | A | - | - |
 | `GET /api/dashboard/agenda` | L | auth (dashboard.ts:9) ; déclarée dashboard.ts:106 ; confinementAvocat (app.ts:134) | SG, BAT, TRES, ADM, SA, CONS, ACC | A | A | A | A | A | A | A | - | - |
-| `GET /api/dashboard/journal` | L | auth (dashboard.ts:9) ; déclarée dashboard.ts:126 ; confinementAvocat (app.ts:134) | SG, ADM, BAT, SA, CONS | A | A | **A!E3** | A | A | A | **A!E3** | - | - |
+| `GET /api/dashboard/journal` | L | auth (dashboard.ts:9) ; perm audit (dashboard.ts:128) ; confinementAvocat (app.ts:134) | SG, ADM, BAT, SA, CONS | A | A | - | A | A | A | - | - | - |
 | `GET /api/audit` | L | auth, perm(audit) (audit.ts:12) ; déclarée audit.ts:20 ; confinementAvocat (app.ts:134) | SG, ADM, BAT, SA, CONS | A | A | - | A | A | A | - | - | - |
 | `GET /api/tableau` | L | auth, perm(membres) (tableau.ts:15) ; déclarée tableau.ts:36 ; confinementAvocat (app.ts:134) | SG, ADM, BAT, SA, CONS, ACC | A | A | - | A | A | A | A | - | - |
 | `GET /api/tableau/pdf` | L | auth, perm(membres) (tableau.ts:15) ; déclarée tableau.ts:81 ; confinementAvocat (app.ts:134) | SG, ADM, BAT, SA, CONS, ACC | A | A | - | A | A | A | A | - | - |
@@ -375,7 +376,7 @@ La colonne « Gardes » liste la garde de routeur (`router.use`) puis celle de l
 | `DELETE /api/cabinets/:id/membres/:membreId` | S | auth, perm(membres) (cabinets.ts:14) ; role SG (cabinets.ts:141) ; confinementAvocat (app.ts:134) | SG, ADM | A | - | - | A | - | - | - | - | - |
 | `POST /api/cabinets/purge` | S | auth, perm(membres) (cabinets.ts:14) ; role SG (cabinets.ts:156) ; confinementAvocat (app.ts:134) | SG, ADM | A | - | - | A | - | - | - | - | - |
 | `GET /api/calendrier-editorial` | L | auth, perm(documents) (calendrierEditorial.ts:12) ; déclarée calendrierEditorial.ts:15 ; confinementAvocat (app.ts:134) | SG, ADM, BAT, SA, CONS, ACC | A | A | - | A | A | A | A | - | - |
-| `PATCH /api/calendrier-editorial/:mois` | M | auth, perm(documents) (calendrierEditorial.ts:12) ; déclarée calendrierEditorial.ts:34 ; confinementAvocat (app.ts:134) | SG, ADM, SA, BAT | A | A | - | A | A | **A!E5** | **A!E5** | - | - |
+| `PATCH /api/calendrier-editorial/:mois` | M | auth, perm(documents) (calendrierEditorial.ts:12) ; role SG, SA, BAT (calendrierEditorial.ts:36) ; confinementAvocat (app.ts:134) | SG, ADM, SA, BAT | A | A | - | A | A | - | - | - | - |
 | `GET /api/espace/moi` | L | auth, avocat (espace.ts:31) ; déclarée espace.ts:42 | AV, STAG | - | - | - | - | - | - | - | A | A |
 | `PATCH /api/espace/moi` | M | auth, avocat (espace.ts:31) ; déclarée espace.ts:102 | AV, STAG | - | - | - | - | - | - | - | A | A |
 | `GET /api/espace/attestation/inscription/pdf` | L | auth, avocat (espace.ts:31) ; déclarée espace.ts:124 | AV, STAG | - | - | - | - | - | - | - | A | A |
@@ -418,15 +419,43 @@ La colonne « Gardes » liste la garde de routeur (`router.use`) puis celle de l
 | `GET /api/espace/scrutins` | L | auth, avocat (espace.ts:31) ; déclarée espace.ts:848 | AV, STAG | - | - | - | - | - | - | - | A | A |
 | `POST /api/espace/scrutins/:id/voter` | V | auth, avocat (espace.ts:31) ; déclarée espace.ts:891 | AV, STAG | - | - | - | - | - | - | - | A | A |
 | `GET /api/messagerie/non-lus` | L | auth, perm(messagerie) (messagerie.ts:20) ; déclarée messagerie.ts:35 ; confinementAvocat (app.ts:134) | SG, ADM, BAT, TRES, SA | A | A | A | A | A | - | - | - | - |
-| `GET /api/messagerie` | L | auth, perm(messagerie) (messagerie.ts:20) ; déclarée messagerie.ts:48 ; confinementAvocat (app.ts:134) | SG, BAT, TRES, SA | A | A | A | **A!E1** | A | - | - | - | - |
-| `GET /api/messagerie/messages/:id/piece` | L | auth, perm(messagerie) (messagerie.ts:20) ; déclarée messagerie.ts:90 ; confinementAvocat (app.ts:134) | SG, BAT, TRES, SA | A | A | A | **A!E1** | A | - | - | - | - |
+| `GET /api/messagerie` | L | auth, perm(messagerie) (messagerie.ts:20) ; sansAdmin (messagerie.ts:50) ; confinementAvocat (app.ts:134) | SG, BAT, TRES, SA | A | A | A | - | A | - | - | - | - |
+| `GET /api/messagerie/messages/:id/piece` | L | auth, perm(messagerie) (messagerie.ts:20) ; sansAdmin (messagerie.ts:93) ; confinementAvocat (app.ts:134) | SG, BAT, TRES, SA | A | A | A | - | A | - | - | - | - |
 | `GET /api/messagerie/messages/:id/accuse/pdf` | L | auth, perm(messagerie) (messagerie.ts:20) ; déclarée messagerie.ts:96 ; confinementAvocat (app.ts:134) | SG, ADM, BAT, TRES, SA | A | A | A | A | A | - | - | - | - |
-| `GET /api/messagerie/:id` | L | auth, perm(messagerie) (messagerie.ts:20) ; déclarée messagerie.ts:105 ; confinementAvocat (app.ts:134) | SG, BAT, TRES, SA | A | A | A | **A!E1** | A | - | - | - | - |
-| `POST /api/messagerie` | C | auth, perm(messagerie) (messagerie.ts:20) ; déclarée messagerie.ts:148 ; confinementAvocat (app.ts:134) | SG, BAT, TRES, SA | A | A | A | **A!E2** | A | - | - | - | - |
-| `POST /api/messagerie/:id` | C | auth, perm(messagerie) (messagerie.ts:20) ; déclarée messagerie.ts:179 ; confinementAvocat (app.ts:134) | SG, BAT, TRES, SA | A | A | A | **A!E2** | A | - | - | - | - |
-| `POST /api/messagerie/:id/attestation` | C | auth, perm(messagerie) (messagerie.ts:20) ; déclarée messagerie.ts:211 ; confinementAvocat (app.ts:134) | SG, BAT, TRES, SA | A | A | A | **A!E2** | A | - | - | - | - |
+| `GET /api/messagerie/:id` | L | auth, perm(messagerie) (messagerie.ts:20) ; sansAdmin (messagerie.ts:109) ; confinementAvocat (app.ts:134) | SG, BAT, TRES, SA | A | A | A | - | A | - | - | - | - |
+| `POST /api/messagerie` | C | auth, perm(messagerie) (messagerie.ts:20) ; sansAdmin (messagerie.ts:153) ; confinementAvocat (app.ts:134) | SG, BAT, TRES, SA | A | A | A | - | A | - | - | - | - |
+| `POST /api/messagerie/:id` | C | auth, perm(messagerie) (messagerie.ts:20) ; sansAdmin (messagerie.ts:185) ; confinementAvocat (app.ts:134) | SG, BAT, TRES, SA | A | A | A | - | A | - | - | - | - |
+| `POST /api/messagerie/:id/attestation` | C | auth, perm(messagerie) (messagerie.ts:20) ; sansAdmin (messagerie.ts:218) ; confinementAvocat (app.ts:134) | SG, BAT, TRES, SA | A | A | A | - | A | - | - | - | - |
 | `GET /api/verifier/quitus/:numero` | L | aucune (publique) | public | pub | pub | pub | pub | pub | pub | pub | pub | pub |
 | `GET /api/verifier/recu/:numero` | L | aucune (publique) | public | pub | pub | pub | pub | pub | pub | pub | pub | pub |
 | `GET /api/verifier/timbre/:code` | L | aucune (publique) | public | pub | pub | pub | pub | pub | pub | pub | pub | pub |
 | `GET /v/:t/:ref` | L | aucune (publique) | public | pub | pub | pub | pub | pub | pub | pub | pub | pub |
 
+## 10. Correctifs T9 (serveur) et restrictions nouvelles
+
+Correctifs appliqués sans migration ni dépendance ; `espace.ts` n'est pas modifié.
+
+| Écart | Correctif | Preuve |
+|---|---|---|
+| E1, E2 | Nouvelle garde `refuserAdmin` (auth.ts:88) : 403 pour l'ADMIN sur le contenu des messages (liste avec aperçu, fil, pièce jointe, envoi, réponse, attestation délivrée dans un fil) et sur le fichier d'une pièce (pieces.ts:55). Les métadonnées restent ouvertes à l'ADMIN : `non-lus`, `accuse/pdf`, `GET /api/pieces`, `GET /api/membres/:id/pieces`, vérification et rejet des pièces. | rbac-matrice « E1 corrigé », « E2 corrigé » ; rbac-journal-refus « secret professionnel » (fil et pièce réels, aucun message ajouté) ; messagerie-pj et parcours alignés (le SG reçoit toujours 404 sur un fil entre confrères) |
+| E3 | `requirePermission("audit")` sur `GET /api/dashboard/journal` (dashboard.ts:128). | « E3 corrigé » (TRES, ACC) |
+| E4 | `requirePermission("discipline_saisir")` sur `PATCH /api/discipline/:id` (discipline.ts:117). | « E4 corrigé » (SA) |
+| E5 | `requireRole(SG, SA, BAT)` sur `POST /api/archives` (archives.ts:23) et `PATCH /api/calendrier-editorial/:mois` (calendrierEditorial.ts:36). | « E5 corrigé » (CONS, ACC) |
+| E7 | `requirePermission("parametres")` sur `POST /api/parametres/tester/:canal` (parametres.ts:249). | « E7 corrigé » (BAT) ; parametres-secrets vert |
+| F1 | users.ts:31 : seuls l'ADMIN et le SG créent, promeuvent ou reprennent (mot de passe) un compte SECRETAIRE_GENERAL. | rbac-journal-refus « F1 » (un SA doté de `utilisateurs` reçoit 403, aucun compte n'est créé) |
+| F5 | `LECTURES_SENSIBLES` (audit.ts:31) couvre aussi `GET /api/discipline` et `GET /api/discipline/journal`. | « la lecture d'un dossier et de la liste écrit une ligne » (Bâtonnier) |
+| D18 | audit.ts:73 : une écriture (méthode autre que GET) refusée en 403 écrit « Accès refusé — <ressource> » dans JournalAudit, avec l'auteur, la méthode, le chemin, le statut et l'IP, jamais le corps de la requête. Les GET refusés ne sont pas journalisés. | « un POST refusé écrit… sans le corps », « un GET refusé n'est pas journalisé », « PUT /rbac écrit toujours sa ligne » |
+| Message 403 | `requireRole` et `requirePermission` répondent « Vous n'avez pas les droits nécessaires pour accéder à cette ressource. » (constante `REFUS`, auth.ts:59). | assertion sur le corps de la réponse |
+
+Discipline et casier (R-62) : TRESORIERE, ACCUEIL et CONSULTATION étaient déjà refusés en 403 sur tout `/api/discipline` et sur `GET /api/membres/:id/pieces`. La matrice le prouve, et rbac-journal-refus le vérifie en plus sur le casier (`?membreId=`).
+
+**Restrictions nouvelles à valider par Fabrice** (chacune réduit un accès qui existait) :
+
+1. ADMIN : il n'accède plus au contenu de la Messagerie, ni en lecture ni en envoi, ni au fichier des pièces (secret professionnel). Le compte ADMIN technique ne peut donc plus répondre à un avocat : la réponse passe par le SG, le Bâtonnier, la Trésorière ou le SA. Côté front (T10), il faut masquer à l'ADMIN le menu Messagerie et le bouton d'ouverture d'une pièce.
+2. TRESORIERE et ACCUEIL : le widget « journal » du tableau de bord leur renvoie désormais 403 ; le front affiche alors une liste vide.
+3. SECRETAIRE_ADJOINT : il ne modifie plus l'instruction d'un dossier disciplinaire sans l'action `discipline_saisir`.
+4. CONSULTATION et ACCUEIL : ils ne créent plus d'archive et ne modifient plus le calendrier éditorial, même si la matrice leur donne `documents`. Ces deux routes sont désormais fixées par rôle (SG, SA, BAT) et ne suivent plus la matrice éditable.
+5. BATONNIER : il ne lance plus le test des canaux techniques (SMTP, SMS, passerelles), sauf si la permission `parametres` lui est accordée.
+6. Rôles éditables : même avec la permission `utilisateurs`, ils ne gèrent plus un compte Secrétaire général.
+
+Restent à décider par Fabrice, sans changement de code : E6 (reclassé en non-écart), E8 à E13 (écarts restrictifs, non élargis selon D17), F2 (projection de la discipline dans l'espace avocat, traitée par la tâche espace avocat), F3 et F6.

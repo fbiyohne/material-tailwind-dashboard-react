@@ -19,6 +19,8 @@ const archiveSchema = z.object({
 /** POST /archives — archive manuelle d'un document généré (RG-14). */
 archivesRouter.post(
   "/",
+  // Lecture seule pour CONSULTATION et ACCUEIL ; le Bâtonnier archive sa Lettre (LettreBatonnier.jsx).
+  requireRole("SECRETAIRE_GENERAL", "SECRETAIRE_ADJOINT", "BATONNIER"),
   asyncH(async (req, res) => {
     const { categorie, titre, reference, date, membreNom } = archiveSchema.parse(req.body);
     const a = await prisma.archive.create({

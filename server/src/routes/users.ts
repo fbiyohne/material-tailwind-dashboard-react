@@ -28,6 +28,11 @@ function interdireEscaladeAdmin(acteur: Role, roleCible?: Role | null) {
   if (acteur !== "ADMIN" && roleCible && PROTEGES.includes(roleCible)) {
     throw new HttpError(403, "Seul un administrateur peut gérer les comptes administrateur et bâtonnier");
   }
+  // F1 (M-20261016) : le SG a tous les modules sans restriction possible ; un rôle éditable à qui
+  // l'on aurait accordé « utilisateurs » ne doit ni créer ni promouvoir ni reprendre un compte SG.
+  if (roleCible === "SECRETAIRE_GENERAL" && acteur !== "ADMIN" && acteur !== "SECRETAIRE_GENERAL") {
+    throw new HttpError(403, "Seuls l'administrateur et le Secrétaire général peuvent gérer un compte Secrétaire général");
+  }
 }
 
 usersRouter.get(

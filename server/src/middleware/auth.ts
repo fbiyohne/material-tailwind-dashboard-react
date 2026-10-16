@@ -55,12 +55,15 @@ export async function requireAuth(req: AuthRequest, _res: Response, next: NextFu
   }
 }
 
+/** Message de refus neutre : ne révèle ni l'existence ni la nature de la ressource (avis juridique, M-20261016). */
+export const REFUS = "Vous n'avez pas les droits nécessaires pour accéder à cette ressource.";
+
 /** Restreint l'accès à certains rôles (l'ADMIN est toujours autorisé). RG-13. */
 export function requireRole(...roles: Role[]) {
   return (req: AuthRequest, _res: Response, next: NextFunction) => {
     if (!req.user) return next(new HttpError(401, "Authentification requise"));
     if (req.user.role === "ADMIN" || roles.includes(req.user.role)) return next();
-    next(new HttpError(403, "Accès refusé pour votre profil"));
+    next(new HttpError(403, REFUS));
   };
 }
 
@@ -73,8 +76,18 @@ export function requirePermission(permission: string) {
   return (req: AuthRequest, _res: Response, next: NextFunction) => {
     if (!req.user) return next(new HttpError(401, "Authentification requise"));
     if (aLaPermission(req.user.role, permission)) return next();
-    next(new HttpError(403, "Accès refusé pour votre profil"));
+    next(new HttpError(403, REFUS));
   };
+}
+
+/**
+ * Secret professionnel (loi 026-92 art. 52, R-58) : l'ADMIN, sous-traitant technique
+ * (loi 29-2019 art. 63), ne lit ni n'écrit le contenu des messages et des pièces.
+ * À poser après une garde qui admet l'ADMIN (requireRole, requirePermission).
+ */
+export function refuserAdmin(req: AuthRequest, _res: Response, next: NextFunction) {
+  if (req.user?.role === "ADMIN") return next(new HttpError(403, REFUS));
+  next();
 }
 
 /**
