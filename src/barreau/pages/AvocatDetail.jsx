@@ -45,7 +45,7 @@ export function AvocatDetail() {
   const peutVoirFinances = FINANCES.includes(user?.role);
   const estAdmin = user?.role === "ADMIN";
   // R1-1 : le lien d'activation revient à l'opérateur ; refusé à l'ADMIN (POST /membres/:id/acces).
-  const peutGererAcces = user?.role === "SECRETAIRE_GENERAL";
+  const peutGererAcces = ["SECRETAIRE_GENERAL", "ADMIN"].includes(user?.role);
   // Modification et attestation sont réservées au SG côté serveur (PATCH
   // /membres/:id, /attestation) : on ne les propose pas au Bâtonnier.
   // La radiation ne se décide pas ici : elle s'enregistre depuis le dossier

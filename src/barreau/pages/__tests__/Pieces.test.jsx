@@ -14,12 +14,14 @@ vi.mock("../../api/resources", () => ({
   supprimerPiece: vi.fn(),
   voirPiece: vi.fn(),
 }));
-vi.mock("../../auth/AuthContext", () => ({ useAuth: () => ({ user: { role: "SECRETAIRE_GENERAL" } }) }));
+let role = "SECRETAIRE_GENERAL";
+vi.mock("../../auth/AuthContext", () => ({ useAuth: () => ({ user: { role } }) }));
 
 const piece = { id: 7, type: "IDENTITE", nomFichier: "cni.pdf", taille: 100, statut: "A_VERIFIER", createdAt: "2026-10-01T10:00:00Z", membre: { nom: "BAKALA Jean", num: 1, qualite: "AVOCAT" } };
 
 beforeEach(() => {
   vi.clearAllMocks();
+  role = "SECRETAIRE_GENERAL";
   listerToutesPieces.mockResolvedValue([piece]);
 });
 
@@ -36,5 +38,14 @@ describe("Pieces — rejet motivé", () => {
     expect(valider).toBeEnabled();
     await userEvent.click(valider);
     expect(rejeterPiece).toHaveBeenCalledWith(7, "abc lisible");
+  });
+});
+
+describe("Pieces — accès de l'ADMIN", () => {
+  it("l'ADMIN voit le bouton Voir et la mention de journalisation", async () => {
+    role = "ADMIN";
+    render(<MemoryRouter><ToastProvider><ConfirmProvider><Pieces /></ConfirmProvider></ToastProvider></MemoryRouter>);
+    expect(await screen.findByRole("button", { name: /Voir/ })).toBeInTheDocument();
+    expect(screen.getByText("Les accès de l'administrateur à ce contenu sont journalisés.")).toBeInTheDocument();
   });
 });

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { MagnifyingGlassIcon, EyeIcon, CheckIcon, XMarkIcon, TrashIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
-import { Badge, useToast, useConfirm, PageHeader, DataTable } from "../components";
+import { MagnifyingGlassIcon, EyeIcon, CheckIcon, XMarkIcon, TrashIcon, ShieldCheckIcon, LockClosedIcon } from "@heroicons/react/24/outline";
+import { Badge, Notice, useToast, useConfirm, PageHeader, DataTable } from "../components";
 import { formatDate } from "../utils/format";
 import { useAuth } from "../auth/AuthContext";
 import { TYPE_PIECE_LABEL as TYPE_LABEL, STATUT_PIECE_META as STATUT } from "../data/pieces";
@@ -92,11 +92,9 @@ export function Pieces() {
     { key: "actions", label: "Action", align: "right",
       cell: (p) => (
         <div className="flex items-center justify-end gap-1.5">
-          {user?.role !== "ADMIN" && (
-            <button className="bpn-btn bpn-btn-ghost bpn-btn-sm" onClick={() => voirPiece(p.id).catch((e) => toast.error(e.message))}>
-              <EyeIcon className="h-3.5 w-3.5" /> Voir
-            </button>
-          )}
+          <button className="bpn-btn bpn-btn-ghost bpn-btn-sm" onClick={() => voirPiece(p.id).catch((e) => toast.error(e.message))}>
+            <EyeIcon className="h-3.5 w-3.5" /> Voir
+          </button>
           {peutGerer && p.statut !== "VERIFIEE" && (
             <button className="bpn-btn bpn-btn-or bpn-btn-sm" onClick={() => action(() => verifierPiece(p.id), "Pièce vérifiée.")}>
               <CheckIcon className="h-3.5 w-3.5" /> Vérifier
@@ -120,6 +118,7 @@ export function Pieces() {
   return (
     <div className="space-y-5">
       <PageHeader eyebrow="Membres" titre="Vérification des pièces" sousTitre="Validation documentaire (KYC) des dossiers d'inscription. Le Secrétaire Général vérifie ou rejette ; le Bâtonnier consulte (RG-15)." />
+      <Notice ton="gris" icon={LockClosedIcon}>Les accès de l'administrateur à ce contenu sont journalisés.</Notice>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap gap-1.5">

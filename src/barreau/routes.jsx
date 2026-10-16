@@ -106,7 +106,7 @@ export const navSections = [
       { name: "Discipline", path: "/discipline", icon: ScaleIcon, perm: "discipline", element: <Discipline /> },
       { name: "Élections", path: "/elections", icon: HandRaisedIcon, perm: "elections", element: <Elections /> },
       { name: "Conseil de l'Ordre", path: "/conseil", icon: UserGroupIcon, perm: "elections", element: <Conseil /> },
-      { name: "Messagerie", path: "/messagerie", icon: ChatBubbleLeftRightIcon, perm: "messagerie", sauf: ["ADMIN"], element: <Messagerie /> },
+      { name: "Messagerie", path: "/messagerie", icon: ChatBubbleLeftRightIcon, perm: "messagerie", element: <Messagerie /> },
     ],
   },
   {
@@ -137,7 +137,6 @@ export const navSections = [
 export const aAcces = (item, user) => {
   const u = typeof user === "string" ? { role: user } : user;
   const role = u?.role;
-  if (item.sauf?.includes(role)) return false; // secret professionnel : l'ADMIN n'a pas le contenu (R-58)
   if (role === "ADMIN" || role === "SECRETAIRE_GENERAL") return true;
   if (item.perm && !u?.permissions?.includes(item.perm)) return false;
   if (item.roles) return item.roles.includes(role); // garde serveur fixée par rôle, en plus de la matrice

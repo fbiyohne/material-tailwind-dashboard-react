@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChatBubbleLeftRightIcon, PaperAirplaneIcon, UserIcon, ArrowLeftIcon, DocumentCheckIcon } from "@heroicons/react/24/outline";
-import { Badge, PageHeader, useToast, TableSkeleton, ErrorState, EmptyState, MessageBulle, ChampPieceJointe, PiedMessage } from "../components";
+import { ChatBubbleLeftRightIcon, PaperAirplaneIcon, UserIcon, ArrowLeftIcon, DocumentCheckIcon, LockClosedIcon } from "@heroicons/react/24/outline";
+import { Badge, Notice, PageHeader, useToast, TableSkeleton, ErrorState, EmptyState, MessageBulle, ChampPieceJointe, PiedMessage } from "../components";
 import { getMessagerie, getConversationAdmin, repondreConversationAdmin, delivrerAttestationFil } from "../api/resources";
 import { useMessagerieRealtime } from "../hooks/useMessagerieRealtime";
 
@@ -72,6 +72,7 @@ export function Messagerie() {
   return (
     <div className="space-y-5">
       <PageHeader eyebrow="Institutionnel" titre="Messagerie" sousTitre="Demandes et messages adressés au Secrétariat par les avocats." />
+      <Notice ton="gris" icon={LockClosedIcon}>Les accès de l'administrateur à ce contenu sont journalisés.</Notice>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[20rem_1fr]">
         {/* Liste — sur mobile, masquée dès qu'un fil est ouvert (vue maître/détail). */}

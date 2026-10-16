@@ -18,12 +18,18 @@ const chemins = (role) => sectionsPourUser(user(role)).flatMap((s) => s.items.ma
 describe("menu par rôle", () => {
   it.each(ROLES)("%s : cohérent avec la matrice attendue", (role) => {
     const c = chemins(role);
-    // Contenu des messages : refusé à l'ADMIN (secret professionnel).
-    expect(c.includes("/messagerie")).toBe(role !== "ADMIN" && (PERMS[role] ?? TOUT).includes("messagerie"));
+    // Messagerie : l'ADMIN a droit à tout (accès tracé côté serveur).
+    expect(c.includes("/messagerie")).toBe((PERMS[role] ?? TOUT).includes("messagerie"));
     // File de vérification des pièces : serveur réservé à SG, Bâtonnier (+ ADMIN).
     expect(c.includes("/pieces")).toBe(["SECRETAIRE_GENERAL", "BATONNIER", "ADMIN"].includes(role));
     // Discipline : jamais pour Trésorière, Accueil, Consultation.
     if (["TRESORIERE", "ACCUEIL", "CONSULTATION"].includes(role)) expect(c).not.toContain("/discipline");
+  });
+
+  it("ADMIN : le menu contient Messagerie et la route /messagerie est autorisée", () => {
+    expect(chemins("ADMIN")).toContain("/messagerie");
+    const item = sectionsPourUser(user("ADMIN")).flatMap((s) => s.items).find((i) => i.path === "/messagerie");
+    expect(aAcces(item, user("ADMIN"))).toBe(true);
   });
 
   it("fiche membre : réservée à SG, Bâtonnier, ADMIN", () => {
