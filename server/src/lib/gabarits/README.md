@@ -51,3 +51,13 @@ on resserre le gabarit, jamais l'échelle.
 Termes interdits (HJ-6) dans les en-têtes, pieds et clauses : « certifié », « signature électronique »,
 « horodatage qualifié », « recommandé électronique », « chiffré de bout en bout », « vote vérifiable »,
 « secret garanti ». Le test `server/test/pdf-gabarit.test.ts` le vérifie.
+
+## Documents assemblés sur le socle
+
+- Famille A (`../templates.ts`, `documentHtml()`) : attestations, convocations, feuille de présence, PV,
+  décision disciplinaire, accusé de lecture, tableau de l'Ordre, liste des avocats (paysage, C-PDF-LISTE).
+- Famille B (`../documentsRiches.ts`) : quitus et reçu de paiement, une page chacun, `blocVerif()` avec la
+  chaîne QR reçue des routes (`qrDocument`, inchangée) et le chemin signé `cheminVerif()`. Textes, numéro,
+  date et montant repris à l'identique. Espacements resserrés localement (jamais l'échelle) : tient sur une
+  page avec les noms, cabinets et adresses les plus longs (contrôlé par rendu réel, M-20261016 T5).
+  Test : `server/test/documents-riches-socle.test.ts`.

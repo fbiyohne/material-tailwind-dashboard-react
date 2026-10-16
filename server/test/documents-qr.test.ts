@@ -177,13 +177,13 @@ describe("Gabarits quitus et reçu (point 6)", () => {
   it("validité du quitus calculée (clause CL-VALIDITE-QUITUS), aucune durée en dur", () => {
     const h = quitusRicheHtml(quitus, membre, "data:,", "x.cg");
     expect(h).not.toMatch(/trois \(03\) mois|valable pour une durée de/i);
-    expect(h).toContain(`Valable jusqu'au <b class="navy">${fmtDateFr(new Date("2027-01-11T10:00:00Z"))}</b> inclus, sauf changement de situation du titulaire`);
+    expect(h).toContain(`Valable jusqu'au <b>${fmtDateFr(new Date("2027-01-11T10:00:00Z"))}</b> inclus, sauf changement de situation du titulaire`);
     expect(h).toContain("consultable à tout moment par le code de vérification.");
   });
 
   it("gabarit : la fin de validité figée (Quitus.finValidite) prime sur tout calcul (R1-2)", () => {
     const h = quitusRicheHtml({ ...quitus, finValidite: new Date("2027-04-11T10:00:00Z") }, membre, "data:,", "x.cg");
-    expect(h).toContain(`Valable jusqu'au <b class="navy">${fmtDateFr(new Date("2027-04-11T10:00:00Z"))}</b> inclus`);
+    expect(h).toContain(`Valable jusqu'au <b>${fmtDateFr(new Date("2027-04-11T10:00:00Z"))}</b> inclus`);
   });
 
   it("clause CL-VERIF sous le QR, sans « signature électronique »", () => {
@@ -198,9 +198,12 @@ describe("Gabarits quitus et reçu (point 6)", () => {
 
   it("identité en 12 pt, nom en 14 pt ; reçu : exercice couvert issu des données", () => {
     const h = quitusRicheHtml(quitus, membre, "data:,", "x.cg");
-    expect(h).toMatch(/\.champ \{[^}]*font-size:12pt/);
-    expect(h).toContain('<span class="nom">Me DUPONT Jean</span>');
-    expect(h).toMatch(/\.champ \.nom \{[^}]*font-size:14pt/);
-    expect(recuRicheHtml(recu, membre, "data:,", "x.cg")).toContain("<b>Exercice couvert :</b><span>2025</span>");
+    // Socle A4 (M-20261016) : --t-identite 12 pt sur les valeurs, --t-nom 14 pt sur le nom.
+    expect(h).toContain("--t-identite: 12pt");
+    expect(h).toMatch(/\.champ dd \{[^}]*font-size: var\(--t-identite\)/);
+    expect(h).toContain("--t-nom: 14pt");
+    expect(h).toMatch(/\.champ-nom dd \{[^}]*font-size: var\(--t-nom\)/);
+    expect(h).toMatch(/class="champ champ-nom[^"]*"><dt>Nom et Prénom\(s\)<\/dt><dd class="">Me DUPONT Jean<\/dd>/);
+    expect(recuRicheHtml(recu, membre, "data:,", "x.cg")).toContain("<dt>Exercice couvert</dt><dd class=\"\">2025</dd>");
   });
 });

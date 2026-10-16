@@ -1,252 +1,110 @@
 /**
- * Reproduction côté serveur (rendu Puppeteer, vectoriel A4) des documents
- * officiels riches AFFICHÉS À L'ÉCRAN : RecuDocument et QuitusDocument
- * (src/barreau/components). Même mise en page, mêmes couleurs, même habillage —
- * mais un vrai PDF (texte sélectionnable) et non une capture d'image.
- *
- * ⚠️ À garder synchronisé avec les composants React correspondants.
+ * Reçu de paiement et quitus de cotisation en PDF (Puppeteer), sur le socle A4 commun
+ * (gabarit.ts, direction DIRECTION_PDF). Changement de mise en page seulement (M-20261016, T5) :
+ * les textes des documents, la chaîne QR reçue des routes (qrDocument) et le chemin signé
+ * /v/{q,r}/… sont repris à l'identique. Les aperçus à l'écran (RecuDocument, QuitusDocument)
+ * restent ceux du client.
  */
 import { montantEnLettresFCFA } from "./montantEnLettres.js";
 import { esc, fmtFCFA, fmtDateFr } from "./documentsCommun.js";
-import { identite, MENTION_DEMONSTRATION } from "./identiteDocuments.js";
+import { identite } from "./identiteDocuments.js";
 import { cachetBatonnier, cachetTresoriere } from "./cachets.js";
 import { cheminVerif } from "./signature.js";
 import { finQuitus } from "./business.js";
-
-/** Cachet officiel (image) ou rien si l'asset est absent. */
-const cachetImg = (src: string, size = 128) =>
-  src ? `<img src="${src}" alt="Cachet officiel" style="width:${size}px;height:${size}px;object-fit:contain" />` : `<div style="width:${size}px"></div>`;
+import { pageA4, entete, titre, champs, signatures, blocVerif } from "./gabarit.js";
 
 /**
- * Logo officiel — source unique (Paramètres). Logo téléversé (data URI image) s'il
- * existe ; sinon sceau dessiné (balance) dont le texte reprend l'identité configurée.
+ * Habillage propre aux deux pièces (préambule, mention personnelle, coordonnées) et resserrement
+ * vertical pour tenir sur une page avec les noms, cabinets et adresses les plus longs (R1) :
+ * on resserre les espacements, jamais l'échelle.
  */
-const sceau = (size: number) => {
-  const id = identite();
-  if (id.logo) return `<img src="${id.logo}" alt="Logo" style="width:${size}px;height:${size}px;object-fit:contain" />`;
-  return `
-<svg width="${size}" height="${size}" viewBox="0 0 100 100" aria-label="Sceau">
-  <defs><path id="s-h" d="M 18,50 A 32,32 0 0 1 82,50"/><path id="s-b" d="M 82,52 A 32,32 0 0 1 18,52"/></defs>
-  <circle cx="50" cy="50" r="47" fill="none" stroke="#C4990A" stroke-width="1.4"/>
-  <circle cx="50" cy="50" r="42" fill="none" stroke="#C4990A" stroke-width="0.6"/>
-  <text fill="#1A3A6B" font-size="6" font-weight="600" letter-spacing="0.8"><textPath href="#s-h" startOffset="50%" text-anchor="middle">${esc(id.ordre.toUpperCase())}</textPath></text>
-  <text fill="#1A3A6B" font-size="6" font-weight="600" letter-spacing="0.8"><textPath href="#s-b" startOffset="50%" text-anchor="middle">${esc(id.denomination.toUpperCase())}</textPath></text>
-  <g stroke="#1A3A6B" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <line x1="50" y1="37" x2="50" y2="63"/><line x1="44" y1="63" x2="56" y2="63"/><line x1="38" y1="42" x2="62" y2="42"/>
-    <circle cx="50" cy="38" r="1.6" fill="#C4990A" stroke="none"/>
-    <line x1="38" y1="42" x2="38" y2="49"/><path d="M33,49 Q38,54 43,49"/>
-    <line x1="62" y1="42" x2="62" y2="49"/><path d="M57,49 Q62,54 67,49"/>
-  </g>
-</svg>`;
-};
-
-/** Filet doré orné d'un losange central. */
-const filet = (w: number) =>
-  `<div class="filet" style="width:${w}px"><span>&#9670;</span></div>`;
-
-const calendrier = `
-<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C4990A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-  <path d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/>
-</svg>`;
-
-/** Coordonnées paramétrées (Paramètres › Identité) ; un bloc vide n'est pas affiché. */
-const bandeauContact = () => {
-  const id = identite();
-  const enLigne = [id.courriel, id.site].filter(Boolean).map(esc).join("<br/>");
-  const tel = id.telephones.split("/").map((t) => esc(t.trim())).filter(Boolean).join("<br/>");
-  return `
-<div class="band">
-  <div><span class="band-l">Adresse</span><br/>${esc(id.adresse)}</div>
-  ${enLigne ? `<div style="text-align:center"><span class="band-l">En ligne</span><br/>${enLigne}</div>` : ""}
-  ${tel ? `<div style="text-align:right"><span class="band-l">Téléphone</span><br/>${tel}</div>` : ""}
-</div>`;
-};
-
-/** Feuille de style partagée des deux documents (reproduit les classes Tailwind). */
-const styles = `
-<style>
-  @page { size: A4 portrait; margin: 0; }
-  * { margin:0; padding:0; box-sizing:border-box; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-  html, body { background:#fff; }
-  body { font-family: Georgia, 'Times New Roman', serif; color:#1C1C18; font-size:13px; }
-  .doc-root { position:relative; width:794px; min-height:1123px; display:flex; flex-direction:column;
-              overflow:hidden; border:2px solid #C4990A; background:#fff; }
-  .inner-border { position:absolute; inset:7px; border:1px solid rgba(196,153,10,.6); pointer-events:none; }
-  .corner { position:absolute; right:-64px; top:-64px; width:176px; height:176px; border-bottom-left-radius:100%; background:#0d2247; }
-  .corner > div { position:absolute; inset:12px; border-bottom-left-radius:100%; border:3px solid rgba(196,153,10,.7); }
-  .watermark { position:absolute; right:24px; top:25%; opacity:.05; }
-  .main { position:relative; z-index:10; flex:1; display:flex; flex-direction:column; padding:40px 48px 0; }
-  .disp { font-family:'Playfair Display', Georgia, serif; }
-  .mono { font-family:'DM Mono', monospace; }
-  .filet { position:relative; height:1px; background:#C4990A; margin:12px auto; }
-  .filet span { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); font-size:10px; line-height:1; color:#C4990A; }
-  .navy { color:#1A3A6B; } .or { color:#C4990A; } .gris { color:#7A756A; }
-  .row-nd { display:flex; justify-content:space-between; }
-  .champ { display:flex; gap:8px; align-items:baseline; border-bottom:1px dotted rgba(122,117,106,.5); padding-bottom:6px; font-size:12pt; }
-  .champ .nom { font-size:14pt; font-weight:700; color:#1A3A6B; }
-  .champ.multi { align-items:flex-start; min-height:42px; }
-  .champ b { flex:0 0 auto; font-weight:700; }
-  .champ span { flex:1; }
-  .montant { width:80%; margin:0 auto; border:2px solid rgba(196,153,10,.7); background:rgba(253,246,227,.55); border-radius:8px; padding:16px 24px; text-align:center; }
-  .valid { width:80%; margin:0 auto; display:flex; align-items:center; gap:16px; border:2px solid rgba(196,153,10,.7); border-radius:12px; padding:14px 20px; }
-  .valid .ico { flex:0 0 auto; width:48px; height:48px; border-radius:50%; background:#0d2247; display:flex; align-items:center; justify-content:center; }
-  .sigrow { display:flex; align-items:flex-end; justify-content:space-between; }
-  .sig { text-align:center; }
-  .sig .line { width:208px; border-top:1px dotted #7A756A; margin-top:48px; }
-  .verif { display:flex; align-items:center; gap:16px; }
-  .verif .t { font-size:11px; line-height:1.5; color:#7A756A; }
-  .sigrow .verif .t { max-width:300px; }
-  .band { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; background:#0d2247; padding:16px 40px; font-size:11px; line-height:1.6; color:rgba(255,255,255,.9); }
-  .band-l { font-weight:600; color:#C4990A; }
+const CSS = `<style>
+.titre-bloc { margin-top: 4mm; margin-bottom: 3mm; }
+.preambule { font-size: 11pt; margin: 0 0 2.5mm; }
+.preambule b { color: var(--marine); }
+.champ { padding: 1mm 0; }
+.identite { margin: 0 0 3mm; }
+.encart { margin-top: 2mm; margin-bottom: 2mm; }
+.signatures { margin-top: 3mm; margin-bottom: 1mm; }
+.sig-espace { height: 12mm; }
+.verif { padding-top: 2.5mm; }
+.mention-perso { font-size: var(--t-legende); font-style: italic; color: var(--gris); text-align: center; margin: 2mm 0 0; }
+.coordonnees { margin: 1.5mm 0 0; padding-top: 1.5mm; border-top: .5pt solid var(--gris-m); font-size: var(--t-legende); color: var(--gris); text-align: center; }
+.coordonnees span { white-space: nowrap; }
 </style>`;
 
-const fonts = `<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Mono&display=swap" rel="stylesheet">`;
-
-/** En-tête commun : sceau + dénomination + sous-titre. */
-const enTete = (sousTitre: string) => `
-  <div style="display:flex; align-items:center; gap:24px;">
-    ${sceau(104)}
-    <div style="flex:1; text-align:center;">
-      <div class="disp navy" style="font-size:26px; font-weight:700; line-height:1.15;">${esc(identite().denomination.toUpperCase())}</div>
-      ${filet(240)}
-      <div style="font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.04em;">${sousTitre}</div>
-      <div class="gris" style="margin-top:4px; font-size:12px; font-style:italic;">Défendre • Conseiller • Servir la Justice</div>
-    </div>
-  </div>`;
-
-/**
- * Bloc de vérification : QR (96 px, soit 25 mm imprimés) + clause CL-VERIF.
- * Le chemin court signé (/v/{t}/{ref}.{jeton}) est celui que le QR encode (qrDocument).
- */
-const verif = (qr: string, host: string, chemin: string) => `
-  <div class="verif">
-    <img src="${qr}" width="96" height="96" alt="QR"/>
-    <div class="t">
-      <div class="navy" style="font-size:12px; font-weight:600; text-transform:uppercase;">Vérification d'authenticité</div>
-      Authenticité vérifiable en scannant ce code ou sur <span class="mono navy">${esc(host)}${esc(chemin)}</span>.
-      Ce code permet de contrôler que le document a été émis par l'Ordre et d'en connaître le statut actuel. Il ne constitue pas une signature.
-    </div>
-  </div>`;
-
-/** Clause C-13 : seulement sur une instance de démonstration. */
-const mentionDemo = () =>
-  identite().modeDemonstration ? `<div class="gris" style="position:relative;z-index:10;padding:6px 48px;text-align:center;font-size:10px;font-style:italic">${esc(MENTION_DEMONSTRATION)}</div>` : "";
-
-const page = (corps: string) =>
-  `<!doctype html><html lang="fr"><head><meta charset="utf-8">${fonts}${styles}</head><body><div class="doc-root">
-    <div class="inner-border"></div>
-    <div class="corner"><div></div></div>
-    <div class="watermark" aria-hidden="true">${sceau(360)}</div>
-    ${corps}
-    ${mentionDemo()}
-    ${bandeauContact()}
-  </div></body></html>`;
+/** Coordonnées paramétrées (Paramètres › Identité) sur une ligne ; une valeur vide n'est pas affichée. */
+const coordonnees = () => {
+  const id = identite();
+  const tels = id.telephones.split("/").map((t) => t.trim());
+  return `<p class="coordonnees">${[id.adresse, id.courriel, id.site, ...tels].filter(Boolean).map((v) => `<span>${esc(v)}</span>`).join(" · ")}</p>`;
+};
 
 interface RecuLike { numero: string; montant: number; annee: number; mode?: string | null; objet?: string | null; date: Date | string; }
 interface MembreLike { nom: string; num?: number; numInscription?: string | null; dateInscription?: Date | string | null; cabinet?: string | null; adresse?: string | null; }
 
-/** Reçu de paiement — reproduction de RecuDocument. */
+/** Reçu de paiement (pièce de recette, série continue). */
 export function recuRicheHtml(recu: RecuLike, membre: MembreLike, qr: string, host: string): string {
+  const id = identite();
   const m = Number(recu.montant) || 0;
-  const corps = `
-    <div class="main">
-      ${enTete("Trésorerie de l'Ordre des Avocats")}
-      <div style="margin-top:32px; text-align:center;">
-        <div class="disp navy" style="font-size:56px; font-weight:700; line-height:1.08;">REÇU</div>
-        ${filet(176)}
-        <div class="or" style="font-size:20px; font-weight:500; text-transform:uppercase; letter-spacing:.12em;">Reçu de paiement</div>
-      </div>
-      <div class="row-nd mono navy" style="margin-top:32px; font-size:14px;">
-        <span>N° ${esc(recu.numero)}</span><span>${esc(identite().ville)}, le ${fmtDateFr(recu.date)}</span>
-      </div>
-      <div style="margin-top:36px;">
-        <div style="text-align:center; font-size:16px; font-weight:700; text-transform:uppercase; line-height:1.375;">La Trésorière de l'Ordre des Avocats<br/>au ${esc(identite().denomination)}</div>
-        <div style="margin-top:16px; text-align:center; font-size:15px; font-style:italic;">Reconnaît avoir reçu de Maître :</div>
-        <div style="margin-top:24px; display:flex; flex-direction:column; gap:16px;">
-          <div class="champ"><b>Nom et Prénom(s) :</b><span class="nom">Me ${esc(membre.nom)}</span></div>
-          <div class="champ"><b>Au titre de :</b><span>${esc(recu.objet || `Cotisation ordinale ${recu.annee}`)}</span></div>
-          <div class="champ"><b>Exercice couvert :</b><span>${esc(recu.annee)}</span></div>
-          <div class="champ"><b>Mode de paiement :</b><span>${esc(recu.mode || "—")}</span></div>
-        </div>
-        <div class="montant" style="margin-top:28px;">
-          <div class="gris" style="font-size:11px; text-transform:uppercase;">Montant perçu</div>
-          <div class="disp navy" style="font-size:34px; font-weight:700; line-height:1.1;">${fmtFCFA(m)}</div>
-          <div class="gris" style="margin-top:2px; font-size:13px; font-style:italic;">${esc(montantEnLettresFCFA(m).replace(/^./, (c) => c.toUpperCase()))}</div>
-        </div>
-        <div style="margin-top:24px; text-align:center; font-size:15px;">En foi de quoi, le présent reçu lui est délivré pour servir et valoir ce que de droit.</div>
-      </div>
-      <div class="sigrow" style="margin-top:40px;">
-        ${verif(qr, host, cheminVerif("r", recu.numero))}
-        ${cachetImg(cachetTresoriere)}
-        <div class="sig">
-          <div style="font-size:13px; font-weight:600;">La Trésorière de l'Ordre</div>
-          <div class="line"></div>
-          <div class="gris" style="margin-top:4px; font-size:12px;">${esc(identite().tresoriere)}</div>
-        </div>
-      </div>
-      <div class="gris" style="margin-top:28px; text-align:center; font-size:11px; font-style:italic;">Ce reçu est strictement personnel et atteste du paiement mentionné ci-dessus.</div>
-    </div>`;
-  return page(corps);
+  return pageA4({
+    titreCourt: "Reçu de paiement",
+    reference: recu.numero,
+    unePage: true,
+    contenu: `${CSS}
+${entete("Reçu n°", recu.numero, `${id.ville}, le ${fmtDateFr(recu.date)}`)}
+<main>
+${titre("Trésorerie de l'Ordre des Avocats", "Reçu de paiement")}
+<p class="preambule"><b>La Trésorière de l'Ordre des Avocats au ${esc(id.denomination)}</b><br/>Reconnaît avoir reçu de Maître :</p>
+${champs([
+  ["Nom et Prénom(s)", `Me ${membre.nom}`, "nom"],
+  ["Au titre de", recu.objet || `Cotisation ordinale ${recu.annee}`],
+  ["Exercice couvert", String(recu.annee)],
+  ["Mode de paiement", recu.mode || "—"],
+])}
+<div class="encart"><p class="encart-titre">Montant perçu</p><p class="montant-chiffres">${fmtFCFA(m)}</p><p class="montant-lettres">${esc(montantEnLettresFCFA(m).replace(/^./, (c) => c.toUpperCase()))}</p></div>
+<div class="corps"><p>En foi de quoi, le présent reçu lui est délivré pour servir et valoir ce que de droit.</p></div>
+</main>
+<div class="cloture">${signatures([["La Trésorière de l'Ordre", id.tresoriere, cachetTresoriere]])}
+${blocVerif(qr, host + cheminVerif("r", recu.numero))}
+<p class="mention-perso">Ce reçu est strictement personnel et atteste du paiement mentionné ci-dessus.</p>
+${coordonnees()}</div>`,
+  });
 }
 
 /**
- * Quitus de cotisation — reproduction de QuitusDocument. La date de fin est celle
- * figée à la délivrance (Quitus.finValidite), jamais la règle courante (finQuitus).
+ * Quitus de cotisation. La date de fin est celle figée à la délivrance (Quitus.finValidite),
+ * jamais la règle courante (finQuitus).
  */
 export function quitusRicheHtml(quitus: { numero: string; annee: number; dateEmission: Date | string; finValidite?: Date | null }, membre: MembreLike, qr: string, host: string): string {
+  const id = identite();
   const fin = finQuitus({ dateEmission: new Date(quitus.dateEmission), finValidite: quitus.finValidite });
   const adresse = [membre.cabinet, membre.adresse].filter(Boolean).join(" — ");
   const inscr = membre.numInscription ?? (membre.num != null ? `${membre.num}/BPN` : "");
-  const corps = `
-    <div class="main">
-      ${enTete(`Ordre des Avocats au ${identite().denomination}`)}
-      <div style="margin-top:14px; text-align:center;">
-        <div class="disp navy" style="font-size:56px; font-weight:700; line-height:1.08;">QUITUS</div>
-        ${filet(176)}
-        <div class="or" style="font-size:20px; font-weight:500; text-transform:uppercase; letter-spacing:.12em;">Certificat de non-redevance</div>
-      </div>
-      <div class="row-nd mono navy" style="margin-top:16px; font-size:14px;">
-        <span>N° ${esc(quitus.numero)}</span><span>${esc(identite().ville)}, le ${fmtDateFr(quitus.dateEmission)}</span>
-      </div>
-      <div style="margin-top:16px;">
-        <div style="text-align:center; font-size:16px; font-weight:700; text-transform:uppercase; line-height:1.375;">Le Bâtonnier de l'Ordre des Avocats<br/>au ${esc(identite().denomination)}</div>
-        <div style="margin-top:14px; text-align:center; font-size:15px; font-style:italic;">Atteste qu'après vérification des écritures de l'Ordre, Maître :</div>
-        <div style="margin-top:16px; display:flex; flex-direction:column; gap:8px;">
-          <div class="champ"><b>Nom et Prénom(s) :</b><span class="nom">Me ${esc(membre.nom)}</span></div>
-          <div class="champ"><b>Inscrit(e) au Barreau sous le n° :</b><span>${esc(inscr)}</span></div>
-          <div class="champ"><b>Date d'inscription :</b><span>${fmtDateFr(membre.dateInscription)}</span></div>
-          <div class="champ multi"><b>Adresse professionnelle :</b><span>${esc(adresse || "—")}</span></div>
-        </div>
-        <div style="margin-top:14px; text-align:center; line-height:1.6;">
-          <div style="font-size:17px; font-weight:700;">est à jour de toutes ses cotisations, contributions et redevances</div>
-          <div style="font-size:15px;">envers l'Ordre des Avocats au ${esc(identite().denomination)}, au titre de l'exercice ${esc(quitus.annee)}.</div>
-        </div>
-        <div style="margin-top:12px; text-align:center; font-size:15px;">En foi de quoi, le présent quitus lui est délivré pour servir et valoir ce que de droit.</div>
-      </div>
-      <div class="valid" style="margin-top:16px;">
-        <div class="ico">${calendrier}</div>
-        <div>
-          <div class="navy" style="font-size:14px; font-weight:700; text-transform:uppercase;">Validité du présent quitus</div>
-          <div class="gris" style="margin-top:2px; font-size:13px;">Valable jusqu'au <b class="navy">${fmtDateFr(fin)}</b> inclus, sauf changement de situation du titulaire, consultable à tout moment par le code de vérification.</div>
-        </div>
-      </div>
-      <div class="sigrow" style="margin-top:16px;">
-        <div class="sig">
-          <div style="font-size:13px; font-weight:600;">Le Trésorier de l'Ordre</div>
-          <div class="line"></div>
-          <div class="gris" style="margin-top:4px; font-size:12px;">${esc(identite().tresoriere)}</div>
-        </div>
-        ${cachetImg(cachetBatonnier)}
-        <div class="sig">
-          <div style="font-size:13px; font-weight:600;">Le Bâtonnier</div>
-          <div class="line"></div>
-          <div class="gris" style="margin-top:4px; font-size:12px;">${esc(identite().batonnier)}</div>
-        </div>
-      </div>
-      <div style="margin-top:12px; border-top:1px solid #E0DBD0; padding-top:10px;">
-        ${verif(qr, host, cheminVerif("q", quitus.numero))}
-      </div>
-      <div class="gris" style="margin-top:10px; text-align:center; font-size:11px; font-style:italic;">Ce document est strictement personnel et ne peut être utilisé à d'autres fins que celles pour lesquelles il est délivré.</div>
-    </div>`;
-  return page(corps);
+  return pageA4({
+    titreCourt: "Quitus",
+    reference: quitus.numero,
+    unePage: true,
+    contenu: `${CSS}
+${entete("Quitus n°", quitus.numero, `${id.ville}, le ${fmtDateFr(quitus.dateEmission)}`)}
+<main>
+${titre("Certificat de non-redevance", "Quitus")}
+<p class="preambule"><b>Le Bâtonnier de l'Ordre des Avocats au ${esc(id.denomination)}</b><br/>Atteste qu'après vérification des écritures de l'Ordre, Maître :</p>
+${champs([
+  ["Nom et Prénom(s)", `Me ${membre.nom}`, "nom"],
+  ["Inscrit(e) au Barreau sous le n°", inscr, "mono"],
+  ["Date d'inscription", fmtDateFr(membre.dateInscription)],
+  ["Adresse professionnelle", adresse || "—", "large"],
+])}
+<div class="corps"><p class="declaration">est à jour de toutes ses cotisations, contributions et redevances</p>
+<p>envers l'Ordre des Avocats au ${esc(id.denomination)}, au titre de l'exercice ${esc(quitus.annee)}.</p>
+<p>En foi de quoi, le présent quitus lui est délivré pour servir et valoir ce que de droit.</p></div>
+<div class="encart"><p class="encart-titre">Validité du présent quitus</p>
+<p>Valable jusqu'au <b>${fmtDateFr(fin)}</b> inclus, sauf changement de situation du titulaire, consultable à tout moment par le code de vérification.</p></div>
+</main>
+<div class="cloture">${signatures([["Le Trésorier de l'Ordre", id.tresoriere], ["Le Bâtonnier", id.batonnier, cachetBatonnier]])}
+${blocVerif(qr, host + cheminVerif("q", quitus.numero))}
+<p class="mention-perso">Ce document est strictement personnel et ne peut être utilisé à d'autres fins que celles pour lesquelles il est délivré.</p>
+${coordonnees()}</div>`,
+  });
 }

@@ -48,7 +48,7 @@ describe("Identité paramétrée des documents (X-05)", () => {
     expect(r).toContain("Brazzaville, le");
     expect(r).toContain("au Barreau de démonstration");
     expect(q).toContain("Brazzaville, le");
-    expect(q).toContain("BARREAU DE DÉMONSTRATION");
+    expect(q).toContain("Barreau de démonstration"); // en-tête du socle A4 (M-20261016) : casse d'origine
   });
 
   it("la mention C-13 n'apparaît qu'en mode démonstration", async () => {
@@ -104,7 +104,7 @@ describe("Identité paramétrée : PDF rendus et coordonnées (X-05, CA11)", () 
     for (const h of [r, q]) {
       expect(h).toContain("contact@demo.test");
       expect(h).toContain("www.demo.test");
-      expect(h).toContain("+242 01<br/>+242 02");
+      expect(h).toContain("<span>+242 01</span> · <span>+242 02</span>"); // coordonnées sur une ligne (socle A4, M-20261016)
     }
   });
 });
