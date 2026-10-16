@@ -1,6 +1,6 @@
 /*
- * Socle A4 commun des gabarits PDF proposés (mission M-20261011, point 8).
- * PROPOSITION : aucun document de production ne l'utilise tant que Fabrice n'a pas choisi une direction.
+ * Socle A4 commun des documents PDF (proposé en M-20261011, point 8 ; appliqué en M-20261016).
+ * Assemblé par server/src/lib/gabarit.ts (pageA4) avec la feuille de la direction choisie (DIRECTION_PDF).
  *
  * Contenu : jetons (couleurs et polices de l'application, aucun nouveau jeton), échelle typographique
  * en points, page A4, marges, grille, composants communs (en-tête, identité, tableau, signatures,
@@ -8,7 +8,7 @@
  * compacte.css) ne font que redéfinir des variables et l'habillage.
  *
  * Les règles @page propres à un document (référence en pied, en-tête courant des pages 2 et
- * suivantes) sont injectées par le générateur, car elles portent la référence du document.
+ * suivantes, paysage) sont injectées par gabarit.ts, car elles portent la référence du document.
  * Chrome (Puppeteer) applique les marges @page du CSS en priorité sur celles de page.pdf()
  * et sait dessiner les boîtes de marge (@bottom-right, counter(pages)) : vérifié le 2026-10-11.
  */
@@ -77,7 +77,7 @@ h1, h2, h3 { margin: 0; font-weight: 700; }
 /* En-tête de document (page 1) */
 .entete { display: grid; grid-template-columns: auto 1fr auto; gap: 4mm; align-items: center; }
 .entete svg { display: block; }
-.entete-sceau svg { width: 17mm; height: 17mm; }
+.entete-sceau svg, .entete-sceau img { width: 17mm; height: 17mm; object-fit: contain; }
 .org-denom { font-family: var(--f-titre); font-size: 15pt; color: var(--marine); margin: 0; line-height: 1.15; }
 .org-ordre { font-size: var(--t-legende); letter-spacing: .14em; text-transform: uppercase; color: var(--gris); margin: 1mm 0 0; }
 .org-adresse { font-size: var(--t-legende); color: var(--gris); margin: .5mm 0 0; }
@@ -145,12 +145,12 @@ ol.odj li { margin: 0 0 1mm; }
 
 /* Bloc de vérification (clause CL-VERIF) */
 .verif { display: grid; grid-template-columns: var(--qr) 1fr; gap: 4mm; align-items: center; break-inside: avoid; margin-top: 3mm; }
-.verif svg { width: var(--qr); height: var(--qr); display: block; }
+.verif svg, .verif img { width: var(--qr); height: var(--qr); display: block; }
 .verif-titre { font-size: var(--t-legende); letter-spacing: .14em; text-transform: uppercase; color: var(--marine); font-weight: 600; margin: 0 0 1mm; }
 .verif-texte { font-size: var(--t-petit); color: var(--encre); margin: 0 0 1mm; }
 .verif-url { font-family: var(--f-mono); font-size: var(--t-petit); color: var(--marine); margin: 0; white-space: nowrap; }
 
-.mention-demo { font-size: var(--t-legende); color: var(--gris); text-align: center; margin: 3mm 0 0; }
+.mention-demo, .mention-liste { font-size: var(--t-legende); color: var(--gris); text-align: center; margin: 3mm 0 0; }
 .mention-prototype { font-size: var(--t-petit); font-weight: 600; color: #8B1A1A; text-align: center; letter-spacing: .08em; text-transform: uppercase; margin: 2mm 0 0; }
 
 /* Timbre : vignette au format d'un timbre, volet de contrôle en dessous */

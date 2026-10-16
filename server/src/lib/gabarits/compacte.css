@@ -1,5 +1,5 @@
 /*
- * Direction 3 : « Compacte administrative » (PROPOSITION, non appliquée).
+ * Direction 3 : « Compacte administrative » (sélectionnable : DIRECTION_PDF de gabarit.ts).
  * Logique de formulaire : bandeau marine, cases à libellé (on retrouve une information sans lire
  * le texte), tableaux denses à fond alterné. Corps 9,5 pt mais identité gardée à 12 pt et nom à
  * 14 pt (point 6). Vise les listes longues et les pièces de gestion : plus de lignes par page.
@@ -9,7 +9,7 @@
 
 .entete { background: var(--marine); color: #fff; padding: 4mm 5mm; }
 .entete-sceau { background: #fff; border-radius: 50%; padding: 1mm; }
-.entete-sceau svg { width: 13mm; height: 13mm; }
+.entete-sceau svg, .entete-sceau img { width: 13mm; height: 13mm; }
 .org-denom { color: #fff; }
 .org-ordre, .org-adresse { color: rgba(255, 255, 255, .78); }
 .entete-ref { background: #fff; padding: 2mm 3mm; border-top: 2pt solid var(--or); }

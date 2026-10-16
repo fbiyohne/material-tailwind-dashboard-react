@@ -1,9 +1,9 @@
 /**
- * Aperçus des gabarits PDF PROPOSÉS (mission M-20261011, point 8). Rien n'est branché sur une route :
- * ce script n'est importé nulle part et sert seulement à produire les aperçus soumis à Fabrice.
+ * Aperçus des gabarits PDF sur données fictives (mission M-20261011, point 8). Le socle est appliqué
+ * en production par src/lib/gabarit.ts (M-20261016) ; ce script n'est importé nulle part.
  *
  * Usage (depuis server/) : npx tsx scripts/apercus-gabarits.ts
- * Entrées : docs/design/pdf/gabarits/socle.css + une feuille par direction.
+ * Entrées : server/src/lib/gabarits/socle.css + une feuille par direction (source unique, lue aussi par gabarit.ts).
  * Sorties : docs/design/pdf/gabarits/html/<direction>/<document>.html (HTML autonome)
  *           docs/design/pdf/apercus/<direction>-<document>.pdf (rendu par htmlVersPdf, comme en production)
  * Contrôle : chaque page doit mesurer 210 x 297 mm et la liste doit dépasser une page ; sinon code de sortie 1.
@@ -20,8 +20,10 @@ import { montantEnLettresFCFA } from "../src/lib/montantEnLettres.js";
 import { finValiditeQuitus } from "../src/lib/business.js";
 import { MENTION_DEMONSTRATION } from "../src/lib/identiteDocuments.js";
 
-const RACINE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../docs/design/pdf");
-const GABARITS = path.join(RACINE, "gabarits");
+const ICI = path.dirname(fileURLToPath(import.meta.url));
+const RACINE = path.resolve(ICI, "../../docs/design/pdf");
+const GABARITS = path.resolve(ICI, "../src/lib/gabarits"); // feuilles CSS (source unique)
+const HTML = path.join(RACINE, "gabarits", "html"); // HTML autonomes générés
 const APERCUS = path.join(RACINE, "apercus");
 
 /** Police des boîtes de marge (pied et en-tête courant) par direction. */
@@ -93,7 +95,7 @@ const signatures = (roles: [string, string][]) =>
 async function verif(url: string) {
   const svg = await QRCode.toString(url, { type: "svg", errorCorrectionLevel: "M", margin: 0, color: { dark: "#0d2247", light: "#ffffff" } });
   return `<aside class="verif">${svg}<div><p class="verif-titre">Vérification d'authenticité</p>
-  <p class="verif-texte">Authenticité vérifiable en scannant ce code ou sur <span class="verif-url">${esc(url)}.</span> Ce code permet de contrôler que le document a été émis par l'Ordre et d'en connaître le statut actuel. Il ne constitue pas une signature électronique.</p></div></aside>`;
+  <p class="verif-texte">Authenticité vérifiable en scannant ce code ou sur <span class="verif-url">${esc(url)}.</span> Ce code permet de contrôler que le document a été émis par l'Ordre et d'en connaître le statut actuel. Il ne constitue pas une signature.</p></div></aside>`;
 }
 
 interface Doc { nom: string; titreCourt: string; ref: string; unePage: boolean; contenu: string }
@@ -263,10 +265,10 @@ async function main() {
   const docs = [await quitus(), await recu(), await timbre(), await attestation(), liste(), pv()];
   const erreurs: string[] = [];
   for (const direction of Object.keys(DIRECTIONS)) {
-    fs.mkdirSync(path.join(GABARITS, "html", direction), { recursive: true });
+    fs.mkdirSync(path.join(HTML, direction), { recursive: true });
     for (const d of docs) {
       const html = assembler(direction, d);
-      fs.writeFileSync(path.join(GABARITS, "html", direction, `${d.nom}.html`), html);
+      fs.writeFileSync(path.join(HTML, direction, `${d.nom}.html`), html);
       const pdf = await htmlVersPdf(html);
       fs.writeFileSync(path.join(APERCUS, `${direction}-${d.nom}.pdf`), pdf);
       const pages = pagesPdf(pdf);

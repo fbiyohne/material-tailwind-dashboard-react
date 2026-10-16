@@ -119,16 +119,16 @@ async function charger(page: Page, html: string) {
   clearTimeout(minuteur);
 }
 
-/** Convertit un document HTML en PDF A4 (qualité vectorielle). */
+/**
+ * Convertit un document HTML en PDF A4 (qualité vectorielle). Les règles @page du document
+ * (format, paysage, marges du socle gabarit.ts, boîtes de marge) font foi : aucune marge ni
+ * mise à l'échelle imposée ici, donc aucune réduction ni troncature silencieuse.
+ */
 export async function htmlVersPdf(html: string): Promise<Buffer> {
   const page = await nouvellePage();
   try {
     await charger(page, html);
-    return (await page.pdf({
-      format: "A4",
-      printBackground: true,
-      margin: { top: "16mm", bottom: "16mm", left: "16mm", right: "16mm" },
-    })) as Buffer;
+    return (await page.pdf({ format: "A4", printBackground: true, preferCSSPageSize: true })) as Buffer;
   } finally {
     await page.close();
   }
@@ -142,42 +142,5 @@ export async function envoyerPdf(res: Response, html: string, filename: string):
   res.end(pdf);
 }
 
-/**
- * Rend un DOCUMENT pleine page (reçu/quitus riches) : pas de marge, format A4,
- * et mise à l'échelle pour tenir sur UNE page (le document .doc-root porte son
- * propre cadre). Sert la reproduction vectorielle des composants à l'écran.
- */
-export async function envoyerDocumentPdf(res: Response, html: string, filename: string): Promise<void> {
-  const page = await nouvellePage();
-  try {
-    await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 2 });
-    await charger(page, html);
-    const hauteur = await page.evaluate(() => {
-      const el = document.querySelector(".doc-root");
-      return el ? Math.ceil((el as HTMLElement).getBoundingClientRect().height) : document.body.scrollHeight;
-    });
-    const scale = Math.min(1, 1122.5 / hauteur); // 297mm @96dpi ; tient sur une page
-    // Si le document doit être réduit pour tenir sur la page, on l'échelonne EN CSS
-    // avec un origine « haut-centre » afin qu'il reste CENTRÉ horizontalement
-    // (l'option `scale` de page.pdf, elle, aligne en haut-gauche → vide à droite).
-    if (scale < 1) {
-      await page.evaluate((s) => {
-        const el = document.querySelector(".doc-root") as HTMLElement;
-        el.style.transformOrigin = "top center";
-        el.style.transform = `scale(${s})`;
-        document.body.style.cssText = "margin:0;width:794px;overflow:hidden;background:#fff;";
-      }, scale);
-    }
-    const pdf = (await page.pdf({
-      format: "A4",
-      printBackground: true,
-      margin: { top: "0", right: "0", bottom: "0", left: "0" },
-      pageRanges: "1",
-    })) as Buffer;
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-    res.end(pdf);
-  } finally {
-    await page.close();
-  }
-}
+/** Ancien rendu « pleine page » des reçus et quitus, conservé comme alias pour ses appelants. */
+export const envoyerDocumentPdf = envoyerPdf;

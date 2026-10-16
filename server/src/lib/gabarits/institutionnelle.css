@@ -1,5 +1,5 @@
 /*
- * Direction 1 : « Institutionnelle sobre » (PROPOSITION, non appliquée).
+ * Direction 1 : « Institutionnelle sobre » (appliquée par défaut : DIRECTION_PDF de gabarit.ts).
  * Lecture de gauche à droite, comme un registre : en-tête aligné à gauche, colonne de libellés
  * fixe (40 mm), filets fins marine. Seule marque : un court onglet or qui ouvre chaque partie.
  * Pas de cadre : le document s'imprime et se photocopie sans perte (seul l'encart de validité a un fond).

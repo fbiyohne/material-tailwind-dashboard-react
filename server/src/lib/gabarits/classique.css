@@ -1,5 +1,5 @@
 /*
- * Direction 2 : « Classique juridique » (PROPOSITION, non appliquée).
+ * Direction 2 : « Classique juridique » (sélectionnable : DIRECTION_PDF de gabarit.ts).
  * Prolonge la famille B actuelle (quitus et reçus) : composition centrée, sceau au centre,
  * double filet or, capitales espacées, texte courant en Georgia justifié comme un acte.
  * Le cadre double or n'habille que les documents d'une page (il se couperait sur une liste).
@@ -15,7 +15,7 @@ th, dt, .ref-label, .org-ordre, .org-adresse, .surtitre, .encart-titre, .sig-rol
 .une-page { border: 2.4pt double var(--or); padding: 5mm 9mm 4mm; }
 
 .entete { grid-template-columns: 1fr; justify-items: center; text-align: center; gap: .8mm; padding-bottom: 3mm; border-bottom: 2.4pt double var(--or); }
-.entete-sceau svg { width: 15mm; height: 15mm; }
+.entete-sceau svg, .entete-sceau img { width: 15mm; height: 15mm; }
 .org-denom { text-transform: uppercase; letter-spacing: .08em; font-size: 14pt; }
 .entete-ref { text-align: center; }
 .ref, .ref-date, .ref-label { display: inline; }
@@ -54,5 +54,5 @@ tfoot td { border-top: 1pt solid var(--marine); border-bottom: 2.4pt double var(
 .une-page .cloture .signatures, .une-page .cloture .verif { display: contents; }
 .une-page .cloture .signature:first-child { grid-column: 1; grid-row: 1; }
 .une-page .cloture .signature:last-child { grid-column: 3; grid-row: 1; }
-.une-page .cloture .verif svg { grid-column: 2; grid-row: 1; }
+.une-page .cloture .verif svg, .une-page .cloture .verif img { grid-column: 2; grid-row: 1; }
 .une-page .cloture .verif > div { grid-column: 1 / -1; grid-row: 2; text-align: center; padding-top: 2.5mm; border-top: .6pt solid var(--or); }
