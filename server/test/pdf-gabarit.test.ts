@@ -38,6 +38,16 @@ describe("pageA4 : page A4, pied commun et pagination", () => {
     expect(h).not.toContain('Réf. R"1');
   });
 
+  it("un « </style> » dans la référence ou le titre ne ferme pas la feuille de style", () => {
+    const nb = (h: string) => h.split("</style>").length - 1;
+    const base = nb(doc());
+    const piege = "</style><img src=x>";
+    for (const h of [doc({ reference: piege }), doc({ titreCourt: piege })]) {
+      expect(nb(h)).toBe(base);
+      expect(h).not.toContain("<img src=x>");
+    }
+  });
+
   it("échappe le titre court dans le HTML", () => {
     expect(doc({ titreCourt: "<b>x</b>" })).toContain("<title>&lt;b&gt;x&lt;/b&gt;</title>");
   });

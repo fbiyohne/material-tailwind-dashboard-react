@@ -36,7 +36,7 @@ export const CLAUSE_LISTE =
   "Document à diffusion restreinte, réservé aux organes de l'Ordre. Contient des données à caractère personnel protégées par la loi n° 29-2019 du 10 octobre 2019. Toute rediffusion est interdite.";
 
 /** Chaîne CSS sûre pour `content:` (guillemets, barres obliques et retours à la ligne neutralisés). */
-const cssStr = (s: string) => `"${s.replace(/[\\"]/g, "\\$&").replace(/\s+/g, " ")}"`;
+const cssStr = (s: string) => `"${s.replace(/[\\"]/g, "\\$&").replace(/</g, "\\3C ").replace(/\s+/g, " ")}"`;
 
 export interface PageA4 {
   /** Titre court de l'en-tête courant (pages 2 et suivantes) et du <title>. */
