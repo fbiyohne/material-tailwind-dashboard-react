@@ -62,6 +62,8 @@ describe("POST /espace/timbres/:id/utilise", () => {
     const page = await request(app).get(cheminVerif("t", t.code));
     expect(page.text).toContain("Déjà utilisé");
     expect(page.text).not.toContain("Authentique");
-    expect((await request(app).get(`/api/verifier/timbre/${t.code}`)).body.valide).toBe(false);
+    const v = (await request(app).get(`/api/verifier/timbre/${t.code}`)).body;
+    expect(v.valide).toBe(false);
+    expect(v.motif).toBe("déjà utilisé");
   });
 });

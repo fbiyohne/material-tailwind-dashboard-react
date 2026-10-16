@@ -17,7 +17,7 @@ import { identite, rafraichirSiPerimee } from "../lib/identiteDocuments.js";
 export const verificationRouter = Router();
 
 // Les numéros sont séquentiels (R-AAAA-NNN / Q-AAAA-NNN) et la réponse divulgue
-// le nom du bénéficiaire (quitus, sauf titulaire sorti) : un limiteur dédié borne
+// le nom du bénéficiaire (quitus et reçu, sauf titulaire sorti) : un limiteur dédié borne
 // l'énumération massive du registre depuis les vérifications publiques (le scan d'un QR
 // légitime ne vérifie qu'un numéro connu à la fois). Une même instance couvre
 // /api/verifier et /v (app.ts) : changer de guichet ne remet pas le compteur à zéro.
@@ -79,17 +79,19 @@ verificationRouter.get(
   asyncH(async (req, res) => {
     const recu = await prisma.recu.findUnique({
       where: { numero: req.params.numero },
-      include: { membre: { select: { nom: true } } },
+      include: { membre: { select: { nom: true, statut: true } } },
     });
     if (!recu || !avantBascule(recu.createdAt)) {
       return res.status(404).json({ valide: false, type: "recu", numero: req.params.numero });
     }
     const signature = signerDocument(recuPayload(recu));
+    const sorti = (STATUTS_SORTIS as readonly string[]).includes(recu.membre.statut);
     res.json({
       valide: true,
       type: "recu",
       numero: recu.numero,
-      beneficiaire: `Me ${recu.membre.nom}`,
+      // Minimisation (avis juridique, point 10 ; PO-21) : titulaire sorti = libellé neutre, sans nom.
+      ...(sorti ? { note: CL_STATUT_SORTI } : { beneficiaire: `Me ${recu.membre.nom}` }),
       exercice: recu.annee,
       date: fmt(recu.date),
       empreinteCle,

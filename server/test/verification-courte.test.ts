@@ -15,6 +15,7 @@ const membres: number[] = [];
 const quitus: Record<string, string> = {};
 let recu = "";
 let recuRadie = "";
+let recuRadie = "";
 let timbre = "";
 let timbreAnnule = "";
 let numInscription = "";
@@ -44,6 +45,7 @@ beforeAll(async () => {
   await q("omis", omis, 2091, new Date());
   recu = (await prisma.recu.create({ data: { numero: `RV-${num}`, membreId: inscrit, annee: 2091, montant: 987654, date: new Date(), objet: "Cotisation" } })).numero;
   const n = ((await prisma.timbre.aggregate({ _max: { numero: true } }))._max.numero ?? 0) + 1;
+  recuRadie = (await prisma.recu.create({ data: { numero: `RVR-${num}`, membreId: radie, annee: 2091, montant: 5000, date: new Date(), objet: "Cotisation" } })).numero;
   recuRadie = (await prisma.recu.create({ data: { numero: `RVR-${num}`, membreId: radie, annee: 2091, montant: 5000, date: new Date(), objet: "Cotisation" } })).numero;
   timbre = (await prisma.timbre.create({ data: { numero: n, code: `VERIFT${num}A`, membreId: inscrit, affaire: "Affaire V", montant: 15000 } })).code;
   timbreAnnule = (await prisma.timbre.create({ data: { numero: n + 1, code: `VERIFT${num}B`, membreId: inscrit, affaire: "Affaire W", montant: 15000, statut: "ANNULE" } })).code;
@@ -210,6 +212,17 @@ describe("Bascule des anciennes URL /api/verifier/... (VERIF_BASCULE)", () => {
     expect(s.body.note).toBe("Le titulaire n'est pas inscrit au tableau à ce jour.");
     expect(JSON.stringify(s.body)).not.toContain("VERIF <");
     expect((await request(app).get(`/api/verifier/quitus/${quitus.valide}`)).body.beneficiaire).toContain("Me ");
+  });
+
+  it("ancienne voie, minimisation : reçu d'un titulaire sorti sans nom, reçu d'un titulaire actif avec nom", async () => {
+    process.env.VERIF_BASCULE = "2999-01-01";
+    const s = await request(app).get(`/api/verifier/recu/${recuRadie}`);
+    expect(s.status).toBe(200);
+    expect(s.body.valide).toBe(true);
+    expect(s.body.beneficiaire).toBeUndefined();
+    expect(s.body.note).toBe("Le titulaire n'est pas inscrit au tableau à ce jour.");
+    expect(JSON.stringify(s.body)).not.toContain("VERIF <");
+    expect((await request(app).get(`/api/verifier/recu/${recu}`)).body.beneficiaire).toContain("Me ");
   });
 
   it("ancienne voie, minimisation : reçu d'un titulaire sorti sans nom, reçu d'un titulaire actif avec nom", async () => {
