@@ -674,7 +674,7 @@ describe("Tableau de l'Ordre — document officiel (Conseil en en-tête, section
     expect(html).toContain("Personnes morales");
     expect(html).toContain("Cabinet Associés Test");
     // Signature = bâtonnier réel (et non l'intitulé codé en dur)
-    const pied = html.slice(html.indexOf('class="sign"'));
+    const pied = html.slice(html.indexOf('class="signatures"'));
     expect(pied).toContain("Me BÂTONNIER Test");
     // Ligne de contexte sous le titre : inscrits · personnes morales · date d'arrêté
     expect(html).toContain("1 inscrit au tableau");

@@ -143,9 +143,12 @@ describe("DELETE /api/scrutins/:id — scrutin passé", () => {
     expect((await request(app).delete("/api/scrutins/999999999").set(...bearer(sg))).status).toBe(404);
   });
 
-  it("aucune ligne d'audit pour les DELETE refusés (409, 403, 401)", async () => {
+  it("DELETE refusés : seuls les 403 sont journalisés (« Accès refusé », D18), jamais le 401 ni le 409", async () => {
     await new Promise((r) => setTimeout(r, 300));
     expect(await prisma.scrutin.count({ where: { id: { in: refuses } } })).toBe(2);
-    expect(await prisma.journalAudit.count({ where: { id: { gt: avant }, methode: "DELETE", chemin: { in: refuses.map((id) => `/api/scrutins/${id}`) } } })).toBe(0);
+    const lignes = await prisma.journalAudit.findMany({ where: { id: { gt: avant }, methode: "DELETE", chemin: { in: refuses.map((id) => `/api/scrutins/${id}`) } } });
+    // 3 refus 403 (Trésorière, Bâtonnier, avocat) sur le scrutin clos ; le 401 sans jeton n'a pas d'auteur.
+    expect(lignes).toHaveLength(3);
+    expect(lignes.every((l) => l.action.startsWith("Accès refusé"))).toBe(true);
   });
 });

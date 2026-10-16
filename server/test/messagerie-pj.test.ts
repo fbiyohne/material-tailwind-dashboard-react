@@ -199,7 +199,7 @@ describe("Accusé de lecture PDF", () => {
     expect(texte).toContain("Accusé de lecture de la plateforme");
     expect(texte).toContain(fil.messages[0].empreinte);
     expect(texte).toContain("Il ne vaut ni lettre recommandée ni notification au sens des articles 39 et 42 de la loi n° 026-92 du 20 août 1992. Valeur probatoire à confirmer.");
-    expect(texte).not.toContain("Barreau Barreau"); // « Barreau [nom] » de C-01 = dénomination paramétrée, sans doublon
+    expect(texte).not.toContain("Barreau de Barreau"); // « Barreau [nom] » de C-01 = dénomination paramétrée, sans doublon
     expect(texte).toContain("conclusions.pdf");
     expect(texte).toContain("Première ouverture");
     expect(texte).not.toContain(SECRET);
