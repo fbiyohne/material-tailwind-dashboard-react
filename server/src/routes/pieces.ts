@@ -31,7 +31,7 @@ const STATUTS_PIECE = ["A_VERIFIER", "VERIFIEE", "REJETEE"] as const;
 
 /**
  * GET /pieces — file d'attente de vérification documentaire : toutes les pièces
- * (filtrables par statut), avec le membre rattaché. SG / Bâtonnier (RG-15).
+ * (filtrables par statut), avec le membre rattaché. SG / Bâtonnier (RG-15) ; ADMIN tracé.
  */
 piecesRouter.get(
   "/",
@@ -46,6 +46,7 @@ piecesRouter.get(
       orderBy: { createdAt: "desc" },
       include: { membre: { select: { id: true, num: true, nom: true, qualite: true } } },
     });
+    await tracerLectureAdmin(req, res); // données personnelles des membres : tracé avant l'envoi
     res.json(pieces);
   })
 );

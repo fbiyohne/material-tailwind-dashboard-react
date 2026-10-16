@@ -105,6 +105,7 @@ messagerieRouter.get(
   "/messages/:id/accuse/pdf",
   asyncH(async (req: AuthRequest, res) => {
     const m = await messageAdministration(req);
+    await tracerLectureAdmin(req, res); // métadonnées d'un fil : lecture ADMIN tracée comme le fil
     await envoyerPdf(res, htmlAccuse(m), `Accuse-lecture-${m.id}.pdf`);
   })
 );
