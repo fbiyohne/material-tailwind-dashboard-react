@@ -118,3 +118,14 @@ describe("Briques communes", () => {
     expect(signatures([["Le Bâtonnier", "Me X", "data:image/png;base64,CC"]])).toContain('src="data:image/png;base64,CC"');
   });
 });
+
+describe("typographie commune", () => {
+  it("un seul « Me », montants et dates insécables dans les tableaux uniquement", async () => {
+    const { typographie } = await import("../src/lib/gabarit.js");
+    const h = typographie("<p>Me Me KALA, le 26 juillet 2026</p><table><tr><td>Me Me KALA</td><td>30 000 FCFA</td><td>26 juillet 2026</td></tr></table>");
+    expect(h).not.toContain("Me Me");
+    expect(h).toContain("30 000 FCFA");
+    expect(h).toContain("<td>26 juillet 2026</td>");
+    expect(h).toContain("le 26 juillet 2026</p>"); // la prose garde ses espaces ordinaires
+  });
+});

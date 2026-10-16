@@ -95,6 +95,21 @@ export interface PageA4 {
   direction?: DirectionPdf;
 }
 
+const MOIS = "janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre";
+/**
+ * Typographie commune des documents : un seul « Me » (les noms sont souvent saisis avec le titre)
+ * et, dans les tableaux, montants (« 30 000 FCFA ») et dates (« 26 juillet 2026 ») insécables.
+ */
+export function typographie(html: string): string {
+  const nbsp = " ";
+  const date = new RegExp(`(\\d{1,2}(?:er)?) (${MOIS}) (\\d{4})`, "g");
+  return html
+    .replace(/\bMe(?:\s|&nbsp;)+(?=Me(?:\s|&nbsp;))/g, "")
+    .replace(/<table[\s\S]*?<\/table>/g, (t) => t
+      .replace(/(\d)[   ]+F ?CFA\b/g, (m, d: string) => `${d}${nbsp}FCFA`)
+      .replace(date, `$1${nbsp}$2${nbsp}$3`));
+}
+
 /** HTML complet d'un document A4 : socle + direction + règles @page propres au document. */
 export function pageA4({ titreCourt, reference, unePage, paysage, listeRestreinte, contenu, direction = SURCHARGE && SURCHARGE in CSS ? SURCHARGE : DIRECTION_PDF }: PageA4): string {
   const id = identite();
@@ -115,7 +130,7 @@ export function pageA4({ titreCourt, reference, unePage, paysage, listeRestreint
   return `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>${esc(titreCourt)}</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600&family=DM+Mono&family=Montserrat:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
 <style>${CSS.socle}${CSS[direction]}${page}</style></head>
-<body class="dir-${direction}"><div class="${unePage ? "une-page" : ""}">${contenu}
+<body class="dir-${direction}"><div class="${unePage ? "une-page" : ""}">${typographie(contenu)}
 ${id.modeDemonstration ? `<p class="mention-demo">${esc(MENTION_DEMONSTRATION)}</p>` : ""}</div>${officielle ? piedOfficiel(reference, listeRestreinte) : ""}</body></html>`;
 }
 

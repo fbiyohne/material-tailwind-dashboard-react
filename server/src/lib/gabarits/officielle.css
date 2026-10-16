@@ -76,7 +76,7 @@ body { font-variant-numeric: lining-nums tabular-nums; }
 .montant-chiffres { font-family: var(--f-titre); font-weight: 700; font-size: 17pt; }
 
 /* Tableaux des listes et états */
-table { font-family: var(--f-titre); font-size: 8.6pt; }
+table { font-family: var(--f-titre); font-size: 8pt; }
 th { color: var(--marine); font-size: 7.4pt; border-bottom: .8pt solid var(--bleu); }
 td { border-bottom: .4pt solid var(--gris-m); }
 tfoot { display: table-row-group; } /* totaux une seule fois, en fin de tableau (Chrome répète sinon tfoot à chaque page) */

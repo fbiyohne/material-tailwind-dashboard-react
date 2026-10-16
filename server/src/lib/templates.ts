@@ -476,8 +476,8 @@ const jour = (d?: Date | string | null) => (d ? new Date(d).toISOString().slice(
 export function listeAvocatsHtml(membres: any[], libelleFiltre: string, date: Date | string): string {
   const d = new Date(date).toLocaleDateString("fr-FR");
   const th = ["N°", "N° inscription", "Nom", "Qualité", "Statut", "Cabinet", "Téléphone", "Email", "Date d'inscription", "Date de radiation", "Date de décès"]
-    .map((c, i) => `<th style="padding:4px 3px${i >= 8 ? ";white-space:nowrap" : ""}">${c}</th>`).join("");
-  const td = (v: unknown, i: number) => `<td style="padding:4px 3px;border-bottom:1px solid #E0DBD0${i >= 8 ? ";white-space:nowrap" : ""}">${escapeHtml(String(v ?? ""))}</td>`;
+    .map((c, i) => `<th style="padding:4px 3px${i >= 8 || [0, 1, 3, 4, 6].includes(i) ? ";white-space:nowrap" : ""}">${c}</th>`).join("");
+  const td = (v: unknown, i: number) => `<td style="padding:4px 3px;border-bottom:1px solid #E0DBD0${i >= 8 || [0, 1, 3, 4, 6].includes(i) ? ";white-space:nowrap" : ""}">${escapeHtml(String(v ?? ""))}</td>`;
   const lignes = membres
     .map((m) => `<tr>${[m.num, m.numInscription, m.nom, QUALITE_FR[m.qualite] ?? m.qualite, STATUT_FR[m.statut] ?? m.statut, m.cabinet, m.tel, m.email, jour(m.dateInscription), jour(m.dateRadiation), jour(m.dateDeces)].map(td).join("")}</tr>`)
     .join("");
