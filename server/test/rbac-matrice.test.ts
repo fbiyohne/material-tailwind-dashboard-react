@@ -14,6 +14,7 @@ import { writeFileSync } from "node:fs";
  *   SEULEMENT. Une écriture n'est envoyée que si les gardes la refusent avant le gestionnaire
  *   (aucun effet de bord) ; DELETE, reinitialiser-donnees, tester/:canal, paiements et webhook
  *   ne reçoivent jamais le jeton d'un rôle qui passe les gardes.
+ * - ADMIN = tous les modules et toutes les actions (décision du 16/10/2026) ; ses lectures de contenu sont tracées.
  * - ECARTS : écarts connus (rapport docs/audits/m20261016/rbac-matrice.md) en it.fails ou it.todo.
  *
  * Base barreau_pn_test uniquement (test/setup.ts). Comptes et données marqués « E2E T8 »,
@@ -27,7 +28,6 @@ vi.mock("../src/middleware/auth.js", async (orig) => {
     ...m,
     requireRole: (...r: Parameters<typeof m.requireRole>) => Object.assign(m.requireRole(...r), { garde: { type: "role", valeurs: r as string[] } }),
     requirePermission: (p: string) => Object.assign(m.requirePermission(p), { garde: { type: "perm", valeurs: [p] } }),
-    refuserAdmin: Object.assign((...a: Parameters<typeof m.refuserAdmin>) => m.refuserAdmin(...a), { garde: { type: "sansAdmin" } }),
   };
 });
 
@@ -53,7 +53,6 @@ const M_REU = [SG, ADM, BAT, SA];
 const M_DISC = [SG, ADM, BAT, SA];
 const M_ELEC = [SG, ADM, BAT, SA];
 const M_MSG = [SG, ADM, BAT, TRES, SA];
-const MSG_CONTENU = [SG, BAT, TRES, SA]; // secret professionnel : contenu refusé à l'ADMIN (R-58, loi 026-92 art. 52)
 const M_DOC = [SG, ADM, BAT, SA, CONS, ACC];
 const M_CE = [SG, ADM, BAT, SA, CONS];
 const M_AUDIT = [SG, ADM, BAT, SA, CONS];
@@ -106,7 +105,7 @@ const MATRICE: Ligne[] = [
   l("DELETE", "/api/membres/:id/rapports/:rid", SUPPR, "S"),
   l("POST", "/api/membres/:id/valider-stage", [BAT, ADM], "V"),
   l("DELETE", "/api/membres/:id", ADMIN_SEUL, "S"),
-  l("POST", "/api/membres/:id/acces", [SG], "M"), // R1-1 : lien d'activation renvoyé à l'opérateur, ADMIN exclu
+  l("POST", "/api/membres/:id/acces", [SG, ADM], "M"), // lien d'activation renvoyé à l'opérateur (ADMIN autorisé, tracé)
   l("POST", "/api/membres/:id/attestation", ECR, "C"),
   l("GET", "/api/membres/:id/attestation/pdf", ECR, "L"),
   l("GET", "/api/membres/:id/attestation-sortie/pdf", ECR, "L"),
@@ -118,11 +117,11 @@ const MATRICE: Ligne[] = [
   l("POST", "/api/users/:id/password", SYS, "M"),
   l("GET", "/api/demandes-acces", SYS, "L"),
   l("POST", "/api/demandes-acces/:id/approuver", SYS, "V"),
-  l("POST", "/api/demandes-acces/:id/approuver-espace", [SG], "V"), // R1-1 : idem
+  l("POST", "/api/demandes-acces/:id/approuver-espace", [SG, ADM], "V"),
   l("POST", "/api/demandes-acces/:id/refuser", SYS, "V"),
 
   l("GET", "/api/pieces", [SG, BAT, ADM], "L"),
-  l("GET", "/api/pieces/:id/fichier", [SG, BAT], "L"), // contenu d'une pièce : ADMIN exclu (avis juridique)
+  l("GET", "/api/pieces/:id/fichier", [SG, BAT, ADM], "L"), // contenu d'une pièce : ADMIN autorisé, lecture tracée dans JournalAudit
   l("POST", "/api/pieces/:id/verifier", [SG, ADM], "V"),
   l("POST", "/api/pieces/:id/rejeter", [SG, ADM], "V"),
   l("DELETE", "/api/pieces/:id", SUPPR, "S"),
@@ -263,13 +262,13 @@ const MATRICE: Ligne[] = [
   ] as [string, string, Action][]).map(([m, c, a]) => l(m, "/api/espace" + c, ESPACE, a)),
 
   l("GET", "/api/messagerie/non-lus", M_MSG, "L"),
-  l("GET", "/api/messagerie", MSG_CONTENU, "L"), // aperçu du corps (140 car.) : contenu
-  l("GET", "/api/messagerie/messages/:id/piece", MSG_CONTENU, "L"),
+  l("GET", "/api/messagerie", M_MSG, "L"), // aperçu du corps (140 car.) : contenu
+  l("GET", "/api/messagerie/messages/:id/piece", M_MSG, "L"),
   l("GET", "/api/messagerie/messages/:id/accuse/pdf", M_MSG, "L"), // métadonnées et empreinte, sans le corps
-  l("GET", "/api/messagerie/:id", MSG_CONTENU, "L"),
-  l("POST", "/api/messagerie", MSG_CONTENU, "C"),
-  l("POST", "/api/messagerie/:id", MSG_CONTENU, "C"),
-  l("POST", "/api/messagerie/:id/attestation", MSG_CONTENU, "C"),
+  l("GET", "/api/messagerie/:id", M_MSG, "L"),
+  l("POST", "/api/messagerie", M_MSG, "C"),
+  l("POST", "/api/messagerie/:id", M_MSG, "C"),
+  l("POST", "/api/messagerie/:id/attestation", M_MSG, "C"),
   l("GET", "/api/verifier/quitus/:numero", PUBLIC, "L"),
   l("GET", "/api/verifier/recu/:numero", PUBLIC, "L"),
   l("GET", "/api/verifier/timbre/:code", PUBLIC, "L"),
@@ -301,17 +300,14 @@ const ECARTS: Ecart[] = [
 
 // Écarts permissifs corrigés par T9 : chaque couple route × rôle reste prouvé en 403 (non-régression).
 const CORRIGES: { id: string; roles: string[]; routes: string[] }[] = [
-  { id: "E1", roles: [ADM], routes: ["GET /api/pieces/:id/fichier", "GET /api/messagerie", "GET /api/messagerie/:id", "GET /api/messagerie/messages/:id/piece"] },
-  { id: "E2", roles: [ADM], routes: ["POST /api/messagerie", "POST /api/messagerie/:id", "POST /api/messagerie/:id/attestation"] },
   { id: "E3", roles: [TRES, ACC], routes: ["GET /api/dashboard/journal"] },
   { id: "E4", roles: [SA], routes: ["PATCH /api/discipline/:id"] },
   { id: "E5", roles: [CONS, ACC], routes: ["POST /api/archives", "PATCH /api/calendrier-editorial/:mois"] },
   { id: "E7", roles: [BAT], routes: ["POST /api/parametres/tester/:canal"] },
-  { id: "R1-1", roles: [ADM], routes: ["POST /api/membres/:id/acces", "POST /api/demandes-acces/:id/approuver-espace"] },
 ];
 
 // ── Lecture de la matrice réelle depuis la pile Express ───────────────────────────────
-type Garde = { type: "auth" | "avocat" | "role" | "perm" | "sansAdmin"; valeurs?: string[] };
+type Garde = { type: "auth" | "avocat" | "role" | "perm"; valeurs?: string[] };
 type Fn = { garde?: Garde };
 const cle = (x: { m: string; c: string }) => `${x.m} ${x.c}`;
 
@@ -352,7 +348,6 @@ function reel(x: Ligne, role: string | null): "401" | "403" | "passe" {
     if (gi.type === "role" && !(r === ADM || gi.valeurs!.includes(r))) return "403";
     if (gi.type === "perm" && !aLaPermission(r, gi.valeurs![0])) return "403";
     if (gi.type === "avocat" && r !== AV) return "403";
-    if (gi.type === "sansAdmin" && r === ADM) return "403";
   }
   return "passe";
 }
@@ -581,11 +576,10 @@ describe("RBAC T8 — cloisonnement de l'espace avocat (IDOR, objets d'un autre 
     expect((await appel("POST", "/api/espace/scrutins/999999999/voter", A(), { candidatIds: [1], membreId: membres.B })).status).toBe(404);
     expect(await prisma.emargement.count({ where: { membreId: membres.B } })).toBe(0);
   });
-  // E1 sur un fil réel (pas un id inexistant) : chemin d'attaque concret, corrigé par T9 (refuserAdmin).
-  it("E1 — l'ADMIN ne lit pas le corps d'un fil avocat ↔ administration (403)", async () => {
+  // E1 sur un fil réel (pas un id inexistant) : chemin d'attaque concret, l'ADMIN a droit à tout (décision du 16/10/2026), lecture tracée.
+  it("E1 — l'ADMIN lit le corps d'un fil avocat ↔ administration (200)", async () => {
     const r = await appel("GET", `/api/messagerie/${fx.convA}`, jetons[ADM]);
-    expect(r.status).toBe(403);
-    expect(JSON.stringify(r.body)).not.toContain("confidentiel");
+    expect(r.status).toBe(200);
   });
   it("stagiaire : même cloisonnement que l'avocat (espace oui, back-office 403)", async () => {
     expect((await appel("GET", "/api/espace/moi", jetons[STAG])).status).toBe(200);

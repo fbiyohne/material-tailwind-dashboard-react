@@ -81,16 +81,6 @@ export function requirePermission(permission: string) {
 }
 
 /**
- * Secret professionnel (loi 026-92 art. 52, R-58) : l'ADMIN, sous-traitant technique
- * (loi 29-2019 art. 63), ne lit ni n'écrit le contenu des messages et des pièces.
- * À poser après une garde qui admet l'ADMIN (requireRole, requirePermission).
- */
-export function refuserAdmin(req: AuthRequest, _res: Response, next: NextFunction) {
-  if (req.user?.role === "ADMIN") return next(new HttpError(403, REFUS));
-  next();
-}
-
-/**
  * Réserve une route à l'espace avocat : exige le rôle AVOCAT ET un membreId
  * rattaché. Contrairement à requireRole, l'ADMIN n'est PAS admis ici (il n'a pas
  * de fiche Membre) : l'espace ne sert que les avocats eux-mêmes.
