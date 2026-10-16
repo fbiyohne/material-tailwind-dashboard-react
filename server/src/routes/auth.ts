@@ -23,11 +23,17 @@ const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHe
 const loginSchema = z.object({ email: z.string().email(), password: z.string().min(1) });
 
 /** GET /auth/identite — public : identité institutionnelle de l'écran de connexion et de l'espace avocat
- *  (jeton confiné à /espace et /auth). Ni signataires ni coordonnées. */
-authRouter.get("/identite", (_req, res) => {
-  const { denomination, ordre, ville, logo, modeDemonstration } = identite();
-  res.json({ identite: { denomination, ordre, ville, logo, modeDemonstration } });
-});
+ *  (jeton confiné à /espace et /auth). Ni signataires ni coordonnées. `modules.masques` (E6) : chemins
+ *  masqués dans Paramètres, pour filtrer le menu de l'espace (aucune donnée personnelle). */
+authRouter.get(
+  "/identite",
+  asyncH(async (_req, res) => {
+    const { denomination, ordre, ville, logo, modeDemonstration } = identite();
+    const row = await prisma.parametres.findUnique({ where: { id: 1 }, select: { data: true } });
+    const masques = (row?.data as { modules?: { masques?: unknown } } | null)?.modules?.masques;
+    res.json({ identite: { denomination, ordre, ville, logo, modeDemonstration }, modules: { masques: Array.isArray(masques) ? masques : [] } });
+  })
+);
 
 authRouter.post(
   "/login",

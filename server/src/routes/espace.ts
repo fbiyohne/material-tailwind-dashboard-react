@@ -19,6 +19,7 @@ import { realtimeMembres, realtimeAdministration } from "../lib/realtime.js";
 import { dateReferenceScrutin, electeursADate } from "../lib/cycleVie.js";
 import { notifier, usersSecretariat, listerNotifications, compterNonLus, marquerLu, marquerToutLu } from "../lib/centreNotifications.js";
 import { emettreTimbre, MONTANT_TIMBRE } from "../lib/timbres.js";
+import { reglesActuelles } from "../lib/regles.js";
 
 /**
  * Espace avocat — surface en libre-service, strictement cloisonnée.
@@ -44,7 +45,7 @@ espaceRouter.get(
   asyncH(async (req: AuthRequest, res) => {
     const id = monMembreId(req);
     const annee = new Date().getFullYear();
-    const [membre, tarifs] = await Promise.all([
+    const [membre, tarifs, recouvrement] = await Promise.all([
       prisma.membre.findUnique({
         where: { id },
         include: {
@@ -53,6 +54,12 @@ espaceRouter.get(
         },
       }),
       tarifsActuels(),
+      // E1 : dernière étape du circuit des impayés de l'exercice (type et date seulement).
+      prisma.evenementSituation.findFirst({
+        where: { membreId: id, annee, type: { in: ["RAPPEL", "MISE_EN_DEMEURE", "TRANSMISSION"] } },
+        orderBy: [{ dateEffet: "desc" }, { id: "desc" }],
+        select: { type: true, dateEffet: true },
+      }),
     ]);
     if (!membre) throw new HttpError(404, "Fiche introuvable");
 
@@ -79,12 +86,59 @@ espaceRouter.get(
         dateInscription: dateCourte(membre.dateInscription),
       },
       annee,
+      recouvrement: recouvrement ? { type: recouvrement.type, dateEffet: dateCourte(recouvrement.dateEffet) } : null,
       situation: {
         cotisation: { du: cotDu, paye: cotPaye, solde: Math.max(0, cotDu - cotPaye), valideTresoriere: cot?.valideTresoriere ?? false, statut: statutCotisation(cotDu, cotPaye) },
         droit: estAvocat ? { du: droitDu, paye: droitPaye, solde: Math.max(0, droitDu - droitPaye), statut: statutCotisation(droitDu, droitPaye) } : null,
       },
       cotisations: membre.cotisations.map((c) => ({ annee: c.annee, du: c.montantDu, paye: c.montantPaye, datePaiement: dateCourte(c.datePaiement), valideTresoriere: c.valideTresoriere, statut: statutCotisation(c.montantDu, c.montantPaye) })),
       droits: membre.droitsPlaidoirie.map((d) => ({ annee: d.annee, du: d.montantDu, paye: d.montantPaye, datePaiement: dateCourte(d.datePaiement), statut: statutCotisation(d.montantDu, d.montantPaye) })),
+    });
+  })
+);
+
+/**
+ * GET /espace/parcours — historique des situations de l'avocat connecté et, pour un
+ * stagiaire, les dates de son stage (E2, audit M-20261016). Lecture seule, filtrée sur
+ * le membreId du jeton. Projection : ni acteur, ni pièce, ni dossier, ni détails.
+ * R-15 : une omission pour maladie (art. 35-1°) ne sort que par son code d'article.
+ * Un événement lié à une décision disciplinaire non notifiée perd motif et référence.
+ */
+espaceRouter.get(
+  "/parcours",
+  asyncH(async (req: AuthRequest, res) => {
+    const membreId = monMembreId(req);
+    const [evenements, membre] = await Promise.all([
+      prisma.evenementSituation.findMany({
+        where: { membreId },
+        orderBy: [{ dateEffet: "desc" }, { id: "desc" }],
+        select: {
+          id: true, type: true, statutAvant: true, statutApres: true, dateEffet: true, annee: true, reference: true, motif: true, details: true,
+          dossier: { select: { dateNotification: true } },
+        },
+      }),
+      prisma.membre.findUnique({ where: { id: membreId }, select: { qualite: true, dateServment: true, dureeMois: true, maitreStage: true, stageValideAt: true } }),
+    ]);
+    if (!membre) throw new HttpError(404, "Fiche introuvable");
+    let stage = null;
+    if (membre.qualite === "STAGIAIRE" || membre.stageValideAt) {
+      const duree = membre.dureeMois ?? (await reglesActuelles()).stage.dureeMois;
+      const fin = membre.dateServment ? new Date(membre.dateServment) : null;
+      fin?.setUTCMonth(fin.getUTCMonth() + duree);
+      stage = { dateServment: dateCourte(membre.dateServment), dureeMois: duree, maitreStage: membre.maitreStage, finPrevue: dateCourte(fin), stageValideAt: dateCourte(membre.stageValideAt) };
+    }
+    res.json({
+      evenements: evenements.map(({ details, dossier, ...e }) => {
+        const maladie = e.type === "OMISSION" && ((details as { cause?: string } | null)?.cause === "35-1" || /^Art\. 35-1°/.test(e.motif ?? ""));
+        const nonNotifie = !!dossier && !dossier.dateNotification;
+        return {
+          ...e,
+          dateEffet: dateCourte(e.dateEffet),
+          motif: nonNotifie ? null : maladie ? "Art. 35-1° loi n° 026-92" : e.motif,
+          reference: nonNotifie ? null : e.reference,
+        };
+      }),
+      stage,
     });
   })
 );
@@ -442,16 +496,28 @@ espaceRouter.get(
 
 // ── Discipline — strictement les dossiers concernant l'avocat connecté ───────
 
+/**
+ * Projection servie à l'avocat (E7, avis juridique HJ-M6) : jamais les éléments
+ * d'instruction (plaignant, rapporteur, rapport, orientation, origine, pièces,
+ * motivation) ; la décision et la sanction seulement une fois notifiées.
+ */
+const DOSSIER_ESPACE = {
+  id: true, membreId: true, reference: true, objet: true, statut: true, dateSaisine: true, dateConvocation: true, dateAudience: true,
+  decision: true, sanction: true, sursis: true, sanctionDebut: true, sanctionFin: true, peineAccessoireMois: true,
+  dateDecision: true, dateNotification: true, decidePar: true, recours: true, dateRecours: true,
+} satisfies Prisma.DossierDisciplinaireSelect;
+type DossierEspace = Prisma.DossierDisciplinaireGetPayload<{ select: typeof DOSSIER_ESPACE }>;
+const dossierEspace = ({ membreId: _m, id, reference, objet, statut, dateSaisine, dateConvocation, dateAudience, ...decision }: DossierEspace) => ({
+  id, reference, objet, statut, dateSaisine, dateConvocation, dateAudience,
+  ...(decision.dateNotification ? decision : {}),
+});
+
 /** GET /espace/discipline — dossiers disciplinaires où l'avocat est mis en cause. */
 espaceRouter.get(
   "/discipline",
   asyncH(async (req: AuthRequest, res) => {
-    res.json(
-      await prisma.dossierDisciplinaire.findMany({
-        where: { membreId: monMembreId(req) },
-        orderBy: { id: "desc" },
-      })
-    );
+    const dossiers = await prisma.dossierDisciplinaire.findMany({ where: { membreId: monMembreId(req) }, orderBy: { id: "desc" }, select: DOSSIER_ESPACE });
+    res.json(dossiers.map(dossierEspace));
   })
 );
 
@@ -459,9 +525,9 @@ espaceRouter.get(
 espaceRouter.get(
   "/discipline/:id",
   asyncH(async (req: AuthRequest, res) => {
-    const d = await prisma.dossierDisciplinaire.findUnique({ where: { id: Number(req.params.id) } });
+    const d = await prisma.dossierDisciplinaire.findUnique({ where: { id: Number(req.params.id) }, select: DOSSIER_ESPACE });
     if (!d || d.membreId !== monMembreId(req)) throw new HttpError(404, "Dossier introuvable");
-    res.json(d);
+    res.json(dossierEspace(d));
   })
 );
 
@@ -471,7 +537,7 @@ espaceRouter.get(
   asyncH(async (req: AuthRequest, res) => {
     const d = await prisma.dossierDisciplinaire.findUnique({ where: { id: Number(req.params.id) } });
     if (!d || d.membreId !== monMembreId(req)) throw new HttpError(404, "Dossier introuvable");
-    if (!d.decision) throw new HttpError(404, "Décision non disponible");
+    if (!d.decision || !d.dateNotification) throw new HttpError(404, "Décision non disponible"); // E7 bis : notifiée seulement
     await envoyerPdf(res, decisionDisciplineHtml(d), `Decision-${d.reference}.pdf`);
   })
 );

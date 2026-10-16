@@ -249,7 +249,7 @@ const MATRICE: Ligne[] = [
 
   // Espace avocat : AVOCAT (et stagiaire) seulement, cloisonné sur le membreId du jeton ; l'ADMIN n'y entre pas.
   ...([
-    ["GET", "/moi", "L"], ["PATCH", "/moi", "M"], ["GET", "/attestation/inscription/pdf", "L"], ["GET", "/attestation/non-redevance/pdf", "L"],
+    ["GET", "/moi", "L"], ["PATCH", "/moi", "M"], ["GET", "/parcours", "L"], ["GET", "/attestation/inscription/pdf", "L"], ["GET", "/attestation/non-redevance/pdf", "L"],
     ["GET", "/timbres", "L"], ["POST", "/timbres", "C"], ["POST", "/timbres/:id/usage", "M"], ["POST", "/timbres/:id/utilise", "M"],
     ["GET", "/notifications", "L"], ["POST", "/notifications/lu-tout", "M"], ["POST", "/notifications/:id/lu", "M"], ["GET", "/documents", "L"],
     ["POST", "/paiement", "C"], ["POST", "/paiement/:ref/confirmer-sandbox", "V"], ["GET", "/recus/:id/pdf", "L"], ["GET", "/quitus/:id/pdf", "L"],
@@ -367,7 +367,7 @@ const jetons: Record<string, string> = {};
 let permissionsInitiales: string[] = [];
 const lignesRp = async () => (await prisma.rolePermission.findMany()).map((p) => `${p.role}|${p.permission}`).sort();
 const membres: Record<"A" | "S" | "B", number> = { A: 0, S: 0, B: 0 };
-const fx = { timbre: 0, recu: 0, quitus: 0, piece: 0, dossierA: 0, dossierB: 0, convA: 0, convB: 0, msgB: 0, archA: 0, archB: 0 };
+const fx = { timbre: 0, recu: 0, quitus: 0, piece: 0, dossierA: 0, dossierB: 0, convA: 0, convB: 0, msgB: 0, archA: 0, archB: 0, evtB: 0 };
 
 async function envoyer(x: Ligne, jeton?: string): Promise<number> {
   const url = x.c.replace(/:[A-Za-z]+/g, "999999999");
@@ -430,6 +430,8 @@ beforeAll(async () => {
   const nomDe = async (id: number) => (await prisma.membre.findUniqueOrThrow({ where: { id } })).nom;
   fx.archA = (await prisma.archive.create({ data: { categorie: "Attestation", titre: `${MARQUE} A`, membreNom: await nomDe(A) } })).id;
   fx.archB = (await prisma.archive.create({ data: { categorie: "Attestation", titre: `${MARQUE} B`, membreNom: await nomDe(B) } })).id;
+  // Événement de situation de B (supprimé en cascade avec le membre).
+  fx.evtB = (await prisma.evenementSituation.create({ data: { membreId: B, type: "RAPPEL", dateEffet: new Date(), annee: 2099, motif: MARQUE } })).id;
 }, 120_000);
 
 afterAll(async () => {
@@ -568,6 +570,11 @@ describe("RBAC T8 — cloisonnement de l'espace avocat (IDOR, objets d'un autre 
     const ids = (r.body.archives as { id: number }[]).map((a) => a.id);
     expect(ids).toContain(fx.archA);
     expect(ids).not.toContain(fx.archB);
+  });
+  it("parcours : historique filtré sur le jeton, l'événement d'un autre membre absent", async () => {
+    const r = await appel("GET", "/api/espace/parcours", A());
+    expect(r.status).toBe(200);
+    expect((r.body.evenements as { id: number }[]).map((e) => e.id)).not.toContain(fx.evtB);
   });
   it("scrutin : le vote est lié au jeton (un membreId fourni est ignoré), scrutin inconnu 404", async () => {
     expect((await appel("POST", "/api/espace/scrutins/999999999/voter", A(), { candidatIds: [1], membreId: membres.B })).status).toBe(404);
