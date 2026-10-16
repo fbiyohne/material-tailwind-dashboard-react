@@ -84,7 +84,7 @@ export const navSections = [
       { name: "Avocats stagiaires", path: "/stagiaires", icon: AcademicCapIcon, perm: "membres", element: <Stagiaires /> },
       { name: "Personnes morales", path: "/cabinets", icon: BuildingOffice2Icon, perm: "membres", element: <Cabinets /> },
       { name: "Tableau de l'Ordre", path: "/tableau", icon: ClipboardDocumentListIcon, perm: "membres", element: <TableauOrdre /> },
-      { name: "Vérification des pièces", path: "/pieces", icon: ShieldCheckIcon, perm: "membres", roles: ["BATONNIER"], element: <Pieces /> },
+      { name: "Vérification des pièces", path: "/pieces", icon: ShieldCheckIcon, perm: "membres", roles: ["SECRETAIRE_GENERAL", "BATONNIER"], element: <Pieces /> },
       { name: "Corps électoral", path: "/corps-electoral", icon: CheckBadgeIcon, perm: "corps_electoral", element: <CorpsElectoral /> },
     ],
   },
@@ -160,7 +160,7 @@ export const allModules = navSections.flatMap((s) => s.items);
 export const detailRoutes = [
   { path: "/profil", element: <Profil />, parent: "/" },
   // Fiche : GET /membres/:id est réservé au SG et au Bâtonnier côté serveur.
-  { path: "/avocats/:id", element: <AvocatDetail />, parent: "/avocats", roles: ["BATONNIER"] },
+  { path: "/avocats/:id", element: <AvocatDetail />, parent: "/avocats", roles: ["SECRETAIRE_GENERAL", "BATONNIER"] }, // = GET /membres/:id (ADMIN passe par requireRole)
   { path: "/discipline/:id", element: <DossierDetail />, parent: "/discipline" },
   { path: "/reunions/:id", element: <ReunionDetail />, parent: "/reunions" },
   { path: "/assemblees/:id", element: <AssembleeDetail />, parent: "/assemblees" },
