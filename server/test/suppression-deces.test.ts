@@ -86,6 +86,13 @@ describe("T6 — DELETE /membres/:id : fiche créée par erreur seulement", () =
     expect(ligne?.action).toMatch(/fiche créée par erreur/);
   });
 
+  it("fiche importée (seul événement : INSCRIPTION initiale) → 200", async () => {
+    const id = await creer("importee");
+    await prisma.evenementSituation.create({ data: { membreId: id, type: "INSCRIPTION", statutApres: "INSCRIT", dateEffet: new Date(), annee: 2026, motif: "Import du tableau" } });
+    expect((await request(app).delete(`/api/membres/${id}`).set(...bearer(admin))).status).toBe(200);
+    expect(await prisma.membre.findUnique({ where: { id } })).toBeNull();
+  });
+
   it("SG → 403 (suppression réservée à l'ADMIN)", async () => {
     const id = await creer("rbac");
     expect((await request(app).delete(`/api/membres/${id}`).set(...bearer(sg))).status).toBe(403);

@@ -1039,7 +1039,8 @@ membresRouter.delete(
     await prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM "Membre" WHERE id = ${id} FOR UPDATE`;
       const historique = await Promise.all([
-        tx.evenementSituation.count({ where }),
+        // l'INSCRIPTION initiale (import ou création) n'est pas un historique : une fiche importée par erreur reste supprimable
+        tx.evenementSituation.count({ where: { ...where, NOT: { type: "INSCRIPTION" } } }),
         tx.paiement.count({ where }),
         tx.recu.count({ where }),
         tx.quitus.count({ where }),
