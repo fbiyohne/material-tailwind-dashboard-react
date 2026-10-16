@@ -9,7 +9,7 @@ const IDENTITE_DEFAUT = {
   denomination: "Barreau de Pointe-Noire",
   ordre: "Ordre National des Avocats du Congo",
   batonnier: "", tresoriere: "", secretaireGeneral: "",
-  adresse: "Maison de l'Avocat — Pointe-Noire, République du Congo",
+  adresse: "245, boulevard Charles de Gaulle — Tour Mayombe, entrée Mezzanine, Pointe-Noire",
 };
 const TARIFS_DEFAUT = { avocat: 150000, stagiaire: 75000, droitsPlaidoirie: 60000 };
 // Pré-réglages Gmail (mot de passe d'application requis — pas le mot de passe du compte).

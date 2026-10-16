@@ -15,8 +15,19 @@ const demoInitial = identite().modeDemonstration;
 afterEach(() => { identite().modeDemonstration = demoInitial; });
 
 describe("pageA4 : page A4, pied commun et pagination", () => {
-  it("porte le format A4, la pagination Page x/y et l'en-tête courant masqué en page 1", () => {
+  it("officielle : pied du papier à en-tête (coordonnées, référence, Page x/y) dessiné sur chaque page", () => {
     const h = doc();
+    expect(h).toContain('<template id="pied-pdf">');
+    expect(h).toContain('Réf. Q-2026-0042 · Page <span class="pageNumber"></span>/<span class="totalPages"></span>');
+    expect(h).toContain(identite().courriel);
+    expect(h).not.toContain("@bottom-left");
+    expect(h).toContain("@page :first");
+    expect(h).toContain('class="une-page"');
+    expect(doc({ reference: "<b>x</b>" })).toContain("Réf. &lt;b&gt;x&lt;/b&gt;");
+  });
+
+  it("autres directions : format A4, Page x/y et en-tête courant dans les boîtes de marge", () => {
+    const h = doc({ direction: "institutionnelle" });
     expect(h).toContain("size: A4");
     expect(h).toContain("counter(pages)");
     expect(h).toContain('"Page " counter(page) "/" counter(pages)');
@@ -33,7 +44,7 @@ describe("pageA4 : page A4, pied commun et pagination", () => {
   });
 
   it("neutralise guillemets et barres obliques de la référence dans le CSS des boîtes de marge", () => {
-    const h = doc({ reference: 'R"1\\x' });
+    const h = doc({ reference: 'R"1\\x', direction: "institutionnelle" });
     expect(h).toContain('Réf. R\\"1\\\\x');
     expect(h).not.toContain('Réf. R"1');
   });
@@ -54,9 +65,9 @@ describe("pageA4 : page A4, pied commun et pagination", () => {
 });
 
 describe("Direction graphique : un seul point de choix", () => {
-  it("institutionnelle par défaut, classique sur demande", () => {
-    expect(DIRECTION_PDF).toBe("institutionnelle");
-    expect(doc()).toContain(css("institutionnelle"));
+  it("officielle par défaut, classique sur demande", () => {
+    expect(DIRECTION_PDF).toBe("officielle");
+    expect(doc()).toContain(css("officielle"));
     expect(doc()).toContain(css("socle"));
     const c = doc({ direction: "classique" });
     expect(c).toContain(css("classique"));
@@ -91,7 +102,7 @@ describe("Clauses juridiques", () => {
   });
 
   it("aucun terme interdit HJ-6 dans le module ni dans les feuilles de style", () => {
-    const sources = [fs.readFileSync(new URL("../src/lib/gabarit.ts", import.meta.url), "utf8"), ...["socle", "institutionnelle", "classique", "compacte"].map(css)].join("\n").toLowerCase();
+    const sources = [fs.readFileSync(new URL("../src/lib/gabarit.ts", import.meta.url), "utf8"), ...["socle", "officielle", "institutionnelle", "classique", "compacte"].map(css)].join("\n").toLowerCase();
     for (const t of ["certifié", "signature électronique", "horodatage qualifié", "recommandé électronique", "chiffré de bout en bout", "vote vérifiable", "secret garanti"]) expect(sources).not.toContain(t);
   });
 });

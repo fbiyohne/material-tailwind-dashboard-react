@@ -125,10 +125,16 @@ async function charger(page: Page, html: string) {
  * mise à l'échelle imposée ici, donc aucune réduction ni troncature silencieuse.
  */
 export async function htmlVersPdf(html: string): Promise<Buffer> {
+  // Pied officiel répété sur chaque page (gabarit « officielle ») : déclaré dans le document par
+  // <template id="pied-pdf">, dessiné par Chrome dans la marge basse de chaque page.
+  const pied = /<template id="pied-pdf">([\s\S]*?)<\/template>/.exec(html)?.[1];
   const page = await nouvellePage();
   try {
     await charger(page, html);
-    return (await page.pdf({ format: "A4", printBackground: true, preferCSSPageSize: true })) as Buffer;
+    return (await page.pdf({
+      format: "A4", printBackground: true, preferCSSPageSize: true,
+      ...(pied ? { displayHeaderFooter: true, headerTemplate: "<span></span>", footerTemplate: pied } : {}),
+    })) as Buffer;
   } finally {
     await page.close();
   }

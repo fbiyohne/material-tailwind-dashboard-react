@@ -6,7 +6,7 @@ import { formatFCFA, formatDate } from "../utils/format";
 import { telechargerCsv } from "../utils/exportCsv";
 import { montantEnLettresFCFA } from "../utils/nombreEnLettres";
 import { telechargerDocumentPdf } from "../utils/exports";
-import { Badge, RecuDocument, ApercuAjuste, Notice, useToast, useConfirm, PageHeader, DataTable } from "../components";
+import { Badge, ApercuServeur, Notice, useToast, useConfirm, PageHeader, DataTable } from "../components";
 import { listerMembres, listerRecus, enregistrerPaiement, annulerRecu, telechargerRecuPdf } from "../api/resources";
 
 // Exportée pour le test : la colonne Statut évite d'additionner un reçu annulé comme un encaissement.
@@ -196,9 +196,11 @@ export function Recus() {
         <div className="space-y-5">
           {/* Aperçu à gabarit fixe (820px, pour l'impression/PDF) : défilement
               horizontal sur petit écran plutôt que de déborder toute la page. */}
-          <ApercuAjuste>
-            <RecuDocument numero={numeroAffiche} membre={membre} montant={Number(montant) || 0} exercice={exercice} mode={mode} date={date} verif={succes?.verif} />
-          </ApercuAjuste>
+          {membre ? (
+            <ApercuServeur titre="Aperçu du reçu" chemin="/recus/apercu" corps={succes ? { id: succes.id } : { membreId: membre.id, montant: Number(montant) || 0, annee: Number(exercice), mode, date }} />
+          ) : (
+            <p className="rounded-lg border border-dashed border-grisM bg-white px-6 py-10 text-center text-sm text-gris">Choisissez un avocat pour afficher l’aperçu du reçu.</p>
+          )}
 
           <div className="bpn-no-print bpn-card">
             <div className="bpn-card-header flex-wrap gap-2">

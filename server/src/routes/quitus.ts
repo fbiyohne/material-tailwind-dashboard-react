@@ -9,6 +9,7 @@ import { eligibleQuitus, prochainNumeroQuitus, finValiditeQuitus, finQuitus } fr
 import { reglesActuelles } from "../lib/regles.js";
 import { envoyerDocumentPdf } from "../lib/pdf.js";
 import { quitusRicheHtml } from "../lib/documentsRiches.js";
+import { QR_APERCU } from "../lib/gabarit.js";
 import { signerDocument, quitusPayload, urlVerif, hotePublic, qrDocument } from "../lib/signature.js";
 import { notifier, userDeMembre } from "../lib/centreNotifications.js";
 
@@ -38,6 +39,31 @@ quitusRouter.get(
     if (!quitus) throw new HttpError(404, "Quitus introuvable");
     const qr = await qrDocument("q", quitus.numero);
     await envoyerDocumentPdf(res, quitusRicheHtml(quitus, quitus.membre, qr, hotePublic()), `Quitus-${quitus.numero}.pdf`);
+  })
+);
+
+/**
+ * POST /quitus/apercu {membreId, annee} | {id} — HTML du quitus pour l'aperçu de l'application,
+ * produit par le même assembleur que le PDF : l'écran montre exactement le document délivré.
+ * Avant délivrance : numéro prévisionnel et QR remplacé par un emplacement.
+ */
+quitusRouter.post(
+  "/apercu",
+  asyncH(async (req, res) => {
+    const { id, membreId, annee } = z.object({ id: z.number().int().optional(), membreId: z.number().int().optional(), annee: z.number().int().optional() }).parse(req.body ?? {});
+    let html: string;
+    if (id) {
+      const q = await prisma.quitus.findUnique({ where: { id }, include: { membre: true } });
+      if (!q) throw new HttpError(404, "Quitus introuvable");
+      html = quitusRicheHtml(q, q.membre, await qrDocument("q", q.numero), hotePublic());
+    } else {
+      const membre = membreId ? await prisma.membre.findUnique({ where: { id: membreId } }) : null;
+      if (!membre || !annee) throw new HttpError(400, "Avocat et exercice requis");
+      const dateEmission = new Date();
+      const finValidite = finValiditeQuitus(dateEmission, (await reglesActuelles()).quitus.validiteMois);
+      html = quitusRicheHtml({ numero: await prochainNumeroQuitus(annee), annee, dateEmission, finValidite }, membre, QR_APERCU, hotePublic());
+    }
+    res.type("html").send(html);
   })
 );
 

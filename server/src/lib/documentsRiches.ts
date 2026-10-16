@@ -19,15 +19,16 @@ import { pageA4, entete, titre, champs, signatures, blocVerif } from "./gabarit.
  * on resserre les espacements, jamais l'échelle.
  */
 const CSS = `<style>
-.titre-bloc { margin-top: 4mm; margin-bottom: 3mm; }
+.titre-bloc { margin-top: 0; margin-bottom: 3mm; }
 .preambule { font-size: 11pt; margin: 0 0 2.5mm; }
-.preambule b { color: var(--marine); }
+.preambule b { color: var(--encre); }
 .champ { padding: 1mm 0; }
 .identite { margin: 0 0 3mm; }
-.encart { margin-top: 2mm; margin-bottom: 2mm; }
+.encart { margin-top: 1.5mm; margin-bottom: 1.5mm; padding-top: 2.5mm; padding-bottom: 2.5mm; }
 .signatures { margin-top: 3mm; margin-bottom: 1mm; }
-.sig-espace { height: 12mm; }
-.verif { padding-top: 2.5mm; }
+.sig-espace { height: 19mm; }
+.sig-espace img { width: 19mm; }
+.verif { padding-top: 2mm; margin-top: 3mm; }
 .mention-perso { font-size: var(--t-legende); font-style: italic; color: var(--gris); text-align: center; margin: 2mm 0 0; }
 .coordonnees { margin: 1.5mm 0 0; padding-top: 1.5mm; border-top: .5pt solid var(--gris-m); font-size: var(--t-legende); color: var(--gris); text-align: center; }
 .coordonnees span { white-space: nowrap; }

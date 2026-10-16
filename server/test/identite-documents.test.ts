@@ -94,8 +94,8 @@ describe("Identité paramétrée : PDF rendus et coordonnées (X-05, CA11)", () 
     await ecrire({});
     const [r0, q0] = rendus();
     for (const h of [r0, q0]) {
-      expect(h).toContain("contact@barreau-pointe-noire.cg");
-      expect(h).toContain("+242 05 000 00 00");
+      expect(h).toContain("contact@barreaudepointenoire.cg");
+      expect(h).toContain("+242 06 857 74 74");
     }
     await ecrire({ denomination: "Barreau de démonstration", ville: "Brazzaville" });
     for (const h of rendus()) expect(h.toLowerCase()).not.toContain("pointe-noire");

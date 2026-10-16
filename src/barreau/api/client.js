@@ -103,6 +103,14 @@ export async function api(path, opts = {}) {
   return data;
 }
 
+/** POST authentifié dont la réponse est du texte (HTML d'aperçu d'un document serveur). */
+export async function apiTexte(path, body) {
+  const res = await avecRafraichissement(() => envoyer(path, { method: "POST", body }));
+  if (res.status === 401) { clearSession(); onUnauthorized?.(); }
+  if (!res.ok) throw Object.assign(new Error(`Aperçu indisponible (${res.status})`), { status: res.status });
+  return res.text();
+}
+
 /** Détecte iOS / iPadOS, où l'attribut `download` est ignoré (le blob doit être
  *  ouvert dans un onglet, l'enregistrement se faisant via la feuille de partage). */
 const estIOS = () =>

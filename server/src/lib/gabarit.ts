@@ -9,15 +9,16 @@ import fs from "node:fs";
 import { esc } from "./documentsCommun.js";
 import { identite, MENTION_DEMONSTRATION } from "./identiteDocuments.js";
 
-export type DirectionPdf = "institutionnelle" | "classique" | "compacte";
+export type DirectionPdf = "officielle" | "institutionnelle" | "classique" | "compacte";
 
-/** Seul point de choix de la direction graphique (« Institutionnelle sobre » en attendant la validation de Fabrice). */
-export const DIRECTION_PDF: DirectionPdf = "institutionnelle";
+/** Seul point de choix de la direction graphique : « Officielle », fidèle au papier à en-tête du Barreau (2026-10-16). */
+export const DIRECTION_PDF: DirectionPdf = "officielle";
 // PDF_DIRECTION : surcharge réservée au script de contrôle (scripts/controle-pdf.ts --direction), absente en production.
 const SURCHARGE = process.env.PDF_DIRECTION as DirectionPdf | undefined;
 
 /** Police des boîtes de marge (pied, en-tête courant) par direction. */
 const POLICE_MARGE: Record<DirectionPdf, string> = {
+  officielle: "Montserrat, 'Segoe UI', sans-serif",
   institutionnelle: "'DM Mono', monospace",
   classique: "Georgia, serif",
   compacte: "'DM Mono', monospace",
@@ -25,7 +26,46 @@ const POLICE_MARGE: Record<DirectionPdf, string> = {
 
 // Feuilles lues une fois au chargement (le serveur tourne sur les sources, sans copie vers dist).
 const lire = (n: string) => fs.readFileSync(new URL(`./gabarits/${n}.css`, import.meta.url), "utf8");
-const CSS = { socle: lire("socle"), institutionnelle: lire("institutionnelle"), classique: lire("classique"), compacte: lire("compacte") };
+const CSS = { socle: lire("socle"), officielle: lire("officielle"), institutionnelle: lire("institutionnelle"), classique: lire("classique"), compacte: lire("compacte") };
+
+/** Logo officiel du Barreau (repris des modèles Word du Conseil de l'Ordre), en data URI ; vide s'il manque. */
+const LOGO_OFFICIEL = (() => {
+  for (const p of ["assets/logo-barreau.png", "server/assets/logo-barreau.png"]) {
+    try { return `data:image/png;base64,${fs.readFileSync(p).toString("base64")}`; } catch { /* dossier suivant */ }
+  }
+  return "";
+})();
+
+/** Pictogrammes du pied officiel : trait unique, même famille (téléphone, globe, repère). */
+const ICO = {
+  tel: '<path d="M5 3h3l2 5-2.5 1.5a11 11 0 0 0 5 5L14 12l5 2v3a2 2 0 0 1-2 2A16 16 0 0 1 3 5a2 2 0 0 1 2-2z"/>',
+  web: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/>',
+  lieu: '<path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
+};
+const ico = (k: keyof typeof ICO) => `<svg viewBox="0 0 24 24" style="width:3.4mm;height:3.4mm;flex:none;margin-top:.2mm;fill:none;stroke:#1E2430;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round">${ICO[k]}</svg>`;
+
+/**
+ * Pied officiel de chaque page (marge basse) : filet bleu, coordonnées, référence et pagination,
+ * bandes jaune et bleue du papier à en-tête. Gabarit HTML de Chrome : styles en ligne obligatoires.
+ */
+function piedOfficiel(reference: string, listeRestreinte?: boolean): string {
+  const id = identite();
+  const tels = id.telephones.split("/").map((t) => t.trim()).filter(Boolean);
+  const adresse = id.adresse.split(/\s+—\s+/).filter(Boolean);
+  const col = (k: keyof typeof ICO, lignes: string[]) => lignes.length ? `<div style="display:flex;gap:2mm;align-items:flex-start">${ico(k)}<span>${lignes.map(esc).join("<br>")}</span></div>` : "";
+  const pied = (page: string) => `
+<div style="position:relative;width:100%;height:32mm;font-family:Montserrat,'Segoe UI',Arial,sans-serif;font-size:7.6pt;line-height:1.35;color:#1E2430;-webkit-print-color-adjust:exact;print-color-adjust:exact">
+  <div style="margin:0 15mm;border-top:.8pt solid #2E67B1"></div>
+  <div style="display:flex;justify-content:space-between;gap:6mm;margin:2.6mm 15mm 0">${col("tel", tels)}${col("web", [id.courriel, id.site].filter(Boolean))}${col("lieu", adresse)}</div>
+  ${listeRestreinte ? `<div style="margin:1.6mm 15mm 0;font-size:6.4pt;color:#5A6170">${esc(CLAUSE_LISTE)}</div>` : ""}
+  <div style="position:absolute;right:15mm;bottom:11mm;font-size:6.6pt;color:#5A6170">Réf. ${esc(reference)} · ${page}</div>
+  <div style="position:absolute;left:0;bottom:5.5mm;width:46%;height:4mm;background:#FDD13B;clip-path:polygon(0 0,96% 0,100% 100%,0 100%)"></div>
+  <div style="position:absolute;left:0;right:0;bottom:0;height:5.5mm;background:#2E67B1"></div>
+</div>`;
+  // Le gabarit de Chrome n'existe qu'au PDF ; .pied-ecran le reproduit pour l'aperçu à l'écran (masqué à l'impression).
+  return `<template id="pied-pdf"><style>html,body{margin:0;padding:0}#footer{padding:0!important}</style>${pied('Page <span class="pageNumber"></span>/<span class="totalPages"></span>')}</template>
+<div class="pied-ecran">${pied("Aperçu")}</div>`;
+}
 
 /** Clause CL-VERIF (avis juridique M-20261011), mot pour mot. */
 export const CLAUSE_VERIF =
@@ -60,7 +100,12 @@ export function pageA4({ titreCourt, reference, unePage, paysage, listeRestreint
   const id = identite();
   const boite = `font-family: ${POLICE_MARGE[direction]}; font-size: 7.5pt; color: #7A756A;`;
   const pied = `${id.denomination} · Réf. ${reference}`;
-  const page = `
+  const officielle = direction === "officielle";
+  const page = officielle ? `
+@page {${paysage ? "\n  size: A4 landscape;" : ""}
+  @top-left { content: ${cssStr(`${id.denomination} · ${titreCourt}`)}; ${boite} }
+}
+@page :first { @top-left { content: none; } }` : `
 @page {${paysage ? "\n  size: A4 landscape;" : ""}
   @bottom-left { content: ${listeRestreinte ? `${cssStr(pied)} "\\A" ${cssStr(CLAUSE_LISTE)}; white-space: pre-wrap;` : `${cssStr(pied)};`} ${boite} }
   @bottom-right { content: "Page " counter(page) "/" counter(pages); white-space: nowrap; ${boite} }
@@ -68,16 +113,17 @@ export function pageA4({ titreCourt, reference, unePage, paysage, listeRestreint
 }
 @page :first { @top-left { content: none; } }`;
   return `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>${esc(titreCourt)}</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600&family=DM+Mono&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600&family=DM+Mono&family=Montserrat:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
 <style>${CSS.socle}${CSS[direction]}${page}</style></head>
 <body class="dir-${direction}"><div class="${unePage ? "une-page" : ""}">${contenu}
-${id.modeDemonstration ? `<p class="mention-demo">${esc(MENTION_DEMONSTRATION)}</p>` : ""}</div></body></html>`;
+${id.modeDemonstration ? `<p class="mention-demo">${esc(MENTION_DEMONSTRATION)}</p>` : ""}</div>${officielle ? piedOfficiel(reference, listeRestreinte) : ""}</body></html>`;
 }
 
 /** Logo téléversé (Paramètres, base64 validée) ou sceau dessiné reprenant l'identité. */
 function sceau(): string {
   const id = identite();
   if (id.logo) return `<img src="${id.logo}" alt="Logo">`;
+  if (LOGO_OFFICIEL) return `<img src="${LOGO_OFFICIEL}" alt="${esc(id.ordre)}, ${esc(id.denomination)}">`;
   return `
 <svg viewBox="0 0 100 100" aria-label="Sceau">
   <defs><path id="sc-h" d="M 18,50 A 32,32 0 0 1 82,50"/><path id="sc-b" d="M 82,52 A 32,32 0 0 1 18,52"/></defs>
@@ -97,6 +143,12 @@ function sceau(): string {
 /** En-tête d'identité (page 1) : sceau, dénomination, ordre, adresse, référence et date. */
 export const entete = (refLabel: string, ref: string, dateLabel: string): string => {
   const id = identite();
+  if ((SURCHARGE && SURCHARGE in CSS ? SURCHARGE : DIRECTION_PDF) === "officielle") return `
+<header class="entete-off">
+  <div class="bandeau"><i></i>${sceau()}<i></i></div>
+  <div class="emetteur"><div><b>${esc(id.ordre)}</b>${esc(id.denomination)}</div>
+    <div class="droite">${esc(refLabel)} <span class="ref">${esc(ref)}</span><br>${esc(dateLabel)}</div></div>
+</header>`;
   return `
 <header class="entete">
   <div class="entete-sceau">${sceau()}</div>
@@ -122,4 +174,7 @@ export const signatures = (roles: [string, string, string?][]): string =>
  */
 export const blocVerif = (qr: string, url: string): string =>
   `<aside class="verif">${qr.startsWith("<svg") ? qr : `<img src="${qr}" alt="Code de vérification">`}<div><p class="verif-titre">Vérification d'authenticité</p>
-  <p class="verif-texte">Authenticité vérifiable en scannant ce code ou sur <span class="verif-url">${esc(url)}.</span> ${CLAUSE_VERIF}</p></div></aside>`;
+  <p class="verif-texte">Scannez ce code avec l'appareil photo d'un téléphone, ou rendez-vous sur <span class="verif-url">${esc(url)}</span>. ${CLAUSE_VERIF}</p></div></aside>`;
+
+/** Emplacement du QR dans l'aperçu d'un document pas encore délivré (aucun code signé n'existe encore). */
+export const QR_APERCU = `<svg viewBox="0 0 100 100" role="img" aria-label="Code de vérification attribué à la délivrance"><rect x="2" y="2" width="96" height="96" fill="none" stroke="#9AA3B2" stroke-width="2" stroke-dasharray="6 5"/><text x="50" y="47" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="10" fill="#5A6170">QR attribué</text><text x="50" y="61" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="10" fill="#5A6170">à l'émission</text></svg>`;

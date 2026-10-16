@@ -23,7 +23,7 @@ const sansDataUri = (h: string) => h.replace(/data:[^"')]+/g, "");
 describe("Quitus et reçu sur le socle A4 (T5)", () => {
   it("sont assemblés par pageA4 : A4, pagination, une page, sans mise à l'échelle", () => {
     for (const h of [q(), r()]) {
-      expect(h).toContain('"Page " counter(page) "/" counter(pages)');
+      expect(h).toContain('<span class="pageNumber"></span>/<span class="totalPages"></span>');
       expect(h).toContain('class="une-page"');
       expect(h).toContain('class="cloture"');
       expect(h).not.toMatch(/doc-root|scale\(|size: A4 portrait; margin: 0/);

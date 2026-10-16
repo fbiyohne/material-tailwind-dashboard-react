@@ -23,7 +23,7 @@ export const PARAMETRES_DEFAUT = {
     batonnier: "Me BIKINDOU Audrey Séverin",
     tresoriere: "Me ONDZE BOYA Armelle Laure Carine",
     secretaireGeneral: "Me KALINA-MENGA Lionel",
-    adresse: "Maison de l'Avocat — Pointe-Noire, République du Congo",
+    adresse: "245, boulevard Charles de Gaulle — Tour Mayombe, entrée Mezzanine, Pointe-Noire",
     logo: "", // logo téléversé (data URI image) ; vide = sceau dessiné
     ville: "Pointe-Noire",
     modeDemonstration: false, // affiche la mention C-13 (données fictives)
@@ -110,7 +110,7 @@ export function exercices() {
 export const identite = () => config.identite ?? PARAMETRES_DEFAUT.identite;
 /** Coordonnées des reçus et quitus, comme côté serveur (identiteDocuments.ts) : celles par défaut
  *  n'appartiennent qu'au barreau de base ; un barreau d'une autre ville ne les hérite pas. */
-const COORDONNEES_BASE = { courriel: "contact@barreau-pointe-noire.cg", site: "www.barreau-pointe-noire.cg", telephones: "+242 05 000 00 00 / +242 06 000 00 00" };
+const COORDONNEES_BASE = { courriel: "contact@barreaudepointenoire.cg", site: "barreaudepointenoire.cg", telephones: "+242 06 857 74 74" };
 export const coordonnees = () => {
   const i = identite();
   const base = (i.ville?.trim() || PARAMETRES_DEFAUT.identite.ville) === PARAMETRES_DEFAUT.identite.ville;

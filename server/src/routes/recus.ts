@@ -5,6 +5,8 @@ import { requireAuth, requireRole, requirePermission, type AuthRequest } from ".
 import { urlVerif, hotePublic, qrDocument } from "../lib/signature.js";
 import { envoyerDocumentPdf } from "../lib/pdf.js";
 import { recuRicheHtml } from "../lib/documentsRiches.js";
+import { QR_APERCU } from "../lib/gabarit.js";
+import { z } from "zod";
 import { estRecuDroit } from "../lib/business.js";
 
 export const recusRouter = Router();
@@ -20,6 +22,33 @@ recusRouter.get(
     if (recu.statut === "ANNULE") throw new HttpError(409, "Reçu annulé : il n'est plus délivrable");
     const qr = await qrDocument("r", recu.numero);
     await envoyerDocumentPdf(res, recuRicheHtml(recu, recu.membre, qr, hotePublic()), `Recu-${recu.numero}.pdf`);
+  })
+);
+
+/**
+ * POST /recus/apercu {membreId, montant, annee, mode, date} | {id} — HTML du reçu pour l'aperçu
+ * de l'application, produit par le même assembleur que le PDF. Avant émission : numéro
+ * « attribué à l'émission » et QR remplacé par un emplacement.
+ */
+recusRouter.post(
+  "/apercu",
+  asyncH(async (req, res) => {
+    const b = z.object({
+      id: z.number().int().optional(), membreId: z.number().int().optional(), montant: z.number().min(0).max(1e12).optional(),
+      annee: z.number().int().optional(), mode: z.string().max(40).optional(), date: z.string().max(30).optional(),
+    }).parse(req.body ?? {});
+    let html: string;
+    if (b.id) {
+      const recu = await prisma.recu.findUnique({ where: { id: b.id }, include: { membre: true } });
+      if (!recu) throw new HttpError(404, "Reçu introuvable");
+      html = recuRicheHtml(recu, recu.membre, await qrDocument("r", recu.numero), hotePublic());
+    } else {
+      const membre = b.membreId ? await prisma.membre.findUnique({ where: { id: b.membreId } }) : null;
+      if (!membre || !b.annee) throw new HttpError(400, "Avocat et exercice requis");
+      const date = b.date && !Number.isNaN(Date.parse(b.date)) ? new Date(b.date) : new Date();
+      html = recuRicheHtml({ numero: "attribué à l'émission", montant: b.montant ?? 0, annee: b.annee, mode: b.mode, objet: `Cotisation ordinale ${b.annee}`, date }, membre, QR_APERCU, hotePublic());
+    }
+    res.type("html").send(html);
   })
 );
 

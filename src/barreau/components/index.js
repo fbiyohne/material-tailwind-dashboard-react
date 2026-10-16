@@ -10,6 +10,7 @@ export { Tabs } from "./Tabs";
 export { SelecteurExercice } from "./SelecteurExercice";
 export { QuitusDocument } from "./QuitusDocument";
 export { ApercuAjuste } from "./ApercuAjuste";
+export { ApercuServeur } from "./ApercuServeur";
 export { RecuDocument } from "./RecuDocument";
 export { QRCode } from "./QRCode";
 export { StatutBadge } from "./StatutBadge";

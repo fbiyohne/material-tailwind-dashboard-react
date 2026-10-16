@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DocumentCheckIcon, CheckCircleIcon, LockClosedIcon, ArrowDownTrayIcon, ShieldCheckIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
-import { QuitusDocument, ApercuAjuste, Notice, useToast, useConfirm, PageHeader, DataTable } from "../components";
+import { ApercuServeur, Notice, useToast, useConfirm, PageHeader, DataTable } from "../components";
 import { useAuth } from "../auth/AuthContext";
 import { formatDate } from "../utils/format";
 import { telechargerCsv } from "../utils/exportCsv";
 import { telechargerDocumentPdf } from "../utils/exports";
-import { quitusEligibles, listerQuitus, genererQuitus, genererQuitusLot, supprimerQuitus, getCotisations, getMembre, telechargerQuitusPdf } from "../api/resources";
+import { quitusEligibles, listerQuitus, genererQuitus, genererQuitusLot, supprimerQuitus, getCotisations, telechargerQuitusPdf } from "../api/resources";
 
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
 const pad3 = (n) => String(n).padStart(3, "0");
@@ -62,7 +62,6 @@ export function Quitus() {
   const [lignes, setLignes] = useState([]);
   const [membreId, setMembreId] = useState(null);
   const [succes, setSucces] = useState(null);
-  const [details, setDetails] = useState(null); // fiche complète de l'avocat sélectionné (n° d'inscription, adresse…)
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState(false);
 
@@ -101,14 +100,6 @@ export function Quitus() {
   );
 
   const membreActif = eligiblesRestants.find((m) => m.id === membreId) ?? eligiblesRestants[0] ?? null;
-
-  // Charge la fiche complète (n° d'inscription, date, adresse) pour renseigner le quitus.
-  useEffect(() => {
-    if (!membreActif?.id) { setDetails(null); return; }
-    let actif = true;
-    getMembre(membreActif.id).then((m) => actif && setDetails(m)).catch(() => actif && setDetails(null));
-    return () => { actif = false; };
-  }, [membreActif?.id]);
 
   const numero = useMemo(() => {
     if (succes?.numero) return succes.numero;
@@ -243,9 +234,7 @@ export function Quitus() {
           {membreActif ? (
             // Gabarit fixe (820px) : défilement horizontal sur mobile plutôt que
             // de déborder toute la page.
-            <ApercuAjuste>
-              <QuitusDocument numero={numero} membre={(details && details.id === membreActif.id) ? details : membreActif} exercice={exercice} date={aujourdhui()} verif={succes?.verif} finValidite={succes?.finValidite} />
-            </ApercuAjuste>
+            <ApercuServeur titre="Aperçu du quitus" chemin="/quitus/apercu" corps={succes ? { id: succes.id } : { membreId: membreActif.id, annee: Number(exercice) }} />
           ) : (
             <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-grisM bg-white px-6 py-16 text-center">
               <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-rougeL text-rouge"><LockClosedIcon className="h-6 w-6" /></div>
