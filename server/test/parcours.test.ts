@@ -480,8 +480,8 @@ describe("Parcours 11 — reçu personnalisé à l'identité d'un barreau", () =
   }, 60_000);
 });
 
-describe("Parcours 12 — journal d'audit : opération tracée, conversations privées inaccessibles", () => {
-  it("l'envoi et la modification sont tracés et filtrables ; ni le contenu, ni le fil privé ne sont accessibles ; journal immuable", async () => {
+describe("Parcours 12 — journal d'audit : opération tracée, conversations privées hors messagerie administration", () => {
+  it("l'envoi et la modification sont tracés et filtrables ; ni le contenu dans le journal, ni le fil privé hors administration (404, même ADMIN) ; journal immuable", async () => {
     const depuis = await maxAudit();
     const a = await avocatEspace("Audit A");
     const b = await avocatEspace("Audit B");
@@ -499,13 +499,13 @@ describe("Parcours 12 — journal d'audit : opération tracée, conversations pr
     expect(filtre.body.items.some((i: { id: number }) => i.id === modif!.id)).toBe(true);
     expect(filtre.body.items.every((i: { userId: number }) => i.userId === sgId)).toBe(true);
 
-    // Contenu privé : absent du journal (toutes colonnes, et réponse de l'API) ; fil inaccessible à l'administration.
+    // Contenu privé : absent du journal (toutes colonnes, et réponse de l'API) ; fil privé hors messagerie administration.
     const colonnes = ["action", "cible", "methode", "chemin", "ip", "userNom"] as const;
     expect(await prisma.journalAudit.count({ where: { OR: colonnes.map((c) => ({ [c]: { contains: SECRET } })) } })).toBe(0);
     expect(JSON.stringify((await request(app).get("/api/audit").query({ pageSize: 200 }).set(...bearer(admin))).body)).not.toContain(SECRET);
     expect((await request(app).get(`/api/messagerie/${fil.body.id}`).set(...bearer(sg))).status).toBe(404);
     expect((await request(app).get("/api/messagerie").set(...bearer(sg))).body.map((c: { id: number }) => c.id)).not.toContain(fil.body.id);
-    expect((await request(app).get(`/api/messagerie/${fil.body.id}`).set(...bearer(admin))).status).toBe(403); // secret professionnel
+    expect((await request(app).get(`/api/messagerie/${fil.body.id}`).set(...bearer(admin))).status).toBe(404); // fil privé entre confrères : hors messagerie administration, même pour l'ADMIN (404)
 
     // Non modifiable : aucune route d'écriture, et la base refuse UPDATE / DELETE (trigger).
     expect((await request(app).delete(`/api/audit/${envoi!.id}`).set(...bearer(admin))).status).toBe(404);
