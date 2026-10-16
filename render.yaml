@@ -51,6 +51,14 @@ services:
       # le serveur refuse de démarrer sans elle. À renseigner dans le dashboard.
       - key: VERIF_BASCULE
         sync: false
+      # Paire RSA (PEM) des documents, dont dérivent les jetons QR : OBLIGATOIRE,
+      # le serveur refuse de démarrer sans elle (pas de disque persistant sur Render,
+      # une clé générée serait perdue au redémarrage et invaliderait tous les QR
+      # imprimés). À renseigner dans le dashboard, jamais dans Git.
+      - key: SIGNATURE_PRIVATE_KEY
+        sync: false
+      - key: SIGNATURE_PUBLIC_KEY
+        sync: false
       # Origine publique https (ex. https://barreau-pn.onrender.com) encodée dans
       # les QR imprimés : OBLIGATOIRE, le serveur refuse de démarrer sans elle.
       - key: PUBLIC_ORIGIN

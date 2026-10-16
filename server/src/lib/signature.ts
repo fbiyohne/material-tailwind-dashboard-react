@@ -26,11 +26,12 @@ function chargerCles(): { privateKey: string; publicKey: string } {
   } catch (e) {
     logger.warn({ err: e }, "Lecture des clés de signature échouée — repli sur génération.");
   }
-  // Aucune clé fournie ni persistée : on en génère (acceptable en dev). En
-  // production, c'est une MAUVAISE configuration : la clé est éphémère et tous
-  // les QR de documents émis deviendront invérifiables au prochain redémarrage.
-  if (process.env.NODE_ENV === "production") {
-    logger.error("Clés de signature absentes : génération d'une clé ÉPHÉMÈRE — les signatures/QR existants seront invalidés au redémarrage. Configurez SIGNATURE_PRIVATE_KEY/SIGNATURE_PUBLIC_KEY ou SIGNATURE_KEY_DIR.");
+  // Aucune clé fournie ni persistée : on en génère (acceptable en dev, ou au premier
+  // démarrage sur un SIGNATURE_KEY_DIR persistant). En production sans dossier
+  // persistant, la clé serait éphémère et tous les QR imprimés deviendraient
+  // « Non reconnu » au redémarrage : on refuse de démarrer (R1-1, fail-closed).
+  if (process.env.NODE_ENV === "production" && !process.env.SIGNATURE_KEY_DIR) {
+    throw new Error("Clés de signature absentes en production : configurez SIGNATURE_PRIVATE_KEY et SIGNATURE_PUBLIC_KEY, ou un SIGNATURE_KEY_DIR persistant.");
   }
   const { privateKey, publicKey } = crypto.generateKeyPairSync("rsa", {
     modulusLength: 2048,

@@ -43,7 +43,7 @@ function secretJwt(): string {
  * Avertit au démarrage des configurations qui, absentes, dégradent SILENCIEUSEMENT
  * en production (échec à l'usage plutôt qu'au boot). N'interrompt pas le démarrage —
  * un déploiement peut légitimement tourner en simulation — mais rend le défaut visible.
- * Seule exception, bloquante : VERIF_BASCULE (voir ci-dessous).
+ * Exceptions bloquantes : VERIF_BASCULE, clés de signature, PUBLIC_ORIGIN (voir ci-dessous).
  */
 export function verifierConfigProduction(avertir: (msg: string) => void): void {
   // Relu à l'appel (et non la constante du module) pour rester testable.
@@ -57,8 +57,10 @@ export function verifierConfigProduction(avertir: (msg: string) => void): void {
   if (process.env.PAYMENT_PROVIDER && !process.env.PAYMENT_WEBHOOK_SECRET) {
     avertir("PAYMENT_PROVIDER défini mais PAYMENT_WEBHOOK_SECRET absent : tous les webhooks de paiement seront rejetés.");
   }
-  if (!process.env.SIGNATURE_PRIVATE_KEY && !process.env.SIGNATURE_KEY_DIR) {
-    avertir("Clés de signature non configurées : une clé éphémère sera générée et invalidera les QR émis à chaque redémarrage.");
+  // R1-1 : le jeton QR dérive de la clé de signature ; une clé éphémère change à chaque
+  // redémarrage et rendrait « Non reconnu » tous les documents authentiques déjà imprimés.
+  if (!(process.env.SIGNATURE_PRIVATE_KEY && process.env.SIGNATURE_PUBLIC_KEY) && !process.env.SIGNATURE_KEY_DIR) {
+    throw new Error("SIGNATURE_PRIVATE_KEY et SIGNATURE_PUBLIC_KEY absentes (et pas de SIGNATURE_KEY_DIR persistant) : obligatoires en production (clé dont dérivent les jetons QR des documents).");
   }
   if (!process.env.SMTP_HOST && !process.env.SMTP_URL) {
     avertir("SMTP non configuré : les notifications email resteront en simulation.");
