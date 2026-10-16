@@ -59,6 +59,7 @@ messagerieRouter.get(
         messages: { orderBy: { createdAt: "desc" }, take: 1 },
       },
     });
+    await tracerLectureAdmin(req, res); // l'aperçu porte le début du corps ; avant tout accusé : un 503 ne marque rien
     // Charger la boîte vaut réception des messages des avocats (posé une seule fois).
     await accuser("recuAt", { conversationId: { in: convs.map((c) => c.id) }, ...MESSAGE_DE_AVOCAT });
     const seuils = convs.map((c) => ({ conversationId: c.id, depuis: c.adminLastReadAt ?? jamaisLu() }));
@@ -78,7 +79,6 @@ messagerieRouter.get(
         nonLus: nonLusParFil.get(c.id) ?? 0,
       };
     });
-    await tracerLectureAdmin(req, res); // l'aperçu porte le début du corps
     res.json(result);
   })
 );

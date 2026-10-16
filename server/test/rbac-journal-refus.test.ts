@@ -183,6 +183,20 @@ describe("T9 — l'ADMIN accède au contenu, chaque lecture tracée sans le cont
     await sansContenu();
   });
 
+  it("liste des pièces (données des membres) et accusé PDF : 200 pour l'ADMIN, une ligne par lecture", async () => {
+    const msg = await prisma.message.findFirstOrThrow({ where: { conversationId: convId } });
+    const liste = await request(app).get("/api/pieces").set(...bearer(jeton.ADM));
+    expect(liste.status).toBe(200);
+    expect(liste.body.map((p: { id: number }) => p.id)).toContain(pieceId);
+    expect((await request(app).get(`/api/messagerie/messages/${msg.id}/accuse/pdf`).set(...bearer(jeton.ADM))).status).toBe(200);
+    for (const [chemin, action] of [["/api/pieces", "Consultation — Pièce"], [`/api/messagerie/messages/${msg.id}/accuse/pdf`, "Consultation — Messagerie"]] as const) {
+      const l = await lignesGet(chemin, ids.ADM);
+      expect(l, chemin).toHaveLength(1);
+      expect(l[0]).toMatchObject({ action, statut: 200 });
+    }
+    await sansContenu();
+  });
+
   it("traçabilité non contournable : casse et barre finale (tolérées par Express) sont journalisées", async () => {
     const chemin = `/api/Messagerie/${convId}/`;
     expect((await request(app).get(chemin).set(...bearer(jeton.ADM))).status).toBe(200);
@@ -200,8 +214,10 @@ describe("T9 — l'ADMIN accède au contenu, chaque lecture tracée sans le cont
   });
 
   it("journal indisponible : l'ADMIN reçoit 503 et aucun contenu (liste, fil, pièce) ; le SG n'est pas affecté", async () => {
-    const urls = ["/api/messagerie", `/api/messagerie/${convId}`, `/api/pieces/${pieceId}/fichier`];
+    const msg = await prisma.message.findFirstOrThrow({ where: { conversationId: convId } });
+    const urls = ["/api/messagerie", `/api/messagerie/${convId}`, `/api/pieces/${pieceId}/fichier`, "/api/pieces", `/api/messagerie/messages/${msg.id}/accuse/pdf`];
     const luAvant = (await prisma.conversation.findUnique({ where: { id: convId } }))?.adminLastReadAt;
+    await prisma.message.updateMany({ where: { conversationId: convId }, data: { recuAt: null, luAt: null } });
     const spy = vi.spyOn(prisma.journalAudit, "create").mockRejectedValue(new Error("panne"));
     try {
       for (const url of urls) {
@@ -211,6 +227,8 @@ describe("T9 — l'ADMIN accède au contenu, chaque lecture tracée sans le cont
       }
       // contenu non servi : le fil n'est pas marqué lu côté administration
       expect((await prisma.conversation.findUnique({ where: { id: convId } }))?.adminLastReadAt).toEqual(luAvant);
+      // ni accusé de réception (liste) ni de lecture (fil) : l'état métier ne bouge pas sans trace
+      expect(await prisma.message.count({ where: { conversationId: convId, OR: [{ recuAt: { not: null } }, { luAt: { not: null } }] } })).toBe(0);
       expect((await request(app).get(`/api/pieces/${pieceId}/fichier`).set(...bearer(jeton.SG))).status).toBe(200);
     } finally {
       spy.mockRestore();
