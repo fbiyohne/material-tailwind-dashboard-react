@@ -1,4 +1,4 @@
-import { useId, useRef, useState } from "react";
+import { createContext, useContext, useId, useRef, useState } from "react";
 import PropTypes from "prop-types";
 
 /**
@@ -15,10 +15,18 @@ import PropTypes from "prop-types";
  * liseré or à droite de l'onglet actif — pour une page à nombreux onglets
  * (Paramètres) qui ne tiendraient pas sur une ligne. Sous lg : rendu horizontal.
  */
+// Vrai à l'intérieur d'un panneau : seul le Tabs de premier niveau est collant.
+const Imbrique = createContext(false);
+
 export function Tabs({ tabs, defaultTab, className = "", ariaLabel = "Sections", vertical = false }) {
   const base = useId();
   const [active, setActive] = useState(defaultTab ?? tabs[0]?.id);
   const refs = useRef({});
+  const imbrique = useContext(Imbrique);
+  // Collant sous la Topbar (--haut-collant posé par le layout) ; en colonne, défilement interne si elle déborde.
+  const collant = imbrique
+    ? ""
+    : `sticky top-[var(--haut-collant,0px)] z-20 bg-[var(--fond-collant,#fff)] ${vertical ? "lg:top-[calc(var(--haut-collant,0px)+1rem)] lg:max-h-[calc(100vh-var(--haut-collant,0px)-2rem)] lg:overflow-y-auto" : ""}`;
 
   const index = Math.max(0, tabs.findIndex((t) => t.id === active));
   const courant = tabs[index] ?? tabs[0];
@@ -42,6 +50,7 @@ export function Tabs({ tabs, defaultTab, className = "", ariaLabel = "Sections",
       {/* Une seule ligne d'onglets : défilement horizontal interne quand la
           largeur manque (mobile), au lieu d'un retour à la ligne qui casse le
           liseré. Le filet gris est porté par l'enveloppe pour ne pas être rogné. */}
+      <div className={collant}>
       <div className={`border-b border-grisM ${vertical ? "lg:border-b-0 lg:border-r" : ""}`}>
       <div
         role="tablist"
@@ -81,6 +90,7 @@ export function Tabs({ tabs, defaultTab, className = "", ariaLabel = "Sections",
         })}
       </div>
       </div>
+      </div>
 
       {courant && (
         <div
@@ -90,7 +100,9 @@ export function Tabs({ tabs, defaultTab, className = "", ariaLabel = "Sections",
           tabIndex={0}
           className={`pt-5 outline-none ${vertical ? "lg:pt-0" : ""}`}
         >
-          {typeof courant.content === "function" ? courant.content() : courant.content}
+          <Imbrique.Provider value={true}>
+            {typeof courant.content === "function" ? courant.content() : courant.content}
+          </Imbrique.Provider>
         </div>
       )}
     </div>

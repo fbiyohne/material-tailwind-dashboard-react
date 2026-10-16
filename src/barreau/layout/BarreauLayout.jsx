@@ -39,7 +39,7 @@ export function BarreauLayout() {
       </a>
       <Sidebar open={menuOpen} onClose={() => setMenuOpen(false)} />
 
-      <div className="min-h-screen bg-white xl:ml-[260px]">
+      <div className="min-h-screen bg-white [--haut-collant:3.5rem] [--fond-collant:#fff] xl:ml-[260px]">
         <Topbar
           title={titre}
           onOpenMenu={() => setMenuOpen(true)}

@@ -74,7 +74,7 @@ export function EspaceAvocatLayout() {
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen bg-creme">
+    <div className="min-h-screen bg-creme [--haut-collant:0px] [--fond-collant:theme(colors.creme)]">
       <a
         href="#contenu-principal"
         className="sr-only z-[90] focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:rounded focus:bg-navy focus:px-4 focus:py-2 focus:text-sm focus:text-white"
