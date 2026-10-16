@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BanknotesIcon, ArrowDownTrayIcon, PrinterIcon, TrashIcon, EnvelopeIcon } from "@heroicons/react/24/outline";
-import { Badge, StatCard, PaiementModal, PaiementEnLigneModal, useToast, useConfirm, EtatImprimable, PageHeader, DataTable, SelecteurExercice } from "../components";
+import { Badge, StatCard, PaiementModal, PaiementEnLigneModal, useToast, useConfirm, PageHeader, DataTable, SelecteurExercice } from "../components";
 import { useAuth } from "../auth/AuthContext";
 import { STATUT_META } from "../data/derivations";
 import { EXERCICE_COURANT } from "../data/dashboard-data";
 import { formatFCFA } from "../utils/format";
 import { telechargerCsv } from "../utils/exportCsv";
-import { exporterExcel, exporterPdf } from "../utils/exports";
-import { getDroits, supprimerDroit, lancerRelancesDroits } from "../api/resources";
+import { exporterExcel } from "../utils/exports";
+import { getDroits, supprimerDroit, lancerRelancesDroits, telechargerEtatPdf } from "../api/resources";
 
 const ENTETE_ETAT = ["N°", "Avocat", "Dû", "Perçu", "Solde", "Statut"];
 
@@ -103,7 +103,7 @@ export function DroitsPlaidoirie() {
     if (lignes.length === 0) { toast.error("Aucune ligne à exporter pour cet exercice."); return; }
     const nom = `etat-droits-plaidoirie-${exercice}`;
     if (fmt === "xlsx") exporterExcel(nom, [ENTETE_ETAT, ...lignesEtat, totauxEtat], `Droits ${exercice}`);
-    else exporterPdf(nom, "#etat-droits");
+    else telechargerEtatPdf({ titre: "État des droits de plaidoirie", sousTitre: `Exercice ${exercice}`, entete: ENTETE_ETAT, lignes: lignesEtat, totaux: totauxEtat, signataire: "tresoriere", fichier: nom }).catch((e) => toast.error(e.message));
   };
 
   return (
@@ -156,7 +156,6 @@ export function DroitsPlaidoirie() {
         />
       </div>
 
-      <EtatImprimable id="etat-droits" titre="État des droits de plaidoirie" sousTitre={`Exercice ${exercice}`} entete={ENTETE_ETAT} lignes={lignesEtat} totaux={totauxEtat} />
 
       <PaiementModal
         ligne={paiement}

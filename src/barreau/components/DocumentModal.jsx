@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { identite } from "../data/config";
 import PropTypes from "prop-types";
 import { PrinterIcon, CheckCircleIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
@@ -6,7 +6,7 @@ import { Modal } from "./Modal";
 import { Notice } from "./Notice";
 import { DocumentChrome } from "./DocumentChrome";
 import { exporterPdf } from "../utils/exports";
-import { telechargerPdf } from "../api/client";
+import { telechargerPdf, urlPdfAuth } from "../api/client";
 
 /**
  * Document officiel générique (convocation, feuille de présence, procès-verbal…)
@@ -27,6 +27,17 @@ export function DocumentModal({
   pdfFilename,
 }) {
   const [archive, setArchive] = useState(false);
+  // Aperçu = le PDF serveur lui-même (gabarit officiel) : l''écran montre exactement le document délivré.
+  const [apercu, setApercu] = useState({ url: "", erreur: "" });
+  useEffect(() => {
+    if (!open || !pdfPath) return undefined;
+    let url = "";
+    let actif = true;
+    urlPdfAuth(pdfPath)
+      .then((u) => { url = u; if (actif) setApercu({ url: u, erreur: "" }); else URL.revokeObjectURL(u); })
+      .catch((e) => actif && setApercu({ url: "", erreur: e.message }));
+    return () => { actif = false; if (url) URL.revokeObjectURL(url); setApercu({ url: "", erreur: "" }); };
+  }, [open, pdfPath]);
 
   const nomFichier = `${title} ${reference ?? ""}`.trim().replace(/\s+/g, "-");
 
@@ -69,9 +80,14 @@ export function DocumentModal({
         <Notice ton="vert" icon={CheckCircleIcon} className="bpn-no-print mb-3 text-sm">Document généré et archivé.</Notice>
       )}
 
-      <DocumentChrome org={org} title={title} reference={reference} date={date} signataires={[signataire]}>
-        {children}
-      </DocumentChrome>
+      {pdfPath ? (
+        apercu.url ? <iframe title={`Aperçu : ${title}`} src={`${apercu.url}#navpanes=0&view=FitH`} className="h-[75vh] w-full rounded-sm border-0 bg-white" />
+          : <p className="py-16 text-center text-sm text-gris">{apercu.erreur || "Préparation du document…"}</p>
+      ) : (
+        <DocumentChrome org={org} title={title} reference={reference} date={date} signataires={[signataire]}>
+          {children}
+        </DocumentChrome>
+      )}
     </Modal>
   );
 }

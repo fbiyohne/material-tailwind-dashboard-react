@@ -36,6 +36,7 @@ import { corpsElectoralRouter } from "./routes/corpsElectoral.js";
 import { dashboardRouter } from "./routes/dashboard.js";
 import { auditRouter } from "./routes/audit.js";
 import { tableauRouter } from "./routes/tableau.js";
+import { etatsRouter } from "./routes/etats.js";
 import { scrutinsRouter } from "./routes/scrutins.js";
 import { signaturesRouter } from "./routes/signatures.js";
 import { conseilRouter } from "./routes/conseil.js";
@@ -160,6 +161,7 @@ export function creerApp(limites: { anonyme?: number; authentifie?: number; veri
   app.use("/api/dashboard", dashboardRouter);
   app.use("/api/audit", auditRouter);
   app.use("/api/tableau", tableauRouter);
+  app.use("/api/etats", etatsRouter);
   app.use("/api/scrutins", scrutinsRouter);
   app.use("/api/signatures", signaturesRouter);
   app.use("/api/conseil", conseilRouter);

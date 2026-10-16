@@ -5,6 +5,8 @@ export const telechargerQuitusPdf = (id, numero) => telechargerPdf(`/quitus/${id
 export const telechargerAttestationPdf = (id, num) => telechargerPdf(`/membres/${id}/attestation/pdf`, `Attestation-${num}.pdf`);
 /** Attestation de sortie du tableau (ancien membre, texte sans motif — T20). */
 export const telechargerAttestationSortiePdf = (id, num) => telechargerPdf(`/membres/${id}/attestation-sortie/pdf`, `Attestation-sortie-${num}.pdf`);
+/** Liste ou état de l'écran mis en page par le serveur sur le gabarit officiel (POST /etats/pdf). */
+export const telechargerEtatPdf = (etat) => telechargerPdf("/etats/pdf", `${etat.fichier}.pdf`, etat);
 export const telechargerConvocationReunionPdf = (id) => telechargerPdf(`/reunions/${id}/convocation/pdf`, `Convocation-reunion.pdf`);
 export const telechargerFeuillePdf = (id) => telechargerPdf(`/reunions/${id}/feuille-presence/pdf`, `Feuille-presence.pdf`);
 export const telechargerConvocationAgPdf = (id) => telechargerPdf(`/assemblees/${id}/convocation/pdf`, `Convocation-AG.pdf`);

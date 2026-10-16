@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { MagnifyingGlassIcon, CheckCircleIcon, EnvelopeIcon, ArrowDownTrayIcon, PrinterIcon, RectangleStackIcon, TrashIcon } from "@heroicons/react/24/outline";
-import { Badge, Modal, useToast, useConfirm, PaiementModal, PaiementEnLigneModal, EtatImprimable, PageHeader, EmptyState, DataTable } from "../components";
+import { Badge, Modal, useToast, useConfirm, PaiementModal, PaiementEnLigneModal, PageHeader, EmptyState, DataTable } from "../components";
 import { useAuth } from "../auth/AuthContext";
 import { EXERCICES, EXERCICE_COURANT } from "../data/dashboard-data";
 import { STATUT_META, QUALITE_LABEL } from "../data/derivations";
 import { formatFCFA, formatDate } from "../utils/format";
 import { telechargerCsv } from "../utils/exportCsv";
-import { exporterExcel, exporterPdf } from "../utils/exports";
+import { exporterExcel } from "../utils/exports";
 import { PERIODES, moisDePeriode, libellePeriode } from "../utils/periode";
-import { getCotisations, getMembre, validerCotisation, lancerRelances, genererCotisations, supprimerCotisation } from "../api/resources";
+import { getCotisations, getMembre, validerCotisation, lancerRelances, genererCotisations, supprimerCotisation, telechargerEtatPdf } from "../api/resources";
 
 const FILTRES = [
   { value: "tous", label: "Tous les statuts" },
@@ -160,7 +160,7 @@ export function Cotisations() {
     if (filtrees.length === 0) { toast.error("Aucune ligne à exporter pour cette sélection."); return; }
     const nom = `etat-cotisations-${exercice}-${periode}`;
     if (fmt === "xlsx") exporterExcel(nom, [ENTETE_ETAT, ...lignesEtat], `Cotisations ${exercice}`);
-    else exporterPdf(nom, "#etat-cotisations");
+    else telechargerEtatPdf({ titre: "État des cotisations ordinales", sousTitre: sousTitreEtat, entete: ENTETE_ETAT, lignes: lignesEtat, signataire: "tresoriere", fichier: nom }).catch((e) => toast.error(e.message));
   };
 
   /** Colonnes de la DataTable — champs réels : l.membre.num, l.membre.nom, l.statut, l.montantDu, l.montantPaye, l.solde, l.datePaiement */
@@ -372,7 +372,6 @@ export function Cotisations() {
         />
       </div>
 
-      <EtatImprimable id="etat-cotisations" titre="État des cotisations ordinales" sousTitre={sousTitreEtat} entete={ENTETE_ETAT} lignes={lignesEtat} />
 
       <HistoriqueModal membreId={historique} onClose={() => setHistorique(null)} />
       <PaiementModal ligne={paiement} exercice={exercice} open={!!paiement} onClose={() => setPaiement(null)} onDone={charger} />

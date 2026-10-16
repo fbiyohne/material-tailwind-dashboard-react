@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MagnifyingGlassIcon, ArrowDownTrayIcon, PrinterIcon, BookOpenIcon } from "@heroicons/react/24/outline";
-import { StatutBadge, PageHeader, DataTable } from "../components";
+import { StatutBadge, PageHeader, DataTable, useToast } from "../components";
 import { exporterExcel } from "../utils/exports";
-import { listerMembres } from "../api/resources";
+import { listerMembres, telechargerEtatPdf } from "../api/resources";
 import { identite } from "../data/config";
 
 export function Annuaire() {
@@ -11,6 +11,7 @@ export function Annuaire() {
   const [erreur, setErreur] = useState(false);
   const [mode, setMode] = useState("public"); // public | interne
   const [recherche, setRecherche] = useState("");
+  const toast = useToast();
 
   const charger = useCallback(() => {
     setChargement(true);
@@ -29,13 +30,17 @@ export function Annuaire() {
     return membres.filter((m) => (!q ? true : m.nom.toLowerCase().includes(q) || (m.cabinet ?? "").toLowerCase().includes(q)));
   }, [membres, recherche]);
 
-  const exporterXlsx = () => {
-    const entete = interne ? ["Nom", "Cabinet", "Téléphone", "Email", "Statut"] : ["Nom", "Cabinet", "Statut"];
-    const rows = lignes.map((m) =>
-      interne ? [`Me ${m.nom}`, m.cabinet, m.tel, m.email, m.statut] : [`Me ${m.nom}`, m.cabinet, m.statut]
-    );
-    exporterExcel(`annuaire-${mode}`, [entete, ...rows], `Annuaire ${mode}`);
-  };
+  const entete = interne ? ["Nom", "Cabinet", "Téléphone", "Email", "Statut"] : ["Nom", "Cabinet", "Statut"];
+  const rows = () => lignes.map((m) =>
+    interne ? [`Me ${m.nom}`, m.cabinet, m.tel, m.email, m.statut] : [`Me ${m.nom}`, m.cabinet, m.statut]
+  );
+  const exporterXlsx = () => exporterExcel(`annuaire-${mode}`, [entete, ...rows()], `Annuaire ${mode}`);
+  // Document officiel : annuaire intégral (filtre de recherche compris) sur le gabarit du Barreau.
+  const imprimer = () => telechargerEtatPdf({
+    titre: `Annuaire ${interne ? "interne" : "public"} du Barreau`,
+    sousTitre: recherche.trim() ? `Recherche « ${recherche.trim()} »` : "Avocats inscrits",
+    entete, lignes: rows().map((l) => l.map((v) => v ?? "")), fichier: `Annuaire-${mode}`,
+  }).catch((e) => toast.error(e.message));
 
   return (
     <div className="space-y-5">
@@ -48,8 +53,8 @@ export function Annuaire() {
             </button>
           ))}
         </div>
-        <button className="bpn-btn bpn-btn-ghost !py-1.5 text-xs" onClick={() => window.print()}>
-          <PrinterIcon className="h-4 w-4" /> Imprimer
+        <button className="bpn-btn bpn-btn-ghost !py-1.5 text-xs" onClick={imprimer} disabled={lignes.length === 0}>
+          <PrinterIcon className="h-4 w-4" /> Imprimer (PDF)
         </button>
         <button className="bpn-btn bpn-btn-ghost !py-1.5 text-xs" onClick={exporterXlsx}>
           <ArrowDownTrayIcon className="h-4 w-4" /> Excel

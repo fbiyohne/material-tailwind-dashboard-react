@@ -103,6 +103,14 @@ export async function api(path, opts = {}) {
   return data;
 }
 
+/** URL locale (blob) d''un PDF serveur authentifié, pour l''afficher dans la page ; à révoquer par l''appelant. */
+export async function urlPdfAuth(path) {
+  const res = await avecRafraichissement(() => envoyer(path));
+  if (res.status === 401) { clearSession(); onUnauthorized?.(); }
+  if (!res.ok) throw new Error("Aperçu du PDF indisponible");
+  return URL.createObjectURL(await res.blob());
+}
+
 /** POST authentifié dont la réponse est du texte (HTML d'aperçu d'un document serveur). */
 export async function apiTexte(path, body) {
   const res = await avecRafraichissement(() => envoyer(path, { method: "POST", body }));
@@ -118,18 +126,18 @@ const estIOS = () =>
   (/iP(ad|hone|od)/.test(navigator.userAgent) ||
     (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
 
-/** Télécharge un PDF serveur authentifié (rafraîchissement automatique sur 401). */
-export async function telechargerPdf(path, filename) {
+/** Télécharge un PDF serveur authentifié (rafraîchissement automatique sur 401) ; `corps` : requête POST JSON. */
+export async function telechargerPdf(path, filename, corps) {
   // Sur iOS/Safari l'attribut `download` ne déclenche aucun enregistrement : on
   // ouvre alors le PDF dans un onglet. Cet onglet doit être ouvert AVANT le
   // `await` (dans le geste de clic) pour échapper au bloqueur de pop-ups.
   const ios = estIOS();
   const onglet = ios ? window.open("", "_blank") : null;
   const charger = () => {
-    const headers = {};
+    const headers = corps ? { "Content-Type": "application/json" } : {};
     const token = getToken();
     if (token) headers.Authorization = `Bearer ${token}`;
-    return fetch(`${BASE}${path}`, { headers });
+    return fetch(`${BASE}${path}`, corps ? { method: "POST", headers, body: JSON.stringify(corps) } : { headers });
   };
   const res = await avecRafraichissement(charger).catch((e) => { onglet?.close(); throw e; });
   if (!res.ok) {

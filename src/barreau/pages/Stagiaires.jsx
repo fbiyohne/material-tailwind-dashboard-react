@@ -7,7 +7,7 @@ import { formatDate } from "../utils/format";
 import { infoStage } from "../data/derivations";
 import { identite } from "../data/config";
 import { telechargerCsv } from "../utils/exportCsv";
-import { listerMembres, supprimerMembre } from "../api/resources";
+import { listerMembres, supprimerMembre, telechargerEtatPdf } from "../api/resources";
 
 const FILTRES = [
   { value: "tous", label: "Tous" },
@@ -173,7 +173,11 @@ export function Stagiaires() {
         ))}
         <button
           type="button"
-          onClick={() => window.print()}
+          disabled={stagiaires.length === 0}
+          onClick={() => telechargerEtatPdf({
+            titre: "Liste de stage", sousTitre: FILTRES.find((f) => f.value === filtre)?.label,
+            entete: COLONNES_CSV.map((c) => c.label), lignes: stagiaires.map((s) => COLONNES_CSV.map((c) => c.valeur(s) ?? "")), fichier: "Liste-de-stage",
+          }).catch((e) => toast.error(e.message))}
           className="bpn-btn bpn-btn-ghost !py-1.5 text-xs"
         >
           <PrinterIcon className="h-4 w-4" />

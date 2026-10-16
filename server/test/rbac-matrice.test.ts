@@ -144,9 +144,12 @@ const MATRICE: Ligne[] = [
   l("DELETE", "/api/cotisations/:membreId/:annee", ADMIN_SEUL, "S"),
   l("POST", "/api/cotisations/:membreId/valider", [TRES, ADM], "V"),
   l("GET", "/api/recus/:id/pdf", M_FIN, "L"),
+  l("POST", "/api/recus/apercu", M_FIN, "L"), // HTML d'aperçu, aucune écriture
+  l("POST", "/api/etats/pdf", [...M_MEMBRES, TRES], "L"), // mise en page des lignes affichées ; jamais un avocat
   l("GET", "/api/recus", M_FIN, "L"),
   l("DELETE", "/api/recus/:id", M_FIN, "S"), // annulation motivée (statut ANNULE), pas une suppression physique
   l("GET", "/api/quitus/:id/pdf", M_FIN, "L"),
+  l("POST", "/api/quitus/apercu", M_FIN, "L"),
   l("GET", "/api/quitus/eligibles", M_FIN, "L"),
   l("GET", "/api/quitus/:id/signature", M_FIN, "L"),
   l("GET", "/api/quitus", M_FIN, "L"),

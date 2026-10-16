@@ -1,6 +1,6 @@
 /*
  * Direction « Officielle » (appliquée par défaut depuis le 2026-10-16 : DIRECTION_PDF de gabarit.ts).
- * Reprend le papier à en-tête réel du Barreau (modèles Word officiels du Conseil de l'Ordre) :
+ * Reprend le papier à en-tête réel du Barreau (modèles Word officiels de convocation et de procès-verbal) :
  * logo rond centré entre deux filets bleus, pied de page à coordonnées et bandes jaune et bleue
  * (dessiné par pdf.ts dans la marge basse de chaque page). Texte d'acte en romain à empattements,
  * titres et repères en Montserrat, la police du papier à en-tête. Aperçus : docs/design/pdf/officielle/.
@@ -79,6 +79,7 @@ body { font-variant-numeric: lining-nums tabular-nums; }
 table { font-family: var(--f-titre); font-size: 8.6pt; }
 th { color: var(--marine); font-size: 7.4pt; border-bottom: .8pt solid var(--bleu); }
 td { border-bottom: .4pt solid var(--gris-m); }
+tfoot { display: table-row-group; } /* totaux une seule fois, en fin de tableau (Chrome répète sinon tfoot à chaque page) */
 tfoot td { border-top: .8pt solid var(--bleu); border-bottom: 0; }
 h2.section { font-family: var(--f-titre); font-weight: 700; font-size: 11pt; letter-spacing: .06em; text-transform: uppercase; }
 .meta dt { font-family: var(--f-titre); text-transform: none; letter-spacing: .02em; font-weight: 400; }

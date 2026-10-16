@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { PrinterIcon, ArrowDownTrayIcon, CheckBadgeIcon, NoSymbolIcon } from "@heroicons/react/24/outline";
-import { StatCard, Badge, PageHeader, Tabs, SelecteurExercice, DataTable, MentionJuridique } from "../components";
+import { StatCard, Badge, useToast, PageHeader, Tabs, SelecteurExercice, DataTable, MentionJuridique } from "../components";
 import { exporterExcel } from "../utils/exports";
 import { formatDate } from "../utils/format";
 import { telechargerCsv } from "../utils/exportCsv";
 import { EXERCICE_COURANT } from "../data/dashboard-data";
 import { identite } from "../data/config";
-import { getCorpsElectoral } from "../api/resources";
+import { getCorpsElectoral, telechargerEtatPdf } from "../api/resources";
 
 const MOTIF_LABEL = {
   cotisation: { label: "Cotisations non à jour", ton: "rouge" },
@@ -46,6 +46,7 @@ export function CorpsElectoral() {
   const [data, setData] = useState({ electeurs: [], exclusCotisation: [], exclusStatut: [], exclusAutre: [] });
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState(false);
+  const toast = useToast();
 
   const charger = useCallback(() => {
     setChargement(true);
@@ -64,6 +65,15 @@ export function CorpsElectoral() {
     ...exclusStatut.map((m) => ({ ...m, _key: `s-${m.id}`, motif: "statut" })),
     ...exclusAutre.map((m) => ({ ...m, _key: `a-${m.id}`, motif: "autre" })),
   ];
+
+  // Document officiel : liste intégrale mise en page par le serveur (gabarit du Barreau).
+  const imprimer = () => telechargerEtatPdf({
+    titre: "Liste du corps électoral",
+    sousTitre: date ? `Situation au ${formatDate(date)}` : `Exercice ${exercice}`,
+    entete: COLONNES_CSV.map((c) => c.label),
+    lignes: electeursNum.map((m) => COLONNES_CSV.map((c) => c.valeur(m) ?? "")),
+    fichier: `Corps-electoral-${exercice}`,
+  }).catch((e) => toast.error(e.message));
 
   const exporterXlsx = () => {
     const lignes = [
@@ -106,8 +116,8 @@ export function CorpsElectoral() {
             content: (
               <>
                 <div className="bpn-no-print mb-4 flex flex-wrap justify-end gap-2 [&>button]:whitespace-nowrap">
-                  <button type="button" onClick={() => window.print()} className="bpn-btn bpn-btn-ghost">
-                    <PrinterIcon className="h-4 w-4" /> Imprimer
+                  <button type="button" onClick={imprimer} disabled={electeurs.length === 0} className="bpn-btn bpn-btn-ghost disabled:opacity-40">
+                    <PrinterIcon className="h-4 w-4" /> Imprimer (PDF)
                   </button>
                   <button type="button" disabled={electeurs.length === 0}
                     onClick={() => telechargerCsv(`corps-electoral-${exercice}`, COLONNES_CSV, electeursNum)}
