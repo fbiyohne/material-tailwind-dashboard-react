@@ -104,5 +104,7 @@ main : bouton *Manual Deploy* dans le tableau de bord du service.
 ## Assistant d'installation
 
 L'assistant d'installation (déploiement VPS) **n'est jamais actif sur Render** :
-la variable `INSTALL_WIZARD` n'y est pas définie, et le seed crée déjà le compte
-administrateur. Le déploiement Render se comporte donc comme aujourd'hui.
+la variable `INSTALL_WIZARD` n'y est pas définie. Le seed, lui, **refuse** désormais
+`NODE_ENV=production` et toute base distante (garde de `server/prisma/seed.ts`) : ses comptes
+au mot de passe commun « barreau » n'existent que sur le poste local. Le compte administrateur
+de production est nominatif, avec un mot de passe fort.

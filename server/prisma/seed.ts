@@ -1,3 +1,4 @@
+import "./seed-garde.js"; // garde-fou R2-1 : doit rester le premier import
 import bcrypt from "bcryptjs";
 import { prisma } from "../src/prisma.js";
 import { montantDu, DROIT_PLAIDOIRIE } from "../src/lib/business.js";
