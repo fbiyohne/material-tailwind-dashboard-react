@@ -31,17 +31,29 @@ Mission M-20261010-audit-ordre-avocats · Juriste-conseil Team Creatic, 2026-10-
 
 ### Destinataires par rôle (matrice attendue, docs/audits/m20261016/rbac-matrice.md §3)
 
-Le serveur reste maître ; le détail route par route est dans ce rapport.
+Le serveur reste maître ; le détail route par route est dans l'annexe (§9) de ce rapport. Les colonnes de rôles ci-dessous sont recopiées sans retouche des lignes correspondantes de la matrice condensée §3 (relecture ligne à ligne faite le 2026-10-16, contrôle mécanique : chaque ligne commence par la ligne de §3 du même module). Légende de §2 : **L** lecture, **C** création, **M** modification, **S** suppression ou annulation, **V** validation ; majuscule = sur toutes les routes du module, minuscule = sur une partie seulement, « — » = aucun accès (403).
 
-| Donnée | Destinataires (accès serveur) |
-|---|---|
-| Membres, historique (T-2) | Lecture : SG, ADMIN, SA, Bâtonnier, Consultation, Accueil (modules). Écriture : SG, ADMIN, SA. Suppression : ADMIN seul |
-| Discipline et casier (T-3, T-5) | SG, Bâtonnier, ADMIN ; SA en lecture ; décision : Bâtonnier et ADMIN. Trésorière, Accueil, Consultation : 403. Lecture journalisée |
-| Cotisations, reçus, quitus, timbres (T-4, T-9) | Trésorière, SG, ADMIN ; Bâtonnier, SA, Consultation, Accueil : 403 sur ces routes |
-| Messagerie et pièces (contenu) (T-6) | SG, Bâtonnier, Trésorière, SA (leurs propres fils) ; ADMIN refusé sur le contenu (secret professionnel, loi 026-92 art. 52) ; Consultation et Accueil : 403 |
-| Journal d'audit (T-7) | Titulaires de « audit » : SG, ADMIN, Bâtonnier, SA, Consultation |
-| Comptes et droits (T-10) | SG et ADMIN ; création d'un compte SG réservée à SG et ADMIN |
-| Espace avocat | Chaque avocat, pour ses seules données (membreId du jeton) |
+| Module | SG | BAT | TRES | ADM | SA | CONS | ACC | AV | STAG | Traitement | Précisions (annexe §9 et §5) |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| membres | LCMsv | lV | lv | LCMSV | lCmv | l | lc | — | — | T-2 | Lecture : annuaire `GET /api/membres` ouvert à tous les rôles internes ; Trésorière limitée à l'annuaire (export, fiche, événements refusés) et à la déclaration d'événement filtrée dans le gestionnaire ; Bâtonnier : fiche, pièces, événements, validations (radiation, stage, admission directe). Création : SG, ADMIN, SA ; Accueil limité au dépôt de pièces. Modification : SG, ADMIN, SA. Validation partielle du SG : admission directe. Suppression d'un membre : ADMIN seul ; SG : suppression d'un rapport de stage. Écarts restrictifs non élargis : fiche et rapports refusés à SA, CONS, ACC (E8), écritures refusées au SA (E9, E10), dépôt refusé à l'Accueil (E11) |
+| pieces | LSV | L | — | lSV | — | — | — | — | — | T-2, T-3 | Fichier d'une pièce (`GET /api/pieces/:id/fichier`) : SG et Bâtonnier seulement ; ADMIN refusé (`refuserAdmin`, secret professionnel). ADMIN : métadonnées (`GET /api/pieces`, `GET /api/membres/:id/pieces`), vérification, rejet, suppression. Trésorière, SA, Consultation, Accueil : 403 |
+| discipline | LCM | LCMV | — | LCMSV | L | — | — | — | — | T-3, T-5 | Instruction (PATCH) : titulaires de `discipline_saisir` (SG, BAT, ADMIN). Décision et réformation : BAT, ADMIN. Suppression : ADMIN. SA en lecture (F6, à valider). Trésorière, Accueil, Consultation : 403, casier compris. Toute lecture (liste, journal, dossier, PDF, casier) est journalisée |
+| cotisations | LC | — | LCV | LCSV | — | — | — | — | — | T-4 | Suppression : ADMIN |
+| recus | LS | — | LS | LS | — | — | — | — | — | T-4 | — |
+| quitus | LC | — | LC | LCS | — | — | — | — | — | T-4 | Émission refusée aujourd'hui à la Trésorière par le code (E12, à valider) |
+| paiements | LCV | — | LCV | LCV | — | — | — | — | — | T-4 | Mode test |
+| droits | LC | — | LC | LCS | — | — | — | — | — | T-9 | — |
+| timbres | LC | — | LC | LCS | — | — | — | — | — | T-9 | Prototype |
+| messagerie | LC | LC | LC | l | LC | — | — | — | — | T-6 | Contenu (liste avec aperçu, fil, pièce jointe, envoi, réponse, attestation) : SG, BAT, TRES, SA, chacun pour ses propres fils. ADMIN : métadonnées seulement (`non-lus`, accusé PDF), contenu refusé (`refuserAdmin`, loi 026-92 art. 52). Consultation, Accueil : 403 |
+| corps-electoral | L | L | — | L | L | L | — | — | — | T-8 | — |
+| scrutins | LCMSV | Lv | — | LCMSV | LCMV | — | — | — | — | T-8 | Publication des résultats refusée au Bâtonnier par le code (E13, à valider) |
+| tableau | LV | L | — | LV | LV | L | L | — | — | T-1 | Registre public |
+| audit | L | L | — | L | L | L | — | — | — | T-7 | Titulaires de la permission `audit` |
+| dashboard | L | L | l | L | L | L | l | — | — | T-7 | Extrait du journal (`GET /api/dashboard/journal`) réservé aux titulaires de `audit` : refusé à la Trésorière et à l'Accueil |
+| users | LCM | — | — | LCMS | — | — | — | — | — | T-10 | Suppression : ADMIN. Création, promotion ou reprise d'un compte SG : SG et ADMIN seulement |
+| rbac | LM | — | — | LM | — | — | — | — | — | T-10 | Toute modification est journalisée |
+| demandes-acces | LV | — | — | LV | — | — | — | — | — | T-10 | — |
+| espace | — | — | — | — | — | — | — | LCMSV | LCMSV | T-2, T-4, T-5, T-6 | Chaque avocat ou stagiaire, pour ses seules données (`membreId` du jeton) ; objet d'un autre membre : 403 ou 404 |
 
 La santé n'est jamais enregistrée : l'omission pour maladie (art. 35-1°) se limite au code d'article (loi 29-2019, art. 17).
 
