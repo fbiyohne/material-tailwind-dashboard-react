@@ -4,7 +4,7 @@ import { z } from "zod";
 import { StatutMembre, type Prisma } from "@prisma/client";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
-import { requireAuth, requireRole, requirePermission, refuserAdmin, REFUS, type AuthRequest } from "../middleware/auth.js";
+import { requireAuth, requireRole, requirePermission, REFUS, type AuthRequest } from "../middleware/auth.js";
 import { prochainNumInscription, prochainNumeroAttestation, archiver, avecRejeuUnicite, STATUTS_HORS_TABLEAU, STATUTS_SORTIS, peutAttesterInscription, tarifsActuels, cotisationDue, statutCotisation } from "../lib/business.js";
 import { aLaPermission } from "../lib/rbac.js";
 import { enregistrerFichier } from "../lib/storage.js";
@@ -1063,13 +1063,11 @@ membresRouter.delete(
  * AVOCAT rattaché à la fiche, inactif, avec un lien d'activation à durée limitée :
  * l'avocat choisit lui-même son mot de passe (le secrétariat ne le connaît
  * jamais). Si un accès non encore activé existe, le lien est régénéré (renvoi).
- * R1-1 : le lien revient à l'opérateur ; l'ADMIN (sous-traitant technique) en est exclu, sinon il
- * choisirait le mot de passe d'un avocat et lirait sa messagerie (secret professionnel, R-58).
+ * Ouvert à l'ADMIN (décision du 16/10/2026). Un accès déjà activé n'est jamais relancé (409, acces.ts).
  */
 membresRouter.post(
   "/:id/acces",
   requireRole("SECRETAIRE_GENERAL"),
-  refuserAdmin,
   asyncH(async (req, res) => {
     const acces = await provisionnerAccesEspace(Number(req.params.id));
     res.status(201).json({ ok: true, ...acces });

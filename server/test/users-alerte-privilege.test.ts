@@ -3,13 +3,11 @@ import request from "supertest";
 import bcrypt from "bcryptjs";
 
 /**
- * Secret professionnel (R-58, loi 026-92 art. 52) — R1-1 (M-20261016) : l'ADMIN, sous-traitant
- * technique, ne peut pas contourner refuserAdmin en prenant la main sur un compte qui accède au
- * contenu des messages ou des pièces (SG, Bâtonnier, AVOCAT, tout rôle titulaire de « messagerie » :
- * SA et Trésorière par défaut). Il reçoit 403 (REFUS) en création, promotion, modification hors
- * activation, redéfinition du mot de passe et suppression, et la base n'est pas modifiée ; il ne peut
- * pas non plus ouvrir la messagerie à un rôle par PUT /rbac. Il garde la désactivation (alertée au
- * titulaire et au SG) et la gestion des autres comptes. Le SG garde l'accès.
+ * L'ADMIN a droit à tout (décision de Fabrice du 16/10/2026, M-20261016-admin-droit-a-tout) : il crée,
+ * promeut, modifie, réinitialise et supprime tout compte, y compris ceux qui accèdent au contenu
+ * (SG, Bâtonnier, SA, Trésorière, AVOCAT), ouvre la messagerie à un rôle et provisionne l'accès à
+ * l'espace avocat. Défense en profondeur conservée : chaque action de l'ADMIN sur un compte habilité
+ * est alertée au titulaire et au SG, et le 409 « accès déjà activé » vaut pour tout opérateur.
  * Base barreau_pn_test ; comptes marqués « e2e-habilite-<suffixe> », supprimés en afterAll.
  */
 
@@ -22,8 +20,6 @@ vi.mock("../src/lib/rbac.js", async (orig) => {
 
 import { creerApp } from "../src/app.js";
 import { prisma } from "../src/prisma.js";
-import { REFUS } from "../src/middleware/auth.js";
-import { refusAdminHabilite } from "../src/routes/users.js";
 
 const app = creerApp({ anonyme: 100_000, authentifie: 100_000 });
 const bearer = (t: string) => ["Authorization", `Bearer ${t}`] as const;
@@ -51,7 +47,7 @@ beforeAll(async () => {
 }, 60_000);
 
 afterAll(async () => {
-  // Filet : si un refus PUT /rbac avait échoué, la matrice CONSULTATION est restaurée.
+  // Filet : si la restauration PUT /rbac avait échoué, la matrice CONSULTATION est restaurée.
   await prisma.rolePermission.deleteMany({ where: { role: "CONSULTATION" } });
   await prisma.rolePermission.createMany({ data: rpConsultation });
   const us = await prisma.user.findMany({ where: { email: { contains: `-${SUF}@test.cg` } }, select: { id: true } });
@@ -59,61 +55,77 @@ afterAll(async () => {
   await prisma.user.deleteMany({ where: { id: { in: us.map((u) => u.id) } } });
 });
 
-describe("R1-1 — l'ADMIN ne prend pas la main sur un compte qui accède au contenu (403, base inchangée)", () => {
-  it.each(["SECRETAIRE_GENERAL", "BATONNIER", "SECRETAIRE_ADJOINT", "TRESORIERE"])("création d'un compte %s : 403 REFUS, aucun compte créé", async (role) => {
+const derniere = async (userId: number) =>
+  (await prisma.notification.findFirst({ where: { userId, type: "securite", message: { contains: SUF } }, orderBy: { id: "desc" } }))?.message ?? "";
+const HABILITES = ["SECRETAIRE_GENERAL", "BATONNIER", "SECRETAIRE_ADJOINT", "TRESORIERE"] as const;
+const compte = async (k: string, role: string) =>
+  (await prisma.user.create({ data: { nom: `${k} ${SUF}`, email: email(k), role: role as never, passwordHash: bcrypt.hashSync("barreau", 4) } })).id;
+
+describe("L'ADMIN a droit à tout sur les comptes habilités (200/201), avec alerte au titulaire et au SG", () => {
+  it.each(HABILITES)("création d'un compte %s : 201, compte créé, alerte « Création du compte »", async (role) => {
     const e = email(`cree-${role.toLowerCase()}`);
-    const r = await request(app).post("/api/users").set(...bearer(adm)).send({ nom: `X ${SUF}`, email: e, role, password: "motdepasse88" });
-    expect(r.status).toBe(403);
-    expect(r.body.erreur).toBe(REFUS);
-    expect(await prisma.user.count({ where: { email: e } })).toBe(0);
+    const r = await request(app).post("/api/users").set(...bearer(adm)).send({ nom: `X ${role} ${SUF}`, email: e, role, password: "motdepasse88" });
+    expect(r.status).toBe(201);
+    expect(r.body.role).toBe(role);
+    expect(await derniere(r.body.id)).toContain("Création du compte");
   });
 
-  it.each(["SECRETAIRE_GENERAL", "BATONNIER", "SECRETAIRE_ADJOINT", "TRESORIERE"])("promotion d'un compte Consultation en %s : 403, rôle inchangé", async (role) => {
-    expect((await request(app).patch(`/api/users/${id.cons}`).set(...bearer(adm)).send({ role })).status).toBe(403);
-    expect((await etat(id.cons)).role).toBe("CONSULTATION");
+  it.each(HABILITES)("promotion d'un compte Consultation en %s : 200, rôle changé, alerte", async (role) => {
+    const i = await compte(`promu-${role.toLowerCase()}`, "CONSULTATION");
+    const r = await request(app).patch(`/api/users/${i}`).set(...bearer(adm)).send({ role });
+    expect(r.status).toBe(200);
+    expect((await etat(i)).role).toBe(role);
+    expect(await derniere(i)).toContain("Modification du compte");
   });
 
-  it("redéfinition du mot de passe d'un SG, Bâtonnier, SA, Trésorière, Avocat : 403, empreinte et session inchangées", async () => {
-    for (const i of [sgId, id.bat, id.sa, id.tres, id.avocat]) {
-      const avant = await etat(i);
-      const r = await request(app).post(`/api/users/${i}/password`).set(...bearer(adm)).send({ password: "piratage888" });
-      expect(r.status).toBe(403);
-      expect(await etat(i)).toEqual(avant);
-    }
+  it.each(HABILITES)("modification du nom et de l'email d'un compte %s : 200, alerte « Modification du compte » au titulaire et au SG", async (role) => {
+    const i = await compte(`modif-${role.toLowerCase()}`, role);
+    const avSg = await nbAlertes(sgId);
+    const r = await request(app).patch(`/api/users/${i}`).set(...bearer(adm)).send({ nom: `Renommé ${SUF}`, email: email(`modif2-${role.toLowerCase()}`) });
+    expect(r.status).toBe(200);
+    expect((await etat(i)).nom).toBe(`Renommé ${SUF}`);
+    expect(await derniere(i)).toContain("Modification du compte");
+    expect(await nbAlertes(sgId)).toBe(avSg + 1);
   });
 
-  it("modification de l'email ou du nom, ou rétrogradation d'un compte habilité : 403, compte inchangé", async () => {
-    for (const i of [id.bat, id.avocat]) {
-      const avant = await etat(i);
-      // Changer l'email ouvrirait la voie « mot de passe oublié » vers une boîte de l'ADMIN.
-      for (const body of [{ email: email("detourne") }, { nom: "Renommé" }, { role: "CONSULTATION" }, { actif: true, nom: "Renommé" }]) {
-        expect((await request(app).patch(`/api/users/${i}`).set(...bearer(adm)).send(body)).status).toBe(403);
-      }
-      expect(await etat(i)).toEqual(avant);
-    }
+  it("rétrogradation d'un Bâtonnier en Consultation : 200, alerte (l'ancien rôle était habilité)", async () => {
+    const i = await compte("retro-bat", "BATONNIER");
+    expect((await request(app).patch(`/api/users/${i}`).set(...bearer(adm)).send({ role: "CONSULTATION" })).status).toBe(200);
+    expect(await derniere(i)).toContain("Modification du compte");
   });
 
-  it("suppression d'un compte habilité : 403, compte conservé", async () => {
-    expect((await request(app).delete(`/api/users/${id.sa}`).set(...bearer(adm))).status).toBe(403);
-    expect(await prisma.user.count({ where: { id: id.sa } })).toBe(1);
+  it.each([...HABILITES, "AVOCAT"])("réinitialisation du mot de passe d'un compte %s : 200, empreinte changée, alerte", async (role) => {
+    const i = await compte(`mdp-${role.toLowerCase()}`, role);
+    const avant = (await etat(i)).passwordHash;
+    expect((await request(app).post(`/api/users/${i}/password`).set(...bearer(adm)).send({ password: "nouveaumdp88" })).status).toBe(200);
+    expect((await etat(i)).passwordHash).not.toBe(avant);
+    expect(await derniere(i)).toContain("Réinitialisation du mot de passe");
   });
 
-  it("PUT /rbac : l'ADMIN n'ouvre pas la messagerie à Consultation (403, matrice inchangée) ; il peut toujours retirer un module", async () => {
+  it("suppression d'un compte habilité : 200, compte supprimé", async () => {
+    const i = await compte("suppr-sa", "SECRETAIRE_ADJOINT");
+    expect((await request(app).delete(`/api/users/${i}`).set(...bearer(adm))).status).toBe(200);
+    expect(await prisma.user.count({ where: { id: i } })).toBe(0);
+  });
+
+  it("PUT /rbac : l'ADMIN ouvre la messagerie à Consultation (200, matrice relue avec messagerie) puis la retire", async () => {
     const avant = (await request(app).get("/api/rbac").set(...bearer(adm))).body.matrice.CONSULTATION as string[];
     expect(avant).not.toContain("messagerie");
     const r = await request(app).put("/api/rbac").set(...bearer(adm)).send({ role: "CONSULTATION", permissions: [...avant, "messagerie"] });
-    expect(r.status).toBe(403);
-    expect((await request(app).get("/api/rbac").set(...bearer(adm))).body.matrice.CONSULTATION).toEqual(avant);
+    expect(r.status).toBe(200);
+    expect((await request(app).get("/api/rbac").set(...bearer(adm))).body.matrice.CONSULTATION).toContain("messagerie");
     expect((await request(app).put("/api/rbac").set(...bearer(adm)).send({ role: "CONSULTATION", permissions: avant })).status).toBe(200);
+    expect((await request(app).get("/api/rbac").set(...bearer(adm))).body.matrice.CONSULTATION).toEqual(avant);
   });
 });
 
 /**
- * Vecteur relevé par la QA : désactiver un AVOCAT actif (permis), puis lui « renvoyer » un lien
- * d'activation (POST /membres/:id/acces ou approbation d'une demande à son email) qui revient à
- * l'opérateur, et choisir soi-même son mot de passe par /auth/activer.
+ * Lien d'activation : l'ADMIN provisionne l'accès espace comme le SG (201, lien) et approuve une
+ * demande d'accès. Le 409 « déjà activé » s'applique à tout opérateur, ADMIN compris : désactiver un
+ * AVOCAT actif puis lui « renvoyer » un lien d'activation qui revient à l'opérateur permettrait de
+ * choisir son mot de passe par /auth/activer (vecteur relevé par la QA).
  */
-describe("R1-1 — l'ADMIN ne reprend pas un compte avocat par le lien d'activation", () => {
+describe("Lien d'activation : l'ADMIN ouvre l'accès espace ; le 409 « déjà activé » vaut pour tous", () => {
   const membresCrees: number[] = [];
   let membreId = 0, userId = 0, hashAvant = "";
   const mailAv = email("avocat-actif");
@@ -133,11 +145,33 @@ describe("R1-1 — l'ADMIN ne reprend pas un compte avocat par le lien d'activat
     for (const mid of membresCrees) await request(app).delete(`/api/membres/${mid}`).set(...bearer(adm));
   });
 
-  it("désactivation (200) puis POST /membres/:id/acces : 403 REFUS, aucun lien, empreinte inchangée, connexion impossible", async () => {
+  it("CA4/CA7 : l'ADMIN provisionne un nouvel avocat (201, lien) et renvoie le lien tant qu'il n'est pas activé (201, renvoi)", async () => {
+    const m = await request(app).post("/api/membres").set(...bearer(adm)).send({ nom: `E2E habilite admin ${SUF}`, qualite: "AVOCAT", email: email("avocat-admin") });
+    membresCrees.push(m.body.id);
+    const p1 = await request(app).post(`/api/membres/${m.body.id}/acces`).set(...bearer(adm));
+    expect(p1.status).toBe(201);
+    expect(p1.body.lien).toContain("/activer/");
+    const p2 = await request(app).post(`/api/membres/${m.body.id}/acces`).set(...bearer(adm));
+    expect(p2.status).toBe(201);
+    expect(p2.body.renvoi).toBe(true);
+    expect(p2.body.lien).toContain("/activer/");
+  });
+
+  it("CA5 : l'ADMIN approuve une demande d'accès à l'espace (201, lien, demande approuvée)", async () => {
+    const mail = email("demande-admin");
+    await request(app).post("/api/auth/demande-acces").send({ nom: `Demande admin ${SUF}`, email: mail, numInscription: "PN-0000", motif: "Accès à mon espace personnel d'avocat." });
+    const d = await prisma.demandeAcces.findFirstOrThrow({ where: { email: mail }, orderBy: { id: "desc" } });
+    const r = await request(app).post(`/api/demandes-acces/${d.id}/approuver-espace`).set(...bearer(adm));
+    expect(r.status).toBe(201);
+    membresCrees.push(r.body.membreId);
+    expect(r.body.lien).toContain("/activer/");
+    expect((await prisma.demandeAcces.findUniqueOrThrow({ where: { id: d.id } })).statut).toBe("APPROUVEE");
+  });
+
+  it("CA7 : désactivation (200) puis POST /membres/:id/acces par l'ADMIN : 409, aucun lien, empreinte inchangée, connexion impossible", async () => {
     expect((await request(app).patch(`/api/users/${userId}`).set(...bearer(adm)).send({ actif: false })).status).toBe(200);
     const r = await request(app).post(`/api/membres/${membreId}/acces`).set(...bearer(adm));
-    expect(r.status).toBe(403);
-    expect(r.body.erreur).toBe(REFUS);
+    expect(r.status).toBe(409);
     expect(r.body.lien).toBeUndefined();
     const u = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
     expect(u.passwordHash).toBe(hashAvant);
@@ -145,11 +179,11 @@ describe("R1-1 — l'ADMIN ne reprend pas un compte avocat par le lien d'activat
     expect((await request(app).post("/api/auth/login").send({ email: mailAv, password: "choisiparadmin8" })).status).toBe(401);
   });
 
-  it("approbation par l'ADMIN d'une demande d'accès à l'email de l'avocat : 403, demande en attente, aucun lien", async () => {
+  it("approbation par l'ADMIN d'une demande d'accès à l'email d'un avocat déjà activé : 409, demande relibérée, aucun lien", async () => {
     await request(app).post("/api/auth/demande-acces").send({ nom: `Usurpation ${SUF}`, email: mailAv, numInscription: "PN-0000", motif: "Accès à mon espace personnel d'avocat." });
     const d = await prisma.demandeAcces.findFirstOrThrow({ where: { email: mailAv }, orderBy: { id: "desc" } });
     const r = await request(app).post(`/api/demandes-acces/${d.id}/approuver-espace`).set(...bearer(adm));
-    expect(r.status).toBe(403);
+    expect(r.status).toBe(409);
     expect(r.body.lien).toBeUndefined();
     expect((await prisma.demandeAcces.findUniqueOrThrow({ where: { id: d.id } })).statut).toBe("EN_ATTENTE");
     expect((await prisma.user.findUniqueOrThrow({ where: { id: userId } })).activationToken).toBeNull();
@@ -174,7 +208,7 @@ describe("R1-1 — l'ADMIN ne reprend pas un compte avocat par le lien d'activat
   });
 });
 
-describe("R1-1 — ce qui reste permis", () => {
+describe("Ce qui reste inchangé : alerte de (dés)activation, comptes non habilités, SG, succession", () => {
   it("l'ADMIN désactive puis réactive un compte habilité : 200, alerte au titulaire et au SG", async () => {
     const av = await nbAlertes(sgId);
     expect((await request(app).patch(`/api/users/${id.sa}`).set(...bearer(adm)).send({ actif: false })).status).toBe(200);
@@ -210,15 +244,3 @@ describe("R1-1 — ce qui reste permis", () => {
   });
 });
 
-describe("R1-1 — amorçage (règle pure)", () => {
-  it("l'ADMIN ne crée que le tout premier compte SG ou Bâtonnier (aucun compte de ce rôle, même désactivé)", () => {
-    expect(refusAdminHabilite("ADMIN", "SECRETAIRE_GENERAL", 0)).toBe(false);
-    expect(refusAdminHabilite("ADMIN", "BATONNIER", 0)).toBe(false);
-    expect(refusAdminHabilite("ADMIN", "SECRETAIRE_GENERAL", 1)).toBe(true);
-    expect(refusAdminHabilite("ADMIN", "SECRETAIRE_ADJOINT", 0)).toBe(true); // le SG crée les SA
-    expect(refusAdminHabilite("ADMIN", "AVOCAT", 0)).toBe(true);
-    expect(refusAdminHabilite("ADMIN", "CONSULTATION", 3)).toBe(false);
-    expect(refusAdminHabilite("ADMIN", "ADMIN", 2)).toBe(false);
-    expect(refusAdminHabilite("SECRETAIRE_GENERAL", "SECRETAIRE_GENERAL", 1)).toBe(false);
-  });
-});

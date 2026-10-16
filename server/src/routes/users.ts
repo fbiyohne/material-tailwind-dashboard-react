@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import type { Role } from "@prisma/client";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
-import { requireAuth, requireRole, type AuthRequest, requirePermission, REFUS } from "../middleware/auth.js";
+import { requireAuth, requireRole, type AuthRequest, requirePermission } from "../middleware/auth.js";
 import { notifier, usersParRole } from "../lib/centreNotifications.js";
 import { aLaPermission } from "../lib/rbac.js";
 
@@ -29,8 +29,7 @@ function interdireEscaladeAdmin(acteur: Role, roleCible?: Role | null) {
     throw new HttpError(403, "Seul un administrateur peut gérer les comptes administrateur");
   }
   // Le rôle BATONNIER détient les actions de décision (R-42) : le SG ne peut pas s'en octroyer l'usage.
-  // Succession (R1-1) : l'ADMIN n'y touchant plus qu'à l'amorçage, un Bâtonnier doté de
-  // « utilisateurs » crée le compte de son successeur.
+  // Succession : un Bâtonnier doté de « utilisateurs » crée le compte de son successeur.
   if (roleCible === "BATONNIER" && acteur !== "ADMIN" && acteur !== "BATONNIER") {
     throw new HttpError(403, "Seuls l'administrateur et le Bâtonnier peuvent gérer un compte bâtonnier");
   }
@@ -42,31 +41,15 @@ function interdireEscaladeAdmin(acteur: Role, roleCible?: Role | null) {
 }
 
 /**
- * Secret professionnel (R-58, loi 026-92 art. 52) — R1-1 : refuserAdmin interdit à l'ADMIN le contenu
- * des messages et des pièces ; il ne doit donc pas non plus pouvoir prendre la main sur un compte qui
- * y accède (création, promotion, nom, email — « mot de passe oublié » —, rôle, mot de passe,
- * suppression). Comptes visés : SG et Bâtonnier (fichiers des pièces), AVOCAT (sa messagerie et ses
- * pièces dans l'espace) et tout rôle titulaire de « messagerie » dans la matrice (SA et Trésorière
- * par défaut ; l'ADMIN ne peut pas l'accorder, cf. PUT /rbac). Il garde la désactivation et la
- * réactivation, alertées au titulaire et au SG, et la gestion des autres comptes.
- * Amorçage : l'installation ne crée que l'ADMIN ; il crée donc le tout premier SG et le premier
- * Bâtonnier, tant qu'aucun compte de ce rôle n'existe (même désactivé — d'où l'interdiction de
- * suppression et de rétrogradation, qui rouvriraient cette porte). Ensuite le SG gère les comptes
- * et le Bâtonnier crée celui de son successeur.
+ * Comptes habilités : ceux qui accèdent au contenu des messages ou des pièces (SG, Bâtonnier, AVOCAT,
+ * tout rôle titulaire de « messagerie »). Accès ADMIN autorisé (décision du 16/10/2026), tracé dans
+ * JournalAudit ; ce que l'ADMIN fait sur un tel compte est en outre signalé au titulaire et au SG.
  */
-const AMORCABLES: Role[] = ["SECRETAIRE_GENERAL", "BATONNIER"];
-const accedeAuContenu = (role: Role) =>
-  role !== "ADMIN" && (AMORCABLES.includes(role) || role === "AVOCAT" || aLaPermission(role, "messagerie"));
-export function refusAdminHabilite(acteur: Role, roleCible: Role | null | undefined, nbDeCeRole: number): boolean {
-  if (acteur !== "ADMIN" || !roleCible || !accedeAuContenu(roleCible)) return false;
-  return !(AMORCABLES.includes(roleCible) && nbDeCeRole === 0);
-}
-function garderHabilite(acteur: Role, roleCible?: Role | null, nbDeCeRole = 1) {
-  if (refusAdminHabilite(acteur, roleCible, nbDeCeRole)) throw new HttpError(403, REFUS);
-}
-/** Défense en profondeur : ce que l'ADMIN fait encore sur un tel compte est signalé au titulaire et au SG. */
-async function alerterPrivilege(acteur: { id: number; role: Role; nom?: string }, cible: { id: number; nom: string; role: Role }, action: string) {
-  if (acteur.role !== "ADMIN" || !accedeAuContenu(cible.role)) return;
+const roleHabilite = (role: Role) =>
+  role !== "ADMIN" && (role === "SECRETAIRE_GENERAL" || role === "BATONNIER" || role === "AVOCAT" || aLaPermission(role, "messagerie"));
+/** Défense en profondeur (prise de compte) : alerte sans blocage ; `ancienRole` couvre une rétrogradation. */
+async function alerterPrivilege(acteur: { id: number; role: Role; nom?: string }, cible: { id: number; nom: string; role: Role }, action: string, ancienRole = cible.role) {
+  if (acteur.role !== "ADMIN" || !(roleHabilite(cible.role) || roleHabilite(ancienRole))) return;
   const sg = await usersParRole(["SECRETAIRE_GENERAL"]);
   await notifier([cible.id, ...sg], {
     type: "securite",
@@ -94,8 +77,6 @@ usersRouter.post(
   asyncH(async (req: AuthRequest, res) => {
     const data = creerSchema.parse(req.body);
     interdireEscaladeAdmin(req.user!.role, data.role);
-    const nbDeCeRole = req.user!.role === "ADMIN" ? await prisma.user.count({ where: { role: data.role } }) : 1;
-    garderHabilite(req.user!.role, data.role, nbDeCeRole);
     // Email normalisé en minuscules : unicité et connexion insensibles à la casse.
     const email = data.email.trim().toLowerCase();
     const existe = await prisma.user.findFirst({ where: { email: { equals: email, mode: "insensitive" } } });
@@ -137,11 +118,9 @@ usersRouter.patch(
     // Anti-escalade : ni promouvoir vers ADMIN, ni modifier un compte ADMIN, sauf en étant ADMIN.
     interdireEscaladeAdmin(req.user!.role, data.role);
     interdireEscaladeAdmin(req.user!.role, cible.role);
-    garderHabilite(req.user!.role, data.role);
-    // Sur un compte habilité, l'ADMIN ne touche qu'au champ « actif ».
-    if (Object.keys(data).some((k) => k !== "actif")) garderHabilite(req.user!.role, cible.role);
     const user = await prisma.user.update({ where: { id }, data, select: SELECT });
-    if (data.actif !== undefined && data.actif !== cible.actif) {
+    if (Object.keys(data).some((k) => k !== "actif")) await alerterPrivilege(req.user!, user, "Modification du compte", cible.role);
+    else if (data.actif !== undefined && data.actif !== cible.actif) {
       await alerterPrivilege(req.user!, user, data.actif ? "Réactivation du compte" : "Désactivation du compte");
     }
     res.json(user);
@@ -162,7 +141,6 @@ usersRouter.delete(
     if (id === req.user!.id) throw new HttpError(400, "Vous ne pouvez pas supprimer votre propre compte");
     const cible = await prisma.user.findUnique({ where: { id } });
     if (!cible) throw new HttpError(404, "Compte introuvable");
-    garderHabilite(req.user!.role, cible.role);
     if (cible.role === "ADMIN") {
       const admins = await prisma.user.count({ where: { role: "ADMIN" } });
       if (admins <= 1) throw new HttpError(400, "Impossible de supprimer le dernier administrateur");
@@ -182,8 +160,8 @@ usersRouter.post(
     const cible = await prisma.user.findUnique({ where: { id } });
     if (!cible) throw new HttpError(404, "Compte introuvable");
     interdireEscaladeAdmin(req.user!.role, cible.role);
-    garderHabilite(req.user!.role, cible.role);
     await prisma.user.update({ where: { id }, data: { passwordHash: bcrypt.hashSync(password, 10) } });
+    await alerterPrivilege(req.user!, cible, "Réinitialisation du mot de passe");
     res.json({ ok: true });
   })
 );
