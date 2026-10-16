@@ -5,6 +5,7 @@ import { HttpError } from "../middleware/error.js";
 import { montantDuAvec, droitDuAvec, prochainNumeroRecu, tarifsActuels } from "./business.js";
 import { envoyerEmail } from "./notifications.js";
 import { notifier, userDeMembre } from "./centreNotifications.js";
+import { cheminVerif } from "./signature.js";
 
 export type TypeReglement = "cotisation" | "droit";
 
@@ -140,7 +141,8 @@ export async function encaisser(opts: {
   void userDeMembre(membre.id)
     .then((uid) => (uid ? notifier([uid], { type: "RECU", titre: "Reçu disponible", message: `Votre reçu N° ${numero} (${estDroit ? "droit de plaidoirie" : "cotisation"} ${annee}) est disponible.`, lien: "/documents" }) : 0))
     .catch(() => {});
-  return resultat;
+  // R2-1 : le reçu renvoyé porte son chemin de vérification signé (QR affiché à l'écran).
+  return { ...resultat, recu: { ...resultat.recu, verif: cheminVerif("r", numero) } };
 }
 
 /**
