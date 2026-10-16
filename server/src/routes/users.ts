@@ -5,6 +5,7 @@ import type { Role } from "@prisma/client";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole, type AuthRequest, requirePermission } from "../middleware/auth.js";
+import { notifier, usersParRole } from "../lib/centreNotifications.js";
 
 /**
  * Gestion des comptes utilisateurs (CDC §5.1, table `users`).
@@ -35,6 +36,23 @@ function interdireEscaladeAdmin(acteur: Role, roleCible?: Role | null) {
   }
 }
 
+/**
+ * Secret professionnel (R-58) : l'ADMIN n'a pas accès au contenu des messages et pièces, mais pourrait
+ * prendre un rôle habilité en créant/promouvant un compte ou en redéfinissant son mot de passe.
+ * Chaque telle action d'un ADMIN alerte le titulaire du compte et le SG en place (best-effort).
+ * Risque résiduel : un sous-traitant technique gérant les comptes peut toujours usurper un rôle habilité.
+ */
+const HABILITES: Role[] = ["SECRETAIRE_GENERAL", "BATONNIER", "SECRETAIRE_ADJOINT"];
+async function alerterPrivilege(acteur: { id: number; role: Role; nom?: string }, cible: { id: number; nom: string; role: Role }, action: string) {
+  if (acteur.role !== "ADMIN" || !HABILITES.includes(cible.role)) return;
+  const sg = await usersParRole(["SECRETAIRE_GENERAL"]);
+  await notifier([cible.id, ...sg], {
+    type: "securite",
+    titre: "Compte à rôle habilité modifié par un administrateur",
+    message: `${action} : compte « ${cible.nom} » (${cible.role}), par l'administrateur technique. Si ce n'est pas attendu, contactez le Secrétaire général.`,
+  }).catch(() => {});
+}
+
 usersRouter.get(
   "/",
   asyncH(async (_req, res) => {
@@ -62,6 +80,7 @@ usersRouter.post(
       data: { nom: data.nom, email, role: data.role, passwordHash: bcrypt.hashSync(data.password, 10) },
       select: SELECT,
     });
+    await alerterPrivilege(req.user!, user, "Création du compte");
     res.status(201).json(user);
   })
 );
@@ -95,6 +114,7 @@ usersRouter.patch(
     interdireEscaladeAdmin(req.user!.role, data.role);
     interdireEscaladeAdmin(req.user!.role, cible.role);
     const user = await prisma.user.update({ where: { id }, data, select: SELECT });
+    if (data.role && data.role !== cible.role) await alerterPrivilege(req.user!, user, "Changement de rôle du compte");
     res.json(user);
   })
 );
@@ -133,6 +153,7 @@ usersRouter.post(
     if (!cible) throw new HttpError(404, "Compte introuvable");
     interdireEscaladeAdmin(req.user!.role, cible.role);
     await prisma.user.update({ where: { id }, data: { passwordHash: bcrypt.hashSync(password, 10) } });
+    await alerterPrivilege(req.user!, cible, "Redéfinition du mot de passe");
     res.json({ ok: true });
   })
 );

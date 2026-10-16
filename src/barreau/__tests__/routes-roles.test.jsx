@@ -34,13 +34,13 @@ describe("menu par rôle", () => {
   });
 });
 
-describe("403 : message neutre", () => {
-  it("remplace tout message serveur par le texte neutre", async () => {
+describe("403 : message du serveur conservé", () => {
+  it("ne réécrit pas le message serveur (le neutre vient du serveur)", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ erreur: "Dossier disciplinaire 12 réservé" }), { status: 403, headers: { "Content-Type": "application/json" } })));
     const { api } = await import("../api/client");
     await expect(api("/membres/1")).rejects.toMatchObject({
       status: 403,
-      message: "Vous n'avez pas les droits nécessaires pour accéder à cette ressource.",
+      message: "Dossier disciplinaire 12 réservé",
     });
     vi.unstubAllGlobals();
   });

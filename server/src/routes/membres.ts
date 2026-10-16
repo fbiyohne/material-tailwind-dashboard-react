@@ -4,7 +4,7 @@ import { z } from "zod";
 import { StatutMembre, type Prisma } from "@prisma/client";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
-import { requireAuth, requireRole, requirePermission, type AuthRequest } from "../middleware/auth.js";
+import { requireAuth, requireRole, requirePermission, REFUS, type AuthRequest } from "../middleware/auth.js";
 import { prochainNumInscription, prochainNumeroAttestation, archiver, avecRejeuUnicite, STATUTS_HORS_TABLEAU, STATUTS_SORTIS, peutAttesterInscription, tarifsActuels, cotisationDue, statutCotisation } from "../lib/business.js";
 import { aLaPermission } from "../lib/rbac.js";
 import { enregistrerFichier } from "../lib/storage.js";
@@ -79,7 +79,7 @@ function gardeRadies(req: AuthRequest, query: Record<string, unknown>): void {
 
 /** Registre : permission « membres » exigée. Renvoie le droit « discipline » (masquage R-62 des lignes). */
 function droitDiscipline(req: AuthRequest): boolean {
-  if (!aLaPermission(req.user!.role, "membres")) throw new HttpError(403, "Accès refusé pour votre profil");
+  if (!aLaPermission(req.user!.role, "membres")) throw new HttpError(403, REFUS);
   return aLaPermission(req.user!.role, "discipline");
 }
 
@@ -798,7 +798,7 @@ membresRouter.post(
     const permis =
       role === "ADMIN" ||
       (decision ? aLaPermission(role, "omission_prononcer") : recouvrement ? aLaPermission(role, "finances") : role === "SECRETAIRE_GENERAL");
-    if (!permis) throw new HttpError(403, "Accès refusé pour votre profil");
+    if (!permis) throw new HttpError(403, REFUS);
 
     const membre = await prisma.membre.findUnique({ where: { id: membreId }, select: { statut: true, qualite: true } });
     if (!membre) throw new HttpError(404, "Avocat introuvable");
