@@ -55,7 +55,8 @@ export function Utilisateurs() {
 
   // Une demande émane d'un avocat (champs n° d'inscription / cabinet) : on
   // propose l'accès espace par défaut, le SG pouvant basculer vers un compte staff.
-  const provisionner = (d) => setCreation(videCreation({ nom: d.nom, email: d.email, demandeId: d.id, type: "avocat" }));
+  // R1-1 : l'accès espace (lien d'activation renvoyé à l'opérateur) est refusé à l'ADMIN côté serveur.
+  const provisionner = (d) => setCreation(videCreation({ nom: d.nom, email: d.email, demandeId: d.id, type: estAdmin ? "personnel" : "avocat" }));
   const refuser = async (d) => {
     try { await refuserDemandeAcces(d.id); await chargerDemandes(); toast.success(`Demande de ${d.nom} refusée.`); }
     catch (e) { toast.error(e.message); }
@@ -311,7 +312,7 @@ export function Utilisateurs() {
       >
         {creation && (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {creation.demandeId && (
+            {creation.demandeId && !estAdmin && (
               <div className="flex gap-1.5 rounded-lg bg-grisL p-1 sm:col-span-2">
                 {[["avocat", "Accès espace avocat"], ["personnel", "Compte du personnel"]].map(([v, l]) => (
                   <button key={v} type="button" onClick={() => setCreation({ ...creation, type: v })}

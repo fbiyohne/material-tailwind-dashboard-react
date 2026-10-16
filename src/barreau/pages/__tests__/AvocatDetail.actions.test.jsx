@@ -49,7 +49,8 @@ describe("AvocatDetail — en-tête en boutons-icônes et menu Actions (O2)", ()
     }
     const menu = await ouvrirMenu();
     const l = libelles(menu);
-    const ordre = ["Contacter", "Modifier", "Accès espace", "Attestation", "Déclarer le décès", "Supprimer"].map((x) => l.indexOf(x));
+    const ordre = ["Contacter", "Modifier", "Attestation", "Déclarer le décès", "Supprimer"].map((x) => l.indexOf(x));
+    expect(l).not.toContain("Accès espace"); // R1-1 : lien d'activation refusé à l'ADMIN côté serveur
     expect(ordre.every((i) => i >= 0)).toBe(true);
     expect([...ordre].sort((a, b) => a - b)).toEqual(ordre);
     // Les actions de parcours s'intercalent entre Attestation et les actions destructives.
@@ -89,9 +90,9 @@ describe("AvocatDetail — en-tête en boutons-icônes et menu Actions (O2)", ()
     getMembre.mockResolvedValue({ ...base, statut: "radie", dateRadiation: "2026-10-01", email: "bakala@exemple.cg" });
     rendre();
     const menu = await ouvrirMenu();
-    expect(libelles(menu)).toEqual(["Contacter", "Modifier", "Accès espace", "Attestation", "Déclarer le décès", "Supprimer"]);
+    expect(libelles(menu)).toEqual(["Contacter", "Modifier", "Attestation", "Déclarer le décès", "Supprimer"]);
     for (const nom of ["Contacter", "Attestation"]) expect(entree(menu, nom)).not.toHaveAttribute("aria-disabled");
-    for (const nom of ["Modifier", "Accès espace", "Déclarer le décès", "Supprimer"]) {
+    for (const nom of ["Modifier", "Déclarer le décès", "Supprimer"]) {
       expect(entree(menu, nom)).toHaveAttribute("aria-disabled", "true");
       expect(entree(menu, nom)).toHaveAttribute("title");
     }

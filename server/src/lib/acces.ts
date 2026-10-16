@@ -60,6 +60,12 @@ export async function provisionnerAccesEspace(membreId: number): Promise<AccesPr
 
     const existant = await tx.user.findUnique({ where: { membreId } });
     if (existant?.actif) throw new HttpError(409, "Un accès actif existe déjà pour cet avocat");
+    // R1-1 : un compte déjà activé (puis désactivé) ne reçoit pas de nouveau lien, sinon l'opérateur
+    // qui reçoit ce lien choisirait le mot de passe de l'avocat. Il se réactive dans Utilisateurs ;
+    // l'avocat redéfinit alors son mot de passe par « mot de passe oublié », lien envoyé à son email.
+    if (existant && !existant.activationToken) {
+      throw new HttpError(409, "Cet accès a déjà été activé : réactivez le compte dans Utilisateurs ; l'avocat redéfinira son mot de passe par « Mot de passe oublié ».");
+    }
     // L'email doit être libre (ou déjà celui de ce compte avocat en attente).
     const homonyme = await tx.user.findUnique({ where: { email: membre.email } });
     if (homonyme && homonyme.membreId !== membreId) {

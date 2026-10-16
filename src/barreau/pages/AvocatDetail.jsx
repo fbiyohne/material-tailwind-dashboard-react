@@ -44,12 +44,13 @@ export function AvocatDetail() {
   const { user } = useAuth();
   const peutVoirFinances = FINANCES.includes(user?.role);
   const estAdmin = user?.role === "ADMIN";
-  const peutGererAcces = ["SECRETAIRE_GENERAL", "ADMIN"].includes(user?.role);
+  // R1-1 : le lien d'activation revient à l'opérateur ; refusé à l'ADMIN (POST /membres/:id/acces).
+  const peutGererAcces = user?.role === "SECRETAIRE_GENERAL";
   // Modification et attestation sont réservées au SG côté serveur (PATCH
   // /membres/:id, /attestation) : on ne les propose pas au Bâtonnier.
   // La radiation ne se décide pas ici : elle s'enregistre depuis le dossier
   // disciplinaire (module Discipline) et se répercute sur la fiche (O2).
-  const peutGererFiche = peutGererAcces;
+  const peutGererFiche = ["SECRETAIRE_GENERAL", "ADMIN"].includes(user?.role);
   const [membre, setMembre] = useState(null);
   const [droit, setDroit] = useState(null); // ligne de droits réelle (rôles finances)
   const [attestation, setAttestation] = useState(null);

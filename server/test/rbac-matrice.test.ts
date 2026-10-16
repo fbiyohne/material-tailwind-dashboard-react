@@ -106,7 +106,7 @@ const MATRICE: Ligne[] = [
   l("DELETE", "/api/membres/:id/rapports/:rid", SUPPR, "S"),
   l("POST", "/api/membres/:id/valider-stage", [BAT, ADM], "V"),
   l("DELETE", "/api/membres/:id", ADMIN_SEUL, "S"),
-  l("POST", "/api/membres/:id/acces", SYS, "M"),
+  l("POST", "/api/membres/:id/acces", [SG], "M"), // R1-1 : lien d'activation renvoyé à l'opérateur, ADMIN exclu
   l("POST", "/api/membres/:id/attestation", ECR, "C"),
   l("GET", "/api/membres/:id/attestation/pdf", ECR, "L"),
   l("GET", "/api/membres/:id/attestation-sortie/pdf", ECR, "L"),
@@ -118,7 +118,7 @@ const MATRICE: Ligne[] = [
   l("POST", "/api/users/:id/password", SYS, "M"),
   l("GET", "/api/demandes-acces", SYS, "L"),
   l("POST", "/api/demandes-acces/:id/approuver", SYS, "V"),
-  l("POST", "/api/demandes-acces/:id/approuver-espace", SYS, "V"),
+  l("POST", "/api/demandes-acces/:id/approuver-espace", [SG], "V"), // R1-1 : idem
   l("POST", "/api/demandes-acces/:id/refuser", SYS, "V"),
 
   l("GET", "/api/pieces", [SG, BAT, ADM], "L"),
@@ -307,6 +307,7 @@ const CORRIGES: { id: string; roles: string[]; routes: string[] }[] = [
   { id: "E4", roles: [SA], routes: ["PATCH /api/discipline/:id"] },
   { id: "E5", roles: [CONS, ACC], routes: ["POST /api/archives", "PATCH /api/calendrier-editorial/:mois"] },
   { id: "E7", roles: [BAT], routes: ["POST /api/parametres/tester/:canal"] },
+  { id: "R1-1", roles: [ADM], routes: ["POST /api/membres/:id/acces", "POST /api/demandes-acces/:id/approuver-espace"] },
 ];
 
 // ── Lecture de la matrice réelle depuis la pile Express ───────────────────────────────

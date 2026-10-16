@@ -5,7 +5,7 @@ import { MemoryRouter } from "react-router-dom";
 import { ToastProvider } from "../../components/Toast";
 import { ConfirmProvider } from "../../components/ConfirmDialog";
 import { Utilisateurs } from "../Utilisateurs";
-import { listerUsers, getRbac } from "../../api/resources";
+import { listerUsers, getRbac, listerDemandesAcces } from "../../api/resources";
 
 // R1-1 : miroir front de users.ts — l'ADMIN ne prend pas la main sur un compte qui accède au contenu.
 const auth = { user: { id: 1, role: "ADMIN" } };
@@ -63,6 +63,15 @@ describe("Utilisateurs — secret professionnel (ADMIN)", () => {
     const options = within(select).getAllByRole("option").map((o) => o.value);
     expect(options).toEqual(["BATONNIER", "ADMIN", "CONSULTATION", "ACCUEIL"]);
     expect(select).toHaveValue("BATONNIER");
+  });
+
+  it("demande d'accès traitée par l'ADMIN : pas d'« Accès espace avocat » (lien d'activation), compte du personnel seulement", async () => {
+    listerDemandesAcces.mockResolvedValueOnce([{ id: 9, nom: "Me Demandeur", email: "dem@x.cg", createdAt: "2026-10-16" }]);
+    rendre();
+    await userEvent.click(await screen.findByRole("button", { name: /Provisionner/ }));
+    const dlg = within(screen.getByRole("dialog"));
+    expect(dlg.queryByRole("button", { name: "Accès espace avocat" })).toBeNull();
+    expect(dlg.getByRole("button", { name: /Créer le compte/ })).toBeInTheDocument();
   });
 
   it("le SG garde toutes les actions sur les comptes métier", async () => {

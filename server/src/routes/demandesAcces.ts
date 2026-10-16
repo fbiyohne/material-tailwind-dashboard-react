@@ -2,7 +2,7 @@ import { identite } from "../lib/identiteDocuments.js";
 import { Router } from "express";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
-import { requireAuth, requireRole, requirePermission } from "../middleware/auth.js";
+import { requireAuth, requireRole, requirePermission, refuserAdmin } from "../middleware/auth.js";
 import { envoyerEmail } from "../lib/notifications.js";
 import { prochainNumInscription } from "../lib/business.js";
 import { provisionnerAccesEspace } from "../lib/acces.js";
@@ -54,9 +54,9 @@ demandesAccesRouter.post("/:id/approuver", asyncH(async (req, res) => {
  * un accès à l'espace avocat : résout la fiche membre par email (ou la crée), puis
  * génère/envoie le lien d'activation. Le provisionnement précède le changement de
  * statut : s'il échoue (email déjà rattaché à un autre compte…), la demande reste
- * EN_ATTENTE.
+ * EN_ATTENTE. R1-1 : refusé à l'ADMIN (le lien d'activation lui reviendrait, cf. POST /membres/:id/acces).
  */
-demandesAccesRouter.post("/:id/approuver-espace", asyncH(async (req, res) => {
+demandesAccesRouter.post("/:id/approuver-espace", refuserAdmin, asyncH(async (req, res) => {
   const id = Number(req.params.id);
   const demande = await prisma.demandeAcces.findUnique({ where: { id } });
   if (!demande) throw new HttpError(404, "Demande introuvable");

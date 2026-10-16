@@ -108,6 +108,72 @@ describe("R1-1 — l'ADMIN ne prend pas la main sur un compte qui accède au con
   });
 });
 
+/**
+ * Vecteur relevé par la QA : désactiver un AVOCAT actif (permis), puis lui « renvoyer » un lien
+ * d'activation (POST /membres/:id/acces ou approbation d'une demande à son email) qui revient à
+ * l'opérateur, et choisir soi-même son mot de passe par /auth/activer.
+ */
+describe("R1-1 — l'ADMIN ne reprend pas un compte avocat par le lien d'activation", () => {
+  const membresCrees: number[] = [];
+  let membreId = 0, userId = 0, hashAvant = "";
+  const mailAv = email("avocat-actif");
+
+  beforeAll(async () => {
+    const m = await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: `E2E habilite ${SUF}`, qualite: "AVOCAT", email: mailAv });
+    membreId = m.body.id;
+    membresCrees.push(membreId);
+    const u = await prisma.user.create({ data: { nom: `Me habilite ${SUF}`, email: mailAv, role: "AVOCAT", membreId, actif: true, passwordHash: bcrypt.hashSync("barreau", 4) } });
+    userId = u.id;
+    hashAvant = u.passwordHash;
+  });
+
+  afterAll(async () => {
+    await prisma.demandeAcces.deleteMany({ where: { email: { contains: `-${SUF}@test.cg` } } });
+    await prisma.user.deleteMany({ where: { membreId: { in: membresCrees } } });
+    for (const mid of membresCrees) await request(app).delete(`/api/membres/${mid}`).set(...bearer(adm));
+  });
+
+  it("désactivation (200) puis POST /membres/:id/acces : 403 REFUS, aucun lien, empreinte inchangée, connexion impossible", async () => {
+    expect((await request(app).patch(`/api/users/${userId}`).set(...bearer(adm)).send({ actif: false })).status).toBe(200);
+    const r = await request(app).post(`/api/membres/${membreId}/acces`).set(...bearer(adm));
+    expect(r.status).toBe(403);
+    expect(r.body.erreur).toBe(REFUS);
+    expect(r.body.lien).toBeUndefined();
+    const u = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+    expect(u.passwordHash).toBe(hashAvant);
+    expect(u.activationToken).toBeNull();
+    expect((await request(app).post("/api/auth/login").send({ email: mailAv, password: "choisiparadmin8" })).status).toBe(401);
+  });
+
+  it("approbation par l'ADMIN d'une demande d'accès à l'email de l'avocat : 403, demande en attente, aucun lien", async () => {
+    await request(app).post("/api/auth/demande-acces").send({ nom: `Usurpation ${SUF}`, email: mailAv, numInscription: "PN-0000", motif: "Accès à mon espace personnel d'avocat." });
+    const d = await prisma.demandeAcces.findFirstOrThrow({ where: { email: mailAv }, orderBy: { id: "desc" } });
+    const r = await request(app).post(`/api/demandes-acces/${d.id}/approuver-espace`).set(...bearer(adm));
+    expect(r.status).toBe(403);
+    expect(r.body.lien).toBeUndefined();
+    expect((await prisma.demandeAcces.findUniqueOrThrow({ where: { id: d.id } })).statut).toBe("EN_ATTENTE");
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: userId } })).activationToken).toBeNull();
+  });
+
+  it("même le SG ne régénère pas de lien sur un compte déjà activé (409) : la réouverture passe par Utilisateurs et « mot de passe oublié »", async () => {
+    const r = await request(app).post(`/api/membres/${membreId}/acces`).set(...bearer(sg));
+    expect(r.status).toBe(409);
+    expect(r.body.lien).toBeUndefined();
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: userId } })).passwordHash).toBe(hashAvant);
+  });
+
+  it("cas positif : le SG provisionne un nouvel avocat (201, lien) et renvoie le lien tant qu'il n'est pas activé", async () => {
+    const m = await request(app).post("/api/membres").set(...bearer(sg)).send({ nom: `E2E habilite neuf ${SUF}`, qualite: "AVOCAT", email: email("avocat-neuf") });
+    membresCrees.push(m.body.id);
+    const p1 = await request(app).post(`/api/membres/${m.body.id}/acces`).set(...bearer(sg));
+    expect(p1.status).toBe(201);
+    expect(p1.body.lien).toContain("/activer/");
+    const p2 = await request(app).post(`/api/membres/${m.body.id}/acces`).set(...bearer(sg));
+    expect(p2.status).toBe(201);
+    expect(p2.body.renvoi).toBe(true);
+  });
+});
+
 describe("R1-1 — ce qui reste permis", () => {
   it("l'ADMIN désactive puis réactive un compte habilité : 200, alerte au titulaire et au SG", async () => {
     const av = await nbAlertes(sgId);
