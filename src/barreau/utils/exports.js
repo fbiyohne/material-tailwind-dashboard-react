@@ -4,6 +4,37 @@
  * côté serveur pour une qualité vectorielle). Excel : vrai fichier .xlsx.
  */
 
+import { identite } from "../data/config";
+
+// C-PDF-LISTE (avis juridique) : pied des exports non publics. Sélecteurs des états concernés.
+export const CLAUSE_LISTE =
+  "Document à diffusion restreinte, réservé aux organes de l'Ordre. Contient des données à caractère personnel protégées par la loi n° 29-2019 du 10 octobre 2019. Toute rediffusion est interdite.";
+const ETATS_RESTREINTS = ["#zone-impression-avocats", "#etat-cotisations"];
+
+/**
+ * Écrit sur chaque page : pied « dénomination · Page i/n » (C-PDF-PIED), clause
+ * C-PDF-LISTE si `restreint`, et en-tête court à partir de la page 2.
+ */
+export function ajouterPieds(pdf, { denomination, restreint = false, marge = 40 }) {
+  const n = pdf.getNumberOfPages();
+  const L = pdf.internal.pageSize.getWidth();
+  const H = pdf.internal.pageSize.getHeight();
+  pdf.setFont("helvetica", "normal");
+  for (let i = 1; i <= n; i++) {
+    pdf.setPage(i);
+    pdf.setTextColor(110);
+    pdf.setFontSize(8);
+    if (i > 1) pdf.text(denomination, marge, 24);
+    if (restreint) {
+      pdf.setFontSize(6.5);
+      pdf.text(pdf.splitTextToSize(CLAUSE_LISTE, L - 2 * marge), marge, H - 38);
+    }
+    pdf.setFontSize(8);
+    pdf.text(denomination, marge, H - 20);
+    pdf.text(`Page ${i}/${n}`, L - marge, H - 20, { align: "right" });
+  }
+}
+
 export async function exporterPdf(filename, selector = ".bpn-print-zone", { page = false } = {}) {
   const el = document.querySelector(selector);
   if (!el) return;
@@ -16,6 +47,14 @@ export async function exporterPdf(filename, selector = ".bpn-print-zone", { page
   const pdf = new JsPDF({ unit: "pt", format: "a4" });
   const pageW = pdf.internal.pageSize.getWidth();
   const pageH = pdf.internal.pageSize.getHeight();
+  const restreint = ETATS_RESTREINTS.includes(selector);
+  const denomination = identite().denomination || "";
+  // Marge basse : réserve la place du pied (et de la clause C-PDF-LISTE).
+  const bas = page ? 34 : restreint ? 72 : 56;
+  const fin = () => {
+    ajouterPieds(pdf, { denomination, restreint });
+    pdf.save(filename.endsWith(".pdf") ? filename : `${filename}.pdf`);
+  };
 
   // Mode « document » : une seule page A4, le document mis à l'échelle pour tenir
   // entièrement (jamais rogné ni débordé) et centré. Marge minime car les
@@ -25,11 +64,12 @@ export async function exporterPdf(filename, selector = ".bpn-print-zone", { page
     // sans perte visible sur un document (fond blanc + aplats).
     const img = canvas.toDataURL("image/jpeg", 0.95);
     const m = 14;
-    const echelle = Math.min((pageW - 2 * m) / canvas.width, (pageH - 2 * m) / canvas.height);
+    const dispo = pageH - m - bas;
+    const echelle = Math.min((pageW - 2 * m) / canvas.width, dispo / canvas.height);
     const w = canvas.width * echelle;
     const h = canvas.height * echelle;
-    pdf.addImage(img, "JPEG", (pageW - w) / 2, (pageH - h) / 2, w, h);
-    pdf.save(filename.endsWith(".pdf") ? filename : `${filename}.pdf`);
+    pdf.addImage(img, "JPEG", (pageW - w) / 2, m + (dispo - h) / 2, w, h);
+    fin();
     return;
   }
 
@@ -39,7 +79,7 @@ export async function exporterPdf(filename, selector = ".bpn-print-zone", { page
   const margin = 40;
   const w = pageW - margin * 2;
   const ratio = w / canvas.width;
-  const pageHpx = (pageH - margin * 2) / ratio;
+  const pageHpx = (pageH - margin - bas) / ratio;
   if (canvas.height <= pageHpx + 1) {
     pdf.addImage(img, "PNG", margin, margin, w, canvas.height * ratio);
   } else {
@@ -57,7 +97,7 @@ export async function exporterPdf(filename, selector = ".bpn-print-zone", { page
       offset += sliceHpx;
     }
   }
-  pdf.save(filename.endsWith(".pdf") ? filename : `${filename}.pdf`);
+  fin();
 }
 
 /**
