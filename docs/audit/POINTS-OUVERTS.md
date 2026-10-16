@@ -321,3 +321,10 @@ Toutes les entrées ont pour interlocutrice Me Kalina MENGA, qui valide ou trans
 - **Constat** : La durée de conservation des reçus (dix ans) et le référentiel comptable applicable restent à confirmer (HJ-I).
 - **Valeur provisoire retenue** : Conservation des reçus émis au moins dix ans ; aucune suppression d'un reçu émis. Renvoi à la conformité-finance.
 - **Interlocutrice** : Me Kalina MENGA.
+
+### PO-42 — Annulation d'un reçu : suppression physique (R2-5)
+- **Texte** : conservation des pièces comptables dix ans, numérotation continue sans trou (voir PO-41) ; avis juridique de la mission M-20261011.
+- **Constat** : `DELETE /recus/:id` (server/src/routes/recus.ts) supprime physiquement le reçu, son archive et les quitus de l'exercice. Il en résulte un trou de numérotation et la page /v/r/... répond « Non reconnu » au lieu de « Annulé ». Défaut antérieur à la mission, contraire à la valeur retenue en PO-41.
+- **Correctif envisagé** : annulation logique (statut ANNULE, annuleLe, motif, acteur) par migration Prisma additive et idempotente, avec « Document annulé » sur /v comme pour les timbres. C'est une évolution de schéma : non codée, en attente de décision de Fabrice et de la conformité-finance.
+- **Valeur provisoire retenue** : comportement actuel conservé, sans changement ; la suppression reste réservée aux profils finances et journalisée.
+- **Interlocutrice** : conformité-finance.
