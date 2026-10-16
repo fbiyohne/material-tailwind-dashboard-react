@@ -7,6 +7,7 @@ import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole, type AuthRequest, requirePermission } from "../middleware/auth.js";
 import { notifier, usersParRole } from "../lib/centreNotifications.js";
 import { aLaPermission } from "../lib/rbac.js";
+import { envoyerEmail } from "../lib/notifications.js";
 
 /**
  * Gestion des comptes utilisateurs (CDC §5.1, table `users`).
@@ -48,7 +49,7 @@ function interdireEscaladeAdmin(acteur: Role, roleCible?: Role | null) {
 const roleHabilite = (role: Role) =>
   role !== "ADMIN" && (role === "SECRETAIRE_GENERAL" || role === "BATONNIER" || role === "AVOCAT" || aLaPermission(role, "messagerie"));
 /** Défense en profondeur (prise de compte) : alerte sans blocage ; `ancienRole` couvre une rétrogradation. */
-async function alerterPrivilege(acteur: { id: number; role: Role; nom?: string }, cible: { id: number; nom: string; role: Role }, action: string, ancienRole = cible.role) {
+async function alerterPrivilege(acteur: { id: number; role: Role; nom?: string }, cible: { id: number; nom: string; role: Role }, action: string, ancienRole = cible.role, emailAvant?: string) {
   if (acteur.role !== "ADMIN" || !(roleHabilite(cible.role) || roleHabilite(ancienRole))) return;
   const sg = await usersParRole(["SECRETAIRE_GENERAL"]);
   await notifier([cible.id, ...sg], {
@@ -56,6 +57,11 @@ async function alerterPrivilege(acteur: { id: number; role: Role; nom?: string }
     titre: "Compte à rôle habilité modifié par un administrateur",
     message: `${action} : compte « ${cible.nom} » (${cible.role}), par l'administrateur technique. Si ce n'est pas attendu, contactez le Secrétaire général.`,
   }).catch(() => {});
+  // L'alerte in-app n'est pas fiable si l'ADMIN contrôle la session du titulaire : copie par email à l'adresse d'avant modification.
+  if (emailAvant) {
+    const texte = `${action} : votre compte « ${cible.nom} » a été modifié par l'administrateur technique. Si ce n'est pas attendu, contactez le Secrétaire général.`;
+    await envoyerEmail({ to: emailAvant, subject: "Compte modifié par un administrateur", text: texte, evenement: "ALERTE_PRIVILEGE" }).catch(() => {});
+  }
 }
 
 usersRouter.get(
@@ -119,9 +125,9 @@ usersRouter.patch(
     interdireEscaladeAdmin(req.user!.role, data.role);
     interdireEscaladeAdmin(req.user!.role, cible.role);
     const user = await prisma.user.update({ where: { id }, data, select: SELECT });
-    if (Object.keys(data).some((k) => k !== "actif")) await alerterPrivilege(req.user!, user, "Modification du compte", cible.role);
+    if (Object.keys(data).some((k) => k !== "actif")) await alerterPrivilege(req.user!, user, "Modification du compte", cible.role, cible.email);
     else if (data.actif !== undefined && data.actif !== cible.actif) {
-      await alerterPrivilege(req.user!, user, data.actif ? "Réactivation du compte" : "Désactivation du compte");
+      await alerterPrivilege(req.user!, user, data.actif ? "Réactivation du compte" : "Désactivation du compte", cible.role, cible.email);
     }
     res.json(user);
   })
@@ -161,7 +167,7 @@ usersRouter.post(
     if (!cible) throw new HttpError(404, "Compte introuvable");
     interdireEscaladeAdmin(req.user!.role, cible.role);
     await prisma.user.update({ where: { id }, data: { passwordHash: bcrypt.hashSync(password, 10) } });
-    await alerterPrivilege(req.user!, cible, "Réinitialisation du mot de passe");
+    await alerterPrivilege(req.user!, cible, "Réinitialisation du mot de passe", cible.role, cible.email);
     res.json({ ok: true });
   })
 );

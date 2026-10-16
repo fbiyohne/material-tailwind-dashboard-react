@@ -52,6 +52,7 @@ afterAll(async () => {
   await prisma.rolePermission.createMany({ data: rpConsultation });
   const us = await prisma.user.findMany({ where: { email: { contains: `-${SUF}@test.cg` } }, select: { id: true } });
   await prisma.notification.deleteMany({ where: { message: { contains: SUF } } });
+  await prisma.journalNotification.deleteMany({ where: { destinataire: { contains: `-${SUF}@test.cg` } } });
   await prisma.user.deleteMany({ where: { id: { in: us.map((u) => u.id) } } });
 });
 
@@ -100,6 +101,22 @@ describe("L'ADMIN a droit à tout sur les comptes habilités (200/201), avec ale
     expect((await request(app).post(`/api/users/${i}/password`).set(...bearer(adm)).send({ password: "nouveaumdp88" })).status).toBe(200);
     expect((await etat(i)).passwordHash).not.toBe(avant);
     expect(await derniere(i)).toContain("Réinitialisation du mot de passe");
+  });
+
+  it("réinitialisation du mot de passe d'un AVOCAT : alerte au SG et email à l'adresse d'avant (hors session contrôlée par l'ADMIN)", async () => {
+    const i = await compte("mdp-mail-avocat", "AVOCAT");
+    const avSg = await nbAlertes(sgId);
+    expect((await request(app).post(`/api/users/${i}/password`).set(...bearer(adm)).send({ password: "nouveaumdp88" })).status).toBe(200);
+    expect(await nbAlertes(sgId)).toBe(avSg + 1);
+    const mails = await prisma.journalNotification.count({ where: { canal: "EMAIL", destinataire: email("mdp-mail-avocat"), evenement: "ALERTE_PRIVILEGE" } });
+    expect(mails).toBe(1);
+  });
+
+  it("changement d'email d'un AVOCAT : l'email d'alerte part à l'ancienne adresse", async () => {
+    const i = await compte("chg-mail-avocat", "AVOCAT");
+    const ancien = email("chg-mail-avocat");
+    expect((await request(app).patch(`/api/users/${i}`).set(...bearer(adm)).send({ email: email("chg-mail-avocat2") })).status).toBe(200);
+    expect(await prisma.journalNotification.count({ where: { destinataire: ancien, evenement: "ALERTE_PRIVILEGE" } })).toBe(1);
   });
 
   it("suppression d'un compte habilité : 200, compte supprimé", async () => {
