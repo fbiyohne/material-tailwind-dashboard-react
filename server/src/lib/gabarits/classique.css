@@ -6,15 +6,15 @@
  * Georgia est déjà utilisée par documentsRiches.ts : aucune nouvelle police.
  */
 
-:root { --f-acte: Georgia, 'Times New Roman', serif; --t-titre: 26pt; --interligne: 1.38; --qr: 26mm; }
+:root { --f-acte: Georgia, 'Times New Roman', serif; --t-titre: 22pt; --interligne: 1.38; --qr: 25mm; }
 
 body { font-family: var(--f-acte); }
 th, dt, .ref-label, .org-ordre, .org-adresse, .surtitre, .encart-titre, .sig-role, .verif-titre,
 .mention-demo, .mention-prototype, .vignette-type { font-family: var(--f-texte); }
 
-.une-page { border: 2.4pt double var(--or); padding: 5mm 9mm 4mm; }
+.une-page { border: 2.4pt double var(--or); padding: 3mm 9mm 2mm; min-height: 247mm; } /* cadre + marges compris dans les 259 mm utiles */
 
-.entete { grid-template-columns: 1fr; justify-items: center; text-align: center; gap: .8mm; padding-bottom: 3mm; border-bottom: 2.4pt double var(--or); }
+.entete { grid-template-columns: 1fr; justify-items: center; text-align: center; gap: .8mm; padding-bottom: 2mm; border-bottom: 2.4pt double var(--or); }
 .entete-sceau svg, .entete-sceau img { width: 15mm; height: 15mm; }
 .org-denom { text-transform: uppercase; letter-spacing: .08em; font-size: 14pt; }
 .entete-ref { text-align: center; }
@@ -22,12 +22,12 @@ th, dt, .ref-label, .org-ordre, .org-adresse, .surtitre, .encart-titre, .sig-rol
 .ref-label::after { content: " "; }
 .ref-date::before { content: " · "; }
 
-.titre-bloc { text-align: center; margin: 5mm 0 3.5mm; }
+.titre-bloc { text-align: center; margin: 3mm 0 2mm; }
 .titre { text-transform: uppercase; letter-spacing: .06em; }
 .titre-bloc::after { content: "\25C6"; display: block; color: var(--or); font-size: 8pt; margin-top: 1mm; line-height: 1; }
 
 .preambule, .sous-titre { text-align: center; font-style: italic; }
-.champ { grid-template-columns: 44mm 1fr; padding: 1.2mm 0; }
+.champ { grid-template-columns: 44mm 1fr; padding: .8mm 0; }
 .champ dt { font-family: var(--f-acte); font-style: italic; text-transform: none; letter-spacing: 0; font-size: 10.5pt; color: var(--encre); font-weight: 400; }
 .champ dd { border-bottom: .6pt dotted var(--gris); padding-bottom: .8mm; }
 .champ-nom dd { font-family: var(--f-titre); }
@@ -50,9 +50,15 @@ tfoot td { border-top: 1pt solid var(--marine); border-bottom: 2.4pt double var(
 
 /* Clôture d'acte : le QR prend la place du cachet, au centre entre les deux signatures (comme le
    sceau central des quitus actuels) ; la clause de vérification court sous la rangée. */
-.une-page .cloture { display: grid; grid-template-columns: 1fr var(--qr) 1fr; column-gap: 8mm; row-gap: 2mm; align-items: end; flex: 0 0 auto; margin-top: auto; padding-top: 4mm; break-inside: avoid; }
+.une-page .cloture { display: grid; grid-template-columns: 1fr var(--qr) 1fr; column-gap: 8mm; row-gap: 1mm; align-items: end; flex: 0 0 auto; margin-top: auto; padding-top: 2mm; break-inside: avoid; }
 .une-page .cloture .signatures, .une-page .cloture .verif { display: contents; }
 .une-page .cloture .signature:first-child { grid-column: 1; grid-row: 1; }
 .une-page .cloture .signature:last-child { grid-column: 3; grid-row: 1; }
 .une-page .cloture .verif svg, .une-page .cloture .verif img { grid-column: 2; grid-row: 1; }
-.une-page .cloture .verif > div { grid-column: 1 / -1; grid-row: 2; text-align: center; padding-top: 2.5mm; border-top: .6pt solid var(--or); }
+.une-page .cloture .verif > div { grid-column: 1 / -1; grid-row: 2; text-align: center; padding-top: 1.5mm; border-top: .6pt solid var(--or); }
+/* Mention personnelle et coordonnées (quitus, reçus) : pleine largeur sous la rangée, sinon elles s'empilent dans une colonne étroite. */
+.une-page .cloture .mention-perso, .une-page .cloture .coordonnees { grid-column: 1 / -1; }
+/* Resserrement vertical des pièces d'une page : cas extrême (nom, cabinet et adresse très longs) sans passer sur 2 pages. */
+.une-page .encart { padding: 1.5mm 4mm; margin: 1mm 0; }
+.une-page .corps p { margin: 0 0 1.5mm; }
+.une-page .cloture .signature .sig-espace { height: 9mm; }

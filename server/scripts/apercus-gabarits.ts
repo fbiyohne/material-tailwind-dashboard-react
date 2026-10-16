@@ -3,12 +3,14 @@
  * en production par src/lib/gabarit.ts (M-20261016) ; ce script n'est importé nulle part.
  *
  * Usage (depuis server/) : npx tsx scripts/apercus-gabarits.ts
+ *   --production [--direction classique] [--debordement] : contrôle des vrais PDF de production (scripts/controle-pdf.ts)
  * Entrées : server/src/lib/gabarits/socle.css + une feuille par direction (source unique, lue aussi par gabarit.ts).
  * Sorties : docs/design/pdf/gabarits/html/<direction>/<document>.html (HTML autonome)
  *           docs/design/pdf/apercus/<direction>-<document>.pdf (rendu par htmlVersPdf, comme en production)
  * Contrôle : chaque page doit mesurer 210 x 297 mm et la liste doit dépasser une page ; sinon code de sortie 1.
  * Données entièrement fictives (« Barreau de démonstration ») ; aucune base n'est lue.
  */
+import "./env-test.js"; // premier import : base de test en mode --production
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -261,6 +263,10 @@ export function pagesPdf(pdf: Uint8Array): { w: number; h: number }[] {
 }
 
 async function main() {
+  if (process.argv.includes("--production")) {
+    const { controler } = await import("./controle-pdf.js");
+    process.exit(await controler(process.argv.slice(2))); // le navigateur Puppeteer partagé garde le processus ouvert
+  }
   fs.mkdirSync(APERCUS, { recursive: true });
   const docs = [await quitus(), await recu(), await timbre(), await attestation(), liste(), pv()];
   const erreurs: string[] = [];

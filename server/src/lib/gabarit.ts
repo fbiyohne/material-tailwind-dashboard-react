@@ -13,6 +13,8 @@ export type DirectionPdf = "institutionnelle" | "classique" | "compacte";
 
 /** Seul point de choix de la direction graphique (« Institutionnelle sobre » en attendant la validation de Fabrice). */
 export const DIRECTION_PDF: DirectionPdf = "institutionnelle";
+// PDF_DIRECTION : surcharge réservée au script de contrôle (scripts/controle-pdf.ts --direction), absente en production.
+const SURCHARGE = process.env.PDF_DIRECTION as DirectionPdf | undefined;
 
 /** Police des boîtes de marge (pied, en-tête courant) par direction. */
 const POLICE_MARGE: Record<DirectionPdf, string> = {
@@ -54,7 +56,7 @@ export interface PageA4 {
 }
 
 /** HTML complet d'un document A4 : socle + direction + règles @page propres au document. */
-export function pageA4({ titreCourt, reference, unePage, paysage, listeRestreinte, contenu, direction = DIRECTION_PDF }: PageA4): string {
+export function pageA4({ titreCourt, reference, unePage, paysage, listeRestreinte, contenu, direction = SURCHARGE && SURCHARGE in CSS ? SURCHARGE : DIRECTION_PDF }: PageA4): string {
   const id = identite();
   const boite = `font-family: ${POLICE_MARGE[direction]}; font-size: 7.5pt; color: #7A756A;`;
   const pied = `${id.denomination} · Réf. ${reference}`;
