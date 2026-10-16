@@ -5,13 +5,12 @@ import { MemoryRouter } from "react-router-dom";
 import { ToastProvider } from "../../components/Toast";
 import { ConfirmProvider } from "../../components/ConfirmDialog";
 import { Utilisateurs } from "../Utilisateurs";
-import { listerUsers, getRbac, listerDemandesAcces } from "../../api/resources";
+import { listerUsers, listerDemandesAcces } from "../../api/resources";
 
-// R1-1 : miroir front de users.ts — l'ADMIN ne prend pas la main sur un compte qui accède au contenu.
+// L'ADMIN a droit à tout (décision du 16/10/2026) ; seule l'anti-escalade d'un non-ADMIN subsiste.
 const auth = { user: { id: 1, role: "ADMIN" } };
 vi.mock("../../api/resources", () => ({
   listerUsers: vi.fn(),
-  getRbac: vi.fn(),
   creerUser: vi.fn(), majUser: vi.fn(), resetPasswordUser: vi.fn(), supprimerUser: vi.fn(),
   listerDemandesAcces: vi.fn().mockResolvedValue([]),
   approuverDemandeAcces: vi.fn(), approuverDemandeEspace: vi.fn(), refuserDemandeAcces: vi.fn(),
@@ -31,55 +30,51 @@ beforeEach(() => {
   vi.clearAllMocks();
   auth.user = { id: 1, role: "ADMIN" };
   listerUsers.mockResolvedValue(users);
-  getRbac.mockResolvedValue({ matrice: { BATONNIER: ["messagerie"], SECRETAIRE_ADJOINT: ["messagerie"], TRESORIERE: ["finances", "messagerie"], ACCUEIL: ["membres"], CONSULTATION: ["membres"] } });
 });
 
-describe("Utilisateurs — secret professionnel (ADMIN)", () => {
-  it("sur un compte SG ou Trésorière, l'ADMIN n'a que Désactiver ; sur Consultation, toutes les actions", async () => {
+const TOUS = ["SECRETAIRE_GENERAL", "BATONNIER", "TRESORIERE", "ADMIN", "SECRETAIRE_ADJOINT", "CONSULTATION", "ACCUEIL"];
+
+describe("Utilisateurs — l'ADMIN a droit à tout", () => {
+  it("sur un compte SG ou Trésorière, l'ADMIN a toutes les actions et toutes les promotions", async () => {
     rendre();
     for (const nom of ["Jean Secrétariat", "Trésorière Kalina"]) {
       const l = within(await ligne(nom));
-      await screen.findAllByRole("button", { name: "Désactiver" });
-      expect(l.queryByRole("button", { name: /Mot de passe/ })).toBeNull();
-      expect(l.queryByRole("button", { name: /Modifier/ })).toBeNull();
-      expect(l.queryByRole("button", { name: /Supprimer/ })).toBeNull();
-      expect(l.getByRole("combobox")).toBeDisabled();
+      expect(l.getByRole("button", { name: /Mot de passe/ })).toBeInTheDocument();
+      expect(l.getByRole("button", { name: /Modifier/ })).toBeInTheDocument();
+      expect(l.getByRole("button", { name: /Supprimer/ })).toBeInTheDocument();
+      expect(l.getByRole("combobox")).toBeEnabled();
       expect(l.getByRole("button", { name: "Désactiver" })).toBeEnabled();
+      expect(within(l.getByRole("combobox")).getAllByRole("option").map((o) => o.value)).toEqual(TOUS);
     }
-    const c = within(await ligne("Agent Consultation"));
-    expect(c.getByRole("button", { name: /Mot de passe/ })).toBeInTheDocument();
-    // Promotion vers un rôle ayant accès au contenu : non proposée.
-    const options = within(c.getByRole("combobox")).getAllByRole("option").map((o) => o.value);
-    expect(options).not.toContain("TRESORIERE");
-    expect(options).not.toContain("SECRETAIRE_GENERAL");
-    expect(options).toContain("ACCUEIL");
   });
 
-  it("création par l'ADMIN : seul le premier Bâtonnier (aucun compte) est proposé parmi les rôles habilités", async () => {
+  it("création par l'ADMIN : tous les rôles sont proposés, SG par défaut", async () => {
     rendre();
     await ligne("Agent Consultation");
     await userEvent.click(screen.getByRole("button", { name: /Nouveau compte/ }));
     const select = within(screen.getByRole("dialog")).getByRole("combobox");
-    const options = within(select).getAllByRole("option").map((o) => o.value);
-    expect(options).toEqual(["BATONNIER", "ADMIN", "CONSULTATION", "ACCUEIL"]);
-    expect(select).toHaveValue("BATONNIER");
+    expect(within(select).getAllByRole("option").map((o) => o.value)).toEqual(TOUS);
+    expect(select).toHaveValue("SECRETAIRE_GENERAL");
   });
 
-  it("demande d'accès traitée par l'ADMIN : pas d'« Accès espace avocat » (lien d'activation), compte du personnel seulement", async () => {
+  it("demande d'accès traitée par l'ADMIN : l'« Accès espace avocat » est proposé", async () => {
     listerDemandesAcces.mockResolvedValueOnce([{ id: 9, nom: "Me Demandeur", email: "dem@x.cg", createdAt: "2026-10-16" }]);
     rendre();
     await userEvent.click(await screen.findByRole("button", { name: /Provisionner/ }));
     const dlg = within(screen.getByRole("dialog"));
-    expect(dlg.queryByRole("button", { name: "Accès espace avocat" })).toBeNull();
-    expect(dlg.getByRole("button", { name: /Créer le compte/ })).toBeInTheDocument();
+    expect(dlg.getByRole("button", { name: "Accès espace avocat" })).toBeInTheDocument();
   });
 
-  it("le SG garde toutes les actions sur les comptes métier", async () => {
+  it("le SG garde toutes les actions sur les comptes métier mais ne voit pas le rôle ADMIN", async () => {
     auth.user = { id: 2, role: "SECRETAIRE_GENERAL" };
     rendre();
     const l = within(await ligne("Trésorière Kalina"));
     expect(l.getByRole("button", { name: /Mot de passe/ })).toBeInTheDocument();
     expect(l.getByRole("combobox")).toBeEnabled();
-    expect(getRbac).not.toHaveBeenCalled();
+    const options = within(l.getByRole("combobox")).getAllByRole("option").map((o) => o.value);
+    expect(options).not.toContain("ADMIN");
+    await userEvent.click(screen.getByRole("button", { name: /Nouveau compte/ }));
+    const select = within(screen.getByRole("dialog")).getByRole("combobox");
+    expect(within(select).getAllByRole("option").map((o) => o.value)).not.toContain("ADMIN");
   });
 });

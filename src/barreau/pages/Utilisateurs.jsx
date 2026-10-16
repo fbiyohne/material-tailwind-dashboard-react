@@ -5,7 +5,7 @@ import { formatDate } from "../utils/format";
 import { useAuth } from "../auth/AuthContext";
 import {
   listerUsers, creerUser, majUser, resetPasswordUser, supprimerUser,
-  listerDemandesAcces, approuverDemandeAcces, approuverDemandeEspace, refuserDemandeAcces, getRbac,
+  listerDemandesAcces, approuverDemandeAcces, approuverDemandeEspace, refuserDemandeAcces,
 } from "../api/resources";
 
 const ROLE_LABEL = {
@@ -24,9 +24,6 @@ const ROLES = ["SECRETAIRE_GENERAL", "BATONNIER", "TRESORIERE", "ADMIN", "SECRET
 
 // `type` : "personnel" (compte back-office, rôle + mot de passe) ou "avocat"
 // (accès espace, lien d'activation). Le toggle n'apparaît que pour une demande.
-const ROLES_CONTENU = ["SECRETAIRE_GENERAL", "BATONNIER", "AVOCAT"];
-const AMORCABLES = ["SECRETAIRE_GENERAL", "BATONNIER"];
-const TITRE_CONTENU = "Compte ayant accès aux messages ou aux pièces : géré par le Secrétaire général (secret professionnel)";
 
 const videCreation = (prefill = {}) => ({ nom: "", email: "", role: "SECRETAIRE_GENERAL", password: "", demandeId: null, type: "personnel", ...prefill });
 
@@ -55,8 +52,7 @@ export function Utilisateurs() {
 
   // Une demande émane d'un avocat (champs n° d'inscription / cabinet) : on
   // propose l'accès espace par défaut, le SG pouvant basculer vers un compte staff.
-  // R1-1 : l'accès espace (lien d'activation renvoyé à l'opérateur) est refusé à l'ADMIN côté serveur.
-  const provisionner = (d) => setCreation(videCreation({ nom: d.nom, email: d.email, demandeId: d.id, type: estAdmin ? "personnel" : "avocat" }));
+  const provisionner = (d) => setCreation(videCreation({ nom: d.nom, email: d.email, demandeId: d.id, type: "avocat" }));
   const refuser = async (d) => {
     try { await refuserDemandeAcces(d.id); await chargerDemandes(); toast.success(`Demande de ${d.nom} refusée.`); }
     catch (e) { toast.error(e.message); }
@@ -86,18 +82,6 @@ export function Utilisateurs() {
   // (changement de rôle, mot de passe, désactivation). On verrouille donc ces
   // actions dans l'UI pour un SG plutôt que de le laisser buter sur un 403.
   const geleAdmin = (u) => !estAdmin && u.role === "ADMIN";
-  // Secret professionnel (miroir de users.ts, R1-1) : l'ADMIN ne prend pas la main sur un compte qui
-  // accède au contenu (SG, Bâtonnier, Avocat, rôles titulaires de « messagerie ») ; il garde la
-  // désactivation. Seul le tout premier SG ou Bâtonnier lui reste créable (amorçage).
-  const [rolesContenu, setRolesContenu] = useState(ROLES_CONTENU);
-  useEffect(() => {
-    if (!estAdmin) return;
-    getRbac()
-      .then(({ matrice }) => setRolesContenu([...ROLES_CONTENU, ...Object.keys(matrice).filter((r) => matrice[r].includes("messagerie"))]))
-      .catch(() => {});
-  }, [estAdmin]);
-  const geleContenu = (u) => estAdmin && u.id !== courant?.id && rolesContenu.includes(u.role);
-  const attribuable = (r) => !estAdmin || !rolesContenu.includes(r) || (AMORCABLES.includes(r) && !users.some((u) => u.role === r));
   const supprimer = async (u) => {
     const ok = await confirm({
       title: "Supprimer le compte",
@@ -155,7 +139,7 @@ export function Utilisateurs() {
   return (
     <div className="space-y-5">
       <PageHeader eyebrow="Système" titre="Utilisateurs" sousTitre="Comptes d'accès à l'application et attribution des rôles (RBAC).">
-        <button className="bpn-btn bpn-btn-or shrink-0" onClick={() => setCreation(videCreation({ role: ROLES.find(attribuable) }))}>
+        <button className="bpn-btn bpn-btn-or shrink-0" onClick={() => setCreation(videCreation({ role: ROLES[0] }))}>
           <UserPlusIcon className="h-4 w-4" /> Nouveau compte
         </button>
       </PageHeader>
@@ -229,15 +213,14 @@ export function Utilisateurs() {
                   <select
                     value={u.role}
                     onChange={(e) => changerRole(u, e.target.value)}
-                    disabled={u.id === courant?.id || geleAdmin(u) || geleContenu(u)}
+                    disabled={u.id === courant?.id || geleAdmin(u)}
                     className="bpn-input !w-auto !py-1 text-xs disabled:opacity-60"
-                    title={u.id === courant?.id ? "Vous ne pouvez pas changer votre propre rôle" : geleAdmin(u) ? "Seul un administrateur peut agir sur un compte administrateur" : geleContenu(u) ? TITRE_CONTENU : ""}
+                    title={u.id === courant?.id ? "Vous ne pouvez pas changer votre propre rôle" : geleAdmin(u) ? "Seul un administrateur peut agir sur un compte administrateur" : ""}
                   >
                     {/* Un non-ADMIN ne peut pas attribuer le rôle ADMIN (anti-escalade
                         serveur) : on ne le propose pas, tout en gardant la valeur
-                        courante affichable si la ligne est déjà ADMIN. Idem pour l'ADMIN et
-                        les rôles ayant accès au contenu (promotion refusée par le serveur). */}
-                    {ROLES.filter((r) => r === u.role || ((estAdmin || r !== "ADMIN") && (!estAdmin || !rolesContenu.includes(r))))
+                        courante affichable si la ligne est déjà ADMIN. */}
+                    {ROLES.filter((r) => r === u.role || estAdmin || r !== "ADMIN")
                       .map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
                   </select>
                 ),
@@ -255,12 +238,12 @@ export function Utilisateurs() {
               align: "right",
               cell: (u) => (
                 <div className="flex justify-end gap-2">
-                  {!geleAdmin(u) && !geleContenu(u) && u.role !== "AVOCAT" && (
+                  {!geleAdmin(u) && u.role !== "AVOCAT" && (
                     <button className="bpn-btn bpn-btn-ghost !px-2 !py-1 text-xs" onClick={() => setEdition({ id: u.id, nom: u.nom, email: u.email })}>
                       <PencilSquareIcon className="h-3.5 w-3.5" /> Modifier
                     </button>
                   )}
-                  {!geleAdmin(u) && !geleContenu(u) && (
+                  {!geleAdmin(u) && (
                     <button className="bpn-btn bpn-btn-ghost !px-2 !py-1 text-xs" onClick={() => setMotDePasse({ id: u.id, nom: u.nom, password: "" })}>
                       <KeyIcon className="h-3.5 w-3.5" /> Mot de passe
                     </button>
@@ -273,7 +256,7 @@ export function Utilisateurs() {
                   >
                     {u.actif ? "Désactiver" : "Réactiver"}
                   </button>
-                  {estAdmin && !geleContenu(u) && (
+                  {estAdmin && (
                     <button
                       className="bpn-btn bpn-btn-ghost !px-2 !py-1 text-xs text-rouge disabled:opacity-50"
                       onClick={() => supprimer(u)}
@@ -312,7 +295,7 @@ export function Utilisateurs() {
       >
         {creation && (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {creation.demandeId && !estAdmin && (
+            {creation.demandeId && (
               <div className="flex gap-1.5 rounded-lg bg-grisL p-1 sm:col-span-2">
                 {[["avocat", "Accès espace avocat"], ["personnel", "Compte du personnel"]].map(([v, l]) => (
                   <button key={v} type="button" onClick={() => setCreation({ ...creation, type: v })}
@@ -337,9 +320,8 @@ export function Utilisateurs() {
               <>
                 <FormField label="Rôle">
                   <select value={creation.role} onChange={setC("role")} className="bpn-input">
-                    {/* Création : un non-ADMIN ne peut pas provisionner un compte ADMIN ; l'ADMIN,
-                        un compte ayant accès au contenu (hors amorçage). */}
-                    {ROLES.filter((r) => (estAdmin || r !== "ADMIN") && attribuable(r))
+                    {/* Création : un non-ADMIN ne peut pas provisionner un compte ADMIN */}
+                    {ROLES.filter((r) => (estAdmin || r !== "ADMIN"))
                       .map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
                   </select>
                 </FormField>
