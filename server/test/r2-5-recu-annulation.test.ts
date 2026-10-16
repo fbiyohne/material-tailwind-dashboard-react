@@ -80,9 +80,9 @@ describe("R2-5 — annulation logique d'un reçu", () => {
 
   it("/v/r/... d'un reçu annulé répond « Document annulé », jamais « Authentique » ni « Non reconnu »", async () => {
     const r = await payer();
-    expect((await request(app).get(r.verif)).text).toContain("Authentique");
+    expect((await request(app).get(new URL(r.verif, "http://x").pathname)).text).toContain("Authentique");
     await request(app).delete(`/api/recus/${r.id}`).set(...bearer(sg));
-    const v = await request(app).get(r.verif);
+    const v = await request(app).get(new URL(r.verif, "http://x").pathname);
     expect(v.status).toBe(200);
     expect(v.text).toContain("Document annulé");
     expect(v.text).not.toContain("Authentique");

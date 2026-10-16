@@ -9,12 +9,14 @@ import { telechargerDocumentPdf } from "../utils/exports";
 import { Badge, RecuDocument, ApercuAjuste, Notice, useToast, useConfirm, PageHeader, DataTable } from "../components";
 import { listerMembres, listerRecus, enregistrerPaiement, annulerRecu, telechargerRecuPdf } from "../api/resources";
 
-const COLONNES_CSV = [
+// Exportée pour le test : la colonne Statut évite d'additionner un reçu annulé comme un encaissement.
+export const COLONNES_CSV = [
   { label: "N°", valeur: (r) => r.numero },
   { label: "Avocat", valeur: (r) => `Me ${r.membre?.nom}` },
   { label: "Montant", valeur: (r) => r.montant },
   { label: "Exercice", valeur: (r) => r.annee },
   { label: "Date", valeur: (r) => formatDate(r.date) },
+  { label: "Statut", valeur: (r) => (r.statut === "ANNULE" ? `Annulé le ${formatDate(r.annuleLe)}` : "Émis") },
 ];
 
 const MODES = ["Espèces", "Virement", "Chèque", "Mobile Money"];

@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { ToastProvider } from "../../components/Toast";
 import { ConfirmProvider } from "../../components/ConfirmDialog";
-import { Recus } from "../Recus";
+import { Recus, COLONNES_CSV } from "../Recus";
 
 // R2-5 — un reçu annulé reste au registre, marqué « Annulé », sans PDF ni bouton d'annulation.
 vi.mock("../../api/resources", () => ({
@@ -24,5 +24,12 @@ describe("Registre des reçus — annulation logique", () => {
     expect(screen.getByRole("button", { name: "Annuler le reçu N° R-2026-0001" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Annuler le reçu N° R-2026-0002" })).toBeNull();
     expect(screen.getAllByTitle("Télécharger le reçu (PDF)")).toHaveLength(1);
+  });
+
+  it("l'export CSV porte une colonne Statut : un reçu annulé n'est pas confondu avec un encaissement", () => {
+    const statut = COLONNES_CSV.find((c) => c.label === "Statut");
+    expect(statut).toBeDefined();
+    expect(statut.valeur({ statut: "ANNULE", annuleLe: "2026-10-05" })).toMatch(/^Annulé le /);
+    expect(statut.valeur({ statut: "EMIS" })).toBe("Émis");
   });
 });
