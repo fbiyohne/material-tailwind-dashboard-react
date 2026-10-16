@@ -10,25 +10,35 @@ import { logger } from "./logger.js";
  * ce n'est ni une signature électronique au sens légal ni un certificat qualifié.
  */
 const keyDir = process.env.SIGNATURE_KEY_DIR || path.resolve("secrets");
-const privPath = path.join(keyDir, "signing-private.pem");
-const pubPath = path.join(keyDir, "signing-public.pem");
 
-function chargerCles(): { privateKey: string; publicKey: string } {
+/**
+ * Charge la paire de clés des documents. En production, toute situation qui
+ * produirait une clé éphémère (dossier absent, paire illisible ou incomplète,
+ * persistance impossible) refuse le démarrage : sinon un redémarrage changerait
+ * les jetons QR et les documents imprimés deviendraient « Non reconnu » (R1-1, R2-7).
+ */
+export function chargerCles(dir = keyDir): { privateKey: string; publicKey: string } {
   if (process.env.SIGNATURE_PRIVATE_KEY && process.env.SIGNATURE_PUBLIC_KEY) {
     return { privateKey: process.env.SIGNATURE_PRIVATE_KEY, publicKey: process.env.SIGNATURE_PUBLIC_KEY };
   }
-  try {
-    if (fs.existsSync(privPath) && fs.existsSync(pubPath)) {
+  const prod = process.env.NODE_ENV === "production";
+  const privPath = path.join(dir, "signing-private.pem");
+  const pubPath = path.join(dir, "signing-public.pem");
+  const presentes = [privPath, pubPath].filter((p) => fs.existsSync(p)).length;
+  if (presentes === 2) {
+    try {
       return { privateKey: fs.readFileSync(privPath, "utf8"), publicKey: fs.readFileSync(pubPath, "utf8") };
+    } catch (e) {
+      if (prod) throw new Error(`Clés de signature illisibles dans ${dir} : démarrage refusé en production (aucune clé de remplacement générée).`);
+      logger.warn({ err: e }, "Lecture des clés de signature échouée — repli sur génération.");
     }
-  } catch (e) {
-    logger.warn({ err: e }, "Lecture des clés de signature échouée — repli sur génération.");
+  } else if (presentes === 1 && prod) {
+    // Régénérer écraserait la moitié restante de la paire : on refuse.
+    throw new Error(`Paire de clés de signature incomplète dans ${dir} : démarrage refusé en production.`);
   }
   // Aucune clé fournie ni persistée : on en génère (acceptable en dev, ou au premier
-  // démarrage sur un SIGNATURE_KEY_DIR persistant). En production sans dossier
-  // persistant, la clé serait éphémère et tous les QR imprimés deviendraient
-  // « Non reconnu » au redémarrage : on refuse de démarrer (R1-1, fail-closed).
-  if (process.env.NODE_ENV === "production" && !process.env.SIGNATURE_KEY_DIR) {
+  // démarrage sur un SIGNATURE_KEY_DIR persistant, à condition que l'écriture réussisse).
+  if (prod && !process.env.SIGNATURE_KEY_DIR) {
     throw new Error("Clés de signature absentes en production : configurez SIGNATURE_PRIVATE_KEY et SIGNATURE_PUBLIC_KEY, ou un SIGNATURE_KEY_DIR persistant.");
   }
   const { privateKey, publicKey } = crypto.generateKeyPairSync("rsa", {
@@ -37,10 +47,15 @@ function chargerCles(): { privateKey: string; publicKey: string } {
     privateKeyEncoding: { type: "pkcs8", format: "pem" },
   });
   try {
-    fs.mkdirSync(keyDir, { recursive: true });
+    fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(privPath, privateKey, { mode: 0o600 });
     fs.writeFileSync(pubPath, publicKey);
+    // Relecture : la paire écrite doit être celle qu'on utilise.
+    if (fs.readFileSync(privPath, "utf8") !== privateKey || fs.readFileSync(pubPath, "utf8") !== publicKey) {
+      throw new Error("relecture des clés persistées divergente");
+    }
   } catch (e) {
+    if (prod) throw new Error(`Persistance des clés de signature impossible dans ${dir} : démarrage refusé en production (clé éphémère interdite).`);
     logger.warn({ err: e }, "Persistance des clés de signature impossible (FS en lecture seule) — clés gardées en mémoire.");
   }
   return { privateKey, publicKey };
@@ -137,7 +152,10 @@ export function originePublique(): string {
 /** Hôte public imprimé sous le QR des gabarits (ex. « barreau-pn.onrender.com »). */
 export const hotePublic = () => new URL(originePublique()).host;
 
+/** URL absolue de vérification (origine canonique + chemin signé) : ce que le QR encode et ce que l'API renvoie dans `verif`. */
+export const urlVerif = (type: TypeDocQr, ref: string) => originePublique() + cheminVerif(type, ref);
+
 /** QR (PNG data URL) du document : même rendu que les QR existants, correction M, origine canonique. */
 export function qrDocument(type: TypeDocQr, ref: string): Promise<string> {
-  return QRCode.toDataURL(originePublique() + cheminVerif(type, ref), { errorCorrectionLevel: "M", margin: 1, width: 234, color: { dark: "#1A3A6B", light: "#ffffff" } });
+  return QRCode.toDataURL(urlVerif(type, ref), { errorCorrectionLevel: "M", margin: 1, width: 234, color: { dark: "#1A3A6B", light: "#ffffff" } });
 }
