@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { urlVerification } from "../../utils/urlVerif.js";
 import { TicketIcon, ArrowDownTrayIcon, ClipboardDocumentIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
-import { Badge, VignetteTimbre, PageHeader, BandeauExperimental, FormField, Notice, useToast, TableSkeleton, ErrorState, EmptyState } from "../../components";
+import { Badge, VignetteTimbre, PageHeader, BandeauExperimental, FormField, Notice, useToast, useConfirm, TableSkeleton, ErrorState, EmptyState } from "../../components";
 import { canauxActifs } from "../../data/config";
 import { formatFCFA, formatDate } from "../../utils/format";
 import { timbrePng, copierTimbre, timbreSvg, telechargerBlob, telechargerSvg } from "../../utils/timbreImage";
@@ -13,6 +13,7 @@ const aujourdhui = () => new Date().toISOString().slice(0, 10);
 /** Espace avocat — l'avocat émet ses timbres de plaidoirie (paiement) et les récupère. */
 export function MesTimbres() {
   const toast = useToast();
+  const confirm = useConfirm();
   const [data, setData] = useState(null);
   const [erreur, setErreur] = useState(false);
   const [moi, setMoi] = useState(null);
@@ -74,6 +75,13 @@ export function MesTimbres() {
   const reprendre = (t) => setSucces({ ...t, membre: { nom: moi?.nom } });
 
   const declarerUtilise = async (t) => {
+    // Irréversible côté serveur : un clic accidentel consommerait le timbre.
+    const ok = await confirm({
+      title: "Marquer ce timbre comme utilisé ?",
+      message: `Le timbre N° ${t.numero} (${t.affaire}) sera déclaré utilisé. Cette action est définitive : il ne pourra plus être apposé sur un autre acte.`,
+      confirmLabel: "Confirmer l'utilisation",
+    });
+    if (!ok) return;
     try { await declarerEspaceTimbreUtilise(t.id); toast.success(`Timbre N° ${t.numero} déclaré utilisé.`); charger(); }
     catch (e) { toast.error(e.message); }
   };
@@ -135,13 +143,13 @@ export function MesTimbres() {
           <ul className="divide-y divide-grisL">
             {data.timbres.map((t) => (
               <li key={t.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
-                <span className="flex min-w-0 items-center gap-3">
-                  <span className="font-mono text-xs text-or-fonce">N° {t.numero}</span>
+                <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+                  <span className="shrink-0 font-mono text-xs text-or-fonce">N° {t.numero}</span>
                   <span className="truncate text-sm text-encre">{t.affaire}</span>
                   {t.juridiction && <span className="shrink-0 text-xs text-gris">· {t.juridiction}</span>}
                   <Badge ton={t.statut === "ANNULE" ? "rouge" : t.statut === "UTILISE" ? "gris" : "vert"} dot={false}>{t.statut === "ANNULE" ? "Annulé" : t.statut === "UTILISE" ? "Utilisé" : "Valide"}</Badge>
                 </span>
-                <span className="flex shrink-0 items-center gap-3">
+                <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                   <span className="text-xs text-gris">{formatDate(t.createdAt)}</span>
                   <button type="button" onClick={() => reprendre(t)} className="text-xs font-medium text-navy hover:text-or-fonce">Copier / télécharger</button>
                   {t.statut === "VALIDE" && <button type="button" onClick={() => declarerUtilise(t)} className="text-xs font-medium text-navy hover:text-or-fonce">Marquer utilisé</button>}

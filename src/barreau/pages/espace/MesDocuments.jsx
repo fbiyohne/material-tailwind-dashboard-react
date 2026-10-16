@@ -91,8 +91,8 @@ export function MesDocuments() {
       ) : (
         <ul className="divide-y divide-grisL">
           {docs.quitus.map((q) => (
-            <li key={q.id} className="flex items-center justify-between gap-3 px-4 py-3">
-              <span className="flex items-center gap-3">
+            <li key={q.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+              <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
                 <Badge ton="bleu" dot={false}>Quitus {q.annee}</Badge>
                 <span className="font-mono text-xs text-or-fonce">{q.numero}</span>
                 <span className="text-xs text-gris">{formatDate(q.date)}</span>
@@ -119,8 +119,8 @@ export function MesDocuments() {
       ) : (
         <ul className="divide-y divide-grisL">
           {docs.recus.map((r) => (
-            <li key={r.id} className="flex items-center justify-between gap-3 px-4 py-3">
-              <span className="flex min-w-0 items-center gap-3">
+            <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+              <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
                 <span className="font-mono text-xs text-or-fonce">{r.numero}</span>
                 <span className="truncate text-sm text-encre">{r.objet ?? `Paiement ${r.annee}`}</span>
                 <span className="shrink-0 text-xs text-gris">{formatDate(r.date)}</span>

@@ -97,16 +97,20 @@ Ces correctifs ne créent aucun module, aucune migration ni aucune dépendance. 
 
 ## 5. Mise à jour T13 : affichage des manques comblés (front)
 
-Tous les manques « partiel » ou « non » des familles 1, 3, 7, 8, 9, 10, 12 et 13 passent à **oui**. Tests : `src/barreau/pages/__tests__/EspaceManques.test.jsx` (11 tests : donnée, état vide, erreur, mention d'accès). Aucun nouveau jeton, police ni dépendance.
+Tous les manques « partiel » ou « non » des familles 1, 3, 7, 8, 9, 10, 12 et 13 passent à **oui**. Tests : `src/barreau/pages/__tests__/EspaceManques.test.jsx` (12 tests : donnée, état vide, erreur, mention d'accès, confirmation du timbre, solde nul) et `src/barreau/layout/__tests__/EspaceAvocatLayout.test.jsx` (2 tests : menu filtré). Aucun nouveau jeton, police ni dépendance.
 
 | # | Famille | Présent (après T13) | Preuve |
 |---|---|---|---|
 | 1 | Cycle de vie | oui : badge de statut à côté de la qualité | `MaSituation.jsx:146`, `:156` |
 | 3 | Parcours et stage | oui : cartes « Mon parcours » et « Mon stage » (`GET /espace/parcours`), états chargement, vide, erreur | `MaSituation.jsx:85-135`, `:188` |
-| 7 | Timbre | oui : badge « Utilisé », bouton « Marquer utilisé » (`POST /espace/timbres/:id/utilise`) | `MesTimbres.jsx:142`, `:147` ; `resources.js:302` |
-| 8 | Quitus et reçus | oui : « Valable jusqu'au », badge « Expiré », lien « Vérifier » | `MesDocuments.jsx:99-103`, `:130` |
-| 9 | Cotisations et omission | oui : Notice du dernier acte de recouvrement tant que le solde est dû | `MaSituation.jsx:162` |
+| 7 | Timbre | oui : badge « Utilisé », bouton « Marquer utilisé » (`POST /espace/timbres/:id/utilise`) précédé d'une confirmation `useConfirm` (action définitive) ; refus = aucun appel, accord = un appel | `MesTimbres.jsx:79-84` (confirmation), `:150` (badge), `:155` (bouton) ; `resources.js:302` ; test `EspaceManques.test.jsx:146` |
+| 8 | Quitus et reçus | oui : « Valable jusqu'au », badge « Expiré », lien « Vérifier » ; lignes repliées à 360 px | `MesDocuments.jsx:99-103`, `:130` ; test `EspaceManques.test.jsx:113` |
+| 9 | Cotisations et omission | oui : Notice du dernier acte de recouvrement tant que le solde est dû ; absente si le solde est nul | `MaSituation.jsx:162` ; tests `EspaceManques.test.jsx:38` (présente), `:62` (solde 0, absente) |
 | 10 | Élections | oui : « Scrutin du JJ/MM/AAAA » | `EspaceScrutins.jsx:66` |
-| 12 | Paramètres | oui : menu de l'espace filtré par les modules masqués (affichage seulement ; `/` et `/discipline` obligatoires) | `EspaceAvocatLayout.jsx:58`, `:100` |
+| 12 | Paramètres | oui : menu de l'espace (bureau et mobile) filtré par les modules masqués (affichage seulement ; `/` et `/discipline` obligatoires) | `EspaceAvocatLayout.jsx:58`, `:100`, `:154` ; tests `EspaceAvocatLayout.test.jsx:24` (masqué absent, obligatoire présent), `:40` (aucun masqué) |
 | 13 | Discipline | oui : sursis, période, inéligibilité, organe, notification, recours ; avis d'attente et PDF masqué tant que non notifiée | `EspaceDiscipline.jsx:67-78` |
 | 6 | Rejet motivé | mention d'accès ajoutée | `MesDocuments.jsx:192` ; constante `MENTION_ACCES_PERSONNEL` (`data/institutionnel.js`) |
+
+### Contrôle navigateur T13 (1280 et 360 px)
+
+Rendu réel sur http://localhost:4100 (dist reconstruit), compte AVOCAT de la base de test, réponses `/api/espace/*` simulées par Playwright (`page.route`) avec des cas longs (nom du maître de stage, objet disciplinaire, nom de fichier, motif de rejet, intitulé d'affaire) : aucune écriture en base. `document.documentElement.scrollWidth <= clientWidth` sur les 8 écrans (MaSituation, MesDocuments, MesTimbres, EspaceDiscipline à 1280 et 360 px). Deux chevauchements trouvés à 360 px et corrigés par repli des lignes (`flex-wrap`) : bouton « Marquer utilisé » rogné dans la liste des timbres (`MesTimbres.jsx:146`, `:152`) et lien « Vérifier » et bouton PDF rognés dans les lignes de quitus et de reçus (`MesDocuments.jsx:94-95`, `:122-123`). Captures : `docs/captures/m20261016/t13/` (situation, documents, documents-quitus, documents-recus, timbres, timbres-confirmation, discipline ; suffixes -1280 et -360).

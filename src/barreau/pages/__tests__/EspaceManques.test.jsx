@@ -59,6 +59,14 @@ describe("MaSituation — statut, recouvrement, parcours, stage", () => {
     expect(screen.queryByText(/Mise en demeure du/)).toBeNull();
   });
 
+  it("recouvrement présent mais cotisation soldée : pas d'avis de recouvrement", async () => {
+    api.getEspaceMoi.mockResolvedValue({ ...MOI, situation: { ...MOI.situation, cotisation: { du: 50000, paye: 50000, solde: 0, statut: "paye", valideTresoriere: true } } });
+    api.getEspaceParcours.mockResolvedValue({ evenements: [], stage: null });
+    render(enveloppe(<MaSituation />));
+    expect(await screen.findByText("Suspendu")).toBeInTheDocument();
+    expect(screen.queryByText(/Mise en demeure du/)).toBeNull();
+  });
+
   it("parcours en erreur : état d'erreur avec reprise", async () => {
     api.getEspaceMoi.mockResolvedValue(MOI);
     api.getEspaceParcours.mockRejectedValue(new Error("x"));
@@ -143,7 +151,15 @@ describe("MesTimbres — déclaration d'usage", () => {
     expect(await screen.findByText("Utilisé")).toBeInTheDocument();
     const boutons = screen.getAllByRole("button", { name: "Marquer utilisé" });
     expect(boutons).toHaveLength(1);
+    // Action définitive : un refus de la confirmation n'appelle pas le serveur.
     await userEvent.click(boutons[0]);
+    expect(await screen.findByText(/définitive/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Annuler" }));
+    expect(api.declarerEspaceTimbreUtilise).not.toHaveBeenCalled();
+    // Accord : un seul appel.
+    await userEvent.click(screen.getByRole("button", { name: "Marquer utilisé" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Confirmer l'utilisation" }));
+    expect(api.declarerEspaceTimbreUtilise).toHaveBeenCalledTimes(1);
     expect(api.declarerEspaceTimbreUtilise).toHaveBeenCalledWith(2);
   });
 });
