@@ -3,11 +3,11 @@
 Relevé en l'état à ada3e30, sans rien modifier. Tout nouveau comportement s'aligne sur ces valeurs.
 
 ## Onglets : `src/barreau/components/Tabs.jsx`
-- Conteneur (l.47) : `lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:items-start lg:gap-6` si `vertical` (seul Paramètres l.463 l'utilise) ; `items-start` est requis pour un sticky en grille.
-- Enveloppe du tablist (l.52) : `border-b border-grisM`, `lg:border-b-0 lg:border-r` en vertical. Aucun sticky.
-- Tablist (l.58) : `-mb-px flex gap-1 overflow-x-auto [scrollbar-width:none]` ; vertical `lg:-mr-px lg:mb-0 lg:flex-col lg:overflow-visible`. Son propre `overflow-x-auto` rend `overflow-y` calculé à `auto` : le sticky se pose donc sur l'enveloppe, pas sur le tablist.
-- Onglet (l.78) : `flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm sm:px-4 font-medium` ; actif `border-or text-navy`, inactif `border-transparent text-gris hover:border-grisM hover:text-encre` ; vertical `lg:border-b-0 lg:border-r-2 lg:pl-0`. Pastille `rounded-full bg-grisL px-1.5 py-0.5 text-xs font-semibold text-gris`.
-- Panneau (l.108) : `pt-5 outline-none`, `lg:pt-0` en vertical.
+- Conteneur (l.41) : `lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:items-start lg:gap-6` si `vertical` (seul Paramètres l.461, prop `vertical` l.463, l'utilise) ; `items-start` est requis pour un sticky en grille.
+- Enveloppe du tablist (l.45) : `border-b border-grisM`, `lg:border-b-0 lg:border-r` en vertical. Aucun sticky.
+- Tablist (l.50) : `-mb-px flex gap-1 overflow-x-auto [scrollbar-width:none]` ; vertical `lg:-mr-px lg:mb-0 lg:flex-col lg:overflow-visible`. Son propre `overflow-x-auto` rend `overflow-y` calculé à `auto` : le sticky se pose donc sur l'enveloppe, pas sur le tablist.
+- Onglet (l.66) : `flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm sm:px-4 font-medium` ; actif `border-or text-navy`, inactif `border-transparent text-gris hover:border-grisM hover:text-encre` ; vertical `lg:border-b-0 lg:border-r-2 lg:pl-0`. Pastille (l.75) `rounded-full bg-grisL px-1.5 py-0.5 text-xs font-semibold text-gris`.
+- Panneau (l.91) : `pt-5 outline-none`, `lg:pt-0` en vertical.
 - Imbrication : Paramètres.jsx l.339 (`ariaLabel="Barreau et identité"`, horizontal) dans le panneau du Tabs vertical de l.461 (`ariaLabel="Sections des paramètres"`, 9 onglets). Seul le niveau 1 doit être collant.
 - Consommateurs (8) : AssembleeDetail l.173, AvocatDetail l.214, CorpsElectoral l.98, DossierDetail l.280, espace/MesDocuments l.242, Parametres l.339 et 461, ReunionDetail l.188, Timbres l.101. (`src/pages/dashboard/profile.jsx` est un autre template, hors périmètre.)
 
@@ -32,8 +32,8 @@ Relevé en l'état à ada3e30, sans rien modifier. Tout nouveau comportement s'a
 - Composants réutilisables : `src/barreau/components/` Badge, Notice, DataTable, Tabs, PageHeader (l.9, `flex flex-col ... sm:flex-row`), StatCard, Modal, Button, EmptyState, ErrorState, Pagination, FormField ; classes globales `bpn-card`, `bpn-btn`, `bpn-eyebrow` (`public/css/tailwind.css`).
 
 ## Exports et impression actuels
-- window.print : `public/css/tailwind.css:248-274` `@media print` avec `@page { size: A4; margin: 18mm }`, tout masqué sauf `.bpn-print-zone`, `.bpn-no-print` masqué. Pas de pied ni de numérotation. Appelants : DocumentModal.jsx:46 (repli sans PDF serveur), Annuaire.jsx:51, CorpsElectoral.jsx:109, Stagiaires.jsx:176.
-- jsPDF : `src/barreau/utils/exports.js` `exporterPdf` (html2canvas puis jsPDF `unit:"pt", format:"a4"`). Mode `page` (l.25-36) : une page, image mise à l'échelle, marge 14 pt, sans en-tête ni pied. Mode flux (l.39-56) : marge 40 pt, tranches PNG, sans en-tête, sans pied, sans « Page x/y ».
+- window.print : `public/css/tailwind.css:251-273` `@media print` avec `@page { size: A4; margin: 18mm }` (l.252-255), tout masqué sauf `.bpn-print-zone`, `.bpn-no-print` masqué. Pas de pied ni de numérotation. Appelants : DocumentModal.jsx:46 (repli sans PDF serveur), Annuaire.jsx:51, CorpsElectoral.jsx:109, Stagiaires.jsx:176.
+- jsPDF : `src/barreau/utils/exports.js` `exporterPdf` (html2canvas puis jsPDF `unit:"pt", format:"a4"`). Mode `page` (l.23-34) : une page, image mise à l'échelle, marge 14 pt (l.27), sans en-tête ni pied. Mode flux (l.36-59) : marge 40 pt (l.39), tranches PNG, sans en-tête, sans pied, sans « Page x/y ».
 
 ## Captures « avant » (instance http://localhost:4100, dist de 15:30 postérieur au dernier commit de src de 15:19, connecté SG)
 - `docs/captures/m20261016/avant/parametres-1280.png` et `parametres-360.png` : onglet Notifications (panneau le plus long, 19 209 px) défilé jusqu'en bas. Mesure : le tablist est à `top = -18 199 px` à 1280 et `-18 647 px` à 360, donc entièrement hors écran ; à 360 px `scrollWidth = clientWidth = 352` (pas de débordement horizontal de page), le tablist défile en interne.
