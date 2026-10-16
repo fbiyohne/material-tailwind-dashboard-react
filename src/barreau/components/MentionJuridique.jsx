@@ -69,7 +69,7 @@ export function MentionJuridique({ type, nature, article, children, className = 
           <span className={`rounded px-1.5 py-px font-semibold uppercase tracking-wide ${n.puce}`}>{n.etiquette}</span>
           {source && <span className="font-mono text-encre">{source}</span>}
         </p>
-        <p className="max-w-prose text-sm">{children ?? preset.texte}</p>
+        <p className="text-justify text-sm hyphens-auto">{children ?? preset.texte}</p>
       </div>
     </div>
   );
