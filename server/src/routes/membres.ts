@@ -443,7 +443,7 @@ const COLONNES_IMPORT = Object.keys(importRowSchema.shape);
 membresRouter.post(
   "/import",
   requireRole("SECRETAIRE_GENERAL"),
-  asyncH(async (req, res) => {
+  asyncH(async (req: AuthRequest, res) => {
     // ?simulation=1 : même validation, aucune écriture (aperçu avant confirmation, F-08).
     const simulation = req.query.simulation === "1";
     // Plafond sur le lot ; chaque ligne est validée à part : une ligne invalide (ex. num non numérique) est rapportée dans erreurs[] sans bloquer les autres.
