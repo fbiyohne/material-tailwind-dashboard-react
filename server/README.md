@@ -644,7 +644,7 @@ Si cette base accumule à son tour des restes, la remettre à zéro par
 ### Serveur & CORS
 - `PORT` (optionnel) : port d'écoute de l'API ; défaut 4000
 - `CLIENT_ORIGIN` (optionnel) : origine CORS autorisée (front) ; défaut `http://localhost:5173`
-- `PUBLIC_ORIGIN` (recommandé en production) : origine publique canonique encodée dans le QR et imprimée sous le QR des quitus et reçus (`/v/...`). Jamais déduite de l'en-tête `Host` ni de `X-Forwarded-*` (R1-6 : un Host falsifié aurait produit un document au jeton valide pointant vers un domaine hostile). Vide : repli sur `CLIENT_ORIGIN` (avertissement au démarrage en production). Schéma autre que http/https : génération refusée.
+- `PUBLIC_ORIGIN` (OBLIGATOIRE en production, https:// exigé : le démarrage est refusé sinon) : origine publique canonique encodée dans le QR et imprimée sous le QR des quitus et reçus (`/v/...`). Jamais déduite de l'en-tête `Host` ni de `X-Forwarded-*` (R1-6 : un Host falsifié aurait produit un document au jeton valide pointant vers un domaine hostile). Vide : repli sur `CLIENT_ORIGIN` (avertissement au démarrage en production). Schéma autre que http/https : génération refusée.
 - `TRUST_PROXY` (optionnel) : nombre de relais de confiance pour lire `X-Forwarded-For` (IP dans JournalAudit) ; défaut 1 (un mandataire). Passer 0 en exposition directe.
 - `HOST` (optionnel) : adresse d'écoute ; défaut `0.0.0.0` (tout réseau). Test & démo : `127.0.0.1`.
 

@@ -63,8 +63,9 @@ export function verifierConfigProduction(avertir: (msg: string) => void): void {
   if (!process.env.SMTP_HOST && !process.env.SMTP_URL) {
     avertir("SMTP non configuré : les notifications email resteront en simulation.");
   }
-  if (!process.env.PUBLIC_ORIGIN) {
-    avertir("PUBLIC_ORIGIN absente : les QR des documents utiliseront CLIENT_ORIGIN comme origine publique de vérification (R1-6).");
+  // Les QR sont imprimés : une origine absente ou non chiffrée les rendrait invérifiables ou exposés (R1-6).
+  if (!/^https:\/\//.test(process.env.PUBLIC_ORIGIN ?? "")) {
+    throw new Error("PUBLIC_ORIGIN absente ou non https:// : obligatoire en production (origine publique encodée dans les QR des documents).");
   }
   if (!process.env.PARAMS_CLE) {
     avertir("PARAMS_CLE absente : aucun secret (SMTP, passerelles, SMS) ne peut être enregistré chiffré depuis les Paramètres.");
