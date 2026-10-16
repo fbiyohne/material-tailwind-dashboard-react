@@ -63,6 +63,11 @@ services:
       # les QR imprimés : OBLIGATOIRE, le serveur refuse de démarrer sans elle.
       - key: PUBLIC_ORIGIN
         sync: false
+      # Clé AES-256-GCM (32 octets base64) des secrets saisis dans Paramètres.
+      # Sans elle, aucun secret n'est enregistrable (avertissement au démarrage).
+      # À générer une fois et ne plus changer : pas de rotation transparente.
+      - key: PARAMS_CLE
+        sync: false
       # Emplacement du Chrome téléchargé au build (sous le projet → persiste au
       # runtime). Lu par le serveur (lib/pdf.ts) pour lancer Puppeteer.
       - key: PUPPETEER_CACHE_DIR
