@@ -90,3 +90,6 @@ export const dossiersInitiaux = [
     statut: "ouvert",
   },
 ];
+
+/** Mention d'accès (avis juridique M-20261016) : décision ou rejet consultable par l'avocat seul. */
+export const MENTION_ACCES_PERSONNEL = "Document consultable par vous seul. Pour toute demande d'accès ou de rectification, adressez-vous au secrétariat du Barreau.";

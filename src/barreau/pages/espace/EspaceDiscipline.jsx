@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ArrowDownTrayIcon, ScaleIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
-import { Badge, PageHeader, useToast, TableSkeleton, ErrorState, EmptyState } from "../../components";
-import { STATUT_DOSSIER_META } from "../../data/institutionnel";
+import { Badge, Notice, PageHeader, useToast, TableSkeleton, ErrorState, EmptyState } from "../../components";
+import { STATUT_DOSSIER_META, MENTION_ACCES_PERSONNEL } from "../../data/institutionnel";
 import { formatDate } from "../../utils/format";
 import { assainirHtml } from "../../utils/sanitizeHtml";
 import { getEspaceDiscipline, telechargerEspaceDecisionPdf } from "../../api/resources";
@@ -64,7 +64,15 @@ export function EspaceDiscipline() {
                   </div>
                 )}
                 <Ligne label="Sanction" valeur={d.sanction} />
-                {d.decision && (
+                <Ligne label="Sursis" valeur={d.sanction && d.sursis ? "Oui" : null} />
+                <Ligne label="Période" valeur={d.sanctionDebut ? `Du ${formatDate(d.sanctionDebut)}${d.sanctionFin ? ` au ${formatDate(d.sanctionFin)}` : ""}` : null} />
+                <Ligne label="Inéligibilité" valeur={d.peineAccessoireMois ? `${d.peineAccessoireMois} mois` : null} />
+                <Ligne label="Organe" valeur={d.decidePar} />
+                <Ligne label="Notifiée le" valeur={d.dateNotification ? formatDate(d.dateNotification) : null} />
+                <Ligne label="Recours" valeur={d.recours ? `${d.recours}${d.dateRecours ? ` (${formatDate(d.dateRecours)})` : ""}` : null} />
+                {!d.dateNotification && <Notice ton="or" className="mt-2">Décision en attente de notification. Elle sera consultable ici dès sa notification.</Notice>}
+                {d.dateNotification && <p className="pt-1 text-xs text-gris">{MENTION_ACCES_PERSONNEL}</p>}
+                {d.dateNotification && d.decision && (
                   <div className="pt-1">
                     <button className="bpn-btn bpn-btn-ghost !py-1.5 text-xs" onClick={() => tele(() => telechargerEspaceDecisionPdf(d.id, d.reference))}>
                       <ArrowDownTrayIcon className="h-3.5 w-3.5" /> Décision (PDF)

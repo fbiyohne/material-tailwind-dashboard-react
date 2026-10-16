@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowDownTrayIcon, ArrowUpTrayIcon, DocumentTextIcon, DocumentCheckIcon, PaperClipIcon, TrashIcon, EyeIcon, AcademicCapIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
 import { Badge, PageHeader, EmptyState, Notice, Tabs, FormField, useToast, useConfirm, TableSkeleton, ErrorState } from "../../components";
+import { MENTION_ACCES_PERSONNEL } from "../../data/institutionnel";
 import { formatFCFA, formatDate } from "../../utils/format";
 import {
   getEspaceDocuments, telechargerEspaceRecuPdf, telechargerEspaceQuitusPdf,
@@ -95,10 +96,15 @@ export function MesDocuments() {
                 <Badge ton="bleu" dot={false}>Quitus {q.annee}</Badge>
                 <span className="font-mono text-xs text-or-fonce">{q.numero}</span>
                 <span className="text-xs text-gris">{formatDate(q.date)}</span>
+                {q.finValidite && <span className="text-xs text-gris">Valable jusqu'au {formatDate(q.finValidite)}</span>}
+                {q.finValidite && q.finValidite < new Date().toISOString().slice(0, 10) && <Badge ton="rouge" dot={false}>Expiré</Badge>}
               </span>
+              <span className="flex shrink-0 items-center gap-2">
+              {q.verif && <a href={q.verif} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-medium text-navy hover:text-or-fonce"><ShieldCheckIcon className="h-4 w-4" /> Vérifier</a>}
               <button className="bpn-btn bpn-btn-ghost bpn-btn-sm" onClick={() => telecharger(() => telechargerEspaceQuitusPdf(q.id, q.numero))}>
                 <ArrowDownTrayIcon className="h-3.5 w-3.5" /> PDF
               </button>
+              </span>
             </li>
           ))}
         </ul>
@@ -120,9 +126,12 @@ export function MesDocuments() {
                 <span className="shrink-0 text-xs text-gris">{formatDate(r.date)}</span>
                 <span className="shrink-0 font-medium">{formatFCFA(r.montant)}</span>
               </span>
+              <span className="flex shrink-0 items-center gap-2">
+              {r.verif && <a href={r.verif} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-medium text-navy hover:text-or-fonce"><ShieldCheckIcon className="h-4 w-4" /> Vérifier</a>}
               <button className="bpn-btn bpn-btn-ghost bpn-btn-sm" onClick={() => telecharger(() => telechargerEspaceRecuPdf(r.id, r.numero))}>
                 <ArrowDownTrayIcon className="h-3.5 w-3.5" /> PDF
               </button>
+              </span>
             </li>
           ))}
         </ul>
@@ -180,6 +189,7 @@ export function MesDocuments() {
                     </div>
                     <div className="mt-0.5 text-xs text-gris">Soumis le {formatDate(p.createdAt)}</div>
                     {p.statut === "REJETEE" && p.note && <div className="mt-1 text-xs text-rouge">Motif : {p.note}</div>}
+                    {p.statut === "REJETEE" && <div className="mt-0.5 text-xs text-gris">{MENTION_ACCES_PERSONNEL}</div>}
                   </div>
                   <div className="flex shrink-0 items-center gap-1.5">
                     <button className="bpn-btn bpn-btn-ghost bpn-btn-sm" onClick={() => voirEspacePiece(p.id).catch((e) => toast.error(e.message))}>

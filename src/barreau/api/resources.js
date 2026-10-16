@@ -299,6 +299,8 @@ export const telechargerEspaceAttestationNonRedevance = () => telechargerPdf("/e
 export const getEspaceTimbres = () => api("/espace/timbres");
 export const creerEspaceTimbre = (body) => api("/espace/timbres", { method: "POST", body });
 export const tracerUsageTimbre = (id, mode) => api(`/espace/timbres/${id}/usage`, { method: "POST", body: { mode } });
+export const declarerEspaceTimbreUtilise = (id) => api(`/espace/timbres/${id}/utilise`, { method: "POST" });
+export const getEspaceParcours = () => api("/espace/parcours");
 
 // Centre de notifications de l'avocat (espace)
 export const getEspaceNotifications = () => api("/espace/notifications");

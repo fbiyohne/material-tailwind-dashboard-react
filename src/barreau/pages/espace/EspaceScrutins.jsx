@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { CheckBadgeIcon, MegaphoneIcon } from "@heroicons/react/24/outline";
 import { Badge, BandeauExperimental, Notice, PageHeader, useToast, TableSkeleton, ErrorState, EmptyState } from "../../components";
+import { formatDate } from "../../utils/format";
 import { getEspaceScrutins, voterScrutin } from "../../api/resources";
 
 const TYPE = { CONSEIL: "Conseil de l'Ordre", CONSEIL_BARREAU: "Conseil du barreau", BATONNIER: "Bâtonnier", AUTRE: "Scrutin" };
@@ -62,7 +63,7 @@ export function EspaceScrutins() {
               <div className="bpn-card-header">
                 <div>
                   <span className="bpn-card-heading">{s.titre}</span>
-                  <div className="mt-0.5 text-xs text-gris">{TYPE[s.type]} · {s.nbSieges} siège(s) à pourvoir</div>
+                  <div className="mt-0.5 text-xs text-gris">{TYPE[s.type]} · {s.nbSieges} siège(s) à pourvoir{s.dateScrutin ? ` · Scrutin du ${formatDate(s.dateScrutin)}` : ""}</div>
                 </div>
                 {s.statut === "PUBLIE" ? <Badge ton="bleu" dot={false}>Résultats publiés</Badge>
                   : s.aDejaVote ? <Badge ton="vert" dot={false}>Vous avez voté</Badge>

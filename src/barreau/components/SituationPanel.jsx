@@ -8,7 +8,7 @@ import { MentionJuridique } from "./MentionJuridique";
 import { useToast } from "./Toast";
 import { enregistrerEvenement, listerPieces } from "../api/resources";
 
-const LIBELLES = {
+export const LIBELLES = {
   INSCRIPTION: "Inscription", PASSAGE_TABLEAU: "Passage au tableau", ADMISSION_DIRECTE: "Admission directe",
   RAPPEL: "Rappel de cotisation", MISE_EN_DEMEURE: "Mise en demeure", TRANSMISSION: "Transmission au Conseil de l'Ordre national",
   OMISSION: "Omission", REINSCRIPTION: "Réinscription", SANCTION: "Sanction enregistrée", SUSPENSION: "Interdiction temporaire",

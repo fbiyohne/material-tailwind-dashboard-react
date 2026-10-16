@@ -5,7 +5,7 @@ import { Badge, VignetteTimbre, PageHeader, BandeauExperimental, FormField, Noti
 import { canauxActifs } from "../../data/config";
 import { formatFCFA, formatDate } from "../../utils/format";
 import { timbrePng, copierTimbre, timbreSvg, telechargerBlob, telechargerSvg } from "../../utils/timbreImage";
-import { getEspaceTimbres, creerEspaceTimbre, tracerUsageTimbre } from "../../api/resources";
+import { getEspaceTimbres, creerEspaceTimbre, tracerUsageTimbre, declarerEspaceTimbreUtilise } from "../../api/resources";
 
 const CANAL_LABEL = { MTN: "MTN Money", AIRTEL: "Airtel Money", CARTE: "Carte bancaire", VIREMENT: "Virement" };
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
@@ -73,6 +73,11 @@ export function MesTimbres() {
   // Reprend un timbre déjà émis dans l'aperçu pour le copier ou le télécharger.
   const reprendre = (t) => setSucces({ ...t, membre: { nom: moi?.nom } });
 
+  const declarerUtilise = async (t) => {
+    try { await declarerEspaceTimbreUtilise(t.id); toast.success(`Timbre N° ${t.numero} déclaré utilisé.`); charger(); }
+    catch (e) { toast.error(e.message); }
+  };
+
   const canaux = useMemo(() => (canauxActifs().length ? canauxActifs() : ["MTN", "AIRTEL", "CARTE", "VIREMENT"]), []);
 
   if (erreur) return <div className="bpn-card p-6"><ErrorState title="Indisponible" description="Vos timbres n'ont pas pu être chargés." onRetry={charger} /></div>;
@@ -134,11 +139,12 @@ export function MesTimbres() {
                   <span className="font-mono text-xs text-or-fonce">N° {t.numero}</span>
                   <span className="truncate text-sm text-encre">{t.affaire}</span>
                   {t.juridiction && <span className="shrink-0 text-xs text-gris">· {t.juridiction}</span>}
-                  <Badge ton={t.statut === "ANNULE" ? "rouge" : "vert"} dot={false}>{t.statut === "ANNULE" ? "Annulé" : "Valide"}</Badge>
+                  <Badge ton={t.statut === "ANNULE" ? "rouge" : t.statut === "UTILISE" ? "gris" : "vert"} dot={false}>{t.statut === "ANNULE" ? "Annulé" : t.statut === "UTILISE" ? "Utilisé" : "Valide"}</Badge>
                 </span>
                 <span className="flex shrink-0 items-center gap-3">
                   <span className="text-xs text-gris">{formatDate(t.createdAt)}</span>
                   <button type="button" onClick={() => reprendre(t)} className="text-xs font-medium text-navy hover:text-or-fonce">Copier / télécharger</button>
+                  {t.statut === "VALIDE" && <button type="button" onClick={() => declarerUtilise(t)} className="text-xs font-medium text-navy hover:text-or-fonce">Marquer utilisé</button>}
                   <a href={t.verif || `/verifier/timbre/${encodeURIComponent(t.code)}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-medium text-navy hover:text-or-fonce"><ShieldCheckIcon className="h-4 w-4" /> Vérifier</a>
                 </span>
               </li>

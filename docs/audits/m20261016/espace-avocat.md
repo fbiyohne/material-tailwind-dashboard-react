@@ -94,3 +94,19 @@ Ces correctifs ne créent aucun module, aucune migration ni aucune dépendance. 
 
 - **Discipline sur-exposée (E7).** C'est le seul écart de confidentialité trouvé. La donnée appartient à l'avocat lui-même, il n'y a donc pas d'IDOR. Mais les éléments d'instruction (plaignant, rapporteur, conclusions, pièces) et les décisions non notifiées sont servis, ce que l'avis juridique exclut (HJ-M6).
 - **Cloisonnement par identifiant vérifié, aucune fuite trouvée** : timbres `:203` et `:218` (403), paiement `:338`, reçus `:349`, quitus `:360`, discipline `:463` et `:473`, pièces `:533` et `:549`, messagerie `:681`, `:711` et `:826` (404 ou 403). Les assemblées et les publications (`:411-441`, `:596-603`) sont institutionnelles, non nominatives. Les archives filtrent sur `membreNom` et excluent les catégories disciplinaires (`:560-583`). Écart mineur noté pour T14 : l'appariement se fait par nom, donc deux homonymes verraient leurs archives respectives. Le corriger exigerait un `membreId` dans Archive, c'est-à-dire une migration, hors périmètre.
+
+## 5. Mise à jour T13 : affichage des manques comblés (front)
+
+Tous les manques « partiel » ou « non » des familles 1, 3, 7, 8, 9, 10, 12 et 13 passent à **oui**. Tests : `src/barreau/pages/__tests__/EspaceManques.test.jsx` (11 tests : donnée, état vide, erreur, mention d'accès). Aucun nouveau jeton, police ni dépendance.
+
+| # | Famille | Présent (après T13) | Preuve |
+|---|---|---|---|
+| 1 | Cycle de vie | oui : badge de statut à côté de la qualité | `MaSituation.jsx:146`, `:156` |
+| 3 | Parcours et stage | oui : cartes « Mon parcours » et « Mon stage » (`GET /espace/parcours`), états chargement, vide, erreur | `MaSituation.jsx:85-135`, `:188` |
+| 7 | Timbre | oui : badge « Utilisé », bouton « Marquer utilisé » (`POST /espace/timbres/:id/utilise`) | `MesTimbres.jsx:142`, `:147` ; `resources.js:302` |
+| 8 | Quitus et reçus | oui : « Valable jusqu'au », badge « Expiré », lien « Vérifier » | `MesDocuments.jsx:99-103`, `:130` |
+| 9 | Cotisations et omission | oui : Notice du dernier acte de recouvrement tant que le solde est dû | `MaSituation.jsx:162` |
+| 10 | Élections | oui : « Scrutin du JJ/MM/AAAA » | `EspaceScrutins.jsx:66` |
+| 12 | Paramètres | oui : menu de l'espace filtré par les modules masqués (affichage seulement ; `/` et `/discipline` obligatoires) | `EspaceAvocatLayout.jsx:58`, `:100` |
+| 13 | Discipline | oui : sursis, période, inéligibilité, organe, notification, recours ; avis d'attente et PDF masqué tant que non notifiée | `EspaceDiscipline.jsx:67-78` |
+| 6 | Rejet motivé | mention d'accès ajoutée | `MesDocuments.jsx:192` ; constante `MENTION_ACCES_PERSONNEL` (`data/institutionnel.js`) |

@@ -6,7 +6,7 @@ import {
   Bars3Icon, XMarkIcon, UserCircleIcon, TicketIcon,
 } from "@heroicons/react/24/outline";
 import { Sceau, ClocheNotifications, BandeauDemonstration, BandeauLimite } from "../components";
-import { identite } from "../data/config";
+import { identite, moduleMasque } from "../data/config";
 import { useAuth } from "../auth/AuthContext";
 import { useFocusAuChangementDeRoute } from "../hooks/useFocusAuChangementDeRoute";
 import { getEspaceMessagerieNonLus, getEspaceNotifications, marquerEspaceNotifLue, marquerToutesEspaceNotifsLues } from "../api/resources";
@@ -55,6 +55,7 @@ export function EspaceAvocatLayout() {
   const navigate = useNavigate();
   const mainRef = useFocusAuChangementDeRoute();
   const [nonLus, setNonLus] = useState(0);
+  const navVisible = NAV.filter((n) => !moduleMasque(n.to)); // modules masqués dans Paramètres (affichage seulement)
   const [menuMobile, setMenuMobile] = useState(false);
   // Le menu déroulant (petits écrans) se referme à chaque changement de page.
   useEffect(() => { setMenuMobile(false); }, [location.pathname]);
@@ -96,7 +97,7 @@ export function EspaceAvocatLayout() {
               Libellés seuls pour tenir dans la largeur ; affiché au-delà de « nav »
               (1400px), sinon on bascule sur le menu déroulant (hamburger). */}
           <nav className="mx-auto hidden items-center gap-1 nav:flex">
-            {NAV.map(({ to, label, end, badge }) => (
+            {navVisible.map(({ to, label, end, badge }) => (
               <NavLink
                 key={to}
                 to={to}
@@ -150,7 +151,7 @@ export function EspaceAvocatLayout() {
         {menuMobile && (
           <nav className="border-t border-white/10 px-4 pb-3 md:px-8 nav:hidden">
             <div className="grid gap-1 py-2 sm:grid-cols-2">
-              {[...NAV, { to: "/compte", label: "Mon compte", icon: UserCircleIcon, end: false }].map(({ to, label, icon: Icon, end, badge }) => (
+              {[...navVisible, { to: "/compte", label: "Mon compte", icon: UserCircleIcon, end: false }].map(({ to, label, icon: Icon, end, badge }) => (
                 <NavLink
                   key={to}
                   to={to}
