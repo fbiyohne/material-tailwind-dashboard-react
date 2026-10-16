@@ -1,95 +1,67 @@
 /** Gabarits HTML des documents officiels (rendus en PDF par Puppeteer). */
 
 import { esc as escapeHtml, fmtDateFr as fmtDate } from "./documentsCommun.js";
-import { identite, MENTION_DEMONSTRATION } from "./identiteDocuments.js";
+import { identite } from "./identiteDocuments.js";
+import { pageA4, entete, signatures } from "./gabarit.js";
 import { cachetPourRole } from "./cachets.js";
-
-/**
- * Logo officiel des documents — source unique (Paramètres). Si un logo a été
- * téléversé (data URI image), il est utilisé partout ; sinon on rend le sceau
- * dessiné (balance) dont le texte reprend la dénomination / l'ordre configurés.
- */
-function sceau(): string {
-  const id = identite();
-  if (id.logo) return `<img src="${id.logo}" alt="Logo" style="width:84px;height:84px;object-fit:contain" />`;
-  return `
-<svg width="84" height="84" viewBox="0 0 100 100">
-  <defs>
-    <path id="h" d="M 18,50 A 32,32 0 0 1 82,50" />
-    <path id="b" d="M 82,52 A 32,32 0 0 1 18,52" />
-  </defs>
-  <circle cx="50" cy="50" r="47" fill="none" stroke="#C4990A" stroke-width="1.4" />
-  <circle cx="50" cy="50" r="42" fill="none" stroke="#C4990A" stroke-width="0.6" />
-  <text fill="#1A3A6B" font-size="6" font-weight="600" letter-spacing="0.8"><textPath href="#h" startOffset="50%" text-anchor="middle">${escapeHtml(id.ordre.toUpperCase())}</textPath></text>
-  <text fill="#1A3A6B" font-size="6" font-weight="600" letter-spacing="0.8"><textPath href="#b" startOffset="50%" text-anchor="middle">${escapeHtml(id.denomination.toUpperCase())}</textPath></text>
-  <g stroke="#1A3A6B" stroke-width="1.4" fill="none" stroke-linecap="round">
-    <line x1="50" y1="37" x2="50" y2="63" /><line x1="44" y1="63" x2="56" y2="63" /><line x1="38" y1="42" x2="62" y2="42" />
-    <line x1="38" y1="42" x2="38" y2="49" /><path d="M33,49 Q38,54 43,49" />
-    <line x1="62" y1="42" x2="62" y2="49" /><path d="M57,49 Q62,54 67,49" />
-  </g>
-</svg>`;
-}
 
 interface DocOptions {
   org: string;
   title: string;
+  /** Sous-titre sous le titre (HTML déjà échappé), ex. libellé de filtre d'une liste. */
+  sousTitre?: string;
   reference?: string;
   bodyHtml: string;
   signataire: { role: string; nom: string };
   /** Apposer le cachet officiel du signataire (défaut : oui). */
   cachet?: boolean;
   date: Date | string;
+  /** A4 paysage (listes larges). */
+  paysage?: boolean;
+  /** Liste non publique : clause C-PDF-LISTE au pied de chaque page. */
+  listeRestreinte?: boolean;
 }
 
-export function documentHtml({ org, title, reference, bodyHtml, signataire, date, cachet = true }: DocOptions): string {
-  return `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600&family=DM+Mono&display=swap" rel="stylesheet">
-<style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family:'DM Sans',sans-serif; color:#1C1C18; }
-  .doc { border:1px solid #E0DBD0; border-radius:6px; overflow:hidden; }
-  .head { background:#1A3A6B; padding:14px 22px; }
-  .head .org { color:#C4990A; font-size:11px; font-weight:600; letter-spacing:2px; text-transform:uppercase; }
-  .head .sub { color:rgba(255,255,255,.6); font-size:10px; }
-  .bar { height:3px; background:linear-gradient(90deg,#C4990A,#e8bc3a,#C4990A); }
-  .body { padding:30px 34px; }
-  .title { font-family:'Playfair Display',serif; font-size:26px; color:#1A3A6B; text-align:center; }
-  .ref { font-family:'DM Mono',monospace; font-size:12px; color:#C4990A; text-align:center; margin:4px 0 22px; }
-  .content { font-size:14px; line-height:1.9; }
-  .content h3 { font-family:'Playfair Display',serif; color:#1A3A6B; font-size:16px; margin:14px 0 4px; }
-  .content h4 { font-weight:600; margin:10px 0 4px; }
-  .content ul { margin:6px 0 6px 20px; list-style:disc; }
-  .content ol { margin:6px 0 6px 20px; list-style:decimal; }
-  .content li { margin:2px 0; }
-  .content p { margin:0 0 8px; }
-  .content b,.content strong{font-weight:700;} .content i,.content em{font-style:italic;} .content u{text-decoration:underline;}
-  .montant { background:#FDF6E3; border:1px solid #E9DFBD; border-radius:4px; padding:12px 16px; margin:14px 0; text-align:center; }
-  .montant b { font-family:'Playfair Display',serif; font-size:19px; color:#1A3A6B; }
-  .montant i { display:block; font-size:12px; color:#7A756A; margin-top:2px; }
-  .row { display:flex; justify-content:space-between; border-bottom:1px dashed #E0DBD0; padding:7px 0; font-size:14px; }
-  .row .l { color:#7A756A; }
-  .foot { display:flex; align-items:flex-end; justify-content:space-between; margin-top:34px; }
-  .foot .date { font-size:12px; color:#7A756A; }
-  .sign { text-align:right; }
-  .sign .role { font-size:10px; text-transform:uppercase; letter-spacing:1px; color:#7A756A; margin-bottom:34px; }
-  .sign .nom { border-top:1px solid #E0DBD0; padding-top:4px; font-size:12px; font-weight:600; color:#1A3A6B; }
-  .mention { border-top:1px solid #E0DBD0; padding:8px 34px; text-align:center; font-size:8px; letter-spacing:2px; text-transform:uppercase; color:#7A756A; }
-</style></head><body>
-  <div class="doc">
-    <div class="head"><div class="org">${escapeHtml(identite().denomination)}</div><div class="sub">${escapeHtml(identite().ordre)} · ${org}</div></div>
-    <div class="bar"></div>
-    <div class="body">
-      <div class="title">${title}</div>
-      ${reference ? `<div class="ref">${reference}</div>` : '<div style="margin-bottom:18px"></div>'}
-      <div class="content">${bodyHtml}</div>
-      <div class="foot">
-        <div style="display:flex;align-items:flex-end;gap:12px">${sceau()}<div class="date">Fait à ${escapeHtml(identite().ville)},<br>le ${fmtDate(date)}</div></div>
-        <div class="sign"><div class="role">${signataire.role}</div>${(() => { const c = cachet ? cachetPourRole(signataire.role) : null; return c ? `<img src="${c}" alt="Cachet officiel" style="display:block;margin:2px 0 -18px auto;width:92px;height:92px;object-fit:contain" />` : ""; })()}<div class="nom">${signataire.nom}</div></div>
-      </div>
-    </div>
-    <div class="mention">Document officiel · ${escapeHtml(identite().ordre)} · ${escapeHtml(identite().denomination)}${identite().modeDemonstration ? `<br>${escapeHtml(MENTION_DEMONSTRATION)}` : ""}</div>
-  </div>
-</body></html>`;
+/**
+ * Compatibilité : mappe les classes internes des corps de gabarits (.content, .montant, .row)
+ * sur les composants du socle A4, sans toucher aux corps (aucun texte juridique réécrit).
+ */
+const CSS_COMPAT = `
+.content { font-size: var(--t-corps); line-height: 1.6; }
+.content h3 { font-family: var(--f-titre); color: var(--marine); font-size: var(--t-section); margin: 4mm 0 1.5mm; break-after: avoid; }
+.content h4 { font-weight: 600; margin: 3mm 0 1mm; }
+.content ul { margin: 2mm 0 2mm 6mm; list-style: disc; }
+.content ol { margin: 2mm 0 2mm 6mm; list-style: decimal; }
+.content li { margin: .6mm 0; }
+.content p { margin: 0 0 2.5mm; }
+.content b, .content strong { font-weight: 700; } .content i, .content em { font-style: italic; } .content u { text-decoration: underline; }
+.montant { background: var(--or-l); border-left: 2.4pt solid var(--or); padding: 3mm 4mm; margin: 4mm 0; text-align: center; break-inside: avoid; }
+.montant b { font-family: var(--f-titre); font-size: 15pt; color: var(--marine); }
+.montant i { display: block; font-size: var(--t-petit); color: var(--gris); margin-top: .8mm; }
+.row { display: flex; justify-content: space-between; gap: 6mm; border-bottom: .5pt dashed var(--gris-m); padding: 1.8mm 0; break-inside: avoid; }
+.row .l { color: var(--gris); }`;
+
+/** Texte brut d'un fragment HTML déjà échappé (pour le pied de page CSS). */
+const texteBrut = (h: string) =>
+  h.replace(/<[^>]+>/g, "").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/&amp;/g, "&");
+
+/** Document officiel A4 : habille un corps de gabarit avec le socle commun (gabarit.ts). */
+export function documentHtml({ org, title, sousTitre, reference, bodyHtml, signataire, date, cachet = true, paysage, listeRestreinte }: DocOptions): string {
+  const id = identite();
+  const ref = reference ? texteBrut(reference) : "";
+  const c = cachet ? cachetPourRole(signataire.role) : null;
+  return pageA4({
+    titreCourt: texteBrut(title),
+    reference: ref || texteBrut(title),
+    unePage: false,
+    paysage,
+    listeRestreinte,
+    contenu: `<style>${CSS_COMPAT}</style>
+${entete(org, ref, fmtDate(date))}
+<div class="titre-bloc"><h1 class="titre">${title}</h1>${sousTitre ? `<p class="sous-titre">${sousTitre}</p>` : ""}</div>
+<div class="content">${bodyHtml}</div><!--/corps-->
+<div class="cloture"><p class="fait-a">Fait à ${escapeHtml(id.ville)}, le ${fmtDate(date)}</p>${signatures([[signataire.role, signataire.nom, c ?? undefined]])}</div>`,
+  });
 }
 
 const liste = (items: string[]) =>
@@ -492,14 +464,17 @@ export function listeAvocatsHtml(membres: any[], libelleFiltre: string, date: Da
   const lignes = membres
     .map((m) => `<tr>${[m.num, m.numInscription, m.nom, QUALITE_FR[m.qualite] ?? m.qualite, STATUT_FR[m.statut] ?? m.statut, m.cabinet, m.tel, m.email, jour(m.dateInscription), jour(m.dateRadiation), jour(m.dateDeces)].map(td).join("")}</tr>`)
     .join("");
-  const titre = `Liste des avocats — ${escapeHtml(libelleFiltre)} — arrêtée au ${d} — Document interne`;
+  const sousTitre = `${escapeHtml(libelleFiltre)} — arrêtée au ${d} — Document interne`;
   return documentHtml({
     org: "Le Secrétaire Général",
-    title: `<span style="font-size:13px">${titre}</span>`,
+    title: "Liste des avocats",
+    sousTitre,
+    paysage: true,
+    listeRestreinte: true,
     reference: `${membres.length} ligne${membres.length > 1 ? "s" : ""}`,
-    bodyHtml: `<table style="width:100%;border-collapse:collapse;font-size:8px;line-height:1.3"><thead><tr style="border-bottom:1.5px solid #1A3A6B;color:#7A756A;text-align:left">${th}</tr></thead><tbody>${lignes}</tbody></table>
+    bodyHtml: `<table style="width:100%;border-collapse:collapse;font-size:8pt;line-height:1.3"><thead><tr style="border-bottom:1.5px solid #1A3A6B;color:#7A756A;text-align:left">${th}</tr></thead><tbody>${lignes}</tbody></table>
       <p style="margin-top:14px;font-size:9px;color:#7A756A;text-align:center">${escapeHtml(identite().denomination)} — Document interne confidentiel — Diffusion interdite hors des organes de l'Ordre.</p>`,
-    signataire: { role: "Le Secrétaire Général", nom: escapeHtml(identite().secretaireGeneral) },
+    signataire: { role: "Le Secrétaire Général", nom: identite().secretaireGeneral },
     date,
     cachet: false,
   });
