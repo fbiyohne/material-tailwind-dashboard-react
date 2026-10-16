@@ -324,6 +324,12 @@ model Recu {
   mode      String?
   ref       String?
   objet     String?
+  // Annulation logique (R2-5) : un reçu émis n'est jamais supprimé (pièce comptable,
+  // numérotation continue). EMIS | ANNULE ; annuleParId = User.id de l'acteur.
+  statut          String    @default("EMIS")
+  annuleLe        DateTime?
+  motifAnnulation String?
+  annuleParId     Int?
   createdAt DateTime @default(now())
 }
 

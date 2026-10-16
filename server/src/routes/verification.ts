@@ -84,6 +84,7 @@ verificationRouter.get(
     if (!recu || !avantBascule(recu.createdAt)) {
       return res.status(404).json({ valide: false, type: "recu", numero: req.params.numero });
     }
+    if (recu.statut === "ANNULE") return res.json({ valide: false, type: "recu", numero: recu.numero, motif: "annulé" });
     const signature = signerDocument(recuPayload(recu));
     const sorti = (STATUTS_SORTIS as readonly string[]).includes(recu.membre.statut);
     res.json({
@@ -197,8 +198,11 @@ async function lignesDocument(t: TypeDocQr, ref: string): Promise<{ lignes: Lign
     };
   }
   if (t === "r") {
-    const r = await prisma.recu.findUnique({ where: { numero: ref }, select: { numero: true, date: true, annee: true } });
-    return r && { lignes: [["Numéro", r.numero], ["Date", fmtDateFr(r.date)], ["Exercice couvert", String(r.annee)], ["Statut", "Émis par l'Ordre"]] };
+    const r = await prisma.recu.findUnique({ where: { numero: ref }, select: { numero: true, date: true, annee: true, statut: true, annuleLe: true } });
+    if (!r) return null;
+    const annule = r.statut === "ANNULE";
+    const statut = annule ? `Annulé${r.annuleLe ? ` le ${fmtDateFr(r.annuleLe)}` : ""} : n'est plus valable` : "Émis par l'Ordre";
+    return { lignes: [["Numéro", r.numero], ["Date", fmtDateFr(r.date)], ["Exercice couvert", String(r.annee)], ["Statut", statut]], annule };
   }
   const tb = await prisma.timbre.findUnique({ where: { code: ref }, select: { id: true, numero: true, createdAt: true, statut: true } });
   if (!tb) return null;

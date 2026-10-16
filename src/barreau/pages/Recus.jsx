@@ -107,7 +107,7 @@ export function Recus() {
   const annuler = async (r) => {
     const ok = await confirm({
       title: "Annuler le reçu",
-      message: `Le reçu N° ${r.numero} sera annulé : le paiement correspondant (${formatFCFA(r.montant)}) sera retiré de la situation de l'avocat. Continuer ?`,
+      message: `Le reçu N° ${r.numero} sera annulé : le paiement correspondant (${formatFCFA(r.montant)}) sera retiré de la situation de l'avocat. Le reçu reste conservé au registre avec la mention « Annulé ». Continuer ?`,
       confirmLabel: "Annuler le reçu",
       danger: true,
     });
@@ -276,6 +276,9 @@ export function Recus() {
                   align: "right",
                   cell: (r) => (
                     <div className="flex items-center justify-end gap-3">
+                      {r.statut === "ANNULE" ? (
+                        <Badge ton="rouge" title={r.motifAnnulation || undefined}>Annulé</Badge>
+                      ) : (
                       <button
                         type="button"
                         onClick={() => telechargerRecuPdf(r.id, r.numero).catch((e) => toast.error(e.message))}
@@ -284,6 +287,7 @@ export function Recus() {
                       >
                         <ArrowDownTrayIcon className="h-4 w-4" /> PDF
                       </button>
+                      )}
                       <a
                         href={r.verif || `/verifier/recu/${encodeURIComponent(r.numero)}`}
                         target="_blank"
@@ -293,9 +297,11 @@ export function Recus() {
                       >
                         <ShieldCheckIcon className="h-4 w-4" /> Vérifier
                       </a>
-                      <button type="button" onClick={() => annuler(r)} title="Annuler le reçu" className="text-gris transition hover:text-rouge">
-                        <TrashIcon className="h-4 w-4" />
-                      </button>
+                      {r.statut !== "ANNULE" && (
+                        <button type="button" onClick={() => annuler(r)} title="Annuler le reçu" aria-label={`Annuler le reçu N° ${r.numero}`} className="text-gris transition hover:text-rouge">
+                          <TrashIcon className="h-4 w-4" />
+                        </button>
+                      )}
                     </div>
                   ),
                 },

@@ -322,9 +322,10 @@ Toutes les entrées ont pour interlocutrice Me Kalina MENGA, qui valide ou trans
 - **Valeur provisoire retenue** : Conservation des reçus émis au moins dix ans ; aucune suppression d'un reçu émis. Renvoi à la conformité-finance.
 - **Interlocutrice** : Me Kalina MENGA.
 
-### PO-42 — Annulation d'un reçu : suppression physique (R2-5)
+### PO-42 — Annulation d'un reçu : suppression physique (R2-5) — **traité**
 - **Texte** : conservation des pièces comptables dix ans, numérotation continue sans trou (voir PO-41) ; avis juridique de la mission M-20261011.
-- **Constat** : `DELETE /recus/:id` (server/src/routes/recus.ts) supprime physiquement le reçu, son archive et les quitus de l'exercice. Il en résulte un trou de numérotation et la page /v/r/... répond « Non reconnu » au lieu de « Annulé ». Défaut antérieur à la mission, contraire à la valeur retenue en PO-41.
-- **Correctif envisagé** : annulation logique (statut ANNULE, annuleLe, motif, acteur) par migration Prisma additive et idempotente, avec « Document annulé » sur /v comme pour les timbres. C'est une évolution de schéma : non codée, en attente de décision de Fabrice et de la conformité-finance.
-- **Valeur provisoire retenue** : comportement actuel conservé, sans changement ; la suppression reste réservée aux profils finances et journalisée.
-- **Interlocutrice** : conformité-finance.
+- **Constat initial** : `DELETE /recus/:id` (server/src/routes/recus.ts) supprimait physiquement le reçu, son archive et les quitus de l'exercice : trou de numérotation, et /v/r/... répondait « Non reconnu » au lieu de « Annulé ».
+- **Correctif appliqué (2026-10-16)** : annulation logique. Migration additive et idempotente `20261016120000_recu_annulation_logique` (Recu.statut EMIS|ANNULE, annuleLe, motifAnnulation, annuleParId). `DELETE /recus/:id` passe le reçu à ANNULE (date, motif, acteur), décrémente le paiement une seule fois (second appel idempotent), conserve l'archive en la marquant « (annulé) ». Le reçu annulé reste au registre avec le badge « Annulé », sans PDF réimprimable (409) ; il n'est plus compté dans la situation de l'avocat ni affiché dans son espace. /v/r/... répond « Document annulé » ; l'ancienne voie /api/verifier/recu répond `valide: false, motif: "annulé"`. Tests : server/test/r2-5-recu-annulation.test.ts, src/barreau/pages/__tests__/Recus.annulation.test.jsx.
+- **Reste ouvert** : (1) le quitus de l'exercice révoqué par l'annulation est encore supprimé physiquement : la contrainte `@@unique([membreId, annee])` empêcherait sa réémission après régularisation ; une annulation logique du quitus suppose de la remplacer par un index unique partiel (`WHERE statut <> 'ANNULE'`), changement non additif à valider ; (2) durée de conservation (dix ans) et référentiel comptable applicable (AUDCIF ou SYCEBNL) à confirmer.
+- **Valeur provisoire retenue** : annulation logique du reçu (aucun effacement) ; le quitus révoqué reste supprimé tant que le point (1) n'est pas tranché.
+- **Interlocutrice** : Me Kalina MENGA, avec l'expert conformité-finance.

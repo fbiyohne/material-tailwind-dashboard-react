@@ -249,7 +249,7 @@ membresRouter.get(
       where: { id: Number(req.params.id) },
       include: {
         cotisations: { orderBy: { annee: "desc" } },
-        recus: { orderBy: { date: "desc" } },
+        recus: { where: { statut: "EMIS" }, orderBy: { date: "desc" } },
         quitus: { orderBy: { dateEmission: "desc" } },
       },
     });

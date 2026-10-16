@@ -260,7 +260,7 @@ espaceRouter.get(
   asyncH(async (req: AuthRequest, res) => {
     const membreId = monMembreId(req);
     const [recus, quitus] = await Promise.all([
-      prisma.recu.findMany({ where: { membreId }, orderBy: { date: "desc" } }),
+      prisma.recu.findMany({ where: { membreId, statut: "EMIS" }, orderBy: { date: "desc" } }),
       prisma.quitus.findMany({ where: { membreId }, orderBy: { dateEmission: "desc" } }),
     ]);
     res.json({
@@ -346,7 +346,7 @@ espaceRouter.get(
   "/recus/:id/pdf",
   asyncH(async (req: AuthRequest, res) => {
     const recu = await prisma.recu.findUnique({ where: { id: Number(req.params.id) }, include: { membre: true } });
-    if (!recu || recu.membreId !== monMembreId(req)) throw new HttpError(404, "Reçu introuvable");
+    if (!recu || recu.membreId !== monMembreId(req) || recu.statut === "ANNULE") throw new HttpError(404, "Reçu introuvable");
     const qr = await qrDocument("r", recu.numero);
     await envoyerDocumentPdf(res, recuRicheHtml(recu, recu.membre, qr, hotePublic()), `Recu-${recu.numero}.pdf`);
   })

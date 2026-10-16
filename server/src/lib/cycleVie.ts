@@ -281,7 +281,7 @@ export async function electeursADate(where: Prisma.MembreWhereInput, D: Date, re
       orderBy: { num: "asc" },
       include: {
         cotisations: { where: { annee } },
-        recus: { where: { annee }, select: { annee: true, montant: true, date: true, objet: true, createdAt: true } },
+        recus: { where: { annee, statut: "EMIS" }, select: { annee: true, montant: true, date: true, objet: true, createdAt: true } },
         evenements: { select: { dateEffet: true, statutAvant: true, statutApres: true } },
         dossiers: {
           where: { sanctionCode: { not: null } },
