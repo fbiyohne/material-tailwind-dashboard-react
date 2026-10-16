@@ -18,12 +18,13 @@ vi.mock("../../api/resources", () => ({
   getEspaceScrutins: vi.fn().mockResolvedValue([]), voterScrutin: vi.fn(),
   getCorpsElectoral: vi.fn().mockResolvedValue({ electeurs: [], exclusCotisation: [], exclusStatut: [], exclusAutre: [] }),
 }));
-vi.mock("../../auth/AuthContext", () => ({ useAuth: () => ({ user: { role: "SECRETAIRE_GENERAL" } }) }));
+const auth = vi.hoisted(() => ({ role: "SECRETAIRE_GENERAL" }));
+vi.mock("../../auth/AuthContext", () => ({ useAuth: () => ({ user: { role: auth.role } }) }));
 
 const env = (ui) => <MemoryRouter><ToastProvider><ConfirmProvider>{ui}</ConfirmProvider></ToastProvider></MemoryRouter>;
 const BANDEAU = { name: /fonctionnalité expérimentale/i };
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => { vi.clearAllMocks(); auth.role = "SECRETAIRE_GENERAL"; });
 
 describe("Élections — prototype", () => {
   it("Elections affiche le bandeau, sans promesse de secret garanti", async () => {
@@ -73,5 +74,88 @@ describe("Corps électoral", () => {
   it("signale la limite de l'historique (PO-20)", async () => {
     render(env(<CorpsElectoral />));
     expect(await screen.findByText(/sans événement enregistré/)).toBeInTheDocument();
+  });
+});
+
+describe("Élections — suppression d'un scrutin", () => {
+  const TITRE = "Conseil 2026";
+  const monter = (statut) => {
+    const base = { id: 1, titre: TITRE, type: "CONSEIL_BARREAU", modalite: "PRESENTIEL", statut };
+    res.listerScrutins.mockResolvedValue([{ ...base, _count: { candidats: 0 } }]);
+    res.getScrutin.mockResolvedValue({ ...base, nbSieges: 1, candidats: [], _count: { emargements: 0, candidats: 0 } });
+  };
+  const ouvrir = async (statut) => {
+    monter(statut);
+    render(env(<Elections />));
+    await userEvent.click(await screen.findByText(TITRE));
+  };
+  const BTN = { name: /Supprimer le scrutin/ };
+
+  it.each(["PREPARATION", "CLOS", "PUBLIE"])("propose la suppression d'un scrutin %s", async (statut) => {
+    await ouvrir(statut);
+    expect(await screen.findByRole("button", BTN)).toBeInTheDocument();
+  });
+
+  it("ne propose pas la suppression d'un scrutin ouvert", async () => {
+    await ouvrir("OUVERT");
+    await screen.findByRole("button", { name: /Clôturer/ });
+    expect(screen.queryByRole("button", BTN)).toBeNull();
+  });
+
+  it("ne propose pas la suppression sans droit de gestion", async () => {
+    auth.role = "TRESORIER";
+    await ouvrir("CLOS");
+    await screen.findByText(/0 votant/);
+    expect(screen.queryByRole("button", BTN)).toBeNull();
+  });
+
+  it.each(["CLOS", "PUBLIE"])("scrutin %s : confirmation par saisie exacte de l'intitulé", async (statut) => {
+    await ouvrir(statut);
+    await userEvent.click(await screen.findByRole("button", BTN));
+    const dialogue = await screen.findByRole("dialog");
+    expect(dialogue).toHaveTextContent(/définitive/);
+    expect(dialogue).toHaveTextContent(/composition du Conseil/);
+    expect(dialogue).toHaveTextContent(/procès-verbaux déjà archivés/);
+    const confirmer = screen.getByRole("button", { name: "Supprimer définitivement" });
+    expect(confirmer).toBeDisabled();
+    await userEvent.type(dialogue.querySelector("input"), "Conseil 202");
+    expect(confirmer).toBeDisabled();
+    await userEvent.type(dialogue.querySelector("input"), "6");
+    expect(confirmer).toBeEnabled();
+  });
+
+  it("après confirmation : un seul appel, toast, liste et détail vidés", async () => {
+    res.supprimerScrutin.mockResolvedValue();
+    await ouvrir("PUBLIE");
+    await userEvent.click(await screen.findByRole("button", BTN));
+    const dialogue = await screen.findByRole("dialog");
+    await userEvent.type(dialogue.querySelector("input"), TITRE);
+    res.listerScrutins.mockResolvedValue([]);
+    await userEvent.click(screen.getByRole("button", { name: "Supprimer définitivement" }));
+    expect(await screen.findByText("Scrutin supprimé.")).toBeInTheDocument();
+    expect(res.supprimerScrutin).toHaveBeenCalledTimes(1);
+    expect(res.supprimerScrutin).toHaveBeenCalledWith(1);
+    expect(await screen.findByText(/Sélectionnez un scrutin/)).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText(TITRE)).toBeNull());
+  });
+
+  it("affiche le message du serveur si la suppression échoue", async () => {
+    res.supprimerScrutin.mockRejectedValue(new Error("Impossible de supprimer un scrutin ouvert."));
+    await ouvrir("CLOS");
+    await userEvent.click(await screen.findByRole("button", BTN));
+    await userEvent.type((await screen.findByRole("dialog")).querySelector("input"), TITRE);
+    await userEvent.click(screen.getByRole("button", { name: "Supprimer définitivement" }));
+    expect(await screen.findByText("Impossible de supprimer un scrutin ouvert.")).toBeInTheDocument();
+    expect(screen.getByText(/0 votant/)).toBeInTheDocument();
+  });
+
+  it("scrutin en préparation : confirmation simple, sans saisie", async () => {
+    res.supprimerScrutin.mockResolvedValue();
+    await ouvrir("PREPARATION");
+    await userEvent.click(await screen.findByRole("button", BTN));
+    const dialogue = await screen.findByRole("dialog");
+    expect(dialogue.querySelector("input")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Supprimer" }));
+    await waitFor(() => expect(res.supprimerScrutin).toHaveBeenCalledWith(1));
   });
 });

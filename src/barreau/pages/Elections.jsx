@@ -67,7 +67,14 @@ export function Elections() {
   };
 
   const supprimer = async (s) => {
-    const ok = await confirm({
+    // Scrutin passé (clos/publié) : suppression définitive, confirmée en retapant l'intitulé exact.
+    const passe = s.statut !== "PREPARATION";
+    const ok = await confirm(passe ? {
+      title: "Supprimer ce scrutin passé ?",
+      message: `Suppression définitive de « ${s.titre} » : résultats et émargements seront effacés. La composition du Conseil et les procès-verbaux déjà archivés sont conservés. Il est conseillé de télécharger le PV avant de supprimer.`,
+      confirmLabel: "Supprimer définitivement", danger: true,
+      motif: { label: "Retapez l'intitulé du scrutin pour confirmer", attendu: s.titre.trim() },
+    } : {
       title: "Supprimer le scrutin ?",
       message: `« ${s.titre} » et ses candidats seront définitivement supprimés.`,
       confirmLabel: "Supprimer", danger: true,
@@ -214,8 +221,8 @@ function ScrutinDetail({ detail, peutGerer, action, confirm, nomCand, setNomCand
               <DocumentArrowDownIcon className="h-4 w-4" /> Télécharger le PV
             </button>
           )}
-          {/* Suppression réservée à un scrutin encore en préparation */}
-          {s.statut === "PREPARATION" && (
+          {/* Suppression interdite seulement pendant le vote (scrutin ouvert) */}
+          {s.statut !== "OUVERT" && (
             <button className="bpn-btn bpn-btn-ghost text-rouge hover:bg-rougeL" onClick={() => onSupprime(s)}>
               <TrashIcon className="h-4 w-4" /> Supprimer le scrutin
             </button>
