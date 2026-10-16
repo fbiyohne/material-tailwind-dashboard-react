@@ -206,6 +206,23 @@ espaceRouter.post(
   })
 );
 
+/**
+ * POST /espace/timbres/:id/utilise — l'avocat déclare le timbre utilisé (une seule affaire) :
+ * statut UTILISE, irréversible, affiché « Déjà utilisé » sur la page de vérification.
+ */
+espaceRouter.post(
+  "/timbres/:id/utilise",
+  asyncH(async (req: AuthRequest, res) => {
+    const timbre = await prisma.timbre.findUnique({ where: { id: Number(req.params.id) } });
+    if (!timbre) throw new HttpError(404, "Timbre introuvable");
+    if (timbre.membreId !== monMembreId(req)) throw new HttpError(403, "Ce timbre n'est pas le vôtre.");
+    if (timbre.statut === "ANNULE") throw new HttpError(409, "Ce timbre est annulé.");
+    if (timbre.statut !== "UTILISE") await prisma.timbre.update({ where: { id: timbre.id }, data: { statut: "UTILISE" } });
+    res.locals.auditDetail = `timbre N° ${timbre.numero}, déclaré utilisé`;
+    res.json({ ok: true, statut: "UTILISE" });
+  })
+);
+
 // — Centre de notifications de l'avocat (mêmes helpers que le back-office) —
 
 /** GET /espace/notifications — dernières alertes de l'avocat + compteur non-lues. */

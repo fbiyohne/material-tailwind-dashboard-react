@@ -49,3 +49,19 @@ describe("POST /espace/timbres/:id/usage", () => {
     expect((await request(app).post(`/api/espace/timbres/${timbreId}/usage`).set(...bearer(jetons[0])).send({ mode: "x" })).status).toBe(400);
   });
 });
+
+describe("POST /espace/timbres/:id/utilise", () => {
+  it("passe le timbre à UTILISE (propriétaire seul) et /v l'affiche « Déjà utilisé »", async () => {
+    const { cheminVerif } = await import("../src/lib/signature.js");
+    const t = await prisma.timbre.findUniqueOrThrow({ where: { id: timbreId } });
+    expect((await request(app).post(`/api/espace/timbres/${timbreId}/utilise`).set(...bearer(jetons[1]))).status).toBe(403);
+    const r = await request(app).post(`/api/espace/timbres/${timbreId}/utilise`).set(...bearer(jetons[0]));
+    expect(r.status).toBe(200);
+    expect((await prisma.timbre.findUniqueOrThrow({ where: { id: timbreId } })).statut).toBe("UTILISE");
+    expect((await request(app).post(`/api/espace/timbres/${timbreId}/utilise`).set(...bearer(jetons[0]))).status).toBe(200);
+    const page = await request(app).get(cheminVerif("t", t.code));
+    expect(page.text).toContain("Déjà utilisé");
+    expect(page.text).not.toContain("Authentique");
+    expect((await request(app).get(`/api/verifier/timbre/${t.code}`)).body.valide).toBe(false);
+  });
+});
