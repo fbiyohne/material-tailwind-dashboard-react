@@ -56,6 +56,7 @@ export function VerificationPublique({ type, numero }) {
               <Ligne label="Type" valeur={TYPE_LABEL[d.type] ?? d.type} />
               <Ligne label="Numéro" valeur={d.numero} mono />
               {d.beneficiaire && <Ligne label="Bénéficiaire" valeur={d.beneficiaire} />}
+              {d.note && <Ligne label="Titulaire" valeur={d.note} />}
               {d.type !== "timbre" && d.affaire && <Ligne label="Affaire" valeur={d.affaire} />}
               {d.type !== "timbre" && d.juridiction && <Ligne label="Juridiction" valeur={d.juridiction} />}
               {d.type !== "timbre" && d.montant != null && <Ligne label="Montant" valeur={formatFCFA(d.montant)} />}

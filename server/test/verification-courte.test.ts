@@ -195,6 +195,21 @@ describe("Bascule des anciennes URL /api/verifier/... (VERIF_BASCULE)", () => {
     }
   });
 
+  it("ancienne voie, minimisation : reçu sans montant ni objet, quitus d'un titulaire sorti sans nom", async () => {
+    process.env.VERIF_BASCULE = "2999-01-01";
+    const r = await request(app).get(`/api/verifier/recu/${recu}`);
+    expect(r.status).toBe(200);
+    expect(r.body.valide).toBe(true);
+    expect(r.body.montant).toBeUndefined();
+    expect(r.body.objet).toBeUndefined();
+    const s = await request(app).get(`/api/verifier/quitus/${quitus.radie}`);
+    expect(s.body.valide).toBe(true);
+    expect(s.body.beneficiaire).toBeUndefined();
+    expect(s.body.note).toBe("Le titulaire n'est pas inscrit au tableau à ce jour.");
+    expect(JSON.stringify(s.body)).not.toContain("VERIF <");
+    expect((await request(app).get(`/api/verifier/quitus/${quitus.valide}`)).body.beneficiaire).toContain("Me ");
+  });
+
   it("une date de bascule illisible ferme l'ancienne voie (fail-closed)", async () => {
     process.env.VERIF_BASCULE = "pas-une-date";
     expect((await request(app).get(`/api/verifier/quitus/${quitus.ancien}`)).status).toBe(404);

@@ -5,11 +5,9 @@ import QRCode from "qrcode";
 import { logger } from "./logger.js";
 
 /**
- * Signature électronique des documents officiels — signature **asymétrique
- * RSA-2048 / SHA-256** (clé privée du Barreau, clé publique distribuable).
- * Il s'agit d'une signature électronique « avancée » : pour le niveau
- * **qualifié (eIDAS)**, remplacer la clé par un certificat délivré par un
- * prestataire de services de confiance qualifié (QTSP) sur un QSCD.
+ * Code de vérification des documents officiels — signature RSA-2048 / SHA-256
+ * interne (clé privée du Barreau, clé publique distribuable), sans portée légale :
+ * ce n'est ni une signature électronique au sens légal ni un certificat qualifié.
  */
 const keyDir = process.env.SIGNATURE_KEY_DIR || path.resolve("secrets");
 const privPath = path.join(keyDir, "signing-private.pem");
