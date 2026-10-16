@@ -12,10 +12,13 @@ const COMPTES = [
   { email: "batonnier@barreau-pn.cg", role: "Bâtonnier" },
 ];
 
+// Comptes de démonstration : développement ou build de démo (VITE_DEMO=1) uniquement, jamais en production.
+const DEMO = () => import.meta.env.DEV || import.meta.env.VITE_DEMO === "1";
+
 export function Login({ onDemande, onOubli }) {
   const { login } = useAuth();
-  const [email, setEmail] = useState("sg@barreau-pn.cg");
-  const [password, setPassword] = useState("barreau");
+  const [email, setEmail] = useState(DEMO() ? "sg@barreau-pn.cg" : "");
+  const [password, setPassword] = useState(DEMO() ? "barreau" : "");
   const [voirMdp, setVoirMdp] = useState(false);
   const [erreur, setErreur] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -103,7 +106,7 @@ export function Login({ onDemande, onOubli }) {
         </div>
       </form>
 
-      <div className="mt-6">
+      {DEMO() && <div className="mt-6">
         <div className="mb-2.5 text-2xs uppercase tracking-[0.18em] text-white/30">Comptes de démonstration · mot de passe « barreau »</div>
         <div className="flex flex-wrap gap-2">
           {COMPTES.map((c) => {
@@ -122,7 +125,7 @@ export function Login({ onDemande, onOubli }) {
             );
           })}
         </div>
-      </div>
+      </div>}
     </AuthLayout>
   );
 }
