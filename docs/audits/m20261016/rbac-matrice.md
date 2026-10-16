@@ -33,7 +33,7 @@ Résultat après T9 (16/10/2026) : **245 tests réussis, 42 en échec attendu (`
 | SG | SECRETAIRE_GENERAL | Accès complet aux modules, non modifiable (`ROLES_COMPLET`) ; actions R-42 limitées à la saisine et à l'admission directe |
 | BAT | BATONNIER | Rôle éditable (`ROLES_MATRICE`) ; détient les actions de décision (discipline_decider, stage_valider, omission_prononcer) |
 | TRES | TRESORIERE | Éditable ; modules finances et messagerie par défaut |
-| ADM | ADMIN | Tous les modules et toutes les actions (`permissionsDeRole`), contenu de la messagerie et des pièces compris (décision de Fabrice du 16/10/2026) ; `requireRole` l'admet toujours |
+| ADM | ADMIN | Tous les modules et toutes les actions (`permissionsDeRole`), contenu de la messagerie et des pièces compris (décision de Fabrice du 16/10/2026), sauf l'espace avocat : libre-service lié au `membreId` du jeton, que l'ADMIN n'a pas ; il gère ces accès via utilisateurs et approuver-espace (voir section 8) ; `requireRole` l'admet toujours |
 | SA | SECRETAIRE_ADJOINT | Éditable ; absent du seed |
 | CONS | CONSULTATION | Éditable ; lecture seule attendue |
 | ACC | ACCUEIL | Éditable ; membres et documents par défaut |
@@ -68,7 +68,7 @@ La matrice attendue route par route est le tableau déclaratif `MATRICE` de `ser
 | membres | LCMsv | lV | lv | LCMSV | lCmv | l | lc | — | — |
 | users | LCM | — | — | LCMS | — | — | — | — | — |
 | demandes-acces | LV | — | — | LV | — | — | — | — | — |
-| pieces | LSV | L | — | lSV | — | — | — | — | — |
+| pieces | LSV | L | — | LSV | — | — | — | — | — |
 | notifications | L | — | — | L | — | — | — | — | — |
 | mes-notifications | LM | LM | LM | LM | LM | LM | LM | — | — |
 | rbac | LM | — | — | LM | — | — | — | — | — |
@@ -93,9 +93,11 @@ La matrice attendue route par route est le tableau déclaratif `MATRICE` de `ser
 | conseil | LCMS | L | — | LCMS | LCM | — | — | — | — |
 | cabinets | LCMS | L | — | LCMS | LCM | L | L | — | — |
 | calendrier-editorial | LM | LM | — | LM | LM | L | L | — | — |
-| espace | — | — | — | — | — | — | — | LCMSV | LCMSV |
-| messagerie | LC | LC | LC | l | LC | — | — | — | — |
+| espace | — | — | — | —\* | — | — | — | LCMSV | LCMSV |
+| messagerie | LC | LC | LC | LC | LC | — | — | — | — |
 | verifier | public | public | public | public | public | public | public | public | public |
+
+\* Espace avocat : exception structurelle, pas un refus de droit. `/api/espace/*` est un libre-service rattaché au `membreId` du jeton (`requireAvocat`, auth.ts) ; l'ADMIN n'a pas de fiche Membre, il n'a donc pas d'« espace » à lui. Il gère ces accès côté administration : utilisateurs, `POST /api/membres/:id/acces`, `POST /api/demandes-acces/:id/approuver-espace`.
 
 ## 4. Matrice réelle (extraite du code, valeurs par défaut de RolePermission), état après T9
 
@@ -109,7 +111,7 @@ Les rôles éditables suivent les valeurs par défaut de RolePermission (`DEFAUT
 | membres | LCMsv | lV | lv | LCMSV | l | l | l | — | — |
 | users | LCM | — | — | LCMS | — | — | — | — | — |
 | demandes-acces | LV | — | — | LV | — | — | — | — | — |
-| pieces | LSV | L | — | lSV | — | — | — | — | — |
+| pieces | LSV | L | — | LSV | — | — | — | — | — |
 | notifications | L | — | — | L | — | — | — | — | — |
 | mes-notifications | LM | LM | LM | LM | LM | LM | LM | — | — |
 | rbac | LM | — | — | LM | — | — | — | — | — |
@@ -134,9 +136,11 @@ Les rôles éditables suivent les valeurs par défaut de RolePermission (`DEFAUT
 | conseil | LCMS | L | — | LCMS | L | — | — | — | — |
 | cabinets | LCMS | L | — | LCMS | L | L | L | — | — |
 | calendrier-editorial | LM | LM | — | LM | LM | L | L | — | — |
-| espace | — | — | — | — | — | — | — | LCMSV | LCMSV |
-| messagerie | LC | LC | LC | l | LC | — | — | — | — |
+| espace | — | — | — | —\* | — | — | — | LCMSV | LCMSV |
+| messagerie | LC | LC | LC | LC | LC | — | — | — | — |
 | verifier | public | public | public | public | public | public | public | public | public |
+
+\* Espace avocat : exception structurelle, pas un refus de droit. `/api/espace/*` est un libre-service rattaché au `membreId` du jeton (`requireAvocat`, auth.ts) ; l'ADMIN n'a pas de fiche Membre, il n'a donc pas d'« espace » à lui. Il gère ces accès côté administration : utilisateurs, `POST /api/membres/:id/acces`, `POST /api/demandes-acces/:id/approuver-espace`.
 
 
 ## 5. Écarts (serveur)
@@ -205,7 +209,7 @@ Le test crée trois membres E2E : A, l'avocat connecté ; S, un stagiaire ; B, l
 | paiement | `POST /api/espace/paiement/:ref/confirmer-sandbox` | non envoyé (route de paiement, D15) ; contrôle `p.membreId !== monMembreId` → 404 | espace.ts:338 |
 | stagiaire | `GET /api/espace/moi` 200 ; dossier de A 404 ; `GET /api/membres` 403 | même confinement que l'avocat | auth.ts (middleware) `requireAvocat`, `confinementAvocat` |
 
-Toutes les routes `/api/espace/*` refusent les rôles internes, ADMIN compris (`requireAvocat`, espace.ts:31 ; 403 prouvé par la matrice).
+Les routes `/api/espace/*` servent le seul titulaire du jeton (`requireAvocat`, espace.ts:31) : un rôle interne, ADMIN compris, y reçoit 403 (prouvé par la matrice). Pour l'ADMIN, c'est une exception structurelle assumée, pas un refus de droit : l'espace est un libre-service rattaché au `membreId` du jeton, et l'ADMIN n'a pas de fiche Membre. Il administre ces accès hors de l'espace (utilisateurs, `POST /api/membres/:id/acces`, `POST /api/demandes-acces/:id/approuver-espace`, tous admis pour lui).
 
 ## 9. Annexe : matrice réelle détaillée (route × rôle, gardes avec fichier:ligne)
 
@@ -262,7 +266,7 @@ La colonne « Gardes » liste la garde de routeur (`router.use`) puis celle de l
 | `POST /api/demandes-acces/:id/approuver-espace` | V | auth, perm(utilisateurs) (demandesAcces.ts:20) ; déclarée demandesAcces.ts:59 ; confinementAvocat (app.ts:134) | SG, ADM | A | - | - | A | - | - | - | - | - |
 | `POST /api/demandes-acces/:id/refuser` | V | auth, perm(utilisateurs) (demandesAcces.ts:20) ; déclarée demandesAcces.ts:103 ; confinementAvocat (app.ts:134) | SG, ADM | A | - | - | A | - | - | - | - | - |
 | `GET /api/pieces` | L | auth (pieces.ts:15) ; role SG, BAT (pieces.ts:36) ; confinementAvocat (app.ts:134) | SG, BAT, ADM | A | A | - | A | - | - | - | - | - |
-| `GET /api/pieces/:id/fichier` | L | auth (pieces.ts:15) ; role SG, BAT (pieces.ts:54) ; sansAdmin (pieces.ts:55) ; confinementAvocat (app.ts:134) | SG, BAT | A | A | - | - | - | - | - | - | - |
+| `GET /api/pieces/:id/fichier` | L | auth (pieces.ts:15) ; role SG, BAT, ADMIN toujours admis (pieces.ts:54) ; lecture ADMIN journalisée (audit.ts, LECTURES_ADMIN) ; confinementAvocat (app.ts:134) | SG, BAT, ADM | A | A | - | A | - | - | - | - | - |
 | `POST /api/pieces/:id/verifier` | V | auth (pieces.ts:15) ; role SG (pieces.ts:85) ; confinementAvocat (app.ts:134) | SG, ADM | A | - | - | A | - | - | - | - | - |
 | `POST /api/pieces/:id/rejeter` | V | auth (pieces.ts:15) ; role SG (pieces.ts:100) ; confinementAvocat (app.ts:134) | SG, ADM | A | - | - | A | - | - | - | - | - |
 | `DELETE /api/pieces/:id` | S | auth (pieces.ts:15) ; role SG (pieces.ts:116) ; confinementAvocat (app.ts:134) | SG, ADM | A | - | - | A | - | - | - | - | - |
@@ -420,13 +424,13 @@ La colonne « Gardes » liste la garde de routeur (`router.use`) puis celle de l
 | `GET /api/espace/scrutins` | L | auth, avocat (espace.ts:31) ; déclarée espace.ts:848 | AV, STAG | - | - | - | - | - | - | - | A | A |
 | `POST /api/espace/scrutins/:id/voter` | V | auth, avocat (espace.ts:31) ; déclarée espace.ts:891 | AV, STAG | - | - | - | - | - | - | - | A | A |
 | `GET /api/messagerie/non-lus` | L | auth, perm(messagerie) (messagerie.ts:20) ; déclarée messagerie.ts:35 ; confinementAvocat (app.ts:134) | SG, ADM, BAT, TRES, SA | A | A | A | A | A | - | - | - | - |
-| `GET /api/messagerie` | L | auth, perm(messagerie) (messagerie.ts:20) ; sansAdmin (messagerie.ts:50) ; confinementAvocat (app.ts:134) | SG, BAT, TRES, SA | A | A | A | - | A | - | - | - | - |
-| `GET /api/messagerie/messages/:id/piece` | L | auth, perm(messagerie) (messagerie.ts:20) ; sansAdmin (messagerie.ts:93) ; confinementAvocat (app.ts:134) | SG, BAT, TRES, SA | A | A | A | - | A | - | - | - | - |
+| `GET /api/messagerie` | L | auth, perm(messagerie) (messagerie.ts:20) ; déclarée messagerie.ts:50 ; confinementAvocat (app.ts:134) | SG, ADM, BAT, TRES, SA | A | A | A | A | A | - | - | - | - |
+| `GET /api/messagerie/messages/:id/piece` | L | auth, perm(messagerie) (messagerie.ts:20) ; déclarée messagerie.ts:92 ; confinementAvocat (app.ts:134) | SG, ADM, BAT, TRES, SA | A | A | A | A | A | - | - | - | - |
 | `GET /api/messagerie/messages/:id/accuse/pdf` | L | auth, perm(messagerie) (messagerie.ts:20) ; déclarée messagerie.ts:96 ; confinementAvocat (app.ts:134) | SG, ADM, BAT, TRES, SA | A | A | A | A | A | - | - | - | - |
-| `GET /api/messagerie/:id` | L | auth, perm(messagerie) (messagerie.ts:20) ; sansAdmin (messagerie.ts:109) ; confinementAvocat (app.ts:134) | SG, BAT, TRES, SA | A | A | A | - | A | - | - | - | - |
-| `POST /api/messagerie` | C | auth, perm(messagerie) (messagerie.ts:20) ; sansAdmin (messagerie.ts:153) ; confinementAvocat (app.ts:134) | SG, BAT, TRES, SA | A | A | A | - | A | - | - | - | - |
-| `POST /api/messagerie/:id` | C | auth, perm(messagerie) (messagerie.ts:20) ; sansAdmin (messagerie.ts:185) ; confinementAvocat (app.ts:134) | SG, BAT, TRES, SA | A | A | A | - | A | - | - | - | - |
-| `POST /api/messagerie/:id/attestation` | C | auth, perm(messagerie) (messagerie.ts:20) ; sansAdmin (messagerie.ts:218) ; confinementAvocat (app.ts:134) | SG, BAT, TRES, SA | A | A | A | - | A | - | - | - | - |
+| `GET /api/messagerie/:id` | L | auth, perm(messagerie) (messagerie.ts:20) ; déclarée messagerie.ts:107 ; confinementAvocat (app.ts:134) | SG, ADM, BAT, TRES, SA | A | A | A | A | A | - | - | - | - |
+| `POST /api/messagerie` | C | auth, perm(messagerie) (messagerie.ts:20) ; déclarée messagerie.ts:150 ; confinementAvocat (app.ts:134) | SG, ADM, BAT, TRES, SA | A | A | A | A | A | - | - | - | - |
+| `POST /api/messagerie/:id` | C | auth, perm(messagerie) (messagerie.ts:20) ; déclarée messagerie.ts:181 ; confinementAvocat (app.ts:134) | SG, ADM, BAT, TRES, SA | A | A | A | A | A | - | - | - | - |
+| `POST /api/messagerie/:id/attestation` | C | auth, perm(messagerie) (messagerie.ts:20) ; déclarée messagerie.ts:213 ; confinementAvocat (app.ts:134) | SG, ADM, BAT, TRES, SA | A | A | A | A | A | - | - | - | - |
 | `GET /api/verifier/quitus/:numero` | L | aucune (publique) | public | pub | pub | pub | pub | pub | pub | pub | pub | pub |
 | `GET /api/verifier/recu/:numero` | L | aucune (publique) | public | pub | pub | pub | pub | pub | pub | pub | pub | pub |
 | `GET /api/verifier/timbre/:code` | L | aucune (publique) | public | pub | pub | pub | pub | pub | pub | pub | pub | pub |
