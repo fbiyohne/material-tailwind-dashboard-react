@@ -413,6 +413,11 @@ date** (`situationADate`, `lib/cycleVie.ts`) selon les règles de `Parametres.da
   DELETE). Candidats et émargements partent en cascade ; la composition du Conseil et
   l'Archive du PV (`SCRUTIN-<id>`) sont conservées. JournalAudit reçoit titre, statut,
   nombre de votants et de candidats (`test/scrutins-suppression.test.ts`).
+  Écran Élections : le bouton « Supprimer le scrutin » est masqué pour un scrutin OUVERT ;
+  pour CLOS/PUBLIÉ, la confirmation exige de retaper l'intitulé exact. Journal d'audit :
+  « Suppression — Scrutin (scrutin #id « titre » (statut …, n votants, m candidats)) ».
+  Parcours vérifié sur l'instance de test (204, absence après rechargement) : captures
+  dans `docs/captures/m20261016/`.
 - Espace avocat : `GET /espace/scrutins` expose `eligible` par scrutin (et
   `dateScrutin`) ; `POST /espace/scrutins/:id/voter` apprécie l'électeur à la date
   de référence du scrutin. Le mécanisme de vote (anonymat, unicité) est inchangé.
