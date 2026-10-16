@@ -249,7 +249,7 @@ describe("Super-administrateur — comptes utilisateurs (ADMIN)", () => {
 
   it("l'ADMIN supprime un compte qu'il a créé (200)", async () => {
     const created = await request(app).post("/api/users").set(...bearer(admin))
-      .send({ nom: "Compte Temporaire", email: `temp${Date.now()}@barreau-pn.cg`, role: "SECRETAIRE_GENERAL", password: "motdepasse8" });
+      .send({ nom: "Compte Temporaire", email: `temp${Date.now()}@barreau-pn.cg`, role: "CONSULTATION", password: "motdepasse8" });
     expect(created.status).toBe(201);
     const r = await request(app).delete(`/api/users/${created.body.id}`).set(...bearer(admin));
     expect(r.status).toBe(200);
@@ -1138,7 +1138,7 @@ describe("Round 3 — sécurité (anti-double-crédit & invalidation de session)
 
   it("changer son mot de passe invalide les jetons d'accès déjà émis (401)", async () => {
     const email = `sess-${Date.now()}@barreau-pn.cg`;
-    await request(app).post("/api/users").set(...bearer(admin)).send({ nom: "Session Test", email, role: "TRESORIERE", password: "ancienpass8" });
+    await request(app).post("/api/users").set(...bearer(sg)).send({ nom: "Session Test", email, role: "TRESORIERE", password: "ancienpass8" });
     const tok = (await request(app).post("/api/auth/login").send({ email, password: "ancienpass8" })).body.token;
     expect((await request(app).get("/api/auth/me").set(...bearer(tok))).status).toBe(200);
     const chg = await request(app).post("/api/auth/password").set(...bearer(tok)).send({ currentPassword: "ancienpass8", newPassword: "nouveaupass8" });

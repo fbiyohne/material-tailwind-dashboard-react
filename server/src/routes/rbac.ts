@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { Role } from "@prisma/client";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
-import { requireAuth, requireRole, type AuthRequest } from "../middleware/auth.js";
+import { requireAuth, requireRole, type AuthRequest, REFUS } from "../middleware/auth.js";
 import {
   PERMISSIONS, PERMISSION_CLES, ACTIONS, ACTION_CLES, ROLES_MATRICE, ROLES_COMPLET, ROLE_LABELS,
   permissionsDeRole, rafraichirMatrice, SENTINELLE_ACTIONS,
@@ -59,6 +59,10 @@ rbacRouter.put(
       if (actuelles.size !== demandees.size || [...demandees].some((p) => !actuelles.has(p))) {
         throw new HttpError(403, "Seul un administrateur peut modifier les permissions d'action");
       }
+    } else if (cles.includes("messagerie") && !permissionsDeRole(role as Role).includes("messagerie")) {
+      // Secret professionnel (R-58, R1-1) : l'ADMIN n'ouvre pas la messagerie à un rôle dont il gère
+      // les comptes (users.ts, refusAdminHabilite) ; c'est au SG de l'accorder.
+      throw new HttpError(403, REFUS);
     }
     await prisma.$transaction([
       prisma.rolePermission.deleteMany({ where: { role: role as Role } }),
