@@ -1,5 +1,6 @@
 import PropTypes from "prop-types";
 import { Sceau } from "./Sceau";
+import { urlVerification } from "../utils/urlVerif.js";
 import { QRCode } from "./QRCode";
 import { formatFCFA } from "../utils/format";
 import { montantEnLettresFCFA } from "../utils/nombreEnLettres";
@@ -35,11 +36,9 @@ function Champ({ label, valeur, multiline = false, nom = false }) {
  */
 export function RecuDocument({ numero, membre, montant, exercice, mode, objet, date, verif }) {
   const m = Number(montant) || 0;
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
   const hasNum = numero && numero !== "automatique";
-  const verifChemin = verif || `/verifier/recu/${encodeURIComponent(numero)}`;
-  const verifUrl = `${origin}${verifChemin}`;
-  const verifHost = origin.replace(/^https?:\/\//, "");
+  // URL absolue signée fournie par le serveur ; repli sur l'ancien chemin pour les documents déjà émis.
+  const { url: verifUrl, hote: verifHost } = urlVerification(verif, `/verifier/recu/${encodeURIComponent(numero)}`);
 
   return (
     <div className="bpn-print-zone relative mx-auto flex w-[820px] min-h-[1160px] flex-col overflow-hidden border-2 border-or bg-white font-serif text-[13px] text-encre">
@@ -110,7 +109,7 @@ export function RecuDocument({ numero, membre, montant, exercice, mode, objet, d
               <div className="text-[11px] leading-relaxed text-gris">
                 <div className="text-[12px] font-semibold uppercase tracking-wide text-navy">Vérification</div>
                 Authenticité vérifiable en scannant ce code ou sur :<br />
-                <span className="font-mono text-navy">{verifHost}{verifChemin}</span><br />
+                <span className="font-mono text-navy">{verifHost}{new URL(verifUrl).pathname}</span><br />
                 Il ne constitue pas une signature électronique.
               </div>
             </div>

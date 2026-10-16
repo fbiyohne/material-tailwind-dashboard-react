@@ -1,5 +1,6 @@
 import PropTypes from "prop-types";
 import { CalendarDaysIcon } from "@heroicons/react/24/outline";
+import { urlVerification } from "../utils/urlVerif.js";
 import { Sceau } from "./Sceau";
 import { QRCode } from "./QRCode";
 import { identite, coordonnees } from "../data/config";
@@ -36,11 +37,8 @@ function Champ({ label, valeur, multiline = false, nom = false }) {
  * C'est la zone imprimable / exportable (.bpn-print-zone).
  */
 export function QuitusDocument({ numero, membre, exercice, date, verif, finValidite }) {
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
-  // Chemin signé fourni par le serveur ; repli sur l'ancien chemin pour les documents déjà émis.
-  const verifChemin = verif || `/verifier/quitus/${encodeURIComponent(numero)}`;
-  const verifUrl = `${origin}${verifChemin}`;
-  const verifHost = origin.replace(/^https?:\/\//, "");
+  // URL absolue signée fournie par le serveur ; repli sur l'ancien chemin pour les documents déjà émis.
+  const { url: verifUrl, hote: verifHost } = urlVerification(verif, `/verifier/quitus/${encodeURIComponent(numero)}`);
   return (
     <div className="bpn-print-zone relative mx-auto flex w-[820px] min-h-[1160px] flex-col overflow-hidden border-2 border-or bg-white font-serif text-[13px] text-encre">
       {/* Double bordure intérieure */}
@@ -141,7 +139,7 @@ export function QuitusDocument({ numero, membre, exercice, date, verif, finValid
           <div className="text-[11px] leading-relaxed text-gris">
             <div className="text-[12px] font-semibold uppercase tracking-wide text-navy">Vérification d'authenticité</div>
             Authenticité vérifiable en scannant ce code ou sur :<br />
-            <span className="font-mono text-navy">{verifHost}{verifChemin}</span><br />
+            <span className="font-mono text-navy">{verifHost}{new URL(verifUrl).pathname}</span><br />
             Ce code permet de contrôler que le document a été émis par l'Ordre et d'en connaître le statut actuel. Il ne constitue pas une signature électronique.
           </div>
         </div>

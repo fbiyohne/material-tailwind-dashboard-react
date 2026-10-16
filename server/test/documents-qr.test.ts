@@ -3,7 +3,7 @@ import request from "supertest";
 import bcrypt from "bcryptjs";
 import { creerApp } from "../src/app.js";
 import { prisma } from "../src/prisma.js";
-import { cheminVerif, qrDocument } from "../src/lib/signature.js";
+import { cheminVerif, urlVerif, qrDocument } from "../src/lib/signature.js";
 import { finValiditeQuitus } from "../src/lib/business.js";
 import { fmtDateFr } from "../src/lib/documentsCommun.js";
 import { quitusRicheHtml, recuRicheHtml } from "../src/lib/documentsRiches.js";
@@ -86,7 +86,7 @@ describe("Documents à QR : champ verif distinct par document", () => {
     const miens = r.body.filter((q: { membreId: number }) => q.membreId === membreId);
     expect(miens).toHaveLength(2);
     for (const q of miens) {
-      expect(q.verif).toBe(cheminVerif("q", q.numero));
+      expect(q.verif).toBe(urlVerif("q", q.numero));
       expect(q.finValidite.slice(0, 10)).toBe(iso(finValiditeQuitus(new Date(q.dateEmission), 3)));
     }
     expect(miens[0].verif).not.toBe(miens[1].verif);
@@ -95,7 +95,7 @@ describe("Documents à QR : champ verif distinct par document", () => {
   it("reçus : GET /recus renvoie deux verif distincts", async () => {
     const r = await request(app).get("/api/recus").set(...bearer(sg));
     const miens = r.body.filter((x: { membreId: number }) => x.membreId === membreId);
-    expect(miens.map((x: { verif: string }) => x.verif)).toEqual(miens.map((x: { numero: string }) => cheminVerif("r", x.numero)));
+    expect(miens.map((x: { verif: string }) => x.verif)).toEqual(miens.map((x: { numero: string }) => urlVerif("r", x.numero)));
     expect(new Set(miens.map((x: { verif: string }) => x.verif)).size).toBe(2);
   });
 
@@ -103,20 +103,20 @@ describe("Documents à QR : champ verif distinct par document", () => {
     const r = await request(app).get("/api/timbres").set(...bearer(sg));
     const miens = r.body.filter((t: { membreId: number }) => t.membreId === membreId);
     expect(miens).toHaveLength(2);
-    for (const t of miens) expect(t.verif).toBe(cheminVerif("t", t.code));
+    for (const t of miens) expect(t.verif).toBe(urlVerif("t", t.code));
     expect(miens[0].verif).not.toBe(miens[1].verif);
     const un = await request(app).get(`/api/timbres/${timbreIds[0]}`).set(...bearer(sg));
-    expect(un.body.verif).toBe(cheminVerif("t", `TESTQR${num}X0`));
+    expect(un.body.verif).toBe(urlVerif("t", `TESTQR${num}X0`));
   });
 
   it("espace avocat : mes documents et mes timbres portent verif (et finValidite pour le quitus)", async () => {
     const d = await request(app).get("/api/espace/documents").set(...bearer(avocat));
     expect(d.status).toBe(200);
-    expect(d.body.quitus.map((q: { verif: string }) => q.verif).sort()).toEqual([cheminVerif("q", `QT-${num}-0`), cheminVerif("q", `QT-${num}-1`)].sort());
+    expect(d.body.quitus.map((q: { verif: string }) => q.verif).sort()).toEqual([urlVerif("q", `QT-${num}-0`), urlVerif("q", `QT-${num}-1`)].sort());
     for (const q of d.body.quitus) expect(q.finValidite).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    expect(d.body.recus.map((x: { verif: string }) => x.verif).sort()).toEqual([cheminVerif("r", `RT-${num}-0`), cheminVerif("r", `RT-${num}-1`)].sort());
+    expect(d.body.recus.map((x: { verif: string }) => x.verif).sort()).toEqual([urlVerif("r", `RT-${num}-0`), urlVerif("r", `RT-${num}-1`)].sort());
     const t = await request(app).get("/api/espace/timbres").set(...bearer(avocat));
-    expect(t.body.timbres.map((x: { verif: string }) => x.verif).sort()).toEqual([cheminVerif("t", `TESTQR${num}X0`), cheminVerif("t", `TESTQR${num}X1`)].sort());
+    expect(t.body.timbres.map((x: { verif: string }) => x.verif).sort()).toEqual([urlVerif("t", `TESTQR${num}X0`), urlVerif("t", `TESTQR${num}X1`)].sort());
   });
 
   it("modifier validiteMois ne réécrit pas la fin d'un quitus déjà délivré (R1-2 ; quitus suivant : quitus-fin-figee.test.ts)", async () => {

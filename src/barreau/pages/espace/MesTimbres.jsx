@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { urlVerification } from "../../utils/urlVerif.js";
 import { TicketIcon, ArrowDownTrayIcon, ClipboardDocumentIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
 import { Badge, VignetteTimbre, PageHeader, BandeauExperimental, FormField, Notice, useToast, TableSkeleton, ErrorState, EmptyState } from "../../components";
 import { canauxActifs } from "../../data/config";
@@ -52,7 +53,7 @@ export function MesTimbres() {
   };
 
   const noeud = () => document.getElementById("vignette-timbre");
-  const urlVerif = (t) => `${window.location.origin}${t.verif || `/verifier/timbre/${encodeURIComponent(t.code)}`}`;
+  const urlVerif = (t) => urlVerification(t.verif, `/verifier/timbre/${encodeURIComponent(t.code)}`).url;
   const tracer = (mode) => tracerUsageTimbre(succes.id, mode).catch(() => {});
   const telecharger = async () => {
     try { telechargerBlob(await timbrePng(noeud()), `Timbre-${succes.numero}.png`); tracer("png"); }

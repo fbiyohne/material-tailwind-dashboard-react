@@ -12,7 +12,7 @@ import { envoyerPdf, htmlVersPdf } from "../lib/pdf.js";
 import { attestationHtml, attestationSortieHtml, listeAvocatsHtml, STATUT_FR, QUALITE_FR } from "../lib/templates.js";
 import { appliquerCycleVie, changerSituation, dossierRadiation, ficheModifiee, reconcilierAcces } from "../lib/cycleVie.js";
 import { reglesActuelles } from "../lib/regles.js";
-import { cheminVerif } from "../lib/signature.js";
+import { urlVerif } from "../lib/signature.js";
 import { realtimeTous } from "../lib/realtime.js";
 import { provisionnerAccesEspace } from "../lib/acces.js";
 
@@ -257,8 +257,8 @@ membresRouter.get(
     // `verif` : chemin signé de la page /v (lien « Vérifier » de la fiche, T10).
     res.json({
       ...membre,
-      recus: membre.recus.map((r) => ({ ...r, verif: cheminVerif("r", r.numero) })),
-      quitus: membre.quitus.map((q) => ({ ...q, verif: cheminVerif("q", q.numero) })),
+      recus: membre.recus.map((r) => ({ ...r, verif: urlVerif("r", r.numero) })),
+      quitus: membre.quitus.map((q) => ({ ...q, verif: urlVerif("q", q.numero) })),
     });
   })
 );

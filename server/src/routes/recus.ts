@@ -2,7 +2,7 @@ import { Router } from "express";
 import { prisma } from "../prisma.js";
 import { asyncH, HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole, requirePermission } from "../middleware/auth.js";
-import { cheminVerif, hotePublic, qrDocument } from "../lib/signature.js";
+import { urlVerif, hotePublic, qrDocument } from "../lib/signature.js";
 import { envoyerDocumentPdf } from "../lib/pdf.js";
 import { recuRicheHtml } from "../lib/documentsRiches.js";
 import { estRecuDroit } from "../lib/business.js";
@@ -32,7 +32,7 @@ recusRouter.get(
       orderBy: { id: "desc" },
       include: { membre: { select: { nom: true, num: true } } },
     });
-    res.json(recus.map((r) => ({ ...r, verif: cheminVerif("r", r.numero) })));
+    res.json(recus.map((r) => ({ ...r, verif: urlVerif("r", r.numero) })));
   })
 );
 

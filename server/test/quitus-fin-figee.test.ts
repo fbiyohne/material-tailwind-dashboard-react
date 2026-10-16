@@ -68,7 +68,7 @@ describe("fin de validité du quitus figée à la délivrance", () => {
     await ecrireValidite(6);
     const liste = await request(app).get("/api/quitus").set(...bearer(sg));
     expect(iso(liste.body.find((q: { id: number }) => q.id === r1.body.id).finValidite)).toBe(fin1);
-    const page = await request(app).get(r1.body.verif);
+    const page = await request(app).get(new URL(r1.body.verif).pathname);
     expect(page.status).toBe(200);
     expect(page.text).toContain(fmtDateFr(new Date(`${fin1}T12:00:00Z`)));
     await request(app).get(`/api/quitus/${r1.body.id}/pdf`).set(...bearer(sg));

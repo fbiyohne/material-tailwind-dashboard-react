@@ -9,7 +9,7 @@ import { enregistrerFichier, lireFichier, supprimerFichier, typeReel } from "../
 import { cotisationDue, droitDue, statutCotisation, tarifsActuels, prochainNumeroAttestation, archiver, STATUTS_SORTIS, STATUTS_ANNUAIRE, peutAttesterInscription, finQuitus } from "../lib/business.js";
 import { finaliserPaiement } from "../lib/encaissement.js";
 import { CANAUX, modeSandbox, nouvelleReference, initierPaiement } from "../lib/paiement.js";
-import { cheminVerif, hotePublic, qrDocument } from "../lib/signature.js";
+import { urlVerif, hotePublic, qrDocument } from "../lib/signature.js";
 import { envoyerPdf, envoyerDocumentPdf } from "../lib/pdf.js";
 import { convocationAgHtml, pvAssembleeHtml, decisionDisciplineHtml, attestationHtml, attestationNonRedevanceHtml } from "../lib/templates.js";
 import { recuRicheHtml, quitusRicheHtml } from "../lib/documentsRiches.js";
@@ -166,7 +166,7 @@ espaceRouter.get(
   "/timbres",
   asyncH(async (req: AuthRequest, res) => {
     const timbres = await prisma.timbre.findMany({ where: { membreId: monMembreId(req) }, orderBy: { id: "desc" } });
-    res.json({ montant: MONTANT_TIMBRE, prototype: modeSandbox, timbres: timbres.map((t) => ({ ...t, verif: cheminVerif("t", t.code) })) });
+    res.json({ montant: MONTANT_TIMBRE, prototype: modeSandbox, timbres: timbres.map((t) => ({ ...t, verif: urlVerif("t", t.code) })) });
   })
 );
 
@@ -186,7 +186,7 @@ espaceRouter.post(
     if (!membre) throw new HttpError(404, "Fiche introuvable");
     // Montant fixé par l'Ordre (non modifiable côté client).
     const timbre = await emettreTimbre({ membre, affaire: data.affaire, reference: data.reference, juridiction: data.juridiction, montant: MONTANT_TIMBRE, canal: data.canal });
-    res.status(201).json({ ...timbre, verif: cheminVerif("t", timbre.code) });
+    res.status(201).json({ ...timbre, verif: urlVerif("t", timbre.code) });
   })
 );
 
@@ -264,10 +264,10 @@ espaceRouter.get(
       prisma.quitus.findMany({ where: { membreId }, orderBy: { dateEmission: "desc" } }),
     ]);
     res.json({
-      recus: recus.map((r) => ({ id: r.id, numero: r.numero, montant: r.montant, annee: r.annee, date: dateCourte(r.date), objet: r.objet, verif: cheminVerif("r", r.numero) })),
+      recus: recus.map((r) => ({ id: r.id, numero: r.numero, montant: r.montant, annee: r.annee, date: dateCourte(r.date), objet: r.objet, verif: urlVerif("r", r.numero) })),
       quitus: quitus.map((q) => ({
         id: q.id, numero: q.numero, annee: q.annee, date: dateCourte(q.dateEmission),
-        verif: cheminVerif("q", q.numero), finValidite: dateCourte(finQuitus(q)),
+        verif: urlVerif("q", q.numero), finValidite: dateCourte(finQuitus(q)),
       })),
     });
   })

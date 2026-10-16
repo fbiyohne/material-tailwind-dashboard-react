@@ -1,5 +1,6 @@
 import PropTypes from "prop-types";
 import { Sceau } from "./Sceau";
+import { urlVerification } from "../utils/urlVerif.js";
 import { QRCode } from "./QRCode";
 import { identite } from "../data/config";
 import { CLAUSE_TIMBRE, MENTION_PROTOTYPE } from "../utils/timbreImage";
@@ -32,11 +33,9 @@ function Guilloche({ id, flip = false }) {
 export function VignetteTimbre({ timbre, idAttr = "vignette-timbre", prototype = false }) {
   const { ordre, denomination } = identite();
   const nom = timbre.membre?.nom ?? timbre.membreNom ?? "";
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
   const code = timbre.code || "—";
-  const verifChemin = timbre.verif || `/verifier/timbre/${encodeURIComponent(code)}`;
-  const verifUrl = `${origin}${verifChemin}`;
-  const verifHost = origin.replace(/^https?:\/\//, "");
+  // URL absolue signée fournie par le serveur ; repli sur l'ancien chemin pour les documents déjà émis.
+  const { url: verifUrl, hote: verifHost } = urlVerification(timbre.verif, `/verifier/timbre/${encodeURIComponent(code)}`);
   const annule = timbre.statut === "ANNULE";
   const uid = String(timbre.numero ?? "x").replace(/\W/g, "");
 
@@ -105,7 +104,7 @@ export function VignetteTimbre({ timbre, idAttr = "vignette-timbre", prototype =
               <div className="min-w-0">
                 <div className="text-[9px] font-bold uppercase tracking-wider text-[#1A3A6B]">Vérifier l'authenticité</div>
                 <div className="mt-0.5 text-[10px] leading-snug text-[#4A5568]">Authenticité vérifiable en scannant ce code ou sur :</div>
-                <div className="mt-0.5 break-all font-mono text-[9.5px] text-[#8A6D08]">{verifHost}{verifChemin}</div>
+                <div className="mt-0.5 break-all font-mono text-[9.5px] text-[#8A6D08]">{verifHost}{new URL(verifUrl).pathname}</div>
                 <div className="mt-0.5 text-[9px] leading-snug text-[#4A5568]">Ne constitue pas une signature électronique.</div>
               </div>
             </div>

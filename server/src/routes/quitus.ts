@@ -9,7 +9,7 @@ import { eligibleQuitus, prochainNumeroQuitus, finValiditeQuitus, finQuitus } fr
 import { reglesActuelles } from "../lib/regles.js";
 import { envoyerDocumentPdf } from "../lib/pdf.js";
 import { quitusRicheHtml } from "../lib/documentsRiches.js";
-import { signerDocument, quitusPayload, cheminVerif, hotePublic, qrDocument } from "../lib/signature.js";
+import { signerDocument, quitusPayload, urlVerif, hotePublic, qrDocument } from "../lib/signature.js";
 import { notifier, userDeMembre } from "../lib/centreNotifications.js";
 
 /** Alerte in-app de l'avocat qu'un quitus est disponible (best-effort). */
@@ -24,7 +24,7 @@ function notifierQuitus(membreId: number, annee: number): void {
  * encodé par le QR, et `finValidite`, figée à la délivrance (finQuitus).
  */
 const avecVerif = <Q extends { numero: string; dateEmission: Date; finValidite: Date | null }>(q: Q) =>
-  ({ ...q, verif: cheminVerif("q", q.numero), finValidite: finQuitus(q) });
+  ({ ...q, verif: urlVerif("q", q.numero), finValidite: finQuitus(q) });
 
 export const quitusRouter = Router();
 // Données financières restreintes (RG-15) : SG, Trésorière, Admin.
