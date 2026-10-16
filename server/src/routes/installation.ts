@@ -41,6 +41,9 @@ const installSchema = z.object({
 installationRouter.post("/", asyncH(async (req, res) => {
   if (!(await wizardActif())) throw new HttpError(409, "Application déjà installée.");
   const d = installSchema.parse(req.body);
+  // Même règle que PUT /parametres : jamais de secret en clair (loi 29-2019, art. 64).
+  if (d.smtp?.pass && !cleDisponible())
+    throw new HttpError(400, "Secret non enregistré : la variable d'environnement PARAMS_CLE (32 octets en base64) est absente ou invalide sur le serveur.");
   await prisma.$transaction(async (tx) => {
     // Verrou consultatif transactionnel : sérialise les installations concurrentes
     // pour fermer la fenêtre TOCTOU. Sans lui, deux POST quasi simultanés (emails
@@ -60,8 +63,8 @@ installationRouter.post("/", asyncH(async (req, res) => {
       tarifs: d.tarifs,
       exerciceCourant: d.exerciceCourant,
       exercices: { premier: d.premierExercice },
-      // Mot de passe SMTP chiffré au repos dès que PARAMS_CLE est configurée (sinon clair, compatibilité).
-      ...(d.smtp ? { smtp: { ...d.smtp, pass: d.smtp.pass && cleDisponible() ? chiffrer(d.smtp.pass) : d.smtp.pass } } : {}),
+      // Mot de passe SMTP toujours chiffré au repos (la garde ci-dessus refuse l'absence de PARAMS_CLE).
+      ...(d.smtp ? { smtp: { ...d.smtp, pass: d.smtp.pass ? chiffrer(d.smtp.pass) : "" } } : {}),
       installe: true,
     };
     await tx.parametres.upsert({ where: { id: 1 }, create: { id: 1, data }, update: { data } });

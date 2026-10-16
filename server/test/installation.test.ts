@@ -99,7 +99,31 @@ describe("Installation — parcours actif (destructif, restauré en fin)", () =>
     expect(r.status).toBe(400);
   });
 
+  const corps = (pass: string) => ({
+    admin: { nom: "Admin Test", email: "Admin.Test@Barreau-PN.cg", motDePasse: "motdepasse123" },
+    identite: { denomination: "Barreau X", ordre: "Ordre X", batonnier: "Me B", tresoriere: "Me T", secretaireGeneral: "Me S", adresse: "Adresse X" },
+    tarifs: { avocat: 200000, stagiaire: 100000, droitsPlaidoirie: 50000 },
+    exerciceCourant: 2027, premierExercice: 2021,
+    smtp: { host: "smtp.gmail.com", port: 587, user: "u@gmail.com", pass, from: "u@gmail.com", secure: false },
+  });
+
+  it("R2-3 : smtp.pass sans PARAMS_CLE → 400, rien d'écrit en clair, aucun admin créé", async () => {
+    const avant = process.env.PARAMS_CLE;
+    delete process.env.PARAMS_CLE;
+    try {
+      const r = await request(app).post("/api/installation").send(corps("secret-en-clair"));
+      expect(r.status).toBe(400);
+      expect(r.body.erreur).toMatch(/PARAMS_CLE/);
+      const row = await prisma.parametres.findUnique({ where: { id: 1 } });
+      expect(JSON.stringify(row?.data)).not.toContain("secret-en-clair");
+      expect(await prisma.user.count({ where: { email: "admin.test@barreau-pn.cg" } })).toBe(0);
+    } finally {
+      if (avant !== undefined) process.env.PARAMS_CLE = avant;
+    }
+  });
+
   it("POST succès : crée l'admin + écrit la config + pose installe", async () => {
+    process.env.PARAMS_CLE ??= Buffer.alloc(32).toString("base64");
     const r = await request(app).post("/api/installation").send({
       admin: { nom: "Admin Test", email: "Admin.Test@Barreau-PN.cg", motDePasse: "motdepasse123" },
       identite: { denomination: "Barreau X", ordre: "Ordre X", batonnier: "Me B", tresoriere: "Me T", secretaireGeneral: "Me S", adresse: "Adresse X" },
@@ -118,6 +142,7 @@ describe("Installation — parcours actif (destructif, restauré en fin)", () =>
     expect(data.installe).toBe(true);
     expect(data.identite.denomination).toBe("Barreau X");
     expect(data.smtp.host).toBe("smtp.gmail.com");
+    expect(data.smtp.pass).toMatch(/^enc:v1:/);
     const login = await request(app).post("/api/auth/login").send({ email: "Admin.Test@Barreau-PN.cg", password: "motdepasse123" });
     expect(login.status).toBe(200);
   });
