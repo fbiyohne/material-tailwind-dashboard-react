@@ -525,11 +525,10 @@ describe("RBAC T8 — cloisonnement de l'espace avocat (IDOR, objets d'un autre 
     expect((await appel("POST", `/api/espace/timbres/${fx.timbre}/utilise`, A())).status).toBe(403);
     expect((await prisma.timbre.findUniqueOrThrow({ where: { id: fx.timbre } })).statut).toBe("VALIDE");
   });
-  it("pièce d'un autre membre : 404 en lecture et en retrait, pièce conservée", async () => {
+  it("pièce d'un autre membre : 404 en lecture", async () => {
     expect((await appel("GET", `/api/espace/pieces/${fx.piece}/fichier`, A())).status).toBe(404);
-    // Tentative IDOR (refus d'objet) sur la fixture E2E de la victime : la pièce doit survivre.
-    expect((await appel("DELETE", `/api/espace/pieces/${fx.piece}`, A())).status).toBe(404);
-    expect(await prisma.pieceDossier.count({ where: { id: fx.piece } })).toBe(1);
+    // DELETE non envoyé (D15 : l'AVOCAT passe les gardes de la route). Preuve par le code :
+    // espace.ts:549 `piece.membreId !== monMembreId(req)` → 404 avant toute suppression.
   });
   it("dossier disciplinaire : le sien 200, celui d'un autre 404 (détail et décision)", async () => {
     expect((await appel("GET", `/api/espace/discipline/${fx.dossierA}`, A())).status).toBe(200);

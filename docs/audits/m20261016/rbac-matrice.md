@@ -23,7 +23,7 @@ cd server && timeout 300 npx vitest run test/rbac-matrice.test.ts
 MATRICE_JSON=/chemin/matrice.json npx vitest run test/rbac-matrice.test.ts
 ```
 
-Résultat au 16/10/2026 : **230 tests réussis, 55 en échec attendu (`it.fails`, écarts répertoriés), 4 `it.todo`** (écritures volontairement non envoyées). Durée : 70 s environ.
+Résultat au 16/10/2026 : **229 tests réussis, 55 en échec attendu (`it.fails`, écarts répertoriés), 1 ignoré (export `MATRICE_JSON` en `runIf`), 4 `it.todo`** (écritures volontairement non envoyées). Durée : 70 s environ.
 
 ## 2. Rôles et légende
 
@@ -195,7 +195,7 @@ Le test crée trois membres E2E : A, l'avocat connecté ; S, un stagiaire ; B, l
 | reçu | `GET /api/espace/recus/:id/pdf` | 404 | espace.ts:349 |
 | quitus | `GET /api/espace/quitus/:id/pdf` | 404 | espace.ts:360 |
 | timbre | `POST /api/espace/timbres/:id/usage`, `/utilise` | 403, statut inchangé | espace.ts:203, :218 |
-| pièce | `GET /api/espace/pieces/:id/fichier`, `DELETE /api/espace/pieces/:id` | 404, pièce conservée | espace.ts:533, :549 |
+| pièce | `GET /api/espace/pieces/:id/fichier` 404 ; `DELETE /api/espace/pieces/:id` non envoyé (D15), contrôle d'objet par le code | 404 en lecture | espace.ts:533, :549 |
 | document disciplinaire | `GET /api/espace/discipline/:id`, `/decision/pdf` | 404 (son propre dossier : 200) | espace.ts:463, :473 |
 | message | `GET /api/espace/messagerie/:id`, `POST /api/espace/messagerie/:id`, pièce jointe, accusé | 404 / 404 / 403 / 403, aucun message ajouté, corps non divulgué | espace.ts:675-684, :709, :826 |
 | document (archives) | `GET /api/espace/archives` | archive de B absente, celle de A présente | espace.ts:571-575 (voir F3) |
