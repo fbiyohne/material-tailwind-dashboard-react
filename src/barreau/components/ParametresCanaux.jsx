@@ -73,12 +73,12 @@ function useSections(cles) {
 
 function Carte({ titre, icon: Icon, children, action }) {
   return (
-    <div className="bpn-card">
+    <div className="bpn-card flex flex-col">
       <div className="bpn-card-header">
         <span className="bpn-card-heading flex items-center gap-2">{Icon && <Icon className="h-4 w-4 text-gris" aria-hidden="true" />}{titre}</span>
         {action}
       </div>
-      <div className="p-5">{children}</div>
+      <div className="flex flex-1 flex-col p-5">{children}</div>
     </div>
   );
 }
@@ -120,7 +120,7 @@ function TestConnexion({ canal, desactive }) {
     finally { setEnCours(false); }
   };
   return (
-    <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+    <div className="mt-auto flex flex-col gap-2 pt-4 sm:flex-row sm:items-center">
       <button type="button" onClick={lancer} disabled={desactive || enCours} aria-busy={enCours || undefined}
         className="bpn-btn bpn-btn-ghost min-h-[44px] shrink-0 text-sm sm:min-h-0">
         <SignalIcon className="h-4 w-4" aria-hidden="true" /> {enCours ? "Test en cours…" : "Tester la connexion"}
@@ -150,7 +150,7 @@ function Etats({ s, children }) {
   return children;
 }
 
-const GRILLE = "grid grid-cols-1 gap-3 sm:grid-cols-2";
+const GRILLE = "grid grid-cols-1 items-end gap-3 sm:grid-cols-2";
 
 /** Bloc d'une passerelle : activation, champs, test de connexion. */
 function BlocPasserelle({ cle, titre, p, set, modifie, children }) {
@@ -183,7 +183,7 @@ export function PanneauPaiements() {
           </select>
           <p id="pg-mode-aide" className="mt-1 text-xs text-gris">Le mode production est verrouillé : il exige une décision écrite du Barreau.</p>
         </div>
-        <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
         <BlocPasserelle cle="mtn" titre="MTN Mobile Money" {...bloc}>
           <Champ id="mtn-user" label="Utilisateur API" valeur={p.mtn?.apiUser} onChange={set("mtn", "apiUser")} />
           <Champ id="mtn-abo" label="Clé d'abonnement" type="password" valeur={p.mtn?.abonnementCle} onChange={set("mtn", "abonnementCle")} />
@@ -228,7 +228,7 @@ export function PanneauNotifications() {
       <div className="space-y-5">
         <Notice ton="gris">Les notifications sont de service et au contenu neutre : jamais le texte d'un message, d'une pièce ni une information disciplinaire.</Notice>
         {/* Cartes deux par deux sur grand écran. */}
-        <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
         <Carte titre="E-mail (SMTP)" icon={EnvelopeIcon} action={etat(envois?.emailSimulation)}>
           <div className={GRILLE}>
             <Champ id="smtp-host" label="Serveur" valeur={smtp.host} onChange={s.regler(["smtp", "host"])} />
@@ -277,7 +277,7 @@ export function PanneauMessagerie() {
   return (
     <Etats s={s}>
       <div className="space-y-5">
-        <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
         <Carte titre="Messagerie interne">
           <div className="space-y-3">
             <Interrupteur id="msg-interne" label="Activer la messagerie interne" valeur={m.interneActive} onChange={set("interneActive")} />

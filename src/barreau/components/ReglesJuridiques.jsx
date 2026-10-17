@@ -59,9 +59,9 @@ export function ReglesJuridiques({ valeur: v, onChange, onSave, enCours }) {
       {/* Clause C-05 (docs/juridique/clauses-congres.md) : une fois, en tête de la section. */}
       <MentionJuridique type="regles" />
       {/* Cartes deux par deux sur grand écran ; le corps électoral (deux listes) occupe la largeur. */}
-      <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
       <Bloc titre="Stage" description="Durée du stage et pièce exigée pour le passage au tableau.">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-2">
           <FormField label="Durée du stage (mois)">
             <input type="number" min={1} max={120} value={v.stage.dureeMois} onChange={(e) => maj("stage", { dureeMois: num(e) })} className="bpn-input" />
           </FormField>
@@ -88,7 +88,7 @@ export function ReglesJuridiques({ valeur: v, onChange, onSave, enCours }) {
       </Bloc>
 
       <Bloc titre="Impayés et omission" description="Délais entre les étapes du circuit : rappel, mise en demeure, transmission.">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-2">
           <FormField label="Rappel → mise en demeure (jours)">
             <input type="number" min={0} max={365} value={v.impayes.delaiRappelJours} onChange={(e) => maj("impayes", { delaiRappelJours: num(e) })} className="bpn-input" />
           </FormField>
@@ -99,7 +99,7 @@ export function ReglesJuridiques({ valeur: v, onChange, onSave, enCours }) {
       </Bloc>
 
       <Bloc titre="Quitus" description="Durée de validité imprimée sur chaque quitus (date de fin calculée). Aucun texte ne la fixe : valeur provisoire (R-65), à confirmer par le Conseil de l'Ordre.">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-2">
           <FormField label="Validité du quitus (mois)" hint="de 1 à 24">
             <input type="number" min={1} max={24} value={v.quitus?.validiteMois ?? 3} onChange={(e) => maj("quitus", { validiteMois: num(e) })} className="bpn-input" />
           </FormField>
@@ -128,7 +128,7 @@ export function ReglesJuridiques({ valeur: v, onChange, onSave, enCours }) {
           ))}
         </div>
         <MentionJuridique type="sursis" />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-2">
           <div className="self-end overflow-hidden rounded-lg border border-grisM">
             <Case checked={v.sursisAutorise} onChange={() => onChange({ ...v, sursisAutorise: !v.sursisAutorise })}>Sursis autorisé (général)</Case>
           </div>
