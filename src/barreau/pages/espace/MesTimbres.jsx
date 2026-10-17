@@ -1,0 +1,167 @@
+import { useEffect, useMemo, useState } from "react";
+import { urlVerification } from "../../utils/urlVerif.js";
+import { TicketIcon, ArrowDownTrayIcon, ClipboardDocumentIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
+import { Badge, VignetteTimbre, PageHeader, BandeauExperimental, FormField, Notice, useToast, useConfirm, TableSkeleton, ErrorState, EmptyState } from "../../components";
+import { canauxActifs } from "../../data/config";
+import { formatFCFA, formatDate } from "../../utils/format";
+import { timbrePng, copierTimbre, timbreSvg, telechargerBlob, telechargerSvg } from "../../utils/timbreImage";
+import { getEspaceTimbres, creerEspaceTimbre, tracerUsageTimbre, declarerEspaceTimbreUtilise } from "../../api/resources";
+
+const CANAL_LABEL = { MTN: "MTN Money", AIRTEL: "Airtel Money", CARTE: "Carte bancaire", VIREMENT: "Virement" };
+const aujourdhui = () => new Date().toISOString().slice(0, 10);
+
+/** Espace avocat — l'avocat émet ses timbres de plaidoirie (paiement) et les récupère. */
+export function MesTimbres() {
+  const toast = useToast();
+  const confirm = useConfirm();
+  const [data, setData] = useState(null);
+  const [erreur, setErreur] = useState(false);
+  const [moi, setMoi] = useState(null);
+  const [affaire, setAffaire] = useState("");
+  const [reference, setReference] = useState("");
+  const [juridiction, setJuridiction] = useState("");
+  const [canal, setCanal] = useState("MTN");
+  const [emission, setEmission] = useState(false);
+  const [succes, setSucces] = useState(null);
+
+  const charger = () => {
+    setErreur(false);
+    getEspaceTimbres().then(setData).catch(() => setErreur(true));
+  };
+  useEffect(() => { charger(); }, []);
+
+  const montant = data?.montant ?? 15000;
+  const apercu = succes ?? {
+    numero: "—", code: "—", affaire: affaire || "—", reference, juridiction,
+    cabinet: moi?.cabinet, montant, membre: { nom: moi?.nom ?? "" }, createdAt: aujourdhui(),
+  };
+
+  // Récupère cabinet/nom pour l'aperçu depuis le premier timbre connu, sinon vide.
+  useEffect(() => {
+    if (data?.timbres?.[0]) setMoi({ nom: data.timbres[0].membre?.nom, cabinet: data.timbres[0].cabinet });
+  }, [data]);
+
+  const emettre = async () => {
+    if (!affaire.trim() || emission) return;
+    setEmission(true);
+    try {
+      const t = await creerEspaceTimbre({ affaire: affaire.trim(), reference: reference.trim() || undefined, juridiction: juridiction.trim() || undefined, canal });
+      setSucces(t);
+      setMoi({ nom: t.membre?.nom, cabinet: t.cabinet });
+      charger();
+      toast.success(`Timbre N° ${t.numero} émis.`);
+    } catch (e) { toast.error(e.message); } finally { setEmission(false); }
+  };
+
+  const noeud = () => document.getElementById("vignette-timbre");
+  const urlVerif = (t) => urlVerification(t.verif, `/verifier/timbre/${encodeURIComponent(t.code)}`).url;
+  const tracer = (mode) => tracerUsageTimbre(succes.id, mode).catch(() => {});
+  const telecharger = async () => {
+    try { telechargerBlob(await timbrePng(noeud()), `Timbre-${succes.numero}.png`); tracer("png"); }
+    catch (e) { toast.error(e.message); }
+  };
+  const telechargerEnSvg = async () => {
+    try { telechargerSvg(await timbreSvg(apercu, urlVerif(apercu), { prototype: data.prototype }), `Timbre-${succes.numero}.svg`); tracer("svg"); }
+    catch (e) { toast.error(e.message); }
+  };
+  const copier = async () => {
+    try {
+      const r = await copierTimbre(noeud(), `Timbre-${succes.numero}.png`);
+      (r.copie ? toast.success : toast.info)(r.message);
+      tracer("copie");
+    } catch (e) { toast.error(e.message); }
+  };
+  // Reprend un timbre déjà émis dans l'aperçu pour le copier ou le télécharger.
+  const reprendre = (t) => setSucces({ ...t, membre: { nom: moi?.nom } });
+
+  const declarerUtilise = async (t) => {
+    // Irréversible côté serveur : un clic accidentel consommerait le timbre.
+    const ok = await confirm({
+      title: "Marquer ce timbre comme utilisé ?",
+      message: `Le timbre N° ${t.numero} (${t.affaire}) sera déclaré utilisé. Cette action est définitive : il ne pourra plus être apposé sur un autre acte.`,
+      confirmLabel: "Confirmer l'utilisation",
+    });
+    if (!ok) return;
+    try { await declarerEspaceTimbreUtilise(t.id); toast.success(`Timbre N° ${t.numero} déclaré utilisé.`); charger(); }
+    catch (e) { toast.error(e.message); }
+  };
+
+  const canaux = useMemo(() => (canauxActifs().length ? canauxActifs() : ["MTN", "AIRTEL", "CARTE", "VIREMENT"]), []);
+
+  if (erreur) return <div className="bpn-card p-6"><ErrorState title="Indisponible" description="Vos timbres n'ont pas pu être chargés." onRetry={charger} /></div>;
+  if (!data) return <div className="bpn-card p-6"><TableSkeleton rows={4} cols={2} /></div>;
+
+  return (
+    <div className="space-y-5">
+      <PageHeader eyebrow="Mon espace" titre="Mes timbres de plaidoirie" sousTitre="Émettez un timbre par affaire, réglez le droit de plaidoirie, puis téléchargez-le ou copiez-le dans vos actes." />
+      <BandeauExperimental variante="timbre" />
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[340px_1fr]">
+        {/* Émission */}
+        <div className="bpn-card">
+          <div className="bpn-card-header"><span className="bpn-card-heading">Nouveau timbre</span><Badge ton="or" dot={false}>{formatFCFA(montant)}</Badge></div>
+          <div className="space-y-3 p-4">
+            <FormField label="Affaire" required><input value={affaire} onChange={(e) => setAffaire(e.target.value)} className="bpn-input" placeholder="Ex. ARENS Vanessa" /></FormField>
+            <div className="grid grid-cols-2 gap-3">
+              <FormField label="Référence"><input value={reference} onChange={(e) => setReference(e.target.value)} className="bpn-input" placeholder="151024" /></FormField>
+              <FormField label="Juridiction"><input value={juridiction} onChange={(e) => setJuridiction(e.target.value)} className="bpn-input" placeholder="TI de Tié-Tié" /></FormField>
+            </div>
+            <FormField label="Moyen de paiement">
+              <select value={canal} onChange={(e) => setCanal(e.target.value)} className="bpn-input">
+                {canaux.map((c) => <option key={c} value={c}>{CANAL_LABEL[c] ?? c}</option>)}
+              </select>
+            </FormField>
+            <button type="button" onClick={emettre} disabled={!affaire.trim() || emission} className="bpn-btn bpn-btn-or w-full justify-center">
+              <TicketIcon className="h-4 w-4" /> {emission ? "Émission…" : `Payer & émettre (${formatFCFA(montant)})`}
+            </button>
+            {succes && (
+              <>
+                <button type="button" onClick={copier} className="bpn-btn bpn-btn-or w-full justify-center"><ClipboardDocumentIcon className="h-4 w-4" /> Copier mon timbre</button>
+                <div className="grid grid-cols-2 gap-2">
+                  <button type="button" onClick={telecharger} className="bpn-btn bpn-btn-ghost justify-center"><ArrowDownTrayIcon className="h-4 w-4" /> Télécharger PNG</button>
+                  <button type="button" onClick={telechargerEnSvg} className="bpn-btn bpn-btn-ghost justify-center"><ArrowDownTrayIcon className="h-4 w-4" /> Télécharger SVG</button>
+                </div>
+                <a href={succes.verif || `/verifier/timbre/${encodeURIComponent(succes.code)}`} target="_blank" rel="noreferrer" className="block text-center text-xs text-gris underline hover:text-navy">Page de vérification</a>
+              </>
+            )}
+            {!succes && <Notice ton="or">Le montant est fixé par l'Ordre. Après paiement, votre timbre est généré avec un QR de vérification à apposer sur l'acte.</Notice>}
+          </div>
+        </div>
+
+        {/* Aperçu */}
+        <div className="flex justify-center rounded-lg border border-grisM bg-grisL/40 p-6">
+          <VignetteTimbre timbre={apercu} prototype={data.prototype} />
+        </div>
+      </div>
+
+      {/* Mes timbres émis */}
+      <div className="bpn-card">
+        <div className="bpn-card-header"><span className="bpn-card-heading">Timbres émis</span><span className="font-mono text-xs text-gris">{data.timbres.length}</span></div>
+        {data.timbres.length === 0 ? (
+          <div className="p-4"><EmptyState icon={TicketIcon} title="Aucun timbre" description="Vos timbres de plaidoirie apparaîtront ici." /></div>
+        ) : (
+          <ul className="divide-y divide-grisL">
+            {data.timbres.map((t) => (
+              <li key={t.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+                <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+                  <span className="shrink-0 font-mono text-xs text-or-fonce">N° {t.numero}</span>
+                  <span className="truncate text-sm text-encre">{t.affaire}</span>
+                  {t.juridiction && <span className="shrink-0 text-xs text-gris">· {t.juridiction}</span>}
+                  <Badge ton={t.statut === "ANNULE" ? "rouge" : t.statut === "UTILISE" ? "gris" : "vert"} dot={false}>{t.statut === "ANNULE" ? "Annulé" : t.statut === "UTILISE" ? "Utilisé" : "Valide"}</Badge>
+                </span>
+                <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span className="text-xs text-gris">{formatDate(t.createdAt)}</span>
+                  <button type="button" onClick={() => reprendre(t)} className="text-xs font-medium text-navy hover:text-or-fonce">Copier / télécharger</button>
+                  {t.statut === "VALIDE" && <button type="button" onClick={() => declarerUtilise(t)} className="text-xs font-medium text-navy hover:text-or-fonce">Marquer utilisé</button>}
+                  <a href={t.verif || `/verifier/timbre/${encodeURIComponent(t.code)}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-medium text-navy hover:text-or-fonce"><ShieldCheckIcon className="h-4 w-4" /> Vérifier</a>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default MesTimbres;

@@ -1,0 +1,46 @@
+/*
+ * Direction 3 : « Compacte administrative » (sélectionnable : DIRECTION_PDF de gabarit.ts).
+ * Logique de formulaire : bandeau marine, cases à libellé (on retrouve une information sans lire
+ * le texte), tableaux denses à fond alterné. Corps 9,5 pt mais identité gardée à 12 pt et nom à
+ * 14 pt (point 6). Vise les listes longues et les pièces de gestion : plus de lignes par page.
+ */
+
+:root { --t-corps: 9.5pt; --t-titre: 20pt; --interligne: 1.35; --t-section: 11.5pt; }
+
+.entete { background: var(--marine); color: #fff; padding: 4mm 5mm; }
+.entete-sceau { background: #fff; border-radius: 50%; padding: 1mm; }
+.entete-sceau svg, .entete-sceau img { width: 13mm; height: 13mm; }
+.org-denom { color: #fff; }
+.org-ordre, .org-adresse { color: rgba(255, 255, 255, .78); }
+.entete-ref { background: #fff; padding: 2mm 3mm; border-top: 2pt solid var(--or); }
+.entete-ref .ref-label { color: var(--or-fonce); }
+
+.titre-bloc { margin: 5mm 0 4mm; padding-bottom: 2.5mm; border-bottom: 1.5pt solid var(--or); display: flex; align-items: baseline; justify-content: space-between; gap: 4mm; }
+.surtitre { order: 2; margin: 0; }
+
+.identite { display: grid; grid-template-columns: 1fr 1fr; border: .5pt solid var(--gris-m); }
+.champ { display: block; padding: 2mm 3mm; border: .5pt solid var(--gris-m); }
+.champ dt { margin-bottom: .6mm; }
+.champ-nom, .champ-large { grid-column: 1 / -1; background: var(--creme); }
+
+.encart { background: var(--gris-l); border-left: 2.4pt solid var(--marine); }
+
+h2.section { background: var(--gris-l); padding: 1.5mm 3mm; border-left: 2.4pt solid var(--or); }
+table { font-size: 8.5pt; }
+th { background: var(--marine); color: #fff; padding: 1.8mm 2mm; }
+th, td { padding-top: 1.1mm; padding-bottom: 1.1mm; }
+tbody tr:nth-child(even) td { background: var(--gris-l); }
+td.mono { color: var(--marine); }
+tfoot td { background: var(--or-l); border-top: 1pt solid var(--or); }
+
+.meta { grid-template-columns: repeat(4, 1fr); border: .5pt solid var(--gris-m); padding: 2.5mm 3mm; }
+
+.signatures { gap: 6mm; }
+.signature { border: .5pt solid var(--gris-m); padding: 2mm 3mm; text-align: left; }
+.sig-espace { height: 18mm; }
+.sig-nom { border-top: 0; }
+
+.verif { background: var(--creme); border: .5pt solid var(--gris-m); padding: 3mm; }
+
+.vignette { border: .75pt solid var(--gris-m); border-top: 4mm solid var(--marine); }
+.vignette .verif { background: #fff; }

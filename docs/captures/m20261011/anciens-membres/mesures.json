@@ -1,0 +1,7 @@
+{
+  "contexte": "T18 reprise QA, 2026-10-12. Instance privée http://localhost:4110 (code courant, base barreau_pn_test, dist/ reconstruit par vite build), compte SG, Playwright MCP.",
+  "360": {"scrollWidth": 352, "clientWidth": 352, "innerWidth": 360, "scrollWidthEgalClientWidth": true, "lignes": 10, "tableauLarg": 529, "conteneurDefilantLarg": 318, "elementsDebordantsHorsConteneurDefilant": 0, "colonnesVisibles": ["N° inscription", "Avocat", "Motif de sortie", "Date de sortie", "Actions"], "filtres": "empilés, pleine largeur (16 à 336 px)"},
+  "1280": {"scrollWidth": 1272, "clientWidth": 1272, "innerWidth": 1280, "scrollWidthEgalClientWidth": true, "lignes": 10, "tableauLarg": 946, "conteneurDefilantLarg": 946, "elementsDebordantsHorsConteneurDefilant": 0, "colonnesVisibles": ["N° inscription", "Avocat", "Cabinet", "Motif de sortie", "Date de sortie", "Actions"], "filtres": "une rangée, quatre champs de 311 à 351 px (même hauteur)"},
+  "vide360": {"scrollWidth": 352, "clientWidth": 352},
+  "note": "innerWidth inclut la barre de défilement verticale de 8 px. À 360 px, le tableau défile dans le conteneur overflow-x-auto de DataTable, comme sur Avocats inscrits."
+}

@@ -1,0 +1,165 @@
+/*
+ * Socle A4 commun des documents PDF (proposé en M-20261011, point 8 ; appliqué en M-20261016).
+ * Assemblé par server/src/lib/gabarit.ts (pageA4) avec la feuille de la direction choisie (DIRECTION_PDF).
+ *
+ * Contenu : jetons (couleurs et polices de l'application, aucun nouveau jeton), échelle typographique
+ * en points, page A4, marges, grille, composants communs (en-tête, identité, tableau, signatures,
+ * bloc de vérification, mentions). Les directions (institutionnelle.css, classique.css,
+ * compacte.css) ne font que redéfinir des variables et l'habillage.
+ *
+ * Les règles @page propres à un document (référence en pied, en-tête courant des pages 2 et
+ * suivantes, paysage) sont injectées par gabarit.ts, car elles portent la référence du document.
+ * Chrome (Puppeteer) applique les marges @page du CSS en priorité sur celles de page.pdf()
+ * et sait dessiner les boîtes de marge (@bottom-right, counter(pages)) : vérifié le 2026-10-11.
+ */
+
+:root {
+  /* Couleurs : jetons de tailwind.config.cjs, inchangés */
+  --marine: #1A3A6B;
+  --marine-2: #0d2247;
+  --or: #C4990A;
+  --or-fonce: #8A6D08; /* seul or autorisé pour du texte sur fond clair */
+  --or-l: #FDF6E3;
+  --creme: #FAF8F3;
+  --gris-l: #F2EFE8;
+  --gris-m: #E0DBD0;
+  --gris: #7A756A;
+  --encre: #1C1C18;
+
+  /* Polices de l'application (Playfair Display, DM Sans, DM Mono) */
+  --f-titre: 'Playfair Display', Georgia, serif;
+  --f-texte: 'DM Sans', 'Segoe UI', sans-serif;
+  --f-mono: 'DM Mono', 'Consolas', monospace;
+
+  /* Échelle typographique (pt) : légende, petit, corps, identité, nom, section, titre */
+  --t-legende: 7.5pt;
+  --t-petit: 8.5pt;
+  --t-corps: 10.5pt;
+  --t-identite: 12pt; /* plancher fixé par le point 6 */
+  --t-nom: 14pt;
+  --t-section: 13pt;
+  --t-titre: 28pt;
+  --interligne: 1.45;
+
+  /* Grille : 174 mm utiles (210 - 2 x 18), colonne de libellés */
+  --col-libelle: 40mm;
+  --gouttiere: 5mm;
+  --qr: 28mm; /* >= 25 mm imprimé (O10) */
+}
+
+@page {
+  size: A4;
+  margin: 18mm 18mm 20mm 18mm;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--f-texte);
+  font-size: var(--t-corps);
+  line-height: var(--interligne);
+  color: var(--encre);
+  font-variant-numeric: tabular-nums;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+p { margin: 0 0 2.5mm; }
+h1, h2, h3 { margin: 0; font-weight: 700; }
+.mono { font-family: var(--f-mono); }
+
+/* Document d'une seule page : le bloc de vérification est poussé en bas de page.
+   Hauteur utile = 297 - 18 - 20 = 259 mm (4 mm de marge : Chrome repousse sinon le dernier bloc en page 2). */
+.une-page { display: flex; flex-direction: column; min-height: 255mm; }
+/* L'espace libre se place entre les signatures et le bloc de vérification, collé en bas. */
+.une-page .cloture { flex: 1; display: flex; flex-direction: column; }
+.une-page .cloture .verif { margin-top: auto; }
+
+/* En-tête de document (page 1) */
+.entete { display: grid; grid-template-columns: auto 1fr auto; gap: 4mm; align-items: center; }
+.entete svg { display: block; }
+.entete-sceau svg, .entete-sceau img { width: 17mm; height: 17mm; object-fit: contain; }
+.org-denom { font-family: var(--f-titre); font-size: 15pt; color: var(--marine); margin: 0; line-height: 1.15; }
+.org-ordre { font-size: var(--t-legende); letter-spacing: .14em; text-transform: uppercase; color: var(--gris); margin: 1mm 0 0; }
+.org-adresse { font-size: var(--t-legende); color: var(--gris); margin: .5mm 0 0; }
+.entete-ref { text-align: right; }
+.ref-label { display: block; font-size: var(--t-legende); letter-spacing: .14em; text-transform: uppercase; color: var(--gris); }
+.ref { display: block; font-family: var(--f-mono); font-size: 11pt; color: var(--marine); }
+.ref-date { display: block; font-size: var(--t-petit); color: var(--gris); }
+
+/* Titre */
+.titre-bloc { margin: 7mm 0 5mm; }
+.surtitre { font-size: var(--t-petit); letter-spacing: .18em; text-transform: uppercase; color: var(--or-fonce); margin: 0 0 1.5mm; font-weight: 600; }
+.titre { font-family: var(--f-titre); font-size: var(--t-titre); color: var(--marine); line-height: 1.05; }
+.sous-titre { font-size: var(--t-corps); color: var(--gris); margin: 2mm 0 0; }
+
+/* Identité du titulaire : 12 pt minimum, nom en 14 pt */
+.identite { margin: 0 0 5mm; }
+.champ { display: grid; grid-template-columns: var(--col-libelle) 1fr; gap: var(--gouttiere); align-items: baseline; padding: 1.5mm 0; }
+.champ dt { font-size: var(--t-legende); letter-spacing: .12em; text-transform: uppercase; color: var(--gris); font-weight: 600; }
+.champ dd { margin: 0; font-size: var(--t-identite); }
+.champ-nom dd { font-size: var(--t-nom); font-weight: 600; color: var(--marine); }
+.champ dd.mono { font-size: 11.5pt; letter-spacing: .02em; }
+
+.corps p { text-align: left; }
+.declaration { font-size: 11.5pt; font-weight: 600; color: var(--marine); }
+
+/* Encart (validité, montant) */
+.encart { padding: 3mm 4mm; margin: 3mm 0; break-inside: avoid; }
+.encart-titre { font-size: var(--t-legende); letter-spacing: .14em; text-transform: uppercase; color: var(--or-fonce); font-weight: 600; margin: 0 0 1mm; }
+.encart p:last-child { margin: 0; }
+.montant-chiffres { font-family: var(--f-titre); font-size: 20pt; color: var(--marine); line-height: 1.1; margin: 0 0 1mm; }
+.montant-lettres { font-size: var(--t-corps); font-style: italic; }
+
+/* Tableaux : en-tête répété à chaque page (thead), lignes non coupées */
+table { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
+thead { display: table-header-group; }
+tr { break-inside: avoid; }
+th { text-align: left; font-size: var(--t-legende); letter-spacing: .1em; text-transform: uppercase; font-weight: 600; }
+th, td { padding: 1.3mm 2mm; vertical-align: top; }
+table + .corps { margin-top: 4mm; }
+td.num, th.num { text-align: right; }
+td.mono { font-family: var(--f-mono); font-size: 9pt; }
+tfoot td { font-weight: 600; }
+
+h2.section { font-family: var(--f-titre); font-size: var(--t-section); color: var(--marine); margin: 6mm 0 2.5mm; break-after: avoid; }
+h2.section .compte { font-family: var(--f-texte); font-size: var(--t-petit); color: var(--gris); font-weight: 400; }
+
+.meta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3mm var(--gouttiere); margin: 0 0 5mm; }
+.meta div { break-inside: avoid; }
+.meta dt { font-size: var(--t-legende); letter-spacing: .12em; text-transform: uppercase; color: var(--gris); font-weight: 600; }
+.meta dd { margin: .5mm 0 0; font-size: var(--t-corps); }
+
+ol.odj { margin: 0 0 4mm; padding-left: 6mm; }
+ol.odj li { margin: 0 0 1mm; }
+
+/* Clôture (lieu, date, signatures, vérification) : jamais coupée d'une page à l'autre */
+.cloture { break-inside: avoid; }
+
+/* Signatures */
+.signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 10mm; margin: 5mm 0 2mm; break-inside: avoid; }
+.signature { text-align: center; }
+.sig-role { font-size: var(--t-petit); letter-spacing: .1em; text-transform: uppercase; color: var(--marine); font-weight: 600; margin: 0; }
+.sig-espace { height: 15mm; }
+.sig-nom { font-size: var(--t-corps); margin: 0; padding-top: 1.5mm; border-top: .5pt solid var(--gris-m); }
+.fait-a { font-size: var(--t-corps); margin: 4mm 0 0; }
+
+/* Bloc de vérification (clause CL-VERIF) */
+.verif { display: grid; grid-template-columns: var(--qr) 1fr; gap: 4mm; align-items: center; break-inside: avoid; margin-top: 3mm; }
+.verif svg, .verif img { width: var(--qr); height: var(--qr); display: block; }
+.verif-titre { font-size: var(--t-legende); letter-spacing: .14em; text-transform: uppercase; color: var(--marine); font-weight: 600; margin: 0 0 1mm; }
+.verif-texte { font-size: var(--t-petit); color: var(--encre); margin: 0 0 1mm; }
+.verif-url { font-family: var(--f-mono); font-size: var(--t-petit); color: var(--marine); margin: 0; white-space: nowrap; }
+
+.mention-demo, .mention-liste { font-size: var(--t-legende); color: var(--gris); text-align: center; margin: 3mm 0 0; }
+.mention-prototype { font-size: var(--t-petit); font-weight: 600; color: #8B1A1A; text-align: center; letter-spacing: .08em; text-transform: uppercase; margin: 2mm 0 0; }
+
+/* Timbre : vignette au format d'un timbre, volet de contrôle en dessous */
+.vignette { width: 92mm; margin: 8mm auto 6mm; padding: 5mm 6mm; text-align: center; break-inside: avoid; }
+.vignette-type { font-size: var(--t-legende); letter-spacing: .3em; text-transform: uppercase; color: var(--or-fonce); font-weight: 600; margin: 0; }
+.vignette-numero { font-family: var(--f-titre); font-size: 26pt; color: var(--marine); margin: 2mm 0; line-height: 1; }
+.vignette-montant { font-family: var(--f-titre); font-size: 15pt; color: var(--marine); margin: 1mm 0 0; }
+.vignette-code { font-family: var(--f-mono); font-size: 10pt; letter-spacing: .12em; margin: 2mm 0 0; }
+/* Dans la vignette (92 mm), QR centré et clause dessous : l'URL tient sur une ligne. */
+.vignette .verif { grid-template-columns: 1fr; justify-items: center; text-align: center; gap: 2mm; margin-top: 4mm; }
+.vignette .verif-texte { font-size: var(--t-legende); }
+.vignette .verif-url { display: block; font-size: 7pt; }

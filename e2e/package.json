@@ -1,0 +1,1 @@
+{"name":"e2e-barreau","private":true,"type":"module","devDependencies":{"@playwright/test":"^1.64.0","jsqr":"^1.4.0","pngjs":"^7.0.0"}}

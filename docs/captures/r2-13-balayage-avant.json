@@ -1,0 +1,1047 @@
+{
+ "bilan": {
+  "libelle": "nat-avant",
+  "url": "http://127.0.0.1:4332",
+  "rechargements": 54,
+  "dureeS": 87,
+  "requetesApi": 378,
+  "compteesLimiteur": 248,
+  "parRechargement": 4.6,
+  "maxParRechargement": 37,
+  "rechargementsAvec429": 34,
+  "chargementsMuets": 0,
+  "ecransConnexion": 0,
+  "sessionsPerdues": 0,
+  "rafraichissements": [],
+  "saturationPrealable": {
+   "404": 599,
+   "429": 1
+  }
+ },
+ "lignes": [
+  {
+   "t": 3,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/",
+   "requetesApi": 16,
+   "compteesLimiteur": 11,
+   "statuts": {
+    "200": 13,
+    "304": 3
+   },
+   "resteMin": 2987,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 7,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/avocats",
+   "requetesApi": 40,
+   "compteesLimiteur": 37,
+   "statuts": {
+    "200": 28,
+    "304": 12
+   },
+   "resteMin": 2950,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 9,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/stagiaires",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "200": 1,
+    "304": 11
+   },
+   "resteMin": 2941,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 11,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/cabinets",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "200": 1,
+    "304": 11
+   },
+   "resteMin": 2932,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 14,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/tableau",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "200": 1,
+    "304": 11
+   },
+   "resteMin": 2923,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 16,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/pieces",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "200": 1,
+    "304": 11
+   },
+   "resteMin": 2914,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 18,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/corps-electoral",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "200": 1,
+    "304": 11
+   },
+   "resteMin": 2905,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 24,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/cotisations",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "304": 12
+   },
+   "resteMin": 2896,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 27,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/quitus",
+   "requetesApi": 15,
+   "compteesLimiteur": 12,
+   "statuts": {
+    "200": 3,
+    "304": 12
+   },
+   "resteMin": 2884,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 29,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/recus",
+   "requetesApi": 13,
+   "compteesLimiteur": 10,
+   "statuts": {
+    "200": 1,
+    "304": 12
+   },
+   "resteMin": 2874,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 32,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/droits-plaidoirie",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "200": 1,
+    "304": 11
+   },
+   "resteMin": 2865,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 34,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/timbres",
+   "requetesApi": 13,
+   "compteesLimiteur": 10,
+   "statuts": {
+    "200": 1,
+    "304": 12
+   },
+   "resteMin": 2855,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 36,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/reunions",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "200": 1,
+    "304": 11
+   },
+   "resteMin": 2846,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 38,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/assemblees",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "200": 1,
+    "304": 11
+   },
+   "resteMin": 2837,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 40,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/discipline",
+   "requetesApi": 11,
+   "compteesLimiteur": 8,
+   "statuts": {
+    "304": 11
+   },
+   "resteMin": 2829,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 42,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/elections",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "200": 1,
+    "304": 11
+   },
+   "resteMin": 2820,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 44,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/conseil",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "200": 1,
+    "304": 11
+   },
+   "resteMin": 2811,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 46,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/messagerie",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "200": 1,
+    "304": 11
+   },
+   "resteMin": 2802,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 48,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/archives",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "200": 1,
+    "304": 11
+   },
+   "resteMin": 2793,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 50,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/annuaire",
+   "requetesApi": 12,
+   "compteesLimiteur": 9,
+   "statuts": {
+    "304": 12
+   },
+   "resteMin": 2784,
+   "retryAfter": null,
+   "chargementMuet": false,
+   "messageLimite": null,
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 52,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/publications",
+   "requetesApi": 3,
+   "compteesLimiteur": 1,
+   "statuts": {
+    "304": 2,
+    "429": 1
+   },
+   "resteMin": 0,
+   "retryAfter": "840",
+   "chargementMuet": false,
+   "messageLimite": "Trop de requêtes, réessayez dans 840 s.",
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 53,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/lettre-batonnier",
+   "requetesApi": 3,
+   "compteesLimiteur": 1,
+   "statuts": {
+    "304": 2,
+    "429": 1
+   },
+   "resteMin": 0,
+   "retryAfter": "839",
+   "chargementMuet": false,
+   "messageLimite": "Trop de requêtes, réessayez dans 839 s.",
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 54,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/parametres",
+   "requetesApi": 3,
+   "compteesLimiteur": 1,
+   "statuts": {
+    "304": 2,
+    "429": 1
+   },
+   "resteMin": 0,
+   "retryAfter": "838",
+   "chargementMuet": false,
+   "messageLimite": "Trop de requêtes, réessayez dans 838 s.",
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 55,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/utilisateurs",
+   "requetesApi": 3,
+   "compteesLimiteur": 1,
+   "statuts": {
+    "304": 2,
+    "429": 1
+   },
+   "resteMin": 0,
+   "retryAfter": "837",
+   "chargementMuet": false,
+   "messageLimite": "Trop de requêtes, réessayez dans 837 s.",
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 56,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/journal-audit",
+   "requetesApi": 3,
+   "compteesLimiteur": 1,
+   "statuts": {
+    "304": 2,
+    "429": 1
+   },
+   "resteMin": 0,
+   "retryAfter": "836",
+   "chargementMuet": false,
+   "messageLimite": "Trop de requêtes, réessayez dans 836 s.",
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 57,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/profil",
+   "requetesApi": 3,
+   "compteesLimiteur": 1,
+   "statuts": {
+    "304": 2,
+    "429": 1
+   },
+   "resteMin": 0,
+   "retryAfter": "835",
+   "chargementMuet": false,
+   "messageLimite": "Trop de requêtes, réessayez dans 835 s.",
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 58,
+   "passe": 1,
+   "largeur": 1280,
+   "route": "/avocats/7862",
+   "requetesApi": 3,
+   "compteesLimiteur": 1,
+   "statuts": {
+    "304": 2,
+    "429": 1
+   },
+   "resteMin": 0,
+   "retryAfter": "834",
+   "chargementMuet": false,
+   "messageLimite": "Trop de requêtes, réessayez dans 834 s.",
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 59,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/",
+   "requetesApi": 3,
+   "compteesLimiteur": 1,
+   "statuts": {
+    "304": 2,
+    "429": 1
+   },
+   "resteMin": 0,
+   "retryAfter": "833",
+   "chargementMuet": false,
+   "messageLimite": "Trop de requêtes, réessayez dans 833 s.",
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 60,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/avocats",
+   "requetesApi": 3,
+   "compteesLimiteur": 1,
+   "statuts": {
+    "304": 2,
+    "429": 1
+   },
+   "resteMin": 0,
+   "retryAfter": "832",
+   "chargementMuet": false,
+   "messageLimite": "Trop de requêtes, réessayez dans 832 s.",
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 61,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/stagiaires",
+   "requetesApi": 3,
+   "compteesLimiteur": 1,
+   "statuts": {
+    "304": 2,
+    "429": 1
+   },
+   "resteMin": 0,
+   "retryAfter": "830",
+   "chargementMuet": false,
+   "messageLimite": "Trop de requêtes, réessayez dans 830 s.",
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 62,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/cabinets",
+   "requetesApi": 3,
+   "compteesLimiteur": 1,
+   "statuts": {
+    "304": 2,
+    "429": 1
+   },
+   "resteMin": 0,
+   "retryAfter": "829",
+   "chargementMuet": false,
+   "messageLimite": "Trop de requêtes, réessayez dans 829 s.",
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 64,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/tableau",
+   "requetesApi": 3,
+   "compteesLimiteur": 1,
+   "statuts": {
+    "304": 2,
+    "429": 1
+   },
+   "resteMin": 0,
+   "retryAfter": "828",
+   "chargementMuet": false,
+   "messageLimite": "Trop de requêtes, réessayez dans 828 s.",
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 65,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/pieces",
+   "requetesApi": 3,
+   "compteesLimiteur": 1,
+   "statuts": {
+    "304": 2,
+    "429": 1
+   },
+   "resteMin": 0,
+   "retryAfter": "827",
+   "chargementMuet": false,
+   "messageLimite": "Trop de requêtes, réessayez dans 827 s.",
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 66,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/corps-electoral",
+   "requetesApi": 3,
+   "compteesLimiteur": 1,
+   "statuts": {
+    "304": 2,
+    "429": 1
+   },
+   "resteMin": 0,
+   "retryAfter": "826",
+   "chargementMuet": false,
+   "messageLimite": "Trop de requêtes, réessayez dans 826 s.",
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 67,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/cotisations",
+   "requetesApi": 3,
+   "compteesLimiteur": 1,
+   "statuts": {
+    "304": 2,
+    "429": 1
+   },
+   "resteMin": 0,
+   "retryAfter": "825",
+   "chargementMuet": false,
+   "messageLimite": "Trop de requêtes, réessayez dans 825 s.",
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 68,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/quitus",
+   "requetesApi": 3,
+   "compteesLimiteur": 1,
+   "statuts": {
+    "304": 2,
+    "429": 1
+   },
+   "resteMin": 0,
+   "retryAfter": "824",
+   "chargementMuet": false,
+   "messageLimite": "Trop de requêtes, réessayez dans 824 s.",
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 69,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/recus",
+   "requetesApi": 3,
+   "compteesLimiteur": 1,
+   "statuts": {
+    "304": 2,
+    "429": 1
+   },
+   "resteMin": 0,
+   "retryAfter": "823",
+   "chargementMuet": false,
+   "messageLimite": "Trop de requêtes, réessayez dans 823 s.",
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 70,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/droits-plaidoirie",
+   "requetesApi": 3,
+   "compteesLimiteur": 1,
+   "statuts": {
+    "304": 2,
+    "429": 1
+   },
+   "resteMin": 0,
+   "retryAfter": "822",
+   "chargementMuet": false,
+   "messageLimite": "Trop de requêtes, réessayez dans 822 s.",
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 71,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/timbres",
+   "requetesApi": 3,
+   "compteesLimiteur": 1,
+   "statuts": {
+    "304": 2,
+    "429": 1
+   },
+   "resteMin": 0,
+   "retryAfter": "821",
+   "chargementMuet": false,
+   "messageLimite": "Trop de requêtes, réessayez dans 821 s.",
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 72,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/reunions",
+   "requetesApi": 3,
+   "compteesLimiteur": 1,
+   "statuts": {
+    "304": 2,
+    "429": 1
+   },
+   "resteMin": 0,
+   "retryAfter": "820",
+   "chargementMuet": false,
+   "messageLimite": "Trop de requêtes, réessayez dans 820 s.",
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 73,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/assemblees",
+   "requetesApi": 3,
+   "compteesLimiteur": 1,
+   "statuts": {
+    "304": 2,
+    "429": 1
+   },
+   "resteMin": 0,
+   "retryAfter": "818",
+   "chargementMuet": false,
+   "messageLimite": "Trop de requêtes, réessayez dans 818 s.",
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 74,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/discipline",
+   "requetesApi": 3,
+   "compteesLimiteur": 1,
+   "statuts": {
+    "304": 2,
+    "429": 1
+   },
+   "resteMin": 0,
+   "retryAfter": "817",
+   "chargementMuet": false,
+   "messageLimite": "Trop de requêtes, réessayez dans 817 s.",
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 76,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/elections",
+   "requetesApi": 3,
+   "compteesLimiteur": 1,
+   "statuts": {
+    "304": 2,
+    "429": 1
+   },
+   "resteMin": 0,
+   "retryAfter": "816",
+   "chargementMuet": false,
+   "messageLimite": "Trop de requêtes, réessayez dans 816 s.",
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 77,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/conseil",
+   "requetesApi": 3,
+   "compteesLimiteur": 1,
+   "statuts": {
+    "304": 2,
+    "429": 1
+   },
+   "resteMin": 0,
+   "retryAfter": "815",
+   "chargementMuet": false,
+   "messageLimite": "Trop de requêtes, réessayez dans 815 s.",
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 78,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/messagerie",
+   "requetesApi": 3,
+   "compteesLimiteur": 1,
+   "statuts": {
+    "304": 2,
+    "429": 1
+   },
+   "resteMin": 0,
+   "retryAfter": "814",
+   "chargementMuet": false,
+   "messageLimite": "Trop de requêtes, réessayez dans 814 s.",
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 79,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/archives",
+   "requetesApi": 3,
+   "compteesLimiteur": 1,
+   "statuts": {
+    "304": 2,
+    "429": 1
+   },
+   "resteMin": 0,
+   "retryAfter": "813",
+   "chargementMuet": false,
+   "messageLimite": "Trop de requêtes, réessayez dans 813 s.",
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 80,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/annuaire",
+   "requetesApi": 3,
+   "compteesLimiteur": 1,
+   "statuts": {
+    "304": 2,
+    "429": 1
+   },
+   "resteMin": 0,
+   "retryAfter": "812",
+   "chargementMuet": false,
+   "messageLimite": "Trop de requêtes, réessayez dans 811 s.",
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 81,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/publications",
+   "requetesApi": 3,
+   "compteesLimiteur": 1,
+   "statuts": {
+    "304": 2,
+    "429": 1
+   },
+   "resteMin": 0,
+   "retryAfter": "811",
+   "chargementMuet": false,
+   "messageLimite": "Trop de requêtes, réessayez dans 811 s.",
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 82,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/lettre-batonnier",
+   "requetesApi": 3,
+   "compteesLimiteur": 1,
+   "statuts": {
+    "304": 2,
+    "429": 1
+   },
+   "resteMin": 0,
+   "retryAfter": "810",
+   "chargementMuet": false,
+   "messageLimite": "Trop de requêtes, réessayez dans 810 s.",
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 83,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/parametres",
+   "requetesApi": 3,
+   "compteesLimiteur": 1,
+   "statuts": {
+    "304": 2,
+    "429": 1
+   },
+   "resteMin": 0,
+   "retryAfter": "809",
+   "chargementMuet": false,
+   "messageLimite": "Trop de requêtes, réessayez dans 809 s.",
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 84,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/utilisateurs",
+   "requetesApi": 3,
+   "compteesLimiteur": 1,
+   "statuts": {
+    "304": 2,
+    "429": 1
+   },
+   "resteMin": 0,
+   "retryAfter": "807",
+   "chargementMuet": false,
+   "messageLimite": "Trop de requêtes, réessayez dans 807 s.",
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 85,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/journal-audit",
+   "requetesApi": 3,
+   "compteesLimiteur": 1,
+   "statuts": {
+    "304": 2,
+    "429": 1
+   },
+   "resteMin": 0,
+   "retryAfter": "806",
+   "chargementMuet": false,
+   "messageLimite": "Trop de requêtes, réessayez dans 806 s.",
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 86,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/profil",
+   "requetesApi": 3,
+   "compteesLimiteur": 1,
+   "statuts": {
+    "304": 2,
+    "429": 1
+   },
+   "resteMin": 0,
+   "retryAfter": "805",
+   "chargementMuet": false,
+   "messageLimite": "Trop de requêtes, réessayez dans 805 s.",
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  },
+  {
+   "t": 87,
+   "passe": 1,
+   "largeur": 360,
+   "route": "/avocats/7862",
+   "requetesApi": 3,
+   "compteesLimiteur": 1,
+   "statuts": {
+    "304": 2,
+    "429": 1
+   },
+   "resteMin": 0,
+   "retryAfter": "804",
+   "chargementMuet": false,
+   "messageLimite": "Trop de requêtes, réessayez dans 804 s.",
+   "refresh": [],
+   "connexion": false,
+   "sessionConservee": true
+  }
+ ],
+ "blocage": []
+}

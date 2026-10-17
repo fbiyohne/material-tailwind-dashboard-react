@@ -114,7 +114,7 @@ export function Home() {
                       >
                         <Typography
                           variant="small"
-                          className="text-[11px] font-medium uppercase text-blue-gray-400"
+                          className="text-xs font-medium uppercase text-blue-gray-400"
                         >
                           {el}
                         </Typography>

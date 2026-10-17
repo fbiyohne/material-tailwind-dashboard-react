@@ -1,0 +1,24 @@
+# Lancement local de l'application en conteneur, raccordé au socle Docker partagé
+# CREATIC (réseau creatic-shared : postgres, redis, mailhog…). Aucun datastore ici.
+# Le gabarit de déploiement VPS autonome (app + PostgreSQL + Caddy) est dans
+# deploy/docker-compose.vps.yml (voir docs/DEPLOIEMENT-VPS.md).
+services:
+  app:
+    build: .
+    environment:
+      DATABASE_URL: postgresql://barreau:${POSTGRES_PASSWORD}@postgres:5432/barreau_pn?schema=public
+      JWT_SECRET: ${JWT_SECRET}
+      SIGNATURE_SECRET: ${SIGNATURE_SECRET}
+      CLIENT_ORIGIN: ${CLIENT_ORIGIN:-http://localhost:4000}
+      SMTP_HOST: mailhog
+      SMTP_PORT: "1025"
+      STATIC_DIR: ../dist
+      PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
+    ports:
+      - "4000:4000"
+    networks:
+      - creatic-shared
+
+networks:
+  creatic-shared:
+    external: true

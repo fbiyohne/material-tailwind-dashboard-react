@@ -31,7 +31,7 @@ export function Tables() {
                   >
                     <Typography
                       variant="small"
-                      className="text-[11px] font-bold uppercase text-blue-gray-400"
+                      className="text-xs font-bold uppercase text-blue-gray-400"
                     >
                       {el}
                     </Typography>
@@ -80,7 +80,7 @@ export function Tables() {
                           variant="gradient"
                           color={online ? "green" : "blue-gray"}
                           value={online ? "online" : "offline"}
-                          className="py-0.5 px-2 text-[11px] font-medium w-fit"
+                          className="py-0.5 px-2 text-xs font-medium w-fit"
                         />
                       </td>
                       <td className={className}>
@@ -123,7 +123,7 @@ export function Tables() {
                     >
                       <Typography
                         variant="small"
-                        className="text-[11px] font-bold uppercase text-blue-gray-400"
+                        className="text-xs font-bold uppercase text-blue-gray-400"
                       >
                         {el}
                       </Typography>

@@ -1,0 +1,3 @@
+﻿num;nom;qualite;statut;sexe;cabinet;tel;email;rccm;cnss;adresse;observations;maitreStage;dateNaissance;dateInscription;dateServment
+900001;EXEMPLE Marie;avocat;inscrit;F;Cabinet Exemple;060000000;marie.exemple@example.org;;;Avenue Exemple;Ligne fictive à remplacer;;1985-03-14;2015-06-01;2015-05-20
+900002;MODELE Paul;stagiaire;stagiaire;H;;060000001;paul.modele@example.org;;;;;Me EXEMPLE Marie;1995-11-02;2025-01-15;

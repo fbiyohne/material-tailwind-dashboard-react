@@ -1,0 +1,268 @@
+<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Procès-verbal d'assemblée générale</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600&family=DM+Mono&display=swap" rel="stylesheet">
+<style>/*
+ * Socle A4 commun des gabarits PDF proposés (mission M-20261011, point 8).
+ * PROPOSITION : aucun document de production ne l'utilise tant que Fabrice n'a pas choisi une direction.
+ *
+ * Contenu : jetons (couleurs et polices de l'application, aucun nouveau jeton), échelle typographique
+ * en points, page A4, marges, grille, composants communs (en-tête, identité, tableau, signatures,
+ * bloc de vérification, mentions). Les directions (institutionnelle.css, classique.css,
+ * compacte.css) ne font que redéfinir des variables et l'habillage.
+ *
+ * Les règles @page propres à un document (référence en pied, en-tête courant des pages 2 et
+ * suivantes) sont injectées par le générateur, car elles portent la référence du document.
+ * Chrome (Puppeteer) applique les marges @page du CSS en priorité sur celles de page.pdf()
+ * et sait dessiner les boîtes de marge (@bottom-right, counter(pages)) : vérifié le 2026-10-11.
+ */
+
+:root {
+  /* Couleurs : jetons de tailwind.config.cjs, inchangés */
+  --marine: #1A3A6B;
+  --marine-2: #0d2247;
+  --or: #C4990A;
+  --or-fonce: #8A6D08; /* seul or autorisé pour du texte sur fond clair */
+  --or-l: #FDF6E3;
+  --creme: #FAF8F3;
+  --gris-l: #F2EFE8;
+  --gris-m: #E0DBD0;
+  --gris: #7A756A;
+  --encre: #1C1C18;
+
+  /* Polices de l'application (Playfair Display, DM Sans, DM Mono) */
+  --f-titre: 'Playfair Display', Georgia, serif;
+  --f-texte: 'DM Sans', 'Segoe UI', sans-serif;
+  --f-mono: 'DM Mono', 'Consolas', monospace;
+
+  /* Échelle typographique (pt) : légende, petit, corps, identité, nom, section, titre */
+  --t-legende: 7.5pt;
+  --t-petit: 8.5pt;
+  --t-corps: 10.5pt;
+  --t-identite: 12pt; /* plancher fixé par le point 6 */
+  --t-nom: 14pt;
+  --t-section: 13pt;
+  --t-titre: 28pt;
+  --interligne: 1.45;
+
+  /* Grille : 174 mm utiles (210 - 2 x 18), colonne de libellés */
+  --col-libelle: 40mm;
+  --gouttiere: 5mm;
+  --qr: 28mm; /* >= 25 mm imprimé (O10) */
+}
+
+@page {
+  size: A4;
+  margin: 18mm 18mm 20mm 18mm;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--f-texte);
+  font-size: var(--t-corps);
+  line-height: var(--interligne);
+  color: var(--encre);
+  font-variant-numeric: tabular-nums;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+p { margin: 0 0 2.5mm; }
+h1, h2, h3 { margin: 0; font-weight: 700; }
+.mono { font-family: var(--f-mono); }
+
+/* Document d'une seule page : le bloc de vérification est poussé en bas de page.
+   Hauteur utile = 297 - 18 - 20 = 259 mm (4 mm de marge : Chrome repousse sinon le dernier bloc en page 2). */
+.une-page { display: flex; flex-direction: column; min-height: 255mm; }
+/* L'espace libre se place entre les signatures et le bloc de vérification, collé en bas. */
+.une-page .cloture { flex: 1; display: flex; flex-direction: column; }
+.une-page .cloture .verif { margin-top: auto; }
+
+/* En-tête de document (page 1) */
+.entete { display: grid; grid-template-columns: auto 1fr auto; gap: 4mm; align-items: center; }
+.entete svg { display: block; }
+.entete-sceau svg { width: 17mm; height: 17mm; }
+.org-denom { font-family: var(--f-titre); font-size: 15pt; color: var(--marine); margin: 0; line-height: 1.15; }
+.org-ordre { font-size: var(--t-legende); letter-spacing: .14em; text-transform: uppercase; color: var(--gris); margin: 1mm 0 0; }
+.org-adresse { font-size: var(--t-legende); color: var(--gris); margin: .5mm 0 0; }
+.entete-ref { text-align: right; }
+.ref-label { display: block; font-size: var(--t-legende); letter-spacing: .14em; text-transform: uppercase; color: var(--gris); }
+.ref { display: block; font-family: var(--f-mono); font-size: 11pt; color: var(--marine); }
+.ref-date { display: block; font-size: var(--t-petit); color: var(--gris); }
+
+/* Titre */
+.titre-bloc { margin: 7mm 0 5mm; }
+.surtitre { font-size: var(--t-petit); letter-spacing: .18em; text-transform: uppercase; color: var(--or-fonce); margin: 0 0 1.5mm; font-weight: 600; }
+.titre { font-family: var(--f-titre); font-size: var(--t-titre); color: var(--marine); line-height: 1.05; }
+.sous-titre { font-size: var(--t-corps); color: var(--gris); margin: 2mm 0 0; }
+
+/* Identité du titulaire : 12 pt minimum, nom en 14 pt */
+.identite { margin: 0 0 5mm; }
+.champ { display: grid; grid-template-columns: var(--col-libelle) 1fr; gap: var(--gouttiere); align-items: baseline; padding: 1.5mm 0; }
+.champ dt { font-size: var(--t-legende); letter-spacing: .12em; text-transform: uppercase; color: var(--gris); font-weight: 600; }
+.champ dd { margin: 0; font-size: var(--t-identite); }
+.champ-nom dd { font-size: var(--t-nom); font-weight: 600; color: var(--marine); }
+.champ dd.mono { font-size: 11.5pt; letter-spacing: .02em; }
+
+.corps p { text-align: left; }
+.declaration { font-size: 11.5pt; font-weight: 600; color: var(--marine); }
+
+/* Encart (validité, montant) */
+.encart { padding: 3mm 4mm; margin: 3mm 0; break-inside: avoid; }
+.encart-titre { font-size: var(--t-legende); letter-spacing: .14em; text-transform: uppercase; color: var(--or-fonce); font-weight: 600; margin: 0 0 1mm; }
+.encart p:last-child { margin: 0; }
+.montant-chiffres { font-family: var(--f-titre); font-size: 20pt; color: var(--marine); line-height: 1.1; margin: 0 0 1mm; }
+.montant-lettres { font-size: var(--t-corps); font-style: italic; }
+
+/* Tableaux : en-tête répété à chaque page (thead), lignes non coupées */
+table { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
+thead { display: table-header-group; }
+tr { break-inside: avoid; }
+th { text-align: left; font-size: var(--t-legende); letter-spacing: .1em; text-transform: uppercase; font-weight: 600; }
+th, td { padding: 1.3mm 2mm; vertical-align: top; }
+table + .corps { margin-top: 4mm; }
+td.num, th.num { text-align: right; }
+td.mono { font-family: var(--f-mono); font-size: 9pt; }
+tfoot td { font-weight: 600; }
+
+h2.section { font-family: var(--f-titre); font-size: var(--t-section); color: var(--marine); margin: 6mm 0 2.5mm; break-after: avoid; }
+h2.section .compte { font-family: var(--f-texte); font-size: var(--t-petit); color: var(--gris); font-weight: 400; }
+
+.meta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3mm var(--gouttiere); margin: 0 0 5mm; }
+.meta div { break-inside: avoid; }
+.meta dt { font-size: var(--t-legende); letter-spacing: .12em; text-transform: uppercase; color: var(--gris); font-weight: 600; }
+.meta dd { margin: .5mm 0 0; font-size: var(--t-corps); }
+
+ol.odj { margin: 0 0 4mm; padding-left: 6mm; }
+ol.odj li { margin: 0 0 1mm; }
+
+/* Clôture (lieu, date, signatures, vérification) : jamais coupée d'une page à l'autre */
+.cloture { break-inside: avoid; }
+
+/* Signatures */
+.signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 10mm; margin: 5mm 0 2mm; break-inside: avoid; }
+.signature { text-align: center; }
+.sig-role { font-size: var(--t-petit); letter-spacing: .1em; text-transform: uppercase; color: var(--marine); font-weight: 600; margin: 0; }
+.sig-espace { height: 15mm; }
+.sig-nom { font-size: var(--t-corps); margin: 0; padding-top: 1.5mm; border-top: .5pt solid var(--gris-m); }
+.fait-a { font-size: var(--t-corps); margin: 4mm 0 0; }
+
+/* Bloc de vérification (clause CL-VERIF) */
+.verif { display: grid; grid-template-columns: var(--qr) 1fr; gap: 4mm; align-items: center; break-inside: avoid; margin-top: 3mm; }
+.verif svg { width: var(--qr); height: var(--qr); display: block; }
+.verif-titre { font-size: var(--t-legende); letter-spacing: .14em; text-transform: uppercase; color: var(--marine); font-weight: 600; margin: 0 0 1mm; }
+.verif-texte { font-size: var(--t-petit); color: var(--encre); margin: 0 0 1mm; }
+.verif-url { font-family: var(--f-mono); font-size: var(--t-petit); color: var(--marine); margin: 0; white-space: nowrap; }
+
+.mention-demo { font-size: var(--t-legende); color: var(--gris); text-align: center; margin: 3mm 0 0; }
+.mention-prototype { font-size: var(--t-petit); font-weight: 600; color: #8B1A1A; text-align: center; letter-spacing: .08em; text-transform: uppercase; margin: 2mm 0 0; }
+
+/* Timbre : vignette au format d'un timbre, volet de contrôle en dessous */
+.vignette { width: 92mm; margin: 8mm auto 6mm; padding: 5mm 6mm; text-align: center; break-inside: avoid; }
+.vignette-type { font-size: var(--t-legende); letter-spacing: .3em; text-transform: uppercase; color: var(--or-fonce); font-weight: 600; margin: 0; }
+.vignette-numero { font-family: var(--f-titre); font-size: 26pt; color: var(--marine); margin: 2mm 0; line-height: 1; }
+.vignette-montant { font-family: var(--f-titre); font-size: 15pt; color: var(--marine); margin: 1mm 0 0; }
+.vignette-code { font-family: var(--f-mono); font-size: 10pt; letter-spacing: .12em; margin: 2mm 0 0; }
+/* Dans la vignette (92 mm), QR centré et clause dessous : l'URL tient sur une ligne. */
+.vignette .verif { grid-template-columns: 1fr; justify-items: center; text-align: center; gap: 2mm; margin-top: 4mm; }
+.vignette .verif-texte { font-size: var(--t-legende); }
+.vignette .verif-url { display: block; font-size: 7pt; }
+/*
+ * Direction 2 : « Classique juridique » (PROPOSITION, non appliquée).
+ * Prolonge la famille B actuelle (quitus et reçus) : composition centrée, sceau au centre,
+ * double filet or, capitales espacées, texte courant en Georgia justifié comme un acte.
+ * Le cadre double or n'habille que les documents d'une page (il se couperait sur une liste).
+ * Georgia est déjà utilisée par documentsRiches.ts : aucune nouvelle police.
+ */
+
+:root { --f-acte: Georgia, 'Times New Roman', serif; --t-titre: 26pt; --interligne: 1.38; --qr: 26mm; }
+
+body { font-family: var(--f-acte); }
+th, dt, .ref-label, .org-ordre, .org-adresse, .surtitre, .encart-titre, .sig-role, .verif-titre,
+.mention-demo, .mention-prototype, .vignette-type { font-family: var(--f-texte); }
+
+.une-page { border: 2.4pt double var(--or); padding: 5mm 9mm 4mm; }
+
+.entete { grid-template-columns: 1fr; justify-items: center; text-align: center; gap: .8mm; padding-bottom: 3mm; border-bottom: 2.4pt double var(--or); }
+.entete-sceau svg { width: 15mm; height: 15mm; }
+.org-denom { text-transform: uppercase; letter-spacing: .08em; font-size: 14pt; }
+.entete-ref { text-align: center; }
+.ref, .ref-date, .ref-label { display: inline; }
+.ref-label::after { content: " "; }
+.ref-date::before { content: " · "; }
+
+.titre-bloc { text-align: center; margin: 5mm 0 3.5mm; }
+.titre { text-transform: uppercase; letter-spacing: .06em; }
+.titre-bloc::after { content: "\25C6"; display: block; color: var(--or); font-size: 8pt; margin-top: 1mm; line-height: 1; }
+
+.preambule, .sous-titre { text-align: center; font-style: italic; }
+.champ { grid-template-columns: 44mm 1fr; padding: 1.2mm 0; }
+.champ dt { font-family: var(--f-acte); font-style: italic; text-transform: none; letter-spacing: 0; font-size: 10.5pt; color: var(--encre); font-weight: 400; }
+.champ dd { border-bottom: .6pt dotted var(--gris); padding-bottom: .8mm; }
+.champ-nom dd { font-family: var(--f-titre); }
+
+.corps p { text-align: justify; hyphens: auto; }
+.declaration { text-align: center !important; font-family: var(--f-titre); font-size: 12pt; }
+.encart { border: 2.4pt double var(--or); text-align: center; }
+
+h2.section { text-align: center; text-transform: uppercase; letter-spacing: .06em; font-size: 11.5pt; margin-top: 4mm; }
+th { color: var(--marine); border-top: 1pt solid var(--marine); border-bottom: 1pt solid var(--marine); }
+td { border-bottom: .5pt dotted var(--gris-m); }
+td.mono { color: var(--or-fonce); }
+tfoot td { border-top: 1pt solid var(--marine); border-bottom: 2.4pt double var(--or); }
+
+.meta { text-align: center; }
+
+.verif { padding-top: 3.5mm; border-top: .6pt solid var(--or); }
+
+.vignette { border: 2.4pt double var(--or); outline: .75pt solid var(--marine); outline-offset: 1.2mm; padding: 4mm 5mm; margin: 4mm auto 3mm; }
+
+/* Clôture d'acte : le QR prend la place du cachet, au centre entre les deux signatures (comme le
+   sceau central des quitus actuels) ; la clause de vérification court sous la rangée. */
+.une-page .cloture { display: grid; grid-template-columns: 1fr var(--qr) 1fr; column-gap: 8mm; row-gap: 2mm; align-items: end; flex: 0 0 auto; margin-top: auto; padding-top: 4mm; break-inside: avoid; }
+.une-page .cloture .signatures, .une-page .cloture .verif { display: contents; }
+.une-page .cloture .signature:first-child { grid-column: 1; grid-row: 1; }
+.une-page .cloture .signature:last-child { grid-column: 3; grid-row: 1; }
+.une-page .cloture .verif svg { grid-column: 2; grid-row: 1; }
+.une-page .cloture .verif > div { grid-column: 1 / -1; grid-row: 2; text-align: center; padding-top: 2.5mm; border-top: .6pt solid var(--or); }
+
+@page {
+  @bottom-left { content: "Barreau de démonstration · Réf. PV-AG-2026-02"; font-family: Georgia, serif; font-size: 7.5pt; color: #7A756A; }
+  @bottom-right { content: "Page " counter(page) "/" counter(pages); font-family: Georgia, serif; font-size: 7.5pt; color: #7A756A; }
+  @top-left { content: "Barreau de démonstration · Procès-verbal d'assemblée générale"; font-family: Georgia, serif; font-size: 7.5pt; color: #7A756A; }
+}
+@page :first { @top-left { content: none; } }</style></head>
+<body class="dir-classique"><div class="">
+<header class="entete">
+  <div class="entete-sceau">
+<svg viewBox="0 0 100 100" aria-label="Sceau">
+  <defs><path id="s-h" d="M 18,50 A 32,32 0 0 1 82,50"/><path id="s-b" d="M 82,52 A 32,32 0 0 1 18,52"/></defs>
+  <circle cx="50" cy="50" r="47" fill="none" stroke="#C4990A" stroke-width="1.4"/>
+  <circle cx="50" cy="50" r="42" fill="none" stroke="#C4990A" stroke-width="0.6"/>
+  <text fill="#1A3A6B" font-size="5.4" font-weight="600" letter-spacing="0.6" font-family="DM Sans, sans-serif"><textPath href="#s-h" startOffset="50%" text-anchor="middle">ORDRE NATIONAL DES AVOCATS</textPath></text>
+  <text fill="#1A3A6B" font-size="5.4" font-weight="600" letter-spacing="0.6" font-family="DM Sans, sans-serif"><textPath href="#s-b" startOffset="50%" text-anchor="middle">BARREAU DE DÉMONSTRATION</textPath></text>
+  <g stroke="#1A3A6B" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="50" y1="37" x2="50" y2="63"/><line x1="44" y1="63" x2="56" y2="63"/><line x1="38" y1="42" x2="62" y2="42"/>
+    <circle cx="50" cy="38" r="1.6" fill="#C4990A" stroke="none"/>
+    <line x1="38" y1="42" x2="38" y2="49"/><path d="M33,49 Q38,54 43,49"/>
+    <line x1="62" y1="42" x2="62" y2="49"/><path d="M57,49 Q62,54 67,49"/>
+  </g>
+</svg></div>
+  <div><p class="org-denom">Barreau de démonstration</p><p class="org-ordre">Ordre national des avocats (démonstration)</p><p class="org-adresse">Maison de l'Avocat, 1 avenue de l'Exemple, Ville-Démo</p></div>
+  <div class="entete-ref"><span class="ref-label">Procès-verbal n°</span><span class="ref">PV-AG-2026-02</span><span class="ref-date">Transmis le 03 octobre 2026</span></div>
+</header><main>
+<div class="titre-bloc"><p class="surtitre">Assemblée générale ordinaire</p><h1 class="titre">Procès-verbal</h1></div>
+<p class="sous-titre">Séance du 26 septembre 2026, Maison de l'Avocat, Ville-Démo.</p>
+<dl class="meta"><div><dt>Date de la séance</dt><dd>26 septembre 2026, 9 h 30</dd></div><div><dt>Président de séance</dt><dd>Me ELENGA Thierry, Bâtonnier</dd></div><div><dt>Secrétaire de séance</dt><dd>Me OKEMBA Serge</dd></div>
+<div><dt>Quorum</dt><dd>48 présents ou représentés sur 72 inscrits</dd></div><div><dt>Date de transmission</dt><dd>03 octobre 2026</dd></div><div><dt>Destinataire</dt><dd>Conseil de l'Ordre national</dd></div></dl>
+<h2 class="section">Ordre du jour</h2>
+<ol class="odj"><li>Approbation du procès-verbal de l'assemblée générale du 27 mars 2026</li><li>Approbation des comptes de l'exercice 2025</li><li>Fixation du montant de la cotisation 2027</li><li>Programme de formation continue 2026-2027</li><li>Questions diverses</li></ol>
+<h2 class="section">Délibérations</h2>
+<div class="corps"><p>La séance est ouverte à 9 h 30 sous la présidence du Bâtonnier. Le quorum étant atteint, l'assemblée peut valablement délibérer sur les points inscrits à l'ordre du jour.</p>
+<p><b>1. Approbation du procès-verbal de l'assemblée générale du 27 mars 2026.</b> L'assemblée, après lecture, approuve le procès-verbal de sa précédente séance sans observation.</p><p><b>2. Approbation des comptes de l'exercice 2025.</b> Le Trésorier présente les comptes de l'exercice clos le 31 décembre 2025. Après les réponses apportées aux questions des membres, l'assemblée approuve les comptes et donne quitus au Trésorier pour sa gestion.</p><p><b>3. Fixation du montant de la cotisation 2027.</b> Sur proposition du Conseil de l'Ordre, l'assemblée fixe la cotisation annuelle de l'avocat inscrit à 150 000 FCFA et celle de l'avocat stagiaire à 75 000 FCFA pour l'exercice 2027.</p><p><b>4. Programme de formation continue 2026-2027.</b> Le Secrétaire général présente le programme de formation continue : déontologie, procédure OHADA, contentieux du travail. L'assemblée l'adopte et invite les confrères à s'y inscrire avant le 30 novembre 2026.</p><p><b>5. Questions diverses.</b> Les membres évoquent l'aménagement de la salle des pas perdus et la permanence des avocats commis d'office. Ces points sont renvoyés au Conseil de l'Ordre pour examen.</p>
+<p>L'ordre du jour étant épuisé, la séance est levée à 12 h 45.</p></div>
+<h2 class="section">Résultat des votes</h2>
+<table><thead><tr><th>Résolution</th><th class="num">Pour</th><th class="num">Contre</th><th class="num">Abstention</th><th>Décision</th></tr></thead>
+<tbody><tr><td>1. Approbation du procès-verbal de l'assemblée générale du 27 mars 2026</td><td class="num">46</td><td class="num">0</td><td class="num">2</td><td>Adoptée</td></tr><tr><td>2. Approbation des comptes de l'exercice 2025</td><td class="num">41</td><td class="num">3</td><td class="num">4</td><td>Adoptée</td></tr><tr><td>3. Fixation du montant de la cotisation 2027</td><td class="num">38</td><td class="num">6</td><td class="num">4</td><td>Adoptée</td></tr><tr><td>4. Programme de formation continue 2026-2027</td><td class="num">47</td><td class="num">0</td><td class="num">1</td><td>Adoptée</td></tr></tbody></table>
+<div class="corps"><p>Le présent procès-verbal a été transmis au Conseil de l'Ordre national le 03 octobre 2026, conformément à l'article 23 de la loi n° 026-92 du 20 août 1992.</p></div>
+<div class="cloture"><p class="fait-a">Fait à Ville-Démo, le 26 septembre 2026.</p>
+<div class="signatures"><div class="signature"><p class="sig-role">Le Président de séance</p><div class="sig-espace"></div><p class="sig-nom">Me ELENGA Thierry</p></div><div class="signature"><p class="sig-role">Le Secrétaire de séance</p><div class="sig-espace"></div><p class="sig-nom">Me OKEMBA Serge</p></div></div></div></main>
+<p class="mention-demo">Données entièrement fictives — toute ressemblance avec une personne réelle serait fortuite. Barreau de démonstration.</p></div></body></html>

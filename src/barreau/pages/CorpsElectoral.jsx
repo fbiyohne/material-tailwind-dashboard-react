@@ -1,0 +1,202 @@
+import { useCallback, useEffect, useState } from "react";
+import { PrinterIcon, ArrowDownTrayIcon, CheckBadgeIcon, NoSymbolIcon } from "@heroicons/react/24/outline";
+import { StatCard, Badge, useToast, PageHeader, Tabs, SelecteurExercice, DataTable, MentionJuridique } from "../components";
+import { exporterExcel } from "../utils/exports";
+import { formatDate } from "../utils/format";
+import { telechargerCsv } from "../utils/exportCsv";
+import { EXERCICE_COURANT } from "../data/dashboard-data";
+import { identite } from "../data/config";
+import { getCorpsElectoral, telechargerEtatPdf } from "../api/resources";
+
+const MOTIF_LABEL = {
+  cotisation: { label: "Cotisations non à jour", ton: "rouge" },
+  statut: { label: "Suspension, radiation, omission, décès ou sortie", ton: "gris" },
+  autre: { label: "Honoraire / autre motif", ton: "or" },
+};
+
+const COLONNES_ELECTEURS = [
+  { key: "num", label: "N°", sortable: true, sortValue: (m) => m._num, cell: (m) => <span className="font-mono text-xs text-gris">{m._num}</span> },
+  { key: "nom", label: "Avocat électeur", sortable: true, sortValue: (m) => m.nom, cell: (m) => (
+    <>
+      <span className="font-medium">Me {m.nom}</span>
+      {/* Mobile : cabinet et date passent sous le nom (colonnes masquées sous 640 px). */}
+      <span className="mt-0.5 block text-xs text-gris sm:hidden">{m.cabinet || "—"} · {formatDate(m.dateInscription)}</span>
+    </>
+  ) },
+  { key: "cabinet", label: "Cabinet", className: "hidden sm:table-cell", sortable: true, sortValue: (m) => m.cabinet, cell: (m) => <span className="text-gris">{m.cabinet || "—"}</span> },
+  { key: "inscrit", label: "Inscrit depuis", className: "hidden sm:table-cell", sortable: true, sortValue: (m) => m.dateInscription ?? "", cell: (m) => <span className="text-xs text-gris">{formatDate(m.dateInscription)}</span> },
+];
+
+const COLONNES_EXCLUSIONS = [
+  { key: "nom", label: "Avocat", sortable: true, sortValue: (m) => m.nom, cell: (m) => <span className="font-medium text-encre">Me {m.nom}</span> },
+  { key: "cabinet", label: "Cabinet", sortable: true, sortValue: (m) => m.cabinet, cell: (m) => <span className="text-gris">{m.cabinet || "—"}</span> },
+  { key: "motif", label: "Motif d'exclusion", align: "right", cell: (m) => <Badge ton={MOTIF_LABEL[m.motif].ton}>{MOTIF_LABEL[m.motif].label}</Badge> },
+];
+
+const COLONNES_CSV = [
+  { label: "N°", valeur: (m) => m._num },
+  { label: "Avocat électeur", valeur: (m) => `Me ${m.nom}` },
+  { label: "Cabinet", valeur: (m) => m.cabinet },
+  { label: "Inscrit depuis", valeur: (m) => formatDate(m.dateInscription) },
+];
+
+export function CorpsElectoral() {
+  const [exercice, setExercice] = useState(EXERCICE_COURANT);
+  const [date, setDate] = useState(""); // vide = fin de l'exercice choisi
+  const [data, setData] = useState({ electeurs: [], exclusCotisation: [], exclusStatut: [], exclusAutre: [] });
+  const [chargement, setChargement] = useState(true);
+  const [erreur, setErreur] = useState(false);
+  const toast = useToast();
+
+  const charger = useCallback(() => {
+    setChargement(true);
+    setErreur(false);
+    getCorpsElectoral(exercice, date)
+      .then(setData)
+      .catch(() => setErreur(true))
+      .finally(() => setChargement(false));
+  }, [exercice, date]);
+  useEffect(() => { charger(); }, [charger]);
+
+  const { electeurs, exclusCotisation, exclusStatut, exclusAutre = [] } = data;
+  const electeursNum = electeurs.map((m, i) => ({ ...m, _num: i + 1 }));
+  const exclusions = [
+    ...exclusCotisation.map((m) => ({ ...m, _key: `c-${m.id}`, motif: "cotisation" })),
+    ...exclusStatut.map((m) => ({ ...m, _key: `s-${m.id}`, motif: "statut" })),
+    ...exclusAutre.map((m) => ({ ...m, _key: `a-${m.id}`, motif: "autre" })),
+  ];
+
+  // Document officiel : liste intégrale mise en page par le serveur (gabarit du Barreau).
+  const imprimer = () => telechargerEtatPdf({
+    titre: "Liste du corps électoral",
+    sousTitre: date ? `Situation au ${formatDate(date)}` : `Exercice ${exercice}`,
+    entete: COLONNES_CSV.map((c) => c.label),
+    lignes: electeursNum.map((m) => COLONNES_CSV.map((c) => c.valeur(m) ?? "")),
+    fichier: `Corps-electoral-${exercice}`,
+  }).catch((e) => toast.error(e.message));
+
+  const exporterXlsx = () => {
+    const lignes = [
+      ["N°", "Avocat électeur", "Cabinet", "Inscrit depuis"],
+      ...electeurs.map((m, i) => [i + 1, `Me ${m.nom}`, m.cabinet, m.dateInscription ?? ""]),
+    ];
+    exporterExcel(`corps-electoral-${exercice}`, lignes, `Corps électoral ${exercice}`);
+  };
+
+  return (
+    <div className="space-y-5">
+      <PageHeader className="bpn-no-print" eyebrow="Membres" titre="Corps électoral" sousTitre="Liste générée automatiquement : avocats inscrits, à jour de cotisations et non suspendus (RG-04 à RG-06).">
+        <SelecteurExercice valeur={exercice} onChange={setExercice} />
+        <label className="flex items-center gap-2">
+          <span className="bpn-label mr-1">Situation au</span>
+          <input type="date" aria-label="Situation à la date du" value={date} onChange={(e) => setDate(e.target.value)} className="bpn-input !w-auto" />
+        </label>
+      </PageHeader>
+
+      <MentionJuridique nature="provisoire" article="PO-20" className="bpn-no-print">
+        La situation à une date passée s'appuie sur l'historique des situations, tenu depuis sa mise en service ; pour un membre sans événement enregistré, c'est son statut actuel qui est retenu. Provisoire, à confirmer par les textes.
+      </MentionJuridique>
+
+      {/* Statistiques (FR-CE) */}
+      <div className="bpn-no-print grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        <StatCard label="Électeurs qualifiés" value={electeurs.length} sub="aptes à voter" accent="vert" />
+        <StatCard label="Exclus — cotisations" value={exclusCotisation.length} sub="non à jour" accent="rouge" />
+        <StatCard label="Exclus — statut" value={exclusStatut.length} sub="suspendu, radié, omis, décédé, sorti" accent="gris" />
+        <StatCard label="Exclus — honoraires / autre" value={exclusAutre.length} sub="non électeurs" accent="or" />
+      </div>
+
+      <Tabs
+        tabs={[
+          {
+            id: "liste",
+            // Libellé court sous 640 px : les deux onglets tiennent sur une ligne à 360 px.
+            label: <><span className="sm:hidden">Liste</span><span className="hidden sm:inline">Liste électorale</span></>,
+            icon: CheckBadgeIcon,
+            badge: electeurs.length || null,
+            content: (
+              <>
+                <div className="bpn-no-print mb-4 flex flex-wrap justify-end gap-2 [&>button]:whitespace-nowrap">
+                  <button type="button" onClick={imprimer} disabled={electeurs.length === 0} className="bpn-btn bpn-btn-ghost disabled:opacity-40">
+                    <PrinterIcon className="h-4 w-4" /> Imprimer (PDF)
+                  </button>
+                  <button type="button" disabled={electeurs.length === 0}
+                    onClick={() => telechargerCsv(`corps-electoral-${exercice}`, COLONNES_CSV, electeursNum)}
+                    className="bpn-btn bpn-btn-ghost disabled:opacity-40">
+                    <ArrowDownTrayIcon className="h-4 w-4" /> Export CSV
+                  </button>
+                  <button type="button" onClick={exporterXlsx} className="bpn-btn bpn-btn-ghost">
+                    <ArrowDownTrayIcon className="h-4 w-4" /> Export Excel
+                  </button>
+                </div>
+
+                {/* Liste électorale (imprimable) */}
+                <div className="bpn-print-zone bpn-card">
+                  <div className="bpn-card-header flex-wrap gap-x-3">
+                    <span className="bpn-card-heading">
+                      Liste du corps électoral {date ? `au ${formatDate(date)}` : exercice} — {identite().denomination}
+                    </span>
+                    <span className="font-mono text-xs text-gris">{electeurs.length} électeurs</span>
+                  </div>
+                  {/* À l'écran : liste paginée (10 par page). */}
+                  <div className="print:hidden">
+                    <DataTable
+                      columns={COLONNES_ELECTEURS}
+                      rows={electeursNum}
+                      loading={chargement}
+                      error={erreur}
+                      onRetry={charger}
+                      pageSize={10}
+                      libelle="électeurs"
+                      emptyIcon={CheckBadgeIcon}
+                      emptyTitle="Aucun électeur qualifié"
+                      emptyDescription={`Aucun avocat ne remplit les conditions pour voter à l'exercice ${exercice} (inscrit, à jour de cotisations, non suspendu).`}
+                    />
+                  </div>
+                  {/* À l'impression : liste intégrale (la pagination ne doit pas tronquer le document officiel). */}
+                  {electeursNum.length > 0 && (
+                    <div className="hidden print:block">
+                      <DataTable
+                        columns={COLONNES_ELECTEURS}
+                        rows={electeursNum}
+                        paginate={false}
+                      />
+                    </div>
+                  )}
+                </div>
+              </>
+            ),
+          },
+          {
+            id: "exclusions",
+            label: "Exclusions",
+            icon: NoSymbolIcon,
+            badge: exclusions.length || null,
+            content: (
+              <div className="bpn-card">
+                <div className="bpn-card-header">
+                  <span className="bpn-card-heading">Exclusions justifiées</span>
+                  <span className="font-mono text-xs text-gris">{exclusions.length}</span>
+                </div>
+                <DataTable
+                  columns={COLONNES_EXCLUSIONS}
+                  rows={exclusions}
+                  getRowId={(m) => m._key}
+                  loading={chargement}
+                  error={erreur}
+                  onRetry={charger}
+                  pageSize={10}
+                  libelle="exclusions"
+                  emptyIcon={NoSymbolIcon}
+                  emptyTitle="Aucune exclusion"
+                  emptyDescription="Tous les avocats inscrits remplissent les conditions pour voter."
+                />
+              </div>
+            ),
+          },
+        ]}
+      />
+    </div>
+  );
+}
+
+export default CorpsElectoral;

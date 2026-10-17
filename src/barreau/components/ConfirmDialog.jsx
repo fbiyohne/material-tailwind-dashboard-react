@@ -1,0 +1,83 @@
+import { createContext, useContext, useCallback, useState } from "react";
+import PropTypes from "prop-types";
+import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import { Modal } from "./Modal";
+
+const ConfirmContext = createContext(null);
+
+/**
+ * Fournit `useConfirm()` — une fonction asynchrone qui ouvre un dialogue et
+ * résout `true`/`false`. Garantit la confirmation avant toute action
+ * irréversible (Definition of Done).
+ */
+export function ConfirmProvider({ children }) {
+  const [state, setState] = useState(null);
+
+  const confirm = useCallback(
+    (options) => new Promise((resolve) => setState({ ...options, resolve })),
+    []
+  );
+
+  const [motif, setMotif] = useState("");
+  // `motif.attendu` : confirmation par saisie exacte (ex. numéro d'inscription avant une suppression).
+  const motifOk = !state?.motif || (state.motif.attendu ? motif.trim() === state.motif.attendu : motif.trim().length >= (state.motif.min ?? 3));
+
+  // Avec l'option `motif`, la promesse résout le texte saisi (ou false si annulé).
+  const close = (value) => {
+    state?.resolve(value && state?.motif ? motif.trim() : value);
+    setState(null);
+    setMotif("");
+  };
+
+  return (
+    <ConfirmContext.Provider value={confirm}>
+      {children}
+      <Modal
+        open={!!state}
+        onClose={() => close(false)}
+        title={state?.title ?? "Confirmer"}
+        footer={
+          <>
+            <button className="bpn-btn bpn-btn-ghost" onClick={() => close(false)}>
+              {state?.cancelLabel ?? "Annuler"}
+            </button>
+            <button
+              className={`bpn-btn ${state?.danger ? "bpn-btn-danger" : "bpn-btn-primary"}`}
+              disabled={!motifOk}
+              onClick={() => close(true)}
+            >
+              {state?.confirmLabel ?? "Confirmer"}
+            </button>
+          </>
+        }
+      >
+        <div className="flex items-start gap-3">
+          {state?.danger && (
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rougeL text-rouge">
+              <ExclamationTriangleIcon className="h-5 w-5" />
+            </div>
+          )}
+          <p className="text-sm leading-6 text-encre">{state?.message}</p>
+        </div>
+        {state?.motif && (
+          <label className="mt-4 block">
+            <span className="bpn-label">{state.motif.label ?? "Motif"} <span className="text-rouge">*</span></span>
+            {state.motif.attendu
+              ? <input className="bpn-input mt-1 font-mono" autoComplete="off" spellCheck={false} value={motif} onChange={(e) => setMotif(e.target.value)} />
+              : <textarea className="bpn-input mt-1" rows={3} maxLength={state.motif.max ?? 500} value={motif} onChange={(e) => setMotif(e.target.value)} />}
+          </label>
+        )}
+      </Modal>
+    </ConfirmContext.Provider>
+  );
+}
+
+ConfirmProvider.propTypes = { children: PropTypes.node };
+
+export function useConfirm() {
+  const ctx = useContext(ConfirmContext);
+  if (!ctx) throw new Error("useConfirm doit être utilisé dans <ConfirmProvider>");
+  return ctx;
+}
+
+export default ConfirmProvider;

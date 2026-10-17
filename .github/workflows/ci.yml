@@ -1,0 +1,41 @@
+name: CI
+
+# Garde anti-régression : vérifie les types du serveur (et la compilation du
+# front) à chaque push et pull request, pour éviter qu'une erreur TypeScript
+# ne réapparaisse.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  server-typecheck:
+    name: Typecheck serveur (tsc --noEmit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Installer les dépendances du serveur
+        working-directory: server
+        run: npm install --no-audit --no-fund
+      - name: Générer le client Prisma (types @prisma/client)
+        working-directory: server
+        run: npm run prisma:generate
+      - name: Vérifier les types
+        working-directory: server
+        run: npm run typecheck
+
+  front-build:
+    name: Build du front (vite)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Installer les dépendances du front
+        run: npm install --no-audit --no-fund
+      - name: Compiler
+        run: npm run build

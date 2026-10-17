@@ -1,0 +1,562 @@
+/** Gabarits HTML des documents officiels (rendus en PDF par Puppeteer). */
+
+import { esc as escapeHtml, fmtDateFr as fmtDate } from "./documentsCommun.js";
+import { identite } from "./identiteDocuments.js";
+import { pageA4, entete, signatures } from "./gabarit.js";
+import { cachetPourRole } from "./cachets.js";
+
+interface DocOptions {
+  org: string;
+  title: string;
+  /** Sous-titre sous le titre (HTML déjà échappé), ex. libellé de filtre d'une liste. */
+  sousTitre?: string;
+  reference?: string;
+  bodyHtml: string;
+  signataire: { role: string; nom: string };
+  /** Apposer le cachet officiel du signataire (défaut : oui). */
+  cachet?: boolean;
+  date: Date | string;
+  /** A4 paysage (listes larges). */
+  paysage?: boolean;
+  /** Liste non publique : clause C-PDF-LISTE au pied de chaque page. */
+  listeRestreinte?: boolean;
+}
+
+/**
+ * Compatibilité : mappe les classes internes des corps de gabarits (.content, .montant, .row)
+ * sur les composants du socle A4, sans toucher aux corps (aucun texte juridique réécrit).
+ */
+const CSS_COMPAT = `
+.content { font-size: var(--t-corps); line-height: 1.6; }
+.content h3 { font-family: var(--f-titre); color: var(--marine); font-size: var(--t-section); margin: 4mm 0 1.5mm; break-after: avoid; }
+.content h4 { font-weight: 600; margin: 3mm 0 1mm; }
+.content ul { margin: 2mm 0 2mm 6mm; list-style: disc; }
+.content ol { margin: 2mm 0 2mm 6mm; list-style: decimal; }
+.content li { margin: .6mm 0; }
+.content p { margin: 0 0 2.5mm; }
+.content b, .content strong { font-weight: 700; } .content i, .content em { font-style: italic; } .content u { text-decoration: underline; }
+.montant { background: var(--or-l); border-left: 2.4pt solid var(--or); padding: 3mm 4mm; margin: 4mm 0; text-align: center; break-inside: avoid; }
+.montant b { font-family: var(--f-titre); font-size: 15pt; color: var(--marine); }
+.montant i { display: block; font-size: var(--t-petit); color: var(--gris); margin-top: .8mm; }
+.row { display: flex; justify-content: space-between; gap: 6mm; border-bottom: .5pt dashed var(--gris-m); padding: 1.8mm 0; break-inside: avoid; }
+.row .l { color: var(--gris); }`;
+
+/** Texte brut d'un fragment HTML déjà échappé (pour le pied de page CSS). */
+const texteBrut = (h: string) =>
+  h.replace(/<[^>]+>/g, "").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/&amp;/g, "&");
+
+/** Document officiel A4 : habille un corps de gabarit avec le socle commun (gabarit.ts). */
+export function documentHtml({ org, title, sousTitre, reference, bodyHtml, signataire, date, cachet = true, paysage, listeRestreinte }: DocOptions): string {
+  const id = identite();
+  const ref = reference ? texteBrut(reference) : "";
+  const c = cachet ? cachetPourRole(signataire.role) : null;
+  return pageA4({
+    titreCourt: texteBrut(title),
+    reference: ref || texteBrut(title),
+    unePage: false,
+    paysage,
+    listeRestreinte,
+    contenu: `<style>${CSS_COMPAT}</style>
+${entete(org, ref, fmtDate(date))}
+<div class="titre-bloc"><h1 class="titre">${title}</h1>${sousTitre ? `<p class="sous-titre">${sousTitre}</p>` : ""}</div>
+<div class="content">${bodyHtml}</div><!--/corps-->
+<div class="cloture"><p class="fait-a">Fait à ${escapeHtml(id.ville)}, le ${fmtDate(date)}</p>${signatures([[signataire.role, signataire.nom, c ?? undefined]])}</div>`,
+  });
+}
+
+const liste = (items: string[]) =>
+  `<ol style="margin:6px 0 0 18px">${items.map((p) => `<li style="margin:2px 0">${escapeHtml(p)}</li>`).join("")}</ol>`;
+
+const QUALITE_TABLEAU: Record<string, string> = { AVOCAT: "Avocats", STAGIAIRE: "Avocats stagiaires", HONORAIRE: "Avocats honoraires" };
+const MENTION_STATUT: Record<string, string> = { SUSPENDU: "Suspendu" }; // les omis ne figurent plus au tableau (art. 35)
+
+/** Composition du Conseil de l'Ordre présentée à un instant donné (en-tête du tableau). */
+export interface ConseilPdf {
+  batonnier?: string | null;
+  bureau: { fonction: string; sigle?: string | null; nom: string }[];
+  membres: string[];
+}
+/** Personne morale (convention déposée) figurant en section III du tableau. */
+export interface CabinetPdf {
+  num: string;
+  nom: string;
+  forme?: string | null;
+  titulaire?: string | null;
+  effectif: number;
+}
+
+/** Bloc « Conseil de l'Ordre » imprimé en tête du tableau officiel. */
+function conseilBloc(conseil?: ConseilPdf): string {
+  if (!conseil || (!conseil.batonnier && conseil.bureau.length === 0 && conseil.membres.length === 0)) return "";
+  const bat = conseil.batonnier
+    ? `<div style="text-align:center;margin-bottom:8px"><div style="font-size:8.5px;text-transform:uppercase;letter-spacing:1.5px;color:#7A756A">Bâtonnier de l'Ordre</div><b style="font-family:'Playfair Display',serif;font-size:15px;color:#1A3A6B">${escapeHtml(conseil.batonnier)}</b></div>`
+    : "";
+  const bureau = conseil.bureau.length
+    ? `<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:8px">${conseil.bureau
+        .map((b) => `<div style="text-align:center;background:#fff;border:1px solid #E9DFBD;border-radius:5px;padding:5px 10px;min-width:120px"><div style="font-size:8.5px;color:#C4990A;font-weight:600;text-transform:uppercase;letter-spacing:.4px">${escapeHtml(b.fonction)}${b.sigle ? ` (${escapeHtml(b.sigle)})` : ""}</div><div style="font-size:12px;font-weight:600;color:#1A3A6B">${escapeHtml(b.nom)}</div></div>`)
+        .join("")}</div>`
+    : "";
+  const membres = conseil.membres.length
+    ? `<div style="font-size:11px;color:#4a4a44;text-align:center;line-height:1.6"><span style="font-size:8.5px;text-transform:uppercase;letter-spacing:1px;color:#7A756A">Membres — </span>${conseil.membres.map((m) => escapeHtml(m)).join(" · ")}</div>`
+    : "";
+  return `<div style="background:#FDF6E3;border:1px solid #E9DFBD;border-radius:6px;padding:12px 16px;margin:2px 0 18px">
+    <div style="text-align:center;font-family:'Playfair Display',serif;color:#1A3A6B;font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px">Conseil de l'Ordre</div>
+    ${bat}${bureau}${membres}</div>`;
+}
+
+/** Section « personnes morales » (conventions déposées) — intro + table, sans titre. */
+function cabinetsTable(cabinets: CabinetPdf[]): string {
+  return `<p style="font-size:10.5px;color:#7A756A;margin:0 0 6px">Cabinets, sociétés et associations d'avocats ayant déposé leur convention à l'Ordre.</p>
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr style="border-bottom:1.5px solid #1A3A6B;color:#7A756A;text-align:left">
+        <th style="padding:5px 6px;width:42px">N°</th><th style="padding:5px 6px">Dénomination</th><th style="padding:5px 6px">Titulaire</th><th style="padding:5px 6px;width:150px">Forme</th><th style="padding:5px 6px;width:64px;text-align:center">Effectif</th></tr></thead>
+      <tbody>${cabinets.map((c) => `<tr style="border-bottom:1px solid #E0DBD0">
+        <td style="padding:5px 6px;font-family:'DM Mono',monospace;color:#C4990A">${escapeHtml(c.num)}</td>
+        <td style="padding:5px 6px"><b>${escapeHtml(c.nom)}</b></td>
+        <td style="padding:5px 6px;color:#7A756A">${c.titulaire ? "Me " + escapeHtml(c.titulaire) : "—"}</td>
+        <td style="padding:5px 6px;color:#7A756A">${c.forme ? escapeHtml(c.forme) : "—"}</td>
+        <td style="padding:5px 6px;text-align:center;font-family:'DM Mono',monospace;color:#1A3A6B">${c.effectif}</td></tr>`).join("")}</tbody>
+    </table>`;
+}
+
+/**
+ * Tableau de l'Ordre — document officiel : Conseil de l'Ordre en en-tête, sections
+ * par qualité (avocats, stagiaires, honoraires), personnes morales, signature du Bâtonnier.
+ */
+export function tableauOrdreHtml(
+  sections: { qualite: string; membres: any[] }[],
+  date: Date | string,
+  extras?: { conseil?: ConseilPdf; cabinets?: CabinetPdf[]; miseAJour?: Date | null },
+): string {
+  const numRomain = ["I", "II", "III", "IV"];
+  const section = (s: { qualite: string; membres: any[] }, i: number) => `
+    <h3 style="font-family:'Playfair Display',serif;color:#1A3A6B;font-size:16px;margin:18px 0 6px"><span style="color:#C4990A">${numRomain[i] ?? i + 1}.</span> ${QUALITE_TABLEAU[s.qualite] ?? s.qualite} <span style="font-size:11px;color:#7A756A">(${s.membres.length})</span></h3>
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr style="border-bottom:1.5px solid #1A3A6B;color:#7A756A;text-align:left">
+        <th style="padding:5px 6px;width:42px">N°</th><th style="padding:5px 6px">Nom</th><th style="padding:5px 6px">Cabinet</th><th style="padding:5px 6px;width:120px">Inscription</th></tr></thead>
+      <tbody>${s.membres.map((m) => `<tr style="border-bottom:1px solid #E0DBD0">
+        <td style="padding:5px 6px;font-family:'DM Mono',monospace;color:#C4990A">${m.rang}</td>
+        <td style="padding:5px 6px"><b>Me ${escapeHtml(m.nom)}</b>${MENTION_STATUT[m.statut] ? ` <span style="font-size:9px;color:#b3261e">(${MENTION_STATUT[m.statut]})</span>` : ""}</td>
+        <td style="padding:5px 6px;color:#7A756A">${m.cabinet ? escapeHtml(m.cabinet) : "—"}</td>
+        <td style="padding:5px 6px;color:#7A756A">${m.dateInscription ? fmtDate(m.dateInscription) : "—"}</td></tr>`).join("")}</tbody>
+    </table>`;
+  const cabinetsSection = extras?.cabinets?.length
+    ? `<h3 style="font-family:'Playfair Display',serif;color:#1A3A6B;font-size:16px;margin:18px 0 6px"><span style="color:#C4990A">${numRomain[sections.length] ?? sections.length + 1}.</span> Personnes morales <span style="font-size:11px;color:#7A756A">(${extras.cabinets.length})</span></h3>${cabinetsTable(extras.cabinets)}`
+    : "";
+  const signataire = extras?.conseil?.batonnier || identite().batonnier;
+  const nbInscrits = sections.reduce((n, s) => n + s.membres.length, 0);
+  const nbPM = extras?.cabinets?.length ?? 0;
+  const contexte = `<div style="text-align:center;font-size:11px;color:#7A756A;margin:-10px 0 18px">${nbInscrits} inscrit${nbInscrits > 1 ? "s" : ""} au tableau · ${nbPM} personne${nbPM > 1 ? "s" : ""} morale${nbPM > 1 ? "s" : ""} · arrêté au ${fmtDate(date)}${extras?.miseAJour ? ` · mis à jour le ${fmtDate(extras.miseAJour)}` : ""}</div>`;
+  return documentHtml({
+    org: "Le Bâtonnier",
+    title: "Tableau de l'Ordre",
+    reference: `Arrêté au ${fmtDate(date)}`,
+    bodyHtml: `${contexte}${conseilBloc(extras?.conseil)}<p style="margin-bottom:4px">Tableau de l'Ordre des Avocats du ${escapeHtml(identite().denomination)}, dressé par ordre d'ancienneté.</p>${sections.map(section).join("")}${cabinetsSection}`,
+    signataire: { role: "Le Bâtonnier", nom: signataire },
+    date,
+  });
+}
+
+type MembreAttestation = { nom: string; num: number; numInscription?: string | null; dateInscription?: Date | string | null; qualite?: string | null; cabinet?: string | null };
+
+/**
+ * Attestation (inscription, sortie du tableau, non-redevance) : mise en page d'acte, pas de lettre.
+ * Titre centré, nom du titulaire mis en avant, éléments attestés dans un encart, formule consacrée,
+ * signature et cachet du Bâtonnier. Une page.
+ */
+function attestationOfficielle(o: { titre: string; numero: string; date: Date | string; membre: MembreAttestation; enonce: string; elements: [string, string][]; formule: string }): string {
+  const id = identite();
+  const elements = o.elements.filter(([, v]) => v);
+  return pageA4({
+    titreCourt: o.titre,
+    reference: `N° ${o.numero}`,
+    unePage: true,
+    contenu: `
+${entete("Attestation n°", o.numero, `${id.ville}, le ${fmtDate(o.date)}`)}
+<div class="content"><main class="certificat">
+<div class="titre-bloc"><h1 class="titre">${escapeHtml(o.titre)}</h1></div>
+<p class="cert-attestant">Le Bâtonnier de l'Ordre des Avocats du ${escapeHtml(id.denomination)}<br>atteste que</p>
+<p class="cert-nom">Me ${escapeHtml(o.membre.nom)}</p>
+<p class="cert-enonce">${o.enonce}</p>
+<dl class="cert-elements" style="--n:${elements.length}">${elements.map(([l, v]) => `<div><dt>${escapeHtml(l)}</dt><dd>${escapeHtml(v)}</dd></div>`).join("")}</dl>
+<p class="cert-formule">${escapeHtml(o.formule)}</p>
+</main></div><!--/corps-->
+<div class="cloture"><p class="fait-a">Fait à ${escapeHtml(id.ville)}, le ${fmtDate(o.date)}</p>${signatures([["Le Bâtonnier", id.batonnier, cachetPourRole("Le Bâtonnier")]])}</div>`,
+  });
+}
+
+const numeroTableau = (m: MembreAttestation) => m.numInscription || String(m.num);
+
+export function attestationHtml(membre: MembreAttestation, numero: string, date: Date | string): string {
+  return attestationOfficielle({
+    titre: "Attestation d'inscription", numero, date, membre,
+    enonce: `est inscrit(e) au Tableau de l'Ordre des Avocats du ${escapeHtml(identite().denomination)}.`,
+    elements: [
+      ["N° au Tableau", numeroTableau(membre)],
+      ["Inscrit(e) depuis le", membre.dateInscription ? fmtDate(membre.dateInscription) : ""],
+      ["Qualité", membre.qualite ? QUALITE_FR[membre.qualite] ?? membre.qualite : ""],
+    ],
+    formule: "La présente attestation est délivrée à l'intéressé(e) pour servir et valoir ce que de droit.",
+  });
+}
+
+/**
+ * Attestation de sortie du tableau (ancien membre, T20 M-20261011). Même cadre que
+ * l'attestation d'inscription ; texte neutre : jamais le motif de sortie (R-62, PO-21).
+ */
+export function attestationSortieHtml(membre: MembreAttestation, numero: string, date: Date | string, dateSortie: Date | string | null): string {
+  return attestationOfficielle({
+    titre: "Attestation de sortie du tableau", numero, date, membre,
+    enonce: `a été inscrit(e) au Tableau de l'Ordre des Avocats du ${escapeHtml(identite().denomination)} et n'y figure plus.`,
+    elements: [
+      ["N° au Tableau", numeroTableau(membre)],
+      ["Inscrit(e) à compter du", membre.dateInscription ? fmtDate(membre.dateInscription) : ""],
+      ["Ne figure plus au Tableau depuis le", dateSortie ? fmtDate(dateSortie) : ""],
+    ],
+    formule: "La présente attestation est délivrée pour servir et valoir ce que de droit.",
+  });
+}
+
+/** Attestation de non-redevance (cotisation de l'exercice intégralement réglée). */
+export function attestationNonRedevanceHtml(membre: MembreAttestation, numero: string, annee: number, date: Date | string): string {
+  return attestationOfficielle({
+    titre: "Attestation de non-redevance", numero, date, membre,
+    enonce: `inscrit(e) au Tableau de l'Ordre, est à jour de sa cotisation ordinale et ne demeure redevable d'aucune somme envers l'Ordre au titre de l'exercice ${escapeHtml(annee)}.`,
+    elements: [
+      ["N° au Tableau", numeroTableau(membre)],
+      ["Exercice", String(annee)],
+      ["Situation", "À jour de cotisation"],
+    ],
+    formule: "La présente attestation est délivrée pour servir et valoir ce que de droit.",
+  });
+}
+
+export function convocationReunionHtml(reunion: any): string {
+  return documentHtml({
+    org: "Conseil de l'Ordre",
+    title: "Convocation",
+    reference: `Réunion du ${fmtDate(reunion.date)}`,
+    bodyHtml: `
+      <p>Le Bâtonnier a l'honneur de convier Mesdames et Messieurs les membres du Conseil de l'Ordre à la réunion qui se tiendra le <b>${fmtDate(reunion.date)}</b>${reunion.heure ? ` à <b>${escapeHtml(reunion.heure)}</b>` : ""}, au <b>${escapeHtml(reunion.lieu ?? "—")}</b>.</p>
+      <p style="margin-top:10px"><b>Ordre du jour :</b></p>${liste(reunion.ordreDuJour ?? [])}`,
+    signataire: { role: "Le Bâtonnier", nom: identite().batonnier },
+    date: reunion.date,
+  });
+}
+
+export function feuillePresenceHtml(reunion: any): string {
+  const id = identite();
+  const membres = [
+    `${id.batonnier} — Bâtonnier`,
+    `${id.tresoriere} — Trésorière`,
+    `${id.secretaireGeneral} — Secrétaire Général`,
+    "", "", "",
+  ];
+  const lignes = membres
+    .map((n) => `<tr><td style="padding:10px 0;border-bottom:1px solid #E0DBD0">${escapeHtml(n)}</td><td style="border-bottom:1px solid #E0DBD0"></td></tr>`)
+    .join("");
+  return documentHtml({
+    org: "Conseil de l'Ordre",
+    title: "Feuille de présence",
+    reference: `Réunion du ${fmtDate(reunion.date)}`,
+    bodyHtml: `<table style="width:100%;font-size:13px"><thead><tr><th style="text-align:left;border-bottom:1px solid #1A3A6B;color:#1A3A6B;padding-bottom:4px">Membre</th><th style="text-align:right;border-bottom:1px solid #1A3A6B;color:#1A3A6B">Émargement</th></tr></thead><tbody>${lignes}</tbody></table>`,
+    signataire: { role: "Le Secrétaire Général", nom: identite().secretaireGeneral },
+    date: reunion.date,
+  });
+}
+
+export function convocationAgHtml(a: any): string {
+  const type = a.type === "AGE" ? "Assemblée Générale Extraordinaire" : "Assemblée Générale Ordinaire";
+  return documentHtml({
+    org: "Conseil de l'Ordre",
+    title: "Convocation à l'Assemblée Générale",
+    reference: `${a.type} du ${fmtDate(a.date)}`,
+    bodyHtml: `
+      <p>Le Bâtonnier convoque l'ensemble des membres du corps électoral à l'<b>${type}</b> qui se tiendra le <b>${fmtDate(a.date)}</b>, au <b>${escapeHtml(a.lieu ?? "—")}</b>.</p>
+      <p style="margin-top:10px"><b>Ordre du jour :</b></p>${liste(a.ordreDuJour ?? [])}`,
+    signataire: { role: "Le Bâtonnier", nom: identite().batonnier },
+    date: a.date,
+  });
+}
+
+export function convocationDisciplineHtml(d: any): string {
+  const qui = d.avocatNom === "Confidentiel" ? "l'avocat concerné" : `Me ${escapeHtml(d.avocatNom)}`;
+  const quand = d.dateAudience ? `, le <b>${fmtDate(d.dateAudience)}</b>` : "";
+  return documentHtml({
+    org: "Conseil de discipline",
+    title: "Convocation disciplinaire",
+    reference: `Dossier N° ${d.reference}`,
+    bodyHtml: `
+      <p>Dans le cadre du dossier disciplinaire <b>N° ${d.reference}</b>, <b>${qui}</b> est invité(e) à comparaître devant le Conseil de discipline de l'Ordre des Avocats du ${escapeHtml(identite().denomination)}${quand}.</p>
+      <p style="margin-top:10px">Objet : ${escapeHtml(d.objet ?? "—")}.</p>
+      <p style="margin-top:10px;font-size:12px;color:#7A756A">L'intéressé(e) pourra se faire assister du conseil de son choix et consulter le dossier au Secrétariat de l'Ordre.</p>`,
+    signataire: { role: "Le Bâtonnier, Président du Conseil de discipline", nom: identite().batonnier },
+    date: new Date(),
+  });
+}
+
+/**
+ * Corps de PV : rend le HTML riche (assaini) si le contenu est balisé, sinon
+ * traite le texte brut en paragraphes (rétrocompatible avec les anciens PV).
+ * Assainissement défensif : le front assainit déjà à la saisie (allowlist stricte) ;
+ * on retire ici tout <script>/<style>, gestionnaire on… et URL javascript:.
+ */
+const assainirHtmlServeur = (html: string) =>
+  html
+    .replace(/<\/?(?:script|style)\b[^>]*>/gi, "")
+    .replace(/\son\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "")
+    .replace(/javascript:/gi, "");
+const corpsPv = (texte?: string | null) =>
+  texte && /<[a-z][\s\S]*>/i.test(texte) ? assainirHtmlServeur(texte) : paragraphes(texte);
+
+/** Rend un texte libre (PV, décision) en paragraphes HTML échappés. */
+const paragraphes = (texte?: string | null) =>
+  (texte ?? "")
+    .split(/\n{2,}/)
+    .map((bloc) => bloc.trim())
+    .filter(Boolean)
+    .map((bloc) => `<p style="margin:0 0 10px">${escapeHtml(bloc).replace(/\n/g, "<br>")}</p>`)
+    .join("") || '<p style="color:#7A756A">— Procès-verbal non encore rédigé —</p>';
+
+/** Titre de section numéroté d'un procès-verbal structuré. */
+const sectionPv = (num: string, texte: string) =>
+  `<h3 style="font-family:'Playfair Display',serif;color:#1A3A6B;font-size:15px;margin:16px 0 6px"><span style="color:#C4990A">${num}.</span> ${texte}</h3>`;
+
+/**
+ * Section « Présences et quorum » à partir de la feuille émargée {label: présent}.
+ * Le quorum est atteint dès que la moitié au moins des membres est présente.
+ */
+function presenceEtQuorum(presences: Record<string, boolean> | null | undefined): string {
+  const entrees = Object.entries(presences ?? {});
+  if (entrees.length === 0) return `<p style="color:#7A756A">Feuille de présence à compléter.</p>`;
+  const presents = entrees.filter(([, v]) => v).map(([n]) => escapeHtml(n));
+  const absents = entrees.filter(([, v]) => !v).map(([n]) => escapeHtml(n));
+  const total = entrees.length;
+  const quorum = presents.length * 2 >= total;
+  return `
+    <div class="row"><span class="l">Membres présents (${presents.length})</span><span>${presents.length ? presents.join(", ") : "—"}</span></div>
+    <div class="row"><span class="l">Membres absents (${absents.length})</span><span>${absents.length ? absents.join(", ") : "—"}</span></div>
+    <p style="margin:8px 0 0">Sur <b>${total}</b> membres composant le Conseil, <b>${presents.length}</b> sont présents. ${quorum
+      ? "La moitié au moins des membres étant présente, le <b>quorum est atteint</b> et le Conseil peut valablement délibérer."
+      : "Le <b>quorum n'est pas atteint</b> ; le Conseil sera de nouveau convoqué sur les points concernés."}</p>`;
+}
+
+/**
+ * Procès-verbal de réunion du Conseil de l'Ordre (CDC §2.9 / §6), structuré
+ * selon le modèle officiel : le squelette et les formules sont composés
+ * automatiquement, l'utilisateur ne saisit que les variables (présences, ODJ,
+ * délibérations). Sections I→V, signature du Secrétaire Général avec cachet.
+ */
+export function pvReunionHtml(reunion: any): string {
+  const odj = (reunion.ordreDuJour ?? []).length
+    ? liste(reunion.ordreDuJour)
+    : '<p style="color:#7A756A">Ordre du jour non renseigné.</p>';
+  return documentHtml({
+    org: "Conseil de l'Ordre",
+    title: "Procès-verbal de réunion",
+    reference: `Réunion du ${fmtDate(reunion.date)}`,
+    bodyHtml: `
+      ${sectionPv("I", "Convocation et ouverture de la séance")}
+      <p>L'an ${new Date(reunion.date).getFullYear()}, le <b>${fmtDate(reunion.date)}</b>${reunion.heure ? ` à <b>${escapeHtml(reunion.heure)}</b>` : ""}, le Conseil de l'Ordre des Avocats du ${escapeHtml(identite().denomination)}, régulièrement convoqué par le Bâtonnier, s'est réuni${reunion.lieu ? ` au <b>${escapeHtml(reunion.lieu)}</b>` : ""}. La séance est présidée par le Bâtonnier.</p>
+      ${sectionPv("II", "Présences et vérification du quorum")}
+      ${presenceEtQuorum(reunion.presences)}
+      ${sectionPv("III", "Ordre du jour")}
+      ${odj}
+      ${sectionPv("IV", "Délibérations et décisions")}
+      ${corpsPv(reunion.pv)}
+      ${sectionPv("V", "Clôture")}
+      <p>Plus rien n'étant inscrit à l'ordre du jour, la séance est levée. Le présent procès-verbal est dressé pour être soumis à l'approbation du Conseil.</p>`,
+    signataire: { role: "Le Secrétaire Général", nom: identite().secretaireGeneral },
+    date: reunion.date,
+  });
+}
+
+/** Procès-verbal d'assemblée générale (CDC §2.10 / §6), structuré (sections I→V). */
+export function pvAssembleeHtml(a: any): string {
+  const type = a.type === "AGE" ? "Assemblée Générale Extraordinaire" : "Assemblée Générale Ordinaire";
+  const odj = (a.ordreDuJour ?? []).length ? liste(a.ordreDuJour) : '<p style="color:#7A756A">Ordre du jour non renseigné.</p>';
+  const decisions = (a.decisions ?? []).length
+    ? `<p style="margin:12px 0 4px"><b>Décisions adoptées :</b></p>${liste(a.decisions)}`
+    : "";
+  return documentHtml({
+    org: "Conseil de l'Ordre",
+    title: "Procès-verbal d'Assemblée Générale",
+    reference: `${a.type} du ${fmtDate(a.date)}`,
+    bodyHtml: `
+      ${sectionPv("I", "Ouverture de la séance")}
+      <p>L'an ${new Date(a.date).getFullYear()}, le <b>${fmtDate(a.date)}</b>, les membres du ${escapeHtml(identite().denomination)} se sont réunis en <b>${type}</b>${a.lieu ? ` au <b>${escapeHtml(a.lieu)}</b>` : ""}, sous la présidence du Bâtonnier.</p>
+      ${sectionPv("II", "Quorum")}
+      <p>Nombre de membres présents : <b>${a.quorumPresent ?? 0}</b>.</p>
+      ${sectionPv("III", "Ordre du jour")}
+      ${odj}
+      ${sectionPv("IV", "Délibérations et décisions")}
+      ${corpsPv(a.pv)}
+      ${decisions}
+      ${sectionPv("V", "Clôture")}
+      <p>L'ordre du jour étant épuisé, la séance est levée. Le présent procès-verbal est dressé pour servir et valoir ce que de droit.</p>`,
+    signataire: { role: "Le Bâtonnier", nom: identite().batonnier },
+    date: a.date,
+  });
+}
+
+/** Procès-verbal de scrutin (élections du Conseil / Bâtonnier) — résultats officiels. */
+export function pvScrutinHtml(s: any): string {
+  const TYPE_LABEL: Record<string, string> = { CONSEIL: "Conseil de l'Ordre", BATONNIER: "Bâtonnier", AUTRE: "Scrutin" };
+  const MODALITE_LABEL: Record<string, string> = { PRESENTIEL: "Présentiel", EN_LIGNE: "Vote en ligne" };
+  const candidats = [...(s.candidats ?? [])].sort((a: any, b: any) => b.voix - a.voix || a.nom.localeCompare(b.nom));
+  const total = candidats.reduce((n: number, c: any) => n + c.voix, 0);
+  const lignes = candidats
+    .map((c: any, i: number) => {
+      const pct = total > 0 ? Math.round((c.voix / total) * 100) : 0;
+      const elu = s.type === "CONSEIL" && i < s.nbSieges && c.voix > 0;
+      return `<tr style="border-bottom:1px solid #E0DBD0">
+        <td style="padding:6px 6px;font-family:'DM Mono',monospace;color:#C4990A">${i + 1}</td>
+        <td style="padding:6px 6px"><b>${escapeHtml(c.nom)}</b>${elu ? ` <span style="font-size:9px;color:#2f855a">(Élu·e)</span>` : ""}</td>
+        <td style="padding:6px 6px;text-align:right;font-family:'DM Mono',monospace;color:#1A3A6B">${c.voix}</td>
+        <td style="padding:6px 6px;text-align:right;color:#7A756A">${pct}%</td></tr>`;
+    })
+    .join("");
+  return documentHtml({
+    org: "Le Secrétaire Général",
+    title: "Procès-verbal du scrutin",
+    reference: escapeHtml(s.titre),
+    bodyHtml: `
+      <div class="row"><span class="l">Type de scrutin</span><span>${TYPE_LABEL[s.type] ?? s.type}</span></div>
+      <div class="row"><span class="l">Modalité</span><span>${MODALITE_LABEL[s.modalite] ?? s.modalite}</span></div>
+      <div class="row"><span class="l">Sièges à pourvoir</span><span>${s.nbSieges}</span></div>
+      <div class="row"><span class="l">Suffrages exprimés</span><span>${total}${s._count?.emargements != null ? ` · ${s._count.emargements} votant(s)` : ""}</span></div>
+      <p style="margin:16px 0 4px"><b>Résultats :</b></p>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="border-bottom:1.5px solid #1A3A6B;color:#7A756A;text-align:left">
+          <th style="padding:5px 6px;width:42px">Rang</th><th style="padding:5px 6px">Candidat</th><th style="padding:5px 6px;text-align:right;width:80px">Voix</th><th style="padding:5px 6px;text-align:right;width:64px">%</th></tr></thead>
+        <tbody>${lignes || '<tr><td colspan="4" style="padding:8px;color:#7A756A">Aucun candidat.</td></tr>'}</tbody>
+      </table>
+      <p style="margin-top:16px;font-size:12px;color:#7A756A">Procès-verbal dressé à l'issue du dépouillement${s.closLe ? ` (clôture le ${fmtDate(s.closLe)})` : ""}.</p>`,
+    signataire: { role: "Le Secrétaire Général", nom: identite().secretaireGeneral },
+    date: s.closLe ?? new Date(),
+  });
+}
+
+/** Décision disciplinaire (CDC §2.11 / §6 — PDF sécurisé). */
+export function decisionDisciplineHtml(d: any): string {
+  const qui = d.avocatNom === "Confidentiel" ? "l'avocat concerné" : `Me ${escapeHtml(d.avocatNom)}`;
+  const sanction = d.sanction
+    ? `<div class="montant"><b>${escapeHtml(d.sanction)}</b><i>Sanction enregistrée${d.decidePar ? ` — ${escapeHtml(d.decidePar)}` : ""}${d.dateDecision ? `, décision du ${fmtDate(d.dateDecision)}` : ""}</i></div>`
+    : "";
+  return documentHtml({
+    org: "Conseil de discipline",
+    title: "Décision disciplinaire",
+    reference: `Dossier N° ${d.reference}`,
+    bodyHtml: `
+      <p>Le Conseil de discipline de l'Ordre des Avocats du ${escapeHtml(identite().denomination)}, statuant sur le dossier <b>N° ${d.reference}</b> concernant <b>${qui}</b>${d.dateAudience ? `, à la suite de l'audience du <b>${fmtDate(d.dateAudience)}</b>` : ""},</p>
+      <p style="margin:10px 0 4px"><b>Objet :</b> ${escapeHtml(d.objet ?? "—")}.</p>
+      <p style="margin:14px 0 4px"><b>Décision :</b></p>
+      ${corpsPv(d.decision)}
+      ${sanction}`,
+    signataire: { role: "Le Bâtonnier, Président du Conseil de discipline", nom: identite().batonnier },
+    date: new Date(),
+  });
+}
+
+// Libellé de chaque valeur de StatutMembre (export, PDF) ; la carte d'import de membres.ts
+// accepte chacun de ces libellés en retour (aller-retour export → import, R2-5).
+export const STATUT_FR: Record<string, string> = {
+  INSCRIT: "Inscrit", SUSPENDU: "Suspendu", RADIE: "Radié", OMIS: "Omis",
+  HONORAIRE: "Honoraire", STAGIAIRE: "Stagiaire", DECEDE: "Décédé",
+  DEMISSIONNAIRE: "Démissionnaire", RETRAITE: "Retraité", CESSATION: "Cessation d'activité",
+};
+export const QUALITE_FR: Record<string, string> = { AVOCAT: "Avocat", STAGIAIRE: "Stagiaire", HONORAIRE: "Honoraire" };
+const jour = (d?: Date | string | null) => (d ? new Date(d).toISOString().slice(0, 10) : "");
+
+/**
+ * Liste de travail des avocats (export PDF). Projection « annuaire » uniquement :
+ * le motif de radiation (donnée disciplinaire, loi 29-2019 art. 16) n'y figure jamais.
+ * Sans cachet : ce n'est pas un acte officiel.
+ */
+export function listeAvocatsHtml(membres: any[], libelleFiltre: string, date: Date | string): string {
+  const d = new Date(date).toLocaleDateString("fr-FR");
+  const th = ["N°", "N° inscription", "Nom", "Qualité", "Statut", "Cabinet", "Téléphone", "Email", "Date d'inscription", "Date de radiation", "Date de décès"]
+    .map((c, i) => `<th style="padding:4px 3px${i >= 8 || [0, 1, 3, 4, 6].includes(i) ? ";white-space:nowrap" : ""}">${c}</th>`).join("");
+  const td = (v: unknown, i: number) => `<td style="padding:4px 3px;border-bottom:1px solid #E0DBD0${i >= 8 || [0, 1, 3, 4, 6].includes(i) ? ";white-space:nowrap" : ""}">${escapeHtml(String(v ?? ""))}</td>`;
+  const lignes = membres
+    .map((m) => `<tr>${[m.num, m.numInscription, m.nom, QUALITE_FR[m.qualite] ?? m.qualite, STATUT_FR[m.statut] ?? m.statut, m.cabinet, m.tel, m.email, jour(m.dateInscription), jour(m.dateRadiation), jour(m.dateDeces)].map(td).join("")}</tr>`)
+    .join("");
+  const sousTitre = `${escapeHtml(libelleFiltre)} — arrêtée au ${d} — Document interne`;
+  return documentHtml({
+    org: "Le Secrétaire Général",
+    title: "Liste des avocats",
+    sousTitre,
+    paysage: true,
+    listeRestreinte: true,
+    reference: `${membres.length} ligne${membres.length > 1 ? "s" : ""}`,
+    bodyHtml: `<table style="width:100%;border-collapse:collapse;font-size:8pt;line-height:1.3"><thead><tr style="border-bottom:1.5px solid #1A3A6B;color:#7A756A;text-align:left">${th}</tr></thead><tbody>${lignes}</tbody></table>
+      <p style="margin-top:14px;font-size:9px;color:#7A756A;text-align:center">${escapeHtml(identite().denomination)} — Document interne confidentiel — Diffusion interdite hors des organes de l'Ordre.</p>`,
+    signataire: { role: "Le Secrétaire Général", nom: identite().secretaireGeneral },
+    date,
+    cachet: false,
+  });
+}
+
+/** Horodatage lisible à l'heure de Brazzaville (UTC+1), telle qu'enregistrée par le serveur. */
+const fmtBrazzaville = (d?: Date | string | null): string =>
+  d ? `${new Intl.DateTimeFormat("fr-FR", { timeZone: "Africa/Brazzaville", dateStyle: "long", timeStyle: "medium" }).format(new Date(d))} (heure de Brazzaville, UTC+1)` : "—";
+
+/** Pied de l'accusé de lecture : clause C-01 mot pour mot (docs/juridique/clauses-congres.md), « Barreau [nom] » = dénomination paramétrée (« Barreau de Pointe-Noire »). */
+export const clauseAccuse = (): string =>
+  `Accusé de lecture établi automatiquement par la plateforme du ${identite().denomination} à partir de ses journaux techniques. Il atteste les dates d'envoi, de réception et de première ouverture enregistrées par le système, et l'empreinte SHA-256 des pièces transmises. Il ne vaut ni lettre recommandée ni notification au sens des articles 39 et 42 de la loi n° 026-92 du 20 août 1992. Valeur probatoire à confirmer.`;
+
+/**
+ * Accusé de lecture de la plateforme (T13, F-34) : métadonnées d'un message
+ * (expéditeur, destinataire, sujet, dates d'envoi / réception / première ouverture,
+ * pièce et empreinte SHA-256). Le corps du message n'y figure JAMAIS (R-58).
+ * Aucune signature ni cachet : document technique, clause C-01 en pied.
+ */
+export function accuseReceptionHtml(a: {
+  messageId: number; sujet: string; auteurNom: string; destinataire: string;
+  envoyeLe: Date; recuLe?: Date | null; luLe?: Date | null; empreinte?: string | null;
+  pieceNom?: string | null; pieceTaille?: number | null;
+}): string {
+  const ligne = (l: string, v: string) => `<div class="row"><span class="l">${l}</span><span>${v}</span></div>`;
+  const piece = a.pieceNom ? `${escapeHtml(a.pieceNom)} (${Math.max(1, Math.round((a.pieceTaille ?? 0) / 1024))} Ko)` : "Aucune";
+  return documentHtml({
+    org: "Messagerie professionnelle",
+    title: "Accusé de lecture de la plateforme",
+    reference: `Message n° ${a.messageId}`,
+    bodyHtml: `
+      ${ligne("Expéditeur", escapeHtml(a.auteurNom))}
+      ${ligne("Destinataire", escapeHtml(a.destinataire))}
+      ${ligne("Sujet", escapeHtml(a.sujet))}
+      ${ligne("Envoi", fmtBrazzaville(a.envoyeLe))}
+      ${ligne("Réception", fmtBrazzaville(a.recuLe))}
+      ${ligne("Première ouverture", fmtBrazzaville(a.luLe))}
+      ${ligne("Pièce jointe", piece)}
+      <div class="row"><span class="l">Empreinte SHA-256</span></div>
+      <p style="font-family:'DM Mono',monospace;font-size:11px;word-break:break-all;margin:6px 0 14px">${escapeHtml(a.empreinte ?? "non calculée (message antérieur à la mise en place des empreintes)")}</p>
+      <p style="font-size:11px;color:#7A756A;line-height:1.6">${escapeHtml(clauseAccuse())}</p>`,
+    signataire: { role: "Édité automatiquement", nom: "Plateforme du Barreau" },
+    cachet: false,
+    date: new Date(),
+  });
+}
+
+/**
+ * Publication de l'Ordre (avis, communiqué) sur le gabarit officiel. Le cachet du Bâtonnier
+ * n'apparaît qu'une fois la publication validée ; avant, le document porte la mention « Projet ».
+ */
+export function publicationHtml(p: { titre: string; type: string; contenu?: string | null; statut: string; date: Date | string }): string {
+  const id = identite();
+  const valide = p.statut === "VALIDE" || p.statut === "PUBLIE";
+  const paragraphes = (p.contenu ?? "").split(/\n\s*\n/).map((t) => t.trim()).filter(Boolean)
+    .map((t) => `<p>${escapeHtml(t).replace(/\n/g, "<br>")}</p>`).join("");
+  return pageA4({
+    titreCourt: `${p.type} — ${p.titre}`,
+    reference: `${p.type} du ${fmtDate(p.date)}`,
+    unePage: false,
+    contenu: `
+${entete("Publication de l'Ordre", p.type, `${id.ville}, le ${fmtDate(p.date)}`)}
+<div class="titre-bloc"><h1 class="titre">${escapeHtml(p.type)}</h1><p class="sous-titre">${escapeHtml(p.titre)}</p></div>
+${valide ? "" : `<p class="mention-projet">Projet — en attente de validation par le Bâtonnier</p>`}
+<div class="corps">${paragraphes || "<p>—</p>"}</div>
+<div class="cloture"><p class="fait-a">Fait à ${escapeHtml(id.ville)}, le ${fmtDate(p.date)}</p>${signatures([["Le Bâtonnier", id.batonnier, valide ? cachetPourRole("Le Bâtonnier") : undefined]])}</div>`,
+  });
+}

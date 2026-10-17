@@ -1,0 +1,13 @@
+#!/bin/sh
+# Garde-fou local : refuse tout push vers la branche de production
+# (autodéploiement Render). Activation : git config core.hooksPath scripts/git-hooks
+# Un push vers cette branche ne se fait qu'avec la validation écrite de Fabrice,
+# hors de ce poste ou après désactivation explicite du hook.
+PROD="refs/heads/claude/file-context-analysis-ixq8w3"
+while read -r local_ref local_sha remote_ref remote_sha; do
+  if [ "$remote_ref" = "$PROD" ]; then
+    echo "REFUS : push vers la branche de production claude/file-context-analysis-ixq8w3 (autodéploiement Render) interdit sans validation de Fabrice." >&2
+    exit 1
+  fi
+done
+exit 0

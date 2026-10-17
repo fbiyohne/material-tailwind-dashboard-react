@@ -1,0 +1,504 @@
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import {
+  CheckIcon,
+  LockClosedIcon,
+  CalculatorIcon,
+  CreditCardIcon,
+  BuildingLibraryIcon,
+  ShieldCheckIcon,
+  BellIcon,
+  ChatBubbleLeftRightIcon,
+  DocumentTextIcon,
+  PlusIcon,
+  XMarkIcon,
+  ExclamationTriangleIcon,
+  TrashIcon,
+  ScaleIcon,
+  Squares2X2Icon,
+} from "@heroicons/react/24/outline";
+import { Badge, Notice, useToast, PageHeader, FormField, Tabs, Modal, Sceau, MatriceAcces } from "../components";
+import ReglesJuridiques from "../components/ReglesJuridiques";
+import ParametresModules from "../components/ParametresModules";
+import { PanneauPaiements, PanneauNotifications, PanneauMessagerie } from "../components/ParametresCanaux";
+import { useAuth } from "../auth/AuthContext";
+import { formatFCFA } from "../utils/format";
+import { appliquerConfig } from "../data/config";
+import { STATUT_META_CLES, STATUT_MEMBRE_META_CLES } from "../data/derivations";
+import { STATUT_DOSSIER_META_CLES } from "../data/institutionnel";
+import { STATUT_PUBLICATION_META_CLES } from "../data/publications";
+import { getParametres, majParametres, getNotifications, reinitialiserDonnees, listerMembres } from "../api/resources";
+
+const DEFAUT = {
+  tarifs: { avocat: 150000, stagiaire: 75000, droitsPlaidoirie: 60000 },
+  exerciceCourant: 2026,
+  premierExercice: 2020,
+  identite: { denomination: "", ordre: "", batonnier: "", tresoriere: "", secretaireGeneral: "", adresse: "", logo: "", ville: "", courriel: "", site: "", telephones: "", modeDemonstration: false },
+  categoriesArchives: [],
+  typesPublication: [],
+  canauxActifs: ["MTN", "AIRTEL", "CARTE", "VIREMENT"],
+  fonctionsConseil: ["Bâtonnier", "Vice-Bâtonnier", "Secrétaire Général", "Trésorière", "Membre du Conseil"],
+  libelles: { membre: {}, cotisation: {}, dossier: {}, publication: {} },
+};
+
+const ROLES = [
+  { role: "Secrétaire Général", mission: "Administrateur fonctionnel principal", acces: "Accès complet", ton: "vert" },
+  { role: "Bâtonnier", mission: "Validation des publications et décisions", acces: "Consultation + validation", ton: "bleu" },
+  { role: "Trésorière", mission: "Gestion financière et validation des quitus", acces: "Finances uniquement", ton: "or" },
+  { role: "Administrateur système", mission: "Configuration et maintenance", acces: "Accès technique total", ton: "gris" },
+  { role: "Avocat", mission: "Espace personnel en libre-service", acces: "Ses propres données uniquement", ton: "bleu" },
+];
+
+const CANAUX_DISPO = [
+  { value: "MTN", label: "MTN Mobile Money" },
+  { value: "AIRTEL", label: "Airtel Money" },
+  { value: "CARTE", label: "Carte (Visa / MasterCard)" },
+  { value: "VIREMENT", label: "Virement (UBA / Ecobank)" },
+];
+
+const DOMAINES_STATUT = [
+  { cle: "membre", titre: "Statuts de membre", defauts: STATUT_MEMBRE_META_CLES },
+  { cle: "cotisation", titre: "Statuts de cotisation", defauts: STATUT_META_CLES },
+  { cle: "dossier", titre: "Statuts de dossier disciplinaire", defauts: STATUT_DOSSIER_META_CLES },
+  { cle: "publication", titre: "Statuts de publication", defauts: STATUT_PUBLICATION_META_CLES },
+];
+
+function Section({ titre, description, children, action }) {
+  return (
+    <div className="bpn-card">
+      <div className="bpn-card-header">
+        <span className="bpn-card-heading">{titre}</span>
+        {action}
+      </div>
+      <div className="p-5">
+        {description && <p className="mb-4 text-sm text-gris">{description}</p>}
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/** Intitulé de sous-section homogène à l'intérieur des cartes de réglages. */
+const SOUS_TITRE = "mb-2 text-xs font-semibold uppercase tracking-wider text-gris";
+
+/** Liste de chaînes éditable (ajout/suppression) — catégories, types… */
+function ListeEditable({ valeurs, onChange, placeholder }) {
+  const [saisie, setSaisie] = useState("");
+  const ajouter = () => {
+    const v = saisie.trim();
+    if (v && !valeurs.includes(v)) onChange([...valeurs, v]);
+    setSaisie("");
+  };
+  return (
+    <div className="space-y-2.5">
+      <div className="flex gap-2">
+        <input
+          value={saisie}
+          onChange={(e) => setSaisie(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); ajouter(); } }}
+          placeholder={placeholder}
+          className="bpn-input text-sm"
+        />
+        <button type="button" onClick={ajouter} className="bpn-btn bpn-btn-ghost shrink-0 text-sm">
+          <PlusIcon className="h-4 w-4" /> Ajouter
+        </button>
+      </div>
+      <div className="flex min-h-[2.75rem] flex-wrap content-start gap-1.5 rounded-lg border border-dashed border-grisM bg-grisL/30 p-2">
+        {valeurs.length === 0 ? (
+          <span className="px-1 py-0.5 text-xs text-gris">Aucune entrée pour l'instant.</span>
+        ) : (
+          valeurs.map((v) => (
+            <span key={v} className="inline-flex items-center gap-1 rounded-full border border-grisM bg-white px-2.5 py-1 text-xs text-encre">
+              {v}
+              <button type="button" aria-label={`Retirer ${v}`} onClick={() => onChange(valeurs.filter((x) => x !== v))} className="text-gris transition hover:text-rouge">
+                <XMarkIcon className="h-3 w-3" />
+              </button>
+            </span>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function Parametres() {
+  const toast = useToast();
+  const { user } = useAuth();
+  const estAdmin = user?.role === "ADMIN";
+  const [reset, setReset] = useState({ ouvert: false, saisie: "", enCours: false });
+  const [tarifs, setTarifs] = useState(DEFAUT.tarifs);
+  const [exercice, setExercice] = useState(DEFAUT.exerciceCourant);
+  const [premierExercice, setPremierExercice] = useState(DEFAUT.premierExercice);
+  const [identite, setIdentite] = useState(DEFAUT.identite);
+  const [categories, setCategories] = useState(DEFAUT.categoriesArchives);
+  const [typesPub, setTypesPub] = useState(DEFAUT.typesPublication);
+  const [canaux, setCanaux] = useState(DEFAUT.canauxActifs);
+  const [regles, setRegles] = useState(null); // { stage, ...regles } : objet complet exigé par le serveur
+  const [fonctions, setFonctions] = useState(DEFAUT.fonctionsConseil);
+  const [libelles, setLibelles] = useState(DEFAUT.libelles);
+  const [notif, setNotif] = useState(null);
+  // Membres (hors stagiaires) proposés dans les sélecteurs Bâtonnier/Trésorière/SG.
+  const [membresListe, setMembresListe] = useState([]);
+
+  useEffect(() => {
+    listerMembres({ qualiteNot: "STAGIAIRE", pageSize: 200 })
+      .then((d) => setMembresListe(d.items))
+      .catch(() => setMembresListe([]));
+    getParametres().then((p) => {
+      setTarifs({ ...DEFAUT.tarifs, ...p.tarifs });
+      setExercice(p.exerciceCourant ?? DEFAUT.exerciceCourant);
+      setPremierExercice(p.exercices?.premier ?? DEFAUT.premierExercice);
+      setIdentite({ ...DEFAUT.identite, ...p.identite });
+      setCategories(p.documents?.categoriesArchives ?? []);
+      setTypesPub(p.documents?.typesPublication ?? []);
+      setCanaux(p.paiement?.canauxActifs ?? DEFAUT.canauxActifs);
+      setRegles(p.regles ? { ...p.regles, stage: p.stage } : null);
+      setFonctions(p.conseil?.fonctions ?? DEFAUT.fonctionsConseil);
+      setLibelles({ membre: {}, cotisation: {}, dossier: {}, publication: {}, ...p.libellesStatuts });
+    }).catch((e) => toast.error(e.message));
+    getNotifications().then(setNotif).catch(() => setNotif(null));
+  }, [toast]);
+
+  // Saisie des montants : on accepte les espaces de milliers en affichage et on
+  // ne conserve que les chiffres en valeur (parseNb), pour un champ lisible.
+  const parseNb = (v) => Number(String(v).replace(/\D/g, "")) || 0;
+  const fmtNb = (n) => String(n ?? "").replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  const setT = (k) => (e) => setTarifs({ ...tarifs, [k]: parseNb(e.target.value) });
+  const setI = (k) => (e) => setIdentite({ ...identite, [k]: e.target.value });
+  // Logo institutionnel : lu en data URI (≈1,5 Mo max) et conservé dans l'identité.
+  const MAX_LOGO = 1_500_000;
+  const chargerLogo = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { toast.error("Le logo doit être une image (PNG, JPG, SVG…)."); return; }
+    if (file.size > MAX_LOGO) { toast.error("Image trop volumineuse (max 1,5 Mo)."); return; }
+    const r = new FileReader();
+    r.onload = () => setIdentite((id) => ({ ...id, logo: String(r.result) }));
+    r.onerror = () => toast.error("Lecture du fichier impossible.");
+    r.readAsDataURL(file);
+    e.target.value = ""; // permet de re-sélectionner le même fichier
+  };
+  const setLib = (dom, cle) => (e) =>
+    setLibelles((l) => ({ ...l, [dom]: { ...l[dom], [cle]: e.target.value } }));
+  const basculerCanal = (v) =>
+    setCanaux((c) => (c.includes(v) ? c.filter((x) => x !== v) : [...c, v]));
+
+  // Enregistre un patch et l'applique immédiatement à la configuration vivante
+  // (les dérivations — exercices, libellés… — se recalculent sans rechargement).
+  const enregistrer = async (patch, message) => {
+    try {
+      await majParametres(patch);
+      appliquerConfig(patch);
+      toast.success(message);
+    } catch (e) {
+      toast.error(e.message);
+    }
+  };
+
+  const sauverTarifs = () =>
+    enregistrer(
+      { tarifs, exerciceCourant: exercice, exercices: { premier: premierExercice } },
+      "Tarifs et exercices enregistrés."
+    );
+  const sauverIdentite = () => enregistrer({ identite }, "Identité de l'institution enregistrée.");
+  // Les anciennes « données de référence » sont réparties entre les onglets : chaque
+  // section s'enregistre seule (le serveur fusionne section par section).
+  const sauverConseil = () => enregistrer({ conseil: { fonctions } }, "Fonctions du Conseil enregistrées.");
+  const sauverLibelles = () => enregistrer({ libellesStatuts: libelles }, "Libellés des statuts enregistrés.");
+  const sauverCanaux = () => enregistrer({ paiement: { canauxActifs: canaux } }, "Canaux de paiement enregistrés.");
+  const sauverDocuments = () =>
+    enregistrer({ documents: { categoriesArchives: categories, typesPublication: typesPub } }, "Catégories de documents enregistrées.");
+
+  const sauverRegles = () => {
+    const { stage, ...autres } = regles;
+    return enregistrer({ regles: autres, stage }, "Règles juridiques enregistrées.");
+  };
+
+  // Réinitialisation totale (ADMIN) — confirmée par saisie du mot « SUPPRIMER ».
+  const lancerReset = async () => {
+    setReset((r) => ({ ...r, enCours: true }));
+    try {
+      await reinitialiserDonnees();
+      toast.success("Toutes les données ont été supprimées — compte administrateur conservé.");
+      setReset({ ouvert: false, saisie: "", enCours: false });
+      setTimeout(() => window.location.assign("/"), 800);
+    } catch (e) {
+      toast.error(e.message);
+      setReset((r) => ({ ...r, enCours: false }));
+    }
+  };
+
+  const panneauTarifs = (
+    <Section titre="Tarifs de référence & exercices" description="Montants annuels des calculs de cotisations et de droits (BR-07 / BR-08), et plage d'exercices affichée.">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <FormField label="Cotisation avocat (FCFA)">
+          <input type="text" inputMode="numeric" value={fmtNb(tarifs.avocat)} onChange={setT("avocat")} className="bpn-input" />
+        </FormField>
+        <FormField label="Cotisation stagiaire (FCFA)">
+          <input type="text" inputMode="numeric" value={fmtNb(tarifs.stagiaire)} onChange={setT("stagiaire")} className="bpn-input" />
+        </FormField>
+        <FormField label="Droit de plaidoirie (FCFA)">
+          <input type="text" inputMode="numeric" value={fmtNb(tarifs.droitsPlaidoirie)} onChange={setT("droitsPlaidoirie")} className="bpn-input" />
+        </FormField>
+        <FormField label="Exercice courant">
+          <input type="number" value={exercice} onChange={(e) => setExercice(Number(e.target.value))} className="bpn-input" />
+        </FormField>
+        <FormField label="Premier exercice" hint="borne basse des filtres">
+          <input type="number" value={premierExercice} onChange={(e) => setPremierExercice(Number(e.target.value))} className="bpn-input" />
+        </FormField>
+      </div>
+      <div className="mt-3 text-xs text-gris">
+        Aperçu : avocat {formatFCFA(tarifs.avocat)} · stagiaire {formatFCFA(tarifs.stagiaire)} · honoraires exonérés · exercices {exercice}→{premierExercice}.
+      </div>
+      <div className="mt-4 flex justify-end">
+        <button className="bpn-btn bpn-btn-primary" onClick={sauverTarifs}><CheckIcon className="h-4 w-4" /> Enregistrer</button>
+      </div>
+    </Section>
+  );
+
+  // Noms des membres (format « Me … ») proposés dans les sélecteurs de fonction.
+  const nomsMembres = membresListe.map((m) => `Me ${m.nom}`).sort((a, b) => a.localeCompare(b));
+  // Sélecteur alimenté par la base : le titulaire d'une fonction est choisi parmi
+  // les membres. La valeur enregistrée reste au format « Me … », inchangée pour les
+  // documents. Une valeur historique hors liste est conservée comme option.
+  const champMembre = (cle, label) => {
+    const valeur = identite[cle] || "";
+    const options = !valeur || nomsMembres.includes(valeur) ? nomsMembres : [valeur, ...nomsMembres];
+    return (
+      <FormField label={label}>
+        <select value={valeur} onChange={setI(cle)} className="bpn-input">
+          <option value="">— Sélectionner un membre —</option>
+          {options.map((n) => <option key={n} value={n}>{n}</option>)}
+        </select>
+      </FormField>
+    );
+  };
+
+  const panneauIdentite = (
+    <Section titre="Identité de l'institution" description="Utilisée dans TOUS les documents officiels (reçus, quitus, attestations, PV…) et l'interface. Le logo et les textes ci-dessous en sont la source unique.">
+      {/* Logo institutionnel — source unique des documents. */}
+      <div className="mb-5 flex flex-col gap-4 rounded-lg border border-grisM bg-grisL/40 p-4 sm:flex-row sm:items-center">
+        <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-grisM bg-white">
+          {identite.logo
+            ? <img src={identite.logo} alt="Logo actuel" className="h-full w-full object-contain" />
+            : <Sceau size={72} />}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-medium text-encre">Logo officiel</div>
+          <p className="mt-0.5 text-xs text-gris">
+            Image PNG, JPG ou SVG (max 1,5 Mo). À défaut, le sceau dessiné est utilisé, reprenant la dénomination et l'ordre saisis.
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <label className="bpn-btn bpn-btn-ghost bpn-btn-sm cursor-pointer">
+              <PlusIcon className="h-3.5 w-3.5" /> {identite.logo ? "Remplacer" : "Téléverser un logo"}
+              <input type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp,image/*" onChange={chargerLogo} className="hidden" />
+            </label>
+            {identite.logo && (
+              <button type="button" onClick={() => setIdentite((id) => ({ ...id, logo: "" }))} className="bpn-btn bpn-btn-ghost bpn-btn-sm text-rouge">
+                <TrashIcon className="h-3.5 w-3.5" /> Retirer
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <FormField label="Dénomination"><input value={identite.denomination} onChange={setI("denomination")} className="bpn-input" /></FormField>
+        <FormField label="Ordre"><input value={identite.ordre} onChange={setI("ordre")} className="bpn-input" /></FormField>
+        {champMembre("batonnier", "Bâtonnier")}
+        {champMembre("tresoriere", "Trésorière")}
+        {champMembre("secretaireGeneral", "Secrétaire Général")}
+        <FormField label="Adresse"><input value={identite.adresse} onChange={setI("adresse")} className="bpn-input" /></FormField>
+        <FormField label="Ville" hint="figure sur les reçus, quitus et en-têtes"><input value={identite.ville ?? ""} onChange={setI("ville")} className="bpn-input" /></FormField>
+        <FormField label="Courriel" hint="bandeau des reçus et quitus"><input value={identite.courriel ?? ""} onChange={setI("courriel")} className="bpn-input" /></FormField>
+        <FormField label="Site web"><input value={identite.site ?? ""} onChange={setI("site")} className="bpn-input" /></FormField>
+        <FormField label="Téléphones" hint="séparés par « / »"><input value={identite.telephones ?? ""} onChange={setI("telephones")} className="bpn-input" /></FormField>
+      </div>
+      <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-lg border border-grisM bg-grisL/40 p-3 text-sm">
+        <input type="checkbox" className="mt-0.5 h-4 w-4 accent-navy" checked={!!identite.modeDemonstration} onChange={(e) => setIdentite({ ...identite, modeDemonstration: e.target.checked })} />
+        <span>
+          <span className="font-medium text-encre">Mode démonstration</span>
+          <span className="block text-xs text-gris">Affiche la mention « données fictives » dans l'en-tête et sur les documents. À n'activer que sur une instance de démonstration.</span>
+        </span>
+      </label>
+      <div className="mt-4 flex justify-end">
+        <button className="bpn-btn bpn-btn-primary" onClick={sauverIdentite}><CheckIcon className="h-4 w-4" /> Enregistrer</button>
+      </div>
+    </Section>
+  );
+
+  /** Bouton d'enregistrement en pied de section (même motif que Tarifs et Institution). */
+  const pied = (onClick, libelle = "Enregistrer") => (
+    <div className="mt-4 flex justify-end">
+      <button className="bpn-btn bpn-btn-primary" onClick={onClick}><CheckIcon className="h-4 w-4" /> {libelle}</button>
+    </div>
+  );
+
+  // 1. Barreau et identité : institution, Conseil de l'Ordre, libellés des statuts.
+  const panneauBarreau = (
+    <Tabs
+      ariaLabel="Barreau et identité"
+      tabs={[
+        { id: "institution", label: "Institution", content: panneauIdentite },
+        { id: "conseil", label: "Conseil de l'Ordre", content: (
+      <Section titre="Fonctions du Conseil de l'Ordre" description="Intitulés proposés à l'ajout ou à la modification d'un membre du Conseil (Bâtonnier, Trésorière, Membre du Conseil…).">
+        <ListeEditable valeurs={fonctions} onChange={setFonctions} placeholder="Nouvelle fonction…" />
+        {pied(sauverConseil)}
+      </Section>
+        ) },
+        { id: "statuts", label: "Libellés des statuts", content: (
+      <Section titre="Libellés des statuts" description="Renommez l'affichage des statuts sans changer la logique. Laissez vide pour conserver le libellé par défaut.">
+        <div className="grid grid-cols-1 gap-x-8 gap-y-6 lg:grid-cols-2">
+          {DOMAINES_STATUT.map((dom) => (
+            <div key={dom.cle}>
+              <div className={SOUS_TITRE}>{dom.titre}</div>
+              <div className="space-y-2">
+                {Object.entries(dom.defauts).map(([cle, meta]) => (
+                  <div key={cle} className="grid grid-cols-[7.5rem_1fr] items-center gap-3">
+                    <span className="flex"><Badge ton={meta.ton} dot={false}>{meta.label}</Badge></span>
+                    <input
+                      value={libelles[dom.cle]?.[cle] ?? ""}
+                      onChange={setLib(dom.cle, cle)}
+                      placeholder={`Par défaut : ${meta.label}`}
+                      className="bpn-input text-sm"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        {pied(sauverLibelles)}
+      </Section>
+        ) },
+      ]}
+    />
+  );
+
+  // 5. Paiements : canaux proposés en ligne (ex-sous-onglet « Paiement & stage »), puis passerelles (T15).
+  const panneauPaiements = (
+    <div className="space-y-5">
+      <Section titre="Canaux proposés en ligne" description="Moyens de paiement affichés aux avocats lors d'un règlement en ligne.">
+        <div className="overflow-hidden rounded-lg border border-grisM">
+          {CANAUX_DISPO.map((c, i) => {
+            const actif = canaux.includes(c.value);
+            return (
+              <label key={c.value} className={`flex min-h-[44px] cursor-pointer items-center justify-between gap-3 px-3 py-2.5 text-sm transition hover:bg-grisL/40 sm:min-h-0 ${i > 0 ? "border-t border-grisL" : ""}`}>
+                <span className={actif ? "font-medium text-encre" : "text-gris"}>{c.label}</span>
+                <input type="checkbox" checked={actif} onChange={() => basculerCanal(c.value)} className="h-4 w-4 accent-navy" />
+              </label>
+            );
+          })}
+        </div>
+        {pied(sauverCanaux, "Enregistrer les canaux")}
+      </Section>
+      <PanneauPaiements />
+    </div>
+  );
+
+  // 9. Documents : listes de référence de l'archivage et des publications.
+  const panneauDocuments = (
+    <Section titre="Catégories & types de documents" description="Listes de référence utilisées dans l'archivage et les publications.">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div>
+          <div className={SOUS_TITRE}>Catégories d'archives</div>
+          <ListeEditable valeurs={categories} onChange={setCategories} placeholder="Nouvelle catégorie…" />
+        </div>
+        <div>
+          <div className={SOUS_TITRE}>Types de publication</div>
+          <ListeEditable valeurs={typesPub} onChange={setTypesPub} placeholder="Nouveau type…" />
+        </div>
+      </div>
+      {pied(sauverDocuments)}
+    </Section>
+  );
+
+  // « Provisoire » n'est plus dans le libellé de l'onglet : la mention est portée par le panneau.
+  const panneauRegles = regles ? (
+    <div className="space-y-5">
+      <ReglesJuridiques valeur={regles} onChange={setRegles} onSave={sauverRegles} />
+    </div>
+  ) : (
+    <Section titre="Règles juridiques" description="Chargement des règles…" />
+  );
+
+  const panneauRoles = (
+    <div className="space-y-5">
+    <Section titre="Matrice des accès" description="Attribuez les modules à chaque profil. Enforcement appliqué à l'interface et au serveur.">
+      <MatriceAcces />
+      <Notice ton="or" icon={LockClosedIcon} className="mt-4">
+        La création des comptes et l'attribution d'un profil à un utilisateur se font dans la page{" "}
+        <Link to="/utilisateurs" className="font-medium text-navy underline">Utilisateurs</Link>.
+      </Notice>
+    </Section>
+
+    {estAdmin && (
+      <Section titre="Zone de danger" description="Opérations irréversibles réservées à l'administrateur système.">
+        <div className="flex flex-col gap-3 rounded-lg border border-rouge/40 bg-rougeL/40 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-2">
+            <ExclamationTriangleIcon className="mt-0.5 h-5 w-5 shrink-0 text-rouge" />
+            <div className="text-sm text-encre">
+              <div className="font-medium">Supprimer toutes les données</div>
+              <p className="mt-0.5 text-xs text-gris">Efface définitivement membres, finances, dossiers, documents, messagerie, journaux et comptes non-administrateurs. <strong>Seuls le compte administrateur et la configuration sont conservés.</strong> Action irréversible.</p>
+            </div>
+          </div>
+          <button type="button" className="bpn-btn bpn-btn-danger shrink-0" onClick={() => setReset({ ouvert: true, saisie: "", enCours: false })}>
+            <TrashIcon className="h-4 w-4" /> Supprimer toutes les données
+          </button>
+        </div>
+      </Section>
+    )}
+    </div>
+  );
+
+  return (
+    <div className="space-y-5">
+      <PageHeader eyebrow="Système" titre="Paramètres" sousTitre="Identité du barreau, règles juridiques, tarifs, accès, canaux de paiement et de notification, messagerie, modules et documents." />
+
+      <Tabs
+        ariaLabel="Sections des paramètres"
+        vertical
+        tabs={[
+          { id: "barreau", label: "Barreau et identité", icon: BuildingLibraryIcon, content: panneauBarreau },
+          { id: "regles", label: "Règles juridiques", icon: ScaleIcon, content: panneauRegles },
+          { id: "tarifs", label: "Tarifs et exercices", icon: CalculatorIcon, content: panneauTarifs },
+          { id: "roles", label: "Rôles et sécurité", icon: ShieldCheckIcon, content: panneauRoles },
+          { id: "paiements", label: "Paiements", icon: CreditCardIcon, content: panneauPaiements },
+          { id: "notifications", label: "Notifications", icon: BellIcon, badge: notif?.journal?.length || null, content: <PanneauNotifications /> },
+          { id: "messagerie", label: "Messagerie", icon: ChatBubbleLeftRightIcon, content: <PanneauMessagerie /> },
+          { id: "modules", label: "Modules", icon: Squares2X2Icon, content: <ParametresModules /> },
+          { id: "documents", label: "Documents", icon: DocumentTextIcon, content: panneauDocuments },
+        ]}
+      />
+
+      <Modal
+        open={reset.ouvert}
+        onClose={() => !reset.enCours && setReset({ ouvert: false, saisie: "", enCours: false })}
+        title="Supprimer toutes les données"
+        footer={
+          <>
+            <button className="bpn-btn bpn-btn-ghost" disabled={reset.enCours} onClick={() => setReset({ ouvert: false, saisie: "", enCours: false })}>Annuler</button>
+            <button className="bpn-btn bpn-btn-danger" disabled={reset.saisie.trim() !== "SUPPRIMER" || reset.enCours} onClick={lancerReset}>
+              {reset.enCours ? "Suppression…" : "Supprimer définitivement"}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rougeL text-rouge"><ExclamationTriangleIcon className="h-5 w-5" /></div>
+            <p className="text-sm leading-6 text-encre">
+              Cette action supprime <strong>définitivement</strong> toutes les données (membres, cotisations, reçus, quitus, dossiers disciplinaires, documents, messagerie, journaux et comptes non-administrateurs). Seuls <strong>votre compte administrateur</strong> et la configuration sont conservés. <strong>Elle est irréversible.</strong>
+            </p>
+          </div>
+          <label className="block text-sm">
+            <span className="text-gris">Pour confirmer, tapez <strong className="font-mono text-rouge">SUPPRIMER</strong> :</span>
+            <input value={reset.saisie} onChange={(e) => setReset((r) => ({ ...r, saisie: e.target.value }))} className="bpn-input mt-1" placeholder="SUPPRIMER" autoComplete="off" />
+          </label>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+export default Parametres;
