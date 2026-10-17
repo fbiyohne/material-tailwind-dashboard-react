@@ -416,9 +416,6 @@ export function Parametres() {
   // « Provisoire » n'est plus dans le libellé de l'onglet : la mention est portée par le panneau.
   const panneauRegles = regles ? (
     <div className="space-y-5">
-      <Notice ton="or" icon={ScaleIcon}>
-        Ces règles sont provisoires : les valeurs qui ne figurent pas dans la loi n° 026-92 doivent être confirmées par le règlement intérieur de l'Ordre et du Barreau.
-      </Notice>
       <ReglesJuridiques valeur={regles} onChange={setRegles} onSave={sauverRegles} />
     </div>
   ) : (

@@ -20,20 +20,19 @@ const EFFETS = { AUCUN: "Sans effet sur le tableau", SUSPENSION: "Suspension du 
 const num = (e) => Math.max(0, Number(e.target.value) || 0);
 const SOUS = "mb-2 text-xs font-semibold uppercase tracking-wider text-gris";
 
-/** Carte de bloc : même gabarit que les sections de Paramètres, avec la mention C-05. */
-function Bloc({ titre, description, children }) {
+/** Carte de bloc : même gabarit que les sections de Paramètres (mention C-05 portée une fois, en tête). */
+function Bloc({ titre, description, large, children }) {
   return (
-    <div className="bpn-card">
+    <div className={`bpn-card ${large ? "xl:col-span-2" : ""}`}>
       <div className="bpn-card-header"><span className="bpn-card-heading">{titre}</span></div>
       <div className="space-y-4 p-5">
         {description && <p className="text-sm text-gris">{description}</p>}
-        <MentionJuridique type="regles" />
         {children}
       </div>
     </div>
   );
 }
-Bloc.propTypes = { titre: PropTypes.string, description: PropTypes.string, children: PropTypes.node };
+Bloc.propTypes = { titre: PropTypes.string, description: PropTypes.string, large: PropTypes.bool, children: PropTypes.node };
 
 const Case = ({ checked, onChange, children }) => (
   <label className="flex cursor-pointer items-center justify-between gap-3 px-3 py-2.5 text-sm hover:bg-grisL/40">
@@ -57,6 +56,10 @@ export function ReglesJuridiques({ valeur: v, onChange, onSave, enCours }) {
 
   return (
     <div className="space-y-5">
+      {/* Clause C-05 (docs/juridique/clauses-congres.md) : une fois, en tête de la section. */}
+      <MentionJuridique type="regles" />
+      {/* Cartes deux par deux sur grand écran ; le corps électoral (deux listes) occupe la largeur. */}
+      <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">
       <Bloc titre="Stage" description="Durée du stage et pièce exigée pour le passage au tableau.">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField label="Durée du stage (mois)">
@@ -141,7 +144,28 @@ export function ReglesJuridiques({ valeur: v, onChange, onSave, enCours }) {
         </div>
       </Bloc>
 
-      <Bloc titre="Corps électoral" description="Qui vote : qualités retenues et statuts exclus à la date du scrutin.">
+      <Bloc titre="Éligibilité" description="Ancienneté d'inscription exigée pour se porter candidat, par type de scrutin.">
+        <div className="space-y-2">
+          {ELIGIBILITE.map(([cle, lib]) => (
+            <div key={cle} className="grid grid-cols-1 items-center gap-2 sm:grid-cols-[1fr_9rem_12rem]">
+              <div className="text-sm text-encre">{lib}</div>
+              <label className="flex items-center gap-2 text-sm text-gris">
+                <input aria-label={`Ancienneté minimale — ${lib}`} type="number" min={0} max={60} value={v.eligibilite[cle].ancienneteMinAns}
+                  onChange={(e) => majElig(cle, { ancienneteMinAns: num(e) })} className="bpn-input w-20 text-sm" /> ans
+              </label>
+              <label className="flex items-center gap-2 text-sm text-gris">
+                <input type="checkbox" className="h-4 w-4 accent-navy" aria-label={`Comparaison stricte — ${lib}`} checked={v.eligibilite[cle].stricte}
+                  onChange={() => majElig(cle, { stricte: !v.eligibilite[cle].stricte })} /> Strictement plus
+              </label>
+            </div>
+          ))}
+        </div>
+        <div className="overflow-hidden rounded-lg border border-grisM">
+          <Case checked={v.exclurePeineAccessoire} onChange={() => onChange({ ...v, exclurePeineAccessoire: !v.exclurePeineAccessoire })}>Exclure les candidats sous peine accessoire</Case>
+        </div>
+      </Bloc>
+
+      <Bloc titre="Corps électoral" large description="Qui vote : qualités retenues et statuts exclus à la date du scrutin.">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div>
             <div className={SOUS}>Qualités retenues</div>
@@ -166,26 +190,7 @@ export function ReglesJuridiques({ valeur: v, onChange, onSave, enCours }) {
         </div>
       </Bloc>
 
-      <Bloc titre="Éligibilité" description="Ancienneté d'inscription exigée pour se porter candidat, par type de scrutin.">
-        <div className="space-y-2">
-          {ELIGIBILITE.map(([cle, lib]) => (
-            <div key={cle} className="grid grid-cols-1 items-center gap-2 sm:grid-cols-[1fr_9rem_12rem]">
-              <div className="text-sm text-encre">{lib}</div>
-              <label className="flex items-center gap-2 text-sm text-gris">
-                <input aria-label={`Ancienneté minimale — ${lib}`} type="number" min={0} max={60} value={v.eligibilite[cle].ancienneteMinAns}
-                  onChange={(e) => majElig(cle, { ancienneteMinAns: num(e) })} className="bpn-input w-20 text-sm" /> ans
-              </label>
-              <label className="flex items-center gap-2 text-sm text-gris">
-                <input type="checkbox" className="h-4 w-4 accent-navy" aria-label={`Comparaison stricte — ${lib}`} checked={v.eligibilite[cle].stricte}
-                  onChange={() => majElig(cle, { stricte: !v.eligibilite[cle].stricte })} /> Strictement plus
-              </label>
-            </div>
-          ))}
-        </div>
-        <div className="overflow-hidden rounded-lg border border-grisM">
-          <Case checked={v.exclurePeineAccessoire} onChange={() => onChange({ ...v, exclurePeineAccessoire: !v.exclurePeineAccessoire })}>Exclure les candidats sous peine accessoire</Case>
-        </div>
-      </Bloc>
+      </div>
 
       <div className="flex justify-end">
         <button type="button" className="bpn-btn bpn-btn-primary" disabled={enCours} onClick={onSave}>

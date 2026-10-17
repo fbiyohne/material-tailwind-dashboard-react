@@ -86,7 +86,7 @@ describe("Paramètres — 9 onglets ordonnés (T17)", () => {
     await userEvent.click(screen.getByRole("button", { name: /Enregistrer les règles/ }));
     expect(majParametres).toHaveBeenCalledTimes(1);
     expect(majParametres.mock.calls[0][0].regles.quitus).toEqual({ validiteMois: 6 });
-    expect(screen.getByText(/règles sont provisoires/)).toBeTruthy();
+    expect(screen.getByText(/Les valeurs signalées « provisoire »/)).toBeTruthy(); // C-05, une fois en tête
   });
 
   it("aucune perte de fonction : chaque ancien panneau reste accessible", async () => {
