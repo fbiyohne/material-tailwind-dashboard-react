@@ -39,6 +39,8 @@ export function ParametresModules() {
         <Notice ton="or" icon={LockClosedIcon}>
           Masquer un module le retire du menu pour tous les profils. Les droits d'accès restent régis par la matrice « Rôles et sécurité ».
         </Notice>
+        {/* Groupes du menu deux par deux sur grand écran. */}
+        <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
         {navSections.map((section) => (
           <div key={section.label}>
             <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-gris">{section.label}</div>
@@ -72,6 +74,7 @@ export function ParametresModules() {
             </ul>
           </div>
         ))}
+        </div>
         <div className="flex justify-end">
           <button className="bpn-btn bpn-btn-primary" onClick={enregistrer} disabled={envoi}>
             <CheckIcon className="h-4 w-4" /> Enregistrer les modules

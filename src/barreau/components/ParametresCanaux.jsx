@@ -183,6 +183,7 @@ export function PanneauPaiements() {
           </select>
           <p id="pg-mode-aide" className="mt-1 text-xs text-gris">Le mode production est verrouillé : il exige une décision écrite du Barreau.</p>
         </div>
+        <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">
         <BlocPasserelle cle="mtn" titre="MTN Mobile Money" {...bloc}>
           <Champ id="mtn-user" label="Utilisateur API" valeur={p.mtn?.apiUser} onChange={set("mtn", "apiUser")} />
           <Champ id="mtn-abo" label="Clé d'abonnement" type="password" valeur={p.mtn?.abonnementCle} onChange={set("mtn", "abonnementCle")} />
@@ -198,10 +199,18 @@ export function PanneauPaiements() {
           <Champ id="ag-cle" label="Clé API" type="password" valeur={p.agregateur?.cleApi} onChange={set("agregateur", "cleApi")} />
           <Champ id="ag-hook" label="Clé de webhook" type="password" valeur={p.agregateur?.cleWebhook} onChange={set("agregateur", "cleWebhook")} />
         </BlocPasserelle>
+        </div>
         <BarreEnregistrer s={s} />
       </div>
     </Etats>
   );
+}
+
+/** Destinataires d'un envoi groupé : premier destinataire et « et N autres », liste complète au survol. */
+function Destinataires({ valeur = "" }) {
+  const liste = valeur.split(",").map((x) => x.trim()).filter(Boolean);
+  if (liste.length <= 1) return <span className="text-gris">{valeur}</span>;
+  return <span className="text-gris" title={liste.join(", ")}>{liste[0]} <span className="whitespace-nowrap text-encre">et {liste.length - 1} autre{liste.length > 2 ? "s" : ""}</span></span>;
 }
 
 /** Notifications : SMTP, SMS, expéditeur, journal des envois. */
@@ -218,6 +227,8 @@ export function PanneauNotifications() {
     <Etats s={s}>
       <div className="space-y-5">
         <Notice ton="gris">Les notifications sont de service et au contenu neutre : jamais le texte d'un message, d'une pièce ni une information disciplinaire.</Notice>
+        {/* Cartes deux par deux sur grand écran. */}
+        <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">
         <Carte titre="E-mail (SMTP)" icon={EnvelopeIcon} action={etat(envois?.emailSimulation)}>
           <div className={GRILLE}>
             <Champ id="smtp-host" label="Serveur" valeur={smtp.host} onChange={s.regler(["smtp", "host"])} />
@@ -238,12 +249,13 @@ export function PanneauNotifications() {
           </div>
           <TestConnexion canal="sms" desactive={s.modifie} />
         </Carte>
+        </div>
         <BarreEnregistrer s={s} />
         <Carte titre="Journal des envois">
           <DataTable
             columns={[
               { key: "canal", label: "Canal", sortable: true, sortValue: (n) => n.canal, cell: (n) => <Badge ton={n.canal === "EMAIL" ? "bleu" : "gris"} dot={false}>{n.canal}</Badge> },
-              { key: "destinataire", label: "Destinataire", sortable: true, sortValue: (n) => n.destinataire, cell: (n) => <span className="text-gris">{n.destinataire}</span> },
+              { key: "destinataire", label: "Destinataire", sortable: true, sortValue: (n) => n.destinataire, cell: (n) => <Destinataires valeur={n.destinataire} /> },
               { key: "evenement", label: "Événement", sortable: true, sortValue: (n) => EVT_LABEL[n.evenement] ?? n.evenement, cell: (n) => <span className="text-gris">{EVT_LABEL[n.evenement] ?? n.evenement}</span> },
               { key: "statut", label: "Statut", sortable: true, sortValue: (n) => (n.statut === "ENVOYE" ? (n.simulation ? 1 : 0) : 2), cell: (n) => <Badge ton={n.statut === "ENVOYE" ? (n.simulation ? "or" : "vert") : "rouge"} dot={false}>{n.statut === "ENVOYE" ? (n.simulation ? "Simulé" : "Envoyé") : "Échec"}</Badge> },
               { key: "date", label: "Date", sortable: true, sortValue: (n) => new Date(n.createdAt).getTime(), cell: (n) => <span className="font-mono text-xs text-gris">{formatDateTime(n.createdAt)}</span> },
@@ -265,6 +277,7 @@ export function PanneauMessagerie() {
   return (
     <Etats s={s}>
       <div className="space-y-5">
+        <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">
         <Carte titre="Messagerie interne">
           <div className="space-y-3">
             <Interrupteur id="msg-interne" label="Activer la messagerie interne" valeur={m.interneActive} onChange={set("interneActive")} />
@@ -284,6 +297,7 @@ export function PanneauMessagerie() {
             <Interrupteur id="msg-sms" label="Relayer l'avis par SMS" valeur={m.relaisSms} onChange={set("relaisSms")} />
           </div>
         </Carte>
+        </div>
         <BarreEnregistrer s={s} />
       </div>
     </Etats>
