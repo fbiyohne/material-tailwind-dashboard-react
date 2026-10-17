@@ -29,3 +29,7 @@ dist-ssr
 .env
 caddy_data/
 caddy_config/
+
+# Artefacts des tests navigateur (téléchargements, captures, exports nominatifs) : jamais versionnés
+.playwright-mcp/
+test-results/
